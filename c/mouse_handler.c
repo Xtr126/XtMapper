@@ -84,7 +84,7 @@ void init_mouse(struct mouse_t *mouse)
 void print_mouse_state(struct mouse_t *mouse)
 {
       char buf[BUFSIZ];
-      snprintf(buf, sizeof(buf), "xdotool mousemove %d %d",mouse->current.x, mouse->current.y);
+      snprintf(buf, sizeof(buf), "sendevent %d %d",mouse->current.x, mouse->current.y);
         system(buf);
 
 
@@ -115,10 +115,10 @@ void button(struct input_event *ie, struct mouse_t *mouse)
 		return;
 
 	if (ie->value == VALUE_PRESSED)
-		mouse->pressed = mouse->current,
+		mouse->pressed = mouse->current;
 
 	if (ie->value == VALUE_RELEASED)
-		mouse->released = mouse->current,
+		mouse->released = mouse->current;
 }
 
 
