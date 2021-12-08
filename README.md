@@ -1,2 +1,0 @@
-# XtMapper
-experimental keymapper
