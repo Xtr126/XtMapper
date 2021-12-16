@@ -16,7 +16,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.XtMapper">
         <service
-            android:name=".Window"
+            android:name=".TouchPointer"
             android:enabled="true"
             android:exported="true" />
         <service

@@ -1,18 +1,4 @@
-/*
- * Copyright (C) 2007 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 
 package com.xtr.keymapper;
 
@@ -24,8 +10,13 @@ import android.view.MotionEvent;
 
 import androidx.core.view.InputDeviceCompat;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 /**
  * Command that sends key events to the device, either by their keycode, or by
@@ -34,14 +25,12 @@ import java.lang.reflect.InvocationTargetException;
 
 
 public class Input {
-    public final static int SOURCE_KEY = 2;
-    public final static int SOURCE_MOVEMENT = 1;
 
-    Method injectInputEventMethod;
-    InputManager im;
-
-    public Input() throws Exception {
-        //Get the instance of InputManager class using reflection
+    static Method injectInputEventMethod;
+    static InputManager im;
+    static int inputSource = InputDevice.SOURCE_UNKNOWN;
+    public static void main(String[] args) {
+        try {
         String methodName = "getInstance";
         Object[] objArr = new Object[0];
         im = (InputManager) InputManager.class.getDeclaredMethod(methodName, new Class[0])
@@ -54,18 +43,35 @@ public class Input {
 
         //Get the reference to injectInputEvent method
         methodName = "injectInputEvent";
-        injectInputEventMethod = InputManager.class.getMethod(methodName, new Class[] {InputEvent.class, Integer.TYPE});
+
+            inputSource = getSource(inputSource, InputDevice.SOURCE_TOUCHSCREEN);
+            injectInputEventMethod = InputManager.class.getMethod(methodName, new Class[] {InputEvent.class, Integer.TYPE});
+            String line;
+            ServerSocket ss=new ServerSocket(MainActivity.DEFAULT_PORT);
+            Socket socket=ss.accept();
+            BufferedReader stdInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            System.out.println("server started at" + MainActivity.DEFAULT_PORT);
+            while ((line = stdInput.readLine()) != null) {
+                String []xy = line.split("\\s+");
+                sendTap(inputSource, Float.parseFloat(xy[0]), Float.parseFloat(xy[1]));
+                System.out.println("tap" + xy[0] + xy[1]);
+            }
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | IOException e) {
+            e.printStackTrace();
+        }
     }
 
 
-    private static final float lerp(float a, float b, float alpha) {
+
+
+    private float lerp(float a, float b, float alpha) {
         return (b - a) * alpha + a;
     }
-    private static final int getSource(int inputSource, int defaultSource) {
+    private static int getSource(int inputSource, int defaultSource) {
         return inputSource == InputDevice.SOURCE_UNKNOWN ? defaultSource : inputSource;
     }
    
-    private void injectMotionEvent(int inputSource, int action, long when, float x, float y, float pressure) {
+    private static void injectMotionEvent(int inputSource, int action, long when, float x, float y, float pressure) {
         final float DEFAULT_SIZE = 1.0f;
         final int DEFAULT_META_STATE = 0;
         final float DEFAULT_PRECISION_X = 1.0f;
@@ -73,7 +79,7 @@ public class Input {
         final int DEFAULT_EDGE_FLAGS = 0;
         MotionEvent event = MotionEvent.obtain(when, when, action, x, y, pressure, DEFAULT_SIZE,
                 DEFAULT_META_STATE, DEFAULT_PRECISION_X, DEFAULT_PRECISION_Y,
-                InputDeviceCompat.SOURCE_TOUCHSCREEN, DEFAULT_EDGE_FLAGS);
+                inputSource, DEFAULT_EDGE_FLAGS);
         event.setSource(inputSource);
 
         try {
@@ -82,7 +88,7 @@ public class Input {
         e.printStackTrace();
     }
     }
-    private void sendTap(int inputSource, float x, float y) {
+    private static void sendTap(int inputSource, float x, float y) {
         long now = SystemClock.uptimeMillis();
         injectMotionEvent(inputSource, MotionEvent.ACTION_DOWN, now, x, y, 1.0f);
         injectMotionEvent(inputSource, MotionEvent.ACTION_UP, now, x, y, 0.0f);
