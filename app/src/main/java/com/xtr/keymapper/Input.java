@@ -2,6 +2,8 @@
 
 package com.xtr.keymapper;
 
+import static java.lang.Float.parseFloat;
+
 import android.hardware.input.InputManager;
 import android.os.SystemClock;
 import android.view.InputDevice;
@@ -44,27 +46,43 @@ public class Input {
         //Get the reference to injectInputEvent method
         methodName = "injectInputEvent";
 
-            inputSource = getSource(inputSource, InputDevice.SOURCE_TOUCHSCREEN);
-            injectInputEventMethod = InputManager.class.getMethod(methodName, new Class[] {InputEvent.class, Integer.TYPE});
-            String line;
-            ServerSocket ss=new ServerSocket(MainActivity.DEFAULT_PORT);
-            Socket socket=ss.accept();
-            BufferedReader stdInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            System.out.println("server started at" + MainActivity.DEFAULT_PORT);
-            while ((line = stdInput.readLine()) != null) {
-                String []xy = line.split("\\s+");
-                sendTap(inputSource, Float.parseFloat(xy[0]), Float.parseFloat(xy[1]));
-                System.out.println("tap" + xy[0] + xy[1]);
+        inputSource = getSource(inputSource, InputDevice.SOURCE_TOUCHSCREEN);
+        injectInputEventMethod = InputManager.class.getMethod(methodName, new Class[] {InputEvent.class, Integer.TYPE});
+        String line;
+        ServerSocket ss=new ServerSocket(MainActivity.DEFAULT_PORT);
+        Socket socket=ss.accept();
+        BufferedReader stdInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        System.out.println("server started at" + MainActivity.DEFAULT_PORT);
+        while ((line = stdInput.readLine()) != null) {
+            String []xy = line.split("\\s+");
+            switch (xy[2]) {
+                case "UP": {
+                    sendTapUp(inputSource, parseFloat(xy[0]), parseFloat(xy[1]));
+                    break;
+                }
+                case "DOWN": {
+                    sendTapDown(inputSource, parseFloat(xy[0]), parseFloat(xy[1]));
+                    break;
+                }
+                case "MOVE": {
+                    sendMove(inputSource,
+                            parseFloat(xy[0]),
+                            parseFloat(xy[1]),
+                            parseFloat(xy[3]),
+                            parseFloat(xy[4]));
+                }
             }
+            System.out.println(line);
+        }
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | IOException e) {
-            e.printStackTrace();
+            System.out.println(e);
         }
     }
 
 
 
 
-    private float lerp(float a, float b, float alpha) {
+    private static float lerp(float a, float b, float alpha) {
         return (b - a) * alpha + a;
     }
     private static int getSource(int inputSource, int defaultSource) {
@@ -93,29 +111,19 @@ public class Input {
         injectMotionEvent(inputSource, MotionEvent.ACTION_DOWN, now, x, y, 1.0f);
         injectMotionEvent(inputSource, MotionEvent.ACTION_UP, now, x, y, 0.0f);
     }
-
-    private void sendSwipe(int inputSource, float x1, float y1, float x2, float y2, int duration) {
-                        inputSource = getSource(inputSource, InputDevice.SOURCE_TOUCHSCREEN);
-        if (duration < 0) {
-            duration = 300;
-        }
+    private static void sendTapUp(int inputSource, float x, float y) {
         long now = SystemClock.uptimeMillis();
-        injectMotionEvent(inputSource, MotionEvent.ACTION_DOWN, now, x1, y1, 1.0f);
-        long startTime = now;
-        long endTime = startTime + duration;
-        while (now < endTime) {
-            long elapsedTime = now - startTime;
-              float alpha = (float) elapsedTime / duration;
-            injectMotionEvent(inputSource, MotionEvent.ACTION_MOVE, now, lerp(x1, x2, alpha),
-                    lerp(y1, y2, alpha), 1.0f);
-            now = SystemClock.uptimeMillis();
-        }
-        injectMotionEvent(inputSource, MotionEvent.ACTION_UP, now, x2, y2, 0.0f);
+        injectMotionEvent(inputSource, MotionEvent.ACTION_UP, now, x, y, 0.0f);
+    }
+    private static void sendTapDown(int inputSource, float x, float y) {
+        long now = SystemClock.uptimeMillis();
+        injectMotionEvent(inputSource, MotionEvent.ACTION_DOWN, now, x, y, 1.0f);
     }
 
-
-
-
-
+    private static void sendMove(int inputSource, float x1, float y1, float x2, float y2) {
+        long now = SystemClock.uptimeMillis();
+            injectMotionEvent(inputSource, MotionEvent.ACTION_MOVE, now, lerp(x1, x2, now),
+                    lerp(y1, y2, now), 1.0f);
+    }
 
 }
