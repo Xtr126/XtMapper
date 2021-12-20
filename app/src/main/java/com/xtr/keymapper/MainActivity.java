@@ -2,8 +2,12 @@ package com.xtr.keymapper;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.provider.Settings;
+import android.widget.Button;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -14,54 +18,92 @@ import java.math.BigInteger;
 
 public class MainActivity extends AppCompatActivity {
 
-    int x = 0;
-    int y = 0;
-    TextView mouseView;
-
+    TextView cmdView;
+    String points;
+    String line = "null";
     public static final int DEFAULT_PORT = 6234;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mouseView = findViewById(R.id.mouseView);
+        cmdView = findViewById(R.id.mouseView);
+        Button startButton = findViewById(R.id.startPointer);
+        startButton.setOnClickListener(v -> startService());
+        Button startServerButton = findViewById(R.id.startServer);
+        startServerButton.setOnClickListener(v -> startServer());
         checkOverlayPermission();
-        startService();
-
     }
 
-    // method for starting the service
     public void startService(){
 
-            // check if the user has already granted
-            // the Draw over other apps permission
-            if(Settings.canDrawOverlays(this)) {
-                // start the service based on the android version
-                    startForegroundService(new Intent(this, ForegroundService.class));
+        if(Settings.canDrawOverlays(this)) {
+            // start the service based on the android version
+            startForegroundService(new Intent(this, ForegroundService.class));
 
-            }
+        }
     }
 
+    public void startServer() {
+        new Thread(() -> {
+            try{
+                PackageManager pm = this.getPackageManager();
+                String packageName = this.getPackageName();
+                ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
+                String apk = ai.publicSourceDir;
+                Process sh = Runtime.getRuntime().exec("su");
+                DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
+                BufferedReader stdInput = new BufferedReader(new InputStreamReader(sh.getInputStream()));
+                outputStream.writeBytes("CLASSPATH=\""+ apk +"\" /system/bin/app_process32 /system/bin "+ packageName + ".Input"+"\n");
+                outputStream.flush();
+                SystemClock.sleep(2000);
+                while ((line = stdInput.readLine()) != null) {
+                    runOnUiThread(() -> {
+                        points += "\n" + line;
+                        MainActivity.this.cmdView.setText(points);
+                    });
+                }
+            } catch (IOException | PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
 
-    // method to ask user to grant the Overlay permission
+    public void setupServer() {
+        try {
+            PackageManager pm = this.getPackageManager();
+            String packageName = this.getPackageName();
+            ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
+            String apk = ai.publicSourceDir;
+            Process sh = Runtime.getRuntime().exec("su");
+            DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
+            outputStream.writeBytes("cat > /mnt/xtr.keymapper.sh" + "\n");
+            outputStream.writeBytes("#!/system/bin/sh\n");
+            outputStream.writeBytes("CLASSPATH=\"" + apk + "\" /system/bin/app_process32 /system/bin " + packageName + ".Input" + "\n");
+            sh.destroy();
+            sh = Runtime.getRuntime().exec("su");
+            outputStream = new DataOutputStream(sh.getOutputStream());
+            outputStream.writeBytes("chmod 777 /mnt/xtr.keymapper.sh\n");
+            outputStream.writeBytes("exit\n");
+            outputStream.flush();
+            outputStream.close();
+            sh.waitFor();
+        } catch (IOException | PackageManager.NameNotFoundException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void checkOverlayPermission(){
-
-
             if (!Settings.canDrawOverlays(this)) {
                 // send user to the device settings
                 Intent myIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
                 startActivity(myIntent);
             }
-
     }
 
-    // check for permission again when user grants it from
-    // the device settings, and start the service
     @Override
     protected void onResume() {
         super.onResume();
-        x = y = 0;
-        startService();
     }
 
     public static Number hexToDec(String hex)  {

@@ -1,5 +1,3 @@
-
-
 package com.xtr.keymapper;
 
 import static java.lang.Float.parseFloat;
@@ -10,7 +8,6 @@ import android.view.InputDevice;
 import android.view.InputEvent;
 import android.view.MotionEvent;
 
-import androidx.core.view.InputDeviceCompat;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -20,10 +17,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-/**
- * Command that sends key events to the device, either by their keycode, or by
- * desired character output.
- */
 
 
 public class Input {
@@ -54,6 +47,7 @@ public class Input {
         BufferedReader stdInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         System.out.println("server started at" + MainActivity.DEFAULT_PORT);
         while ((line = stdInput.readLine()) != null) {
+            System.out.println(line);
             String []xy = line.split("\\s+");
             switch (xy[2]) {
                 case "UP": {
@@ -72,7 +66,6 @@ public class Input {
                             parseFloat(xy[4]));
                 }
             }
-            System.out.println(line);
         }
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | IOException e) {
             System.out.println(e);
