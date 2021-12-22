@@ -172,11 +172,7 @@ void*  UpdateMouse(void* context) {
         jmethodID updateX = (*env)->GetMethodID(env, pctx->mainActivityClz,
                                                  "updateMouseX", "()V");
         jmethodID updateY = (*env)->GetMethodID(env, pctx->mainActivityClz,
-                                                 "updateMouseY", "()V");
-        jmethodID updateXn = (*env)->GetMethodID(env, pctx->mainActivityClz,
-                                                 "updateMouseXn", "()V");
-        jmethodID updateYn = (*env)->GetMethodID(env, pctx->mainActivityClz,
-                                                 "updateMouseYn", "()V");
+                                                "updateMouseX", "()V");
         int fd;
         const char *dev = "/dev/input/event2";
         struct input_event ie;
@@ -185,35 +181,13 @@ void*  UpdateMouse(void* context) {
             perror("opening device");
             exit(EXIT_FAILURE);
         }
+        ioctl(fd, EVIOCGRAB, (void *)1);
         while (read(fd, &ie, sizeof(struct input_event))) {
-            if (ie.code == REL_X) {
-                if (ie.value > 0) {
-                    while (ie.value > 0) {
-                        (*env)->CallVoidMethod(env, pctx->mainActivityObj, updateX);
-                        ie.value--;
-                    }
-                } else {
-                    while (ie.value < 0) {
-                        (*env)->CallVoidMethod(env, pctx->mainActivityObj, updateXn);
-                        ie.value++;
-                    }
-                }
-                break;
-            }
-            if (ie.code == REL_Y) {
-                if (ie.value > 0) {
-                    while (ie.value > 0) {
-                        (*env)->CallVoidMethod(env, pctx->mainActivityObj, updateY);
-                        ie.value--;
-                    }
-                } else {
-                    while (ie.value < 0) {
-                        (*env)->CallVoidMethod(env, pctx->mainActivityObj, updateYn);
-                        ie.value++;
-                    }
-                }
-                break;
-            }
+            if (ie.code == REL_X)
+                (*env)->CallVoidMethod(env, pctx->mainActivityObj, updateX, (jint) ie.value);
+
+            if (ie.code == REL_Y)
+                (*env)->CallVoidMethod(env, pctx->mainActivityObj, updateY, (jint) ie.value);
         }
         close(fd);
         (*env)->CallVoidMethod(env, pctx->mainActivityObj, timerId);

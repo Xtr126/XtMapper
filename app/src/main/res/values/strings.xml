@@ -3,4 +3,5 @@
     <string name="start_touch_pointer">2-Start touch pointer</string>
     <string name="run_script_info">Server not started</string>
     <string name="start_server">1-Start server</string>
+    <string name="start_server_manual">Start server (manual)</string>
 </resources>

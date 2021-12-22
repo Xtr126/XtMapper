@@ -76,14 +76,14 @@ public void open() {
                 String []xy = line.split("\\s+");
                 switch (xy[2]) {
                     case "REL_X": {
-                        x2 += (int) MainActivity.hexToDec(xy[3]);
+                        x2 += (int) Utils.hexToDec(xy[3]);
                         if (pointer_down)
                             Xout.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
                         x1 = x2;
                         break;
                     }
                     case "REL_Y": {
-                        y2 += (int) MainActivity.hexToDec(xy[3]);
+                        y2 += (int) Utils.hexToDec(xy[3]);
                         if (pointer_down)
                             Xout.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
                         y1 = y2;
