@@ -10,7 +10,7 @@ import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
-
+    public TextView cmdView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -20,14 +20,26 @@ public class MainActivity extends AppCompatActivity {
         startButton.setOnClickListener(v -> startService());
         Button startServerButton = findViewById(R.id.startServer);
         Button startServerButton2 = findViewById(R.id.startServerM);
+        Button keymap = findViewById(R.id.start_editor);
+        keymap.setOnClickListener(v -> startEditor());
+        cmdView = findViewById(R.id.mouseView);
         startServerButton.setOnClickListener(v -> server.startServer());
         startServerButton2.setOnClickListener(v -> server.setupServer());
         checkOverlayPermission();
     }
+
+
     public void startService(){
         if(Settings.canDrawOverlays(this)) {
             // start the service based on the android version
             startForegroundService(new Intent(this, ForegroundService.class));
+
+        }
+    }
+    public void startEditor(){
+        if(Settings.canDrawOverlays(this)) {
+            // start the service based on the android version
+            startForegroundService(new Intent(this, EditorService.class));
 
         }
     }
@@ -42,6 +54,5 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
     }
-
 
 }

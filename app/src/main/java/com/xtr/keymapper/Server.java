@@ -24,6 +24,7 @@ public class Server {
         this.context=context;
         cmdView = ((MainActivity)context).findViewById(R.id.mouseView);
     }
+
     public void startServer() {
         new Thread(() -> {
             try{
