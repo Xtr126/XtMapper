@@ -26,6 +26,7 @@ public class Server {
     }
 
     public void startServer() {
+        cmdView.setText(points);
         new Thread(() -> {
             try{
                 PackageManager pm = context.getPackageManager();

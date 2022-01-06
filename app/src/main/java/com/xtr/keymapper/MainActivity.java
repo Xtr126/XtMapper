@@ -38,9 +38,8 @@ public class MainActivity extends AppCompatActivity {
     }
     public void startEditor(){
         if(Settings.canDrawOverlays(this)) {
-            // start the service based on the android version
-            startForegroundService(new Intent(this, EditorService.class));
-
+            EditorUI window=new EditorUI(this);
+            window.open();
         }
     }
     public void checkOverlayPermission(){

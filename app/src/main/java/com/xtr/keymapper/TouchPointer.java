@@ -26,15 +26,13 @@ public class TouchPointer {
     private final View cursorView;
     private final WindowManager.LayoutParams mParams;
     private final WindowManager mWindowManager;
-    Button stopPointer;
     int x1 = 100;
     int x2 = 100;
     int y1 = 100;
     int y2 = 100;
     public TouchPointer(Context context){
         this.context=context;
-        stopPointer = ((MainActivity)context).findViewById(R.id.stop_pointer);
-        stopPointer.setOnClickListener(v -> hideCursor());
+
         // set the layout parameters of the cursor
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
@@ -101,11 +99,6 @@ public void open() {
                 }
                 cursorView.setX(x1);
                 cursorView.setY(y1);
-                /*cursorView.animate()
-                        .x(x1)
-                        .y(y1)
-                        .setDuration(0)
-                        .start(); */
 
             }
         } catch (IOException e) {
