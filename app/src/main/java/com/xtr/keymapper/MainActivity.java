@@ -1,6 +1,8 @@
 package com.xtr.keymapper;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -23,6 +25,8 @@ public class MainActivity extends AppCompatActivity {
         Button keymap = findViewById(R.id.start_editor);
         keymap.setOnClickListener(v -> startEditor());
         cmdView = findViewById(R.id.mouseView);
+
+
         startServerButton.setOnClickListener(v -> server.startServer());
         startServerButton2.setOnClickListener(v -> server.setupServer());
         checkOverlayPermission();

@@ -16,10 +16,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.XtMapper">
         <service
-            android:name=".TouchPointer"
-            android:enabled="true"
-            android:exported="true" />
-        <service
             android:name=".ForegroundService"
             android:enabled="true"
             android:exported="true" />

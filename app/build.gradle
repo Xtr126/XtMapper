@@ -13,15 +13,15 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-         ndk {
+        /* ndk {
             abiFilters 'x86'
-           }
+           } */
     }
-    externalNativeBuild {
+   /* externalNativeBuild {
         ndkBuild {
             path 'Android.mk'
         }
-    }
+    } */
 
     buildTypes {
         release {
