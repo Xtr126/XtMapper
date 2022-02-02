@@ -17,11 +17,11 @@ android {
             abiFilters 'x86'
            }
     }
-    externalNativeBuild {
+      externalNativeBuild {
         ndkBuild {
             path 'Android.mk'
         }
-    }
+    } 
 
     buildTypes {
         release {
