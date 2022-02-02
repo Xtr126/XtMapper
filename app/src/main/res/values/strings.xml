@@ -1,9 +1,10 @@
 <resources>
     <string name="app_name">XtMapper</string>
-    <string name="start_touch_pointer">2-Start touch pointer</string>
+    <string name="start_touch_pointer">Start touch pointer</string>
     <string name="run_script_info">Server not started</string>
-    <string name="start_server">1-Start server</string>
-    <string name="start_server_manual">Start server (manual)</string>
-    <string name="stop_pointer_overlay">Stop Pointer overlay</string>
-    <string name="edit_keymap">Edit Keymap</string>
+    <string name="start_server">Start server</string>
+    <string name="start_server_manual">Start in terminal</string>
+    <string name="stop_pointer_overlay">Stop touch pointer</string>
+    <string name="edit_keymap">Edit mode</string>
+    <string name="about_info">About</string>
 </resources>

@@ -10,13 +10,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.LinearLayout;
+import android.widget.ImageView;
 
-import androidx.appcompat.content.res.AppCompatResources;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.nambimobile.widgets.efab.ExpandableFab;
+import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
+import com.nambimobile.widgets.efab.FabSize;
 
 public class EditorUI {
 
@@ -24,10 +25,11 @@ public class EditorUI {
     private final View keymapView;
     private final WindowManager.LayoutParams mParams;
     private final WindowManager mWindowManager;
-    FabOption fab1;
-    FabOption addKey1;
-    ConstraintLayout mainView;
-
+    FabOption saveButton;
+    FabOption addKey;
+    FabOption dPad;
+    FabOption crossHair;
+    ExpandableFabLayout mainView;
     public EditorUI(Context context) {
         this.context = context;
         mParams = new WindowManager.LayoutParams(
@@ -53,7 +55,7 @@ public class EditorUI {
             Log.d("Error1", e.toString());
         }
     }
-    public void hideCursor() {
+    public void hideView() {
         try {
             ((WindowManager) context.getSystemService(WINDOW_SERVICE)).removeView(keymapView);
             keymapView.invalidate();
@@ -66,21 +68,26 @@ public class EditorUI {
         }
     }
     public void initFab() {
-        fab1 = mainView.findViewById(R.id.save_button);
-        fab1.setOnClickListener(v -> hideCursor());
-        addKey1 = mainView.findViewById(R.id.add_button);
-        addKey1.setOnClickListener(v -> addKey());
+        saveButton = mainView.findViewById(R.id.save_button);
+        addKey = mainView.findViewById(R.id.add_button);
+        dPad = mainView.findViewById(R.id.d_pad);
+        crossHair = mainView.findViewById(R.id.cross_hair);
+
+        saveButton.setOnClickListener(v -> hideView());
+        addKey.setOnClickListener(v -> addKey());
+
+        dPad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        crossHair.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        saveButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        addKey.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+
     }
+
     private void addKey() {
         MovableFloatingActionButton KeyA = new MovableFloatingActionButton(context);
         KeyA.setImageBitmap(KeyA.setText("A"));
-        KeyA.setOnClickListener(v -> addKey2());
-
+        KeyA.setScaleType(ImageView.ScaleType.CENTER);
         mainView.addView(KeyA);
     }
-    private void addKey2() {
-        MovableFloatingActionButton KeyB = new MovableFloatingActionButton(context);
-        KeyB.setImageBitmap(KeyB.setText("B"));
-        mainView.addView(KeyB);
-    }
+
 }

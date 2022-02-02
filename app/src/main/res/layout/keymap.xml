@@ -1,53 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/MainView"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="horizontal">
-
     <com.nambimobile.widgets.efab.ExpandableFabLayout
-        android:layout_width="300dp"
-        android:layout_height="match_parent"
+        android:id="@+id/MainView"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+    <com.nambimobile.widgets.efab.Overlay
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:overlay_color="#000000"
+        app:overlay_alpha="0.50"
+        app:overlay_openingAnimationDurationMs="1000"/>
 
-        <com.nambimobile.widgets.efab.ExpandableFab
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_marginEnd="21dp"
-            android:layout_marginBottom="21dp" />
+    <com.nambimobile.widgets.efab.ExpandableFab
+        android:id="@+id/expandable_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="10dp"
+        app:efab_firstFabOptionMarginPx="60"
+        app:efab_successiveFabOptionMarginPx="60"
+        app:efab_color="#9374DE"
+        app:efab_icon="@drawable/ic_create_white_24dp"
+        app:efab_iconAnimationRotationDeg="-225" />
 
         <com.nambimobile.widgets.efab.FabOption
             android:id="@+id/add_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             app:fab_icon="@drawable/plus"
             app:label_text="Add key" />
 
         <com.nambimobile.widgets.efab.FabOption
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
             android:src="@drawable/crosshair"
+            android:id="@+id/cross_hair"
             app:label_text="CrossHair" />
 
         <com.nambimobile.widgets.efab.FabOption
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="80dp"
+            android:layout_height="70dp"
+            android:id="@+id/d_pad"
             android:src="@drawable/dpad"
-            app:fabSize="auto"
-            app:label_text="D-Pad"
-            app:label_translationXPx="2"
-            app:useCompatPadding="true" />
+            app:label_text="D-Pad" />
 
         <com.nambimobile.widgets.efab.FabOption
             android:id="@+id/save_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             app:fab_icon="@drawable/save"
             app:label_text="Save" />
     </com.nambimobile.widgets.efab.ExpandableFabLayout>
-
-
-</androidx.constraintlayout.widget.ConstraintLayout>
