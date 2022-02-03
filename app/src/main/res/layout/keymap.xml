@@ -5,6 +5,7 @@
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
+        android:layout_gravity="center"
         android:layout_height="match_parent">
     <com.nambimobile.widgets.efab.Overlay
         android:layout_width="match_parent"

@@ -11,35 +11,38 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 
-import androidx.constraintlayout.widget.ConstraintLayout;
-
-import com.nambimobile.widgets.efab.ExpandableFab;
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
-import com.nambimobile.widgets.efab.FabSize;
 
 public class EditorUI {
 
-    private final Context context;
-    private final View keymapView;
-    private final WindowManager.LayoutParams mParams;
-    private final WindowManager mWindowManager;
+    Context context;
+    View keymapView;
+    WindowManager.LayoutParams mParams;
+    WindowManager mWindowManager;
     FabOption saveButton;
     FabOption addKey;
     FabOption dPad;
     FabOption crossHair;
     ExpandableFabLayout mainView;
+    View KeyLayout;
+    MovableFrameLayout Key;
+    LayoutInflater layoutInflater;
     public EditorUI(Context context) {
         this.context = context;
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 PixelFormat.TRANSLUCENT);
-        LayoutInflater layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+        layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         keymapView = layoutInflater.inflate(R.layout.keymap, null);
         mainView = keymapView.findViewById(R.id.MainView);
+
+        //Key = KeyLayout.findViewById(R.id.MainView2);
         initFab();
         mParams.gravity = Gravity.CENTER;
         mWindowManager = (WindowManager) context.getSystemService(WINDOW_SERVICE);
@@ -84,10 +87,14 @@ public class EditorUI {
     }
 
     private void addKey() {
+        KeyLayout = layoutInflater.inflate(R.layout.key, mainView);
+    }
+
+    private MovableFloatingActionButton MakeKey(String key) {
         MovableFloatingActionButton KeyA = new MovableFloatingActionButton(context);
-        KeyA.setImageBitmap(KeyA.setText("A"));
+        KeyA.setImageBitmap(KeyA.setText(key));
         KeyA.setScaleType(ImageView.ScaleType.CENTER);
-        mainView.addView(KeyA);
+        return KeyA;
     }
 
 }

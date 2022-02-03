@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<com.xtr.keymapper.MovableFrameLayout android:orientation="vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <ImageView
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:id="@+id/imageView"
+        android:src="@drawable/key" />
+
+    <com.xtr.keymapper.UppercaseEditText
+        android:id="@+id/key"
+        android:layout_width="28dp"
+        android:layout_height="55dp"
+        android:layout_gravity="center"
+        android:autofillHints="Enter Key"
+        android:elevation="16dp"
+        android:ems="10"
+        android:gravity="bottom|start"
+        android:inputType="none"
+        android:maxLength="1"
+        android:textColor="@android:color/white"
+        android:textSize="30dp"
+        tools:ignore="SpUsage" />
+</com.xtr.keymapper.MovableFrameLayout>
