@@ -1,30 +1,35 @@
-package com.xtr.keymapper;
+package com.xtr.keymapper.Layout;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 
-public class MovableFrameLayout extends FrameLayout implements View.OnTouchListener {
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+public class MovableFloatingActionButton extends FloatingActionButton implements View.OnTouchListener {
 
     private final static float CLICK_DRAG_TOLERANCE = 10; // Often, there will be a slight, unintentional, drag when the user taps the FAB, so we need to account for this.
 
     private float downRawX, downRawY;
     private float dX, dY;
 
-    public MovableFrameLayout(Context context) {
+    public MovableFloatingActionButton(Context context) {
         super(context);
         init();
     }
 
-    public MovableFrameLayout(Context context, AttributeSet attrs) {
+    public MovableFloatingActionButton(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public MovableFrameLayout(Context context, AttributeSet attrs, int defStyleAttr) {
+    public MovableFloatingActionButton(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }
@@ -97,4 +102,18 @@ public class MovableFrameLayout extends FrameLayout implements View.OnTouchListe
 
     }
 
+public Bitmap setText(String text) {
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setTextSize(40);
+        paint.setColor(Color.WHITE);
+        paint.setTextAlign(Paint.Align.LEFT);
+        float baseline = -paint.ascent(); // ascent() is negative
+        int width = (int) (paint.measureText(text) + 0.0f); // round
+        int height = (int) (baseline + paint.descent() + 0.0f);
+        Bitmap image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+
+        Canvas canvas = new Canvas(image);
+        canvas.drawText(text, 0, baseline, paint);
+        return image;
+    }
 }

@@ -1,4 +1,4 @@
-package com.xtr.keymapper;
+package com.xtr.keymapper.Layout;
 
 import android.content.Context;
 
@@ -42,11 +42,9 @@ public class UppercaseEditText extends androidx.appcompat.widget.AppCompatEditTe
     }
     public void afterTextChanged(Editable et) {
         String s=et.toString();
-        if(!s.equals(s.toUpperCase()))
-        {
+        if(!s.equals(s.toUpperCase())) {
             s=s.toUpperCase();
-            super.setText(s);
-            super.setSelection(super.length()); //fix reverse texting
+            setText(s);
         }
     }
 

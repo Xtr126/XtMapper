@@ -2,6 +2,7 @@ package com.xtr.keymapper;
 
 import static android.content.Context.WINDOW_SERVICE;
 
+import android.animation.Keyframe;
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.util.Log;
@@ -10,28 +11,41 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
+import com.xtr.keymapper.Layout.MovableFloatingActionButton;
+import com.xtr.keymapper.Layout.MovableFrameLayout;
+
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class EditorUI {
-
     Context context;
     View keymapView;
+
     WindowManager.LayoutParams mParams;
     WindowManager mWindowManager;
+    LayoutInflater layoutInflater;
+    ExpandableFabLayout mainView;
+
     FabOption saveButton;
     FabOption addKey;
     FabOption dPad;
     FabOption crossHair;
-    ExpandableFabLayout mainView;
-    View KeyLayout;
-    MovableFrameLayout Key;
-    LayoutInflater layoutInflater;
+
+    List<EditText> KeyText;
+    List<View> KeyLayout;
+    List<MovableFrameLayout> KeyFrame;
+    private int i;
+
     public EditorUI(Context context) {
         this.context = context;
+        i=0;
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -39,13 +53,16 @@ public class EditorUI {
                 PixelFormat.TRANSLUCENT);
 
         layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        keymapView = layoutInflater.inflate(R.layout.keymap, null);
+        keymapView = layoutInflater.inflate(R.layout.keymap, new ExpandableFabLayout(context), false);
         mainView = keymapView.findViewById(R.id.MainView);
 
-        //Key = KeyLayout.findViewById(R.id.MainView2);
         initFab();
         mParams.gravity = Gravity.CENTER;
         mWindowManager = (WindowManager) context.getSystemService(WINDOW_SERVICE);
+        KeyLayout = new ArrayList<View>();
+        KeyText = new ArrayList<EditText>();
+        KeyFrame = new ArrayList<MovableFrameLayout>();
+
     }
     public void open() {
         try {
@@ -59,6 +76,8 @@ public class EditorUI {
         }
     }
     public void hideView() {
+        KeymapConfig saveConfig = new KeymapConfig(context,KeyText,KeyLayout,KeyFrame);
+        saveConfig.save();
         try {
             ((WindowManager) context.getSystemService(WINDOW_SERVICE)).removeView(keymapView);
             keymapView.invalidate();
@@ -87,9 +106,11 @@ public class EditorUI {
     }
 
     private void addKey() {
-        KeyLayout = layoutInflater.inflate(R.layout.key, mainView);
+        KeyLayout.add(layoutInflater.inflate(R.layout.key, mainView));
+        KeyText.add(KeyLayout.get(i).findViewById(R.id.key));
+        KeyFrame.add(KeyLayout.get(i).findViewById(R.id.movableFrameLayout));
+        i++;
     }
-
     private MovableFloatingActionButton MakeKey(String key) {
         MovableFloatingActionButton KeyA = new MovableFloatingActionButton(context);
         KeyA.setImageBitmap(KeyA.setText(key));

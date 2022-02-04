@@ -1,31 +1,30 @@
-package com.xtr.keymapper;
+package com.xtr.keymapper.Layout;
 
 import android.content.Context;
-
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
+import android.widget.FrameLayout;
 
-public class MovableLinearLayout extends LinearLayout implements View.OnTouchListener {
+public class MovableFrameLayout extends FrameLayout implements View.OnTouchListener {
 
     private final static float CLICK_DRAG_TOLERANCE = 10; // Often, there will be a slight, unintentional, drag when the user taps the FAB, so we need to account for this.
 
     private float downRawX, downRawY;
     private float dX, dY;
 
-    public MovableLinearLayout(Context context) {
+    public MovableFrameLayout(Context context) {
         super(context);
         init();
     }
 
-    public MovableLinearLayout(Context context, AttributeSet attrs) {
+    public MovableFrameLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public MovableLinearLayout(Context context, AttributeSet attrs, int defStyleAttr) {
+    public MovableFrameLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }
@@ -97,6 +96,5 @@ public class MovableLinearLayout extends LinearLayout implements View.OnTouchLis
         }
 
     }
-
 
 }

@@ -18,16 +18,17 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        cmdView = findViewById(R.id.mouseView);
         FloatingActionButton startButton = findViewById(R.id.startPointer);
-        Server server = new Server(this);
-        startButton.setOnClickListener(v -> startService());
         FloatingActionButton startServerButton = findViewById(R.id.startServer);
         FloatingActionButton startServerButton2 = findViewById(R.id.startServerM);
         FloatingActionButton keymap = findViewById(R.id.start_editor);
+
+        startButton.setOnClickListener(v -> startService());
         keymap.setOnClickListener(v -> startEditor());
-        cmdView = findViewById(R.id.mouseView);
 
-
+        Server server = new Server(this);
         startServerButton.setOnClickListener(v -> server.startServer());
         startServerButton2.setOnClickListener(v -> server.setupServer());
         checkOverlayPermission();
@@ -38,7 +39,6 @@ public class MainActivity extends AppCompatActivity {
         if(Settings.canDrawOverlays(this)) {
             // start the service based on the android version
             startForegroundService(new Intent(this, ForegroundService.class));
-
         }
     }
     public void startEditor(){
