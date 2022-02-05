@@ -37,7 +37,6 @@ public class Server {
                 Process sh = Runtime.getRuntime().exec("su");
                 DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
                 outputStream.writeBytes("CLASSPATH=\""+ apk +"\" /system/bin/app_process32 /system/bin "+ packageName + ".Input"+"\n");
-                outputStream.flush();
                 outputStream.close();
                 BufferedReader stdInput = new BufferedReader(new InputStreamReader(sh.getInputStream()));
                 while ((line = stdInput.readLine()) != null) {
@@ -61,12 +60,12 @@ public class Server {
             outputStream.writeBytes("cat > /mnt/xtr.keymapper.sh" + "\n");
             outputStream.writeBytes("#!/system/bin/sh\n");
             outputStream.writeBytes("CLASSPATH=\"" + apk + "\" /system/bin/app_process32 /system/bin " + packageName + ".Input" + "\n");
-            sh.destroy();
+            outputStream.close();
+            sh.waitFor();
             sh = Runtime.getRuntime().exec("su");
             outputStream = new DataOutputStream(sh.getOutputStream());
             outputStream.writeBytes("chmod 777 /mnt/xtr.keymapper.sh\n");
             outputStream.writeBytes("exit\n");
-            outputStream.flush();
             outputStream.close();
             sh.waitFor();
             cmdView.setText("run /mnt/xtr.keymapper.sh");

@@ -4,7 +4,9 @@ import static android.content.Context.WINDOW_SERVICE;
 
 import android.animation.Keyframe;
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.text.InputFilter;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -13,13 +15,21 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.FrameLayout.LayoutParams;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
+import com.nambimobile.widgets.efab.Orientation;
 import com.xtr.keymapper.Layout.MovableFloatingActionButton;
 import com.xtr.keymapper.Layout.MovableFrameLayout;
+import com.xtr.keymapper.Layout.UppercaseEditText;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,9 +48,8 @@ public class EditorUI {
     FabOption dPad;
     FabOption crossHair;
 
-    List<EditText> KeyText;
-    List<View> KeyLayout;
-    List<MovableFrameLayout> KeyFrame;
+    List<MovableFloatingActionButton> KeyX;
+
     private int i;
 
     public EditorUI(Context context) {
@@ -59,9 +68,7 @@ public class EditorUI {
         initFab();
         mParams.gravity = Gravity.CENTER;
         mWindowManager = (WindowManager) context.getSystemService(WINDOW_SERVICE);
-        KeyLayout = new ArrayList<View>();
-        KeyText = new ArrayList<EditText>();
-        KeyFrame = new ArrayList<MovableFrameLayout>();
+        KeyX = new ArrayList<>();
 
     }
     public void open() {
@@ -76,9 +83,15 @@ public class EditorUI {
         }
     }
     public void hideView() {
-        KeymapConfig saveConfig = new KeymapConfig(context,KeyText,KeyLayout,KeyFrame);
-        saveConfig.save();
         try {
+            String s = "start db" + "\n";
+            for (int i = 0; i < KeyX.size(); i++) {
+                s += i + " " + KeyX.get(i).getX() + " " + KeyX.get(i).getY() + "\n";
+            }
+            FileWriter fileWriter = new FileWriter(context.getFilesDir().getPath() + "/keymap_config");
+            PrintWriter printWriter = new PrintWriter(fileWriter);
+            printWriter.print(s);
+            printWriter.close();
             ((WindowManager) context.getSystemService(WINDOW_SERVICE)).removeView(keymapView);
             keymapView.invalidate();
             // remove all views
@@ -89,6 +102,7 @@ public class EditorUI {
             Log.d("Error2", e.toString());
         }
     }
+
     public void initFab() {
         saveButton = mainView.findViewById(R.id.save_button);
         addKey = mainView.findViewById(R.id.add_button);
@@ -106,16 +120,45 @@ public class EditorUI {
     }
 
     private void addKey() {
-        KeyLayout.add(layoutInflater.inflate(R.layout.key, mainView));
-        KeyText.add(KeyLayout.get(i).findViewById(R.id.key));
-        KeyFrame.add(KeyLayout.get(i).findViewById(R.id.movableFrameLayout));
+        KeyX.add(i,MakeKey(String.valueOf(i)));
+        mainView.addView(KeyX.get(i));
+        MakeKeyLayout();
         i++;
     }
     private MovableFloatingActionButton MakeKey(String key) {
         MovableFloatingActionButton KeyA = new MovableFloatingActionButton(context);
-        KeyA.setImageBitmap(KeyA.setText(key));
-        KeyA.setScaleType(ImageView.ScaleType.CENTER);
+        KeyA.setText(key);
         return KeyA;
+    }
+    private void MakeKeyLayout() {
+        MovableFrameLayout KeyFrame = new MovableFrameLayout(context);
+        ImageView imageView = new ImageView(context);
+        imageView.setMaxHeight(50);
+        imageView.setMaxWidth(50);
+        imageView.setImageResource(R.drawable.key);
+
+        UppercaseEditText KeyText = new UppercaseEditText(context);
+        KeyText.setWidth(28);
+        KeyText.setHeight(55);
+        KeyText.setTextColor(Color.WHITE);
+        KeyText.setCursorVisible(false);
+        KeyText.setTextSize(30);
+        KeyText.setFilters(new InputFilter[] { new InputFilter.LengthFilter(1) });
+
+        LayoutParams l1 = new LayoutParams(LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER);
+        l1.height = 50; l1.width = 50;
+        KeyFrame.addView(imageView, l1);
+
+        LayoutParams l2 = new LayoutParams(LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER);
+        l2.height = 55; l2.width = 28;
+        KeyFrame.addView(KeyText, l2);
+        mainView.addView(KeyFrame);
+
+
     }
 
 }

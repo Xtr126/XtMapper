@@ -5,6 +5,9 @@ import android.widget.EditText;
 
 import com.xtr.keymapper.Layout.MovableFrameLayout;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 
 public class KeymapConfig {
@@ -17,12 +20,16 @@ public class KeymapConfig {
                         List<View> KeyLayout,
                         List<MovableFrameLayout> KeyFrame) {
         this.context = context;
-        for (int i = 0; i < KeyText.size(); i++) {
+       /* for (int i = 0; i < KeyText.size(); i++) {
             x = KeyFrame.get(i).getX();
             y = KeyFrame.get(i).getY();
-            s += KeyText.get(i).getText().toString() + " " + x + " " + y + "\n";
-        }
+            s += i + KeyText.get(i).getText().toString() + " " + x + " " + y + "\n";
+        } */
     }
-    public void save() {
+    public void save(String s) throws IOException {
+        FileWriter fileWriter = new FileWriter(context.getFilesDir().getPath() + "/keymap_config");
+        PrintWriter printWriter = new PrintWriter(fileWriter);
+        printWriter.print(s);
+        printWriter.close();
     }
 }

@@ -9,6 +9,7 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -102,7 +103,7 @@ public class MovableFloatingActionButton extends FloatingActionButton implements
 
     }
 
-public Bitmap setText(String text) {
+public void setText(String text) {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setTextSize(40);
         paint.setColor(Color.WHITE);
@@ -114,6 +115,7 @@ public Bitmap setText(String text) {
 
         Canvas canvas = new Canvas(image);
         canvas.drawText(text, 0, baseline, paint);
-        return image;
+        setImageBitmap(image);
+        setScaleType(ScaleType.CENTER_INSIDE);
     }
 }
