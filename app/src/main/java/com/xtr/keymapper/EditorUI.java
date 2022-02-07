@@ -2,34 +2,26 @@ package com.xtr.keymapper;
 
 import static android.content.Context.WINDOW_SERVICE;
 
-import android.animation.Keyframe;
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.PixelFormat;
-import android.text.InputFilter;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.FrameLayout;
-import android.widget.FrameLayout.LayoutParams;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
-import com.nambimobile.widgets.efab.Orientation;
+import com.xtr.keymapper.Layout.XtKeyLayout;
 import com.xtr.keymapper.Layout.MovableFloatingActionButton;
-import com.xtr.keymapper.Layout.MovableFrameLayout;
-import com.xtr.keymapper.Layout.UppercaseEditText;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,7 +40,7 @@ public class EditorUI {
     FabOption dPad;
     FabOption crossHair;
 
-    List<MovableFloatingActionButton> KeyX;
+    List<XtKeyLayout> KeyX;
 
     private int i;
 
@@ -76,22 +68,38 @@ public class EditorUI {
             if (keymapView.getWindowToken() == null) {
                 if (keymapView.getParent() == null) {
                     mWindowManager.addView(mainView, mParams);
+                    loadKeymap();
                 }
             }
         } catch (Exception e) {
             Log.d("Error1", e.toString());
         }
     }
+
+    private void loadKeymap() throws IOException {
+        KeymapConfig keymapConfig =  new KeymapConfig(context);
+        List<String> stream = Files.readAllLines(Paths.get(KeymapConfig.configPath));
+        stream.forEach(keymapConfig::loadConfig);
+        String[] key = keymapConfig.getKey();
+        Float[] x = keymapConfig.getX();
+        Float[] y = keymapConfig.getY();
+
+        for (int n = 0; n < key.length; n++) {
+            if (key[n] != null) {
+                KeyX.add(i, new XtKeyLayout(context));
+                mainView.addView(KeyX.get(i));
+                KeyX.get(i).setKeyText(key[n]);
+                KeyX.get(i).setX(x[n]);
+                KeyX.get(i).setY(y[n]);
+                i++;
+            }
+        }
+    }
+
+
     public void hideView() {
         try {
-            String s = "start db" + "\n";
-            for (int i = 0; i < KeyX.size(); i++) {
-                s += i + " " + KeyX.get(i).getX() + " " + KeyX.get(i).getY() + "\n";
-            }
-            FileWriter fileWriter = new FileWriter(context.getFilesDir().getPath() + "/keymap_config");
-            PrintWriter printWriter = new PrintWriter(fileWriter);
-            printWriter.print(s);
-            printWriter.close();
+            saveKeymap();
             ((WindowManager) context.getSystemService(WINDOW_SERVICE)).removeView(keymapView);
             keymapView.invalidate();
             // remove all views
@@ -102,6 +110,18 @@ public class EditorUI {
             Log.d("Error2", e.toString());
         }
     }
+
+    private void saveKeymap() throws IOException {
+        StringBuilder s = new StringBuilder();
+        for (int i = 0; i < KeyX.size(); i++) {
+            s.append(KeyX.get(i).getData());
+        }
+        FileWriter fileWriter = new FileWriter(KeymapConfig.configPath);
+        PrintWriter printWriter = new PrintWriter(fileWriter);
+        printWriter.print(s);
+        printWriter.close();
+    }
+
 
     public void initFab() {
         saveButton = mainView.findViewById(R.id.save_button);
@@ -120,9 +140,9 @@ public class EditorUI {
     }
 
     private void addKey() {
-        KeyX.add(i,MakeKey(String.valueOf(i)));
+        KeyX.add(i,new XtKeyLayout(context));
         mainView.addView(KeyX.get(i));
-        MakeKeyLayout();
+        KeyX.get(i).setKeyText(String.valueOf(i));
         i++;
     }
     private MovableFloatingActionButton MakeKey(String key) {
@@ -130,35 +150,4 @@ public class EditorUI {
         KeyA.setText(key);
         return KeyA;
     }
-    private void MakeKeyLayout() {
-        MovableFrameLayout KeyFrame = new MovableFrameLayout(context);
-        ImageView imageView = new ImageView(context);
-        imageView.setMaxHeight(50);
-        imageView.setMaxWidth(50);
-        imageView.setImageResource(R.drawable.key);
-
-        UppercaseEditText KeyText = new UppercaseEditText(context);
-        KeyText.setWidth(28);
-        KeyText.setHeight(55);
-        KeyText.setTextColor(Color.WHITE);
-        KeyText.setCursorVisible(false);
-        KeyText.setTextSize(30);
-        KeyText.setFilters(new InputFilter[] { new InputFilter.LengthFilter(1) });
-
-        LayoutParams l1 = new LayoutParams(LayoutParams.WRAP_CONTENT,
-                LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER);
-        l1.height = 50; l1.width = 50;
-        KeyFrame.addView(imageView, l1);
-
-        LayoutParams l2 = new LayoutParams(LayoutParams.WRAP_CONTENT,
-                LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER);
-        l2.height = 55; l2.width = 28;
-        KeyFrame.addView(KeyText, l2);
-        mainView.addView(KeyFrame);
-
-
-    }
-
 }

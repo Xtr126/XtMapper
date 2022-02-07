@@ -1,35 +1,40 @@
 package com.xtr.keymapper;
 import android.content.Context;
-import android.view.View;
-import android.widget.EditText;
-
-import com.xtr.keymapper.Layout.MovableFrameLayout;
-
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.List;
 
 public class KeymapConfig {
     Context context;
-    String s;
-    float x; float y;
-    //EditText[] KeyText;
-    //MovableFrameLayout[] KeyFrame;
-    public KeymapConfig(Context context, List<EditText> KeyText,
-                        List<View> KeyLayout,
-                        List<MovableFrameLayout> KeyFrame) {
+    public static final String configPath = "//data/data/com.xtr.keymapper/files/keymap_config";
+    String[] key; Float[] x; Float[] y;
+
+    public KeymapConfig(Context context) {
         this.context = context;
-       /* for (int i = 0; i < KeyText.size(); i++) {
-            x = KeyFrame.get(i).getX();
-            y = KeyFrame.get(i).getY();
-            s += i + KeyText.get(i).getText().toString() + " " + x + " " + y + "\n";
-        } */
+        key = new String[36];
+        x = new Float[36];
+        y = new Float[36];
     }
-    public void save(String s) throws IOException {
-        FileWriter fileWriter = new FileWriter(context.getFilesDir().getPath() + "/keymap_config");
-        PrintWriter printWriter = new PrintWriter(fileWriter);
-        printWriter.print(s);
-        printWriter.close();
+
+    public String[] getKey() {
+        return key;
     }
+
+    public Float[] getX() {
+        return x;
+    }
+
+    public Float[] getY() {
+        return y;
+    }
+
+    public void loadConfig(String s) {
+        String alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String[] xy = s.split("\\s+");
+
+        String keyX = xy[0].substring(4);
+        int i = alphabet.indexOf(keyX);
+
+        key[i] = keyX;
+        x[i] = Float.valueOf(xy[1]);
+        y[i] = Float.valueOf(xy[2]);
+    }
+
 }
