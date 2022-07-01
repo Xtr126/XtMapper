@@ -15,95 +15,25 @@
 #include <assert.h>
 #include <inttypes.h>
 
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#define PORT 6345
+
+
 static const char* kTAG = "mouse_read";
 
 typedef struct mouse_context {
 	JavaVM  *javaVM;
 	jclass   jniHelperClz;
 	jobject  jniHelperObj;
-	jclass   mainActivityClz;
-	jobject  mainActivityObj;
+	jclass   InputClz;
+	jobject  InputObj;
 	pthread_mutex_t  lock;
 	int      done;
 } mouseContext;
 mouseContext g_ctx;
 
-JNIEXPORT jstring JNICALL
-Java_com_xtr_keymapper_MainActivity_stringFromJNI(JNIEnv *env, jobject thiz) {
-#if defined(__arm__)
-	#if defined(__ARM_ARCH_7A__)
-    #if defined(__ARM_NEON__)
-      #if defined(__ARM_PCS_VFP)
-        #define ABI "armeabi-v7a/NEON (hard-float)"
-      #else
-        #define ABI "armeabi-v7a/NEON"
-      #endif
-    #else
-      #if defined(__ARM_PCS_VFP)
-        #define ABI "armeabi-v7a (hard-float)"
-      #else
-        #define ABI "armeabi-v7a"
-      #endif
-    #endif
-  #else
-   #define ABI "armeabi"
-  #endif
-#elif defined(__i386__)
-#define ABI "x86"
-#elif defined(__x86_64__)
-	#define ABI "x86_64"
-#elif defined(__mips64)  /* mips64el-* toolchain defines __mips__ too */
-#define ABI "mips64"
-#elif defined(__mips__)
-#define ABI "mips"
-#elif defined(__aarch64__)
-#define ABI "arm64-v8a"
-#else
-#define ABI "unknown"
-#endif
 
-	return (*env)->NewStringUTF(env, "Compiled with ABI " ABI ".");
-}
-void queryRuntimeInfo(JNIEnv *env, jobject instance) {
-    // Find out which OS we are running on. It does not matter for this app
-    // just to demo how to call static functions.
-    // Our java JniHelper class id and instance are initialized when this
-    // shared lib got loaded, we just directly use them
-    //    static function does not need instance, so we just need to feed
-    //    class and method id to JNI
-    jmethodID versionFunc = (*env)->GetStaticMethodID(
-            env, g_ctx.jniHelperClz,
-            "getBuildVersion", "()Ljava/lang/String;");
-
-    if (!versionFunc) {
-
-        return;
-    }
-    jstring buildVersion = (*env)->CallStaticObjectMethod(env,
-                                                          g_ctx.jniHelperClz, versionFunc);
-    const char *version = (*env)->GetStringUTFChars(env, buildVersion, NULL);
-    if (!version) {
-
-        return;
-    }
-
-    (*env)->ReleaseStringUTFChars(env, buildVersion, version);
-
-    // we are called from JNI_OnLoad, so got to release LocalRef to avoid leaking
-    (*env)->DeleteLocalRef(env, buildVersion);
-
-    // Query available memory size from a non-static public function
-    // we need use an instance of JniHelper class to call JNI
-    jmethodID memFunc = (*env)->GetMethodID(env, g_ctx.jniHelperClz,
-                                            "getRuntimeMemorySize", "()J");
-    if (!memFunc) {
-
-        return;
-    }
-    jlong result = (*env)->CallLongMethod(env, instance, memFunc);
-
-    (void)result;  // silence the compiler warning
-}
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
     memset(&g_ctx, 0, sizeof(g_ctx));
@@ -122,10 +52,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     jobject    handler = (*env)->NewObject(env, g_ctx.jniHelperClz,
                                            jniHelperCtor);
     g_ctx.jniHelperObj = (*env)->NewGlobalRef(env, handler);
-    queryRuntimeInfo(env, g_ctx.jniHelperObj);
 
     g_ctx.done = 0;
-    g_ctx.mainActivityObj = NULL;
+    g_ctx.InputObj = NULL;
     return  JNI_VERSION_1_6;
 }
 void   sendJavaMsg(JNIEnv *env, jobject instance,
@@ -152,8 +81,8 @@ void*  UpdateMouse(void* context) {
     sendJavaMsg(env, pctx->jniHelperObj, statusId,
                 "MouseThread status: initializing...");
 
-    // get mainActivity updateTimer function
-    jmethodID timerId = (*env)->GetMethodID(env, pctx->mainActivityClz,
+    // get Input updateTimer function
+    jmethodID timerId = (*env)->GetMethodID(env, pctx->InputClz,
                                             "updateMouse", "()V");
 
 
@@ -169,10 +98,10 @@ void*  UpdateMouse(void* context) {
         if (done) {
             break;
         }
-        jmethodID updateX = (*env)->GetMethodID(env, pctx->mainActivityClz,
+       /* jmethodID updateX = (*env)->GetMethodID(env, pctx->InputClz,
                                                  "updateMouseX", "()V");
-        jmethodID updateY = (*env)->GetMethodID(env, pctx->mainActivityClz,
-                                                "updateMouseX", "()V");
+        jmethodID updateY = (*env)->GetMethodID(env, pctx->InputClz,
+                                                "updateMouseX", "()V"); */
         int fd;
         const char *dev = "/dev/input/event2";
         struct input_event ie;
@@ -181,16 +110,52 @@ void*  UpdateMouse(void* context) {
             perror("opening device");
             exit(EXIT_FAILURE);
         }
-        ioctl(fd, EVIOCGRAB, (void *)1);
+//        ioctl(fd, EVIOCGRAB, (void *)1);
+
+        int sock = 0, client_fd;
+        struct sockaddr_in serv_addr;
+
+        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+            printf("\n Socket creation error \n");
+        }
+
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(PORT);
+
+        // Convert IPv4 and IPv6 addresses from text to binary
+        // form
+        if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)
+            <= 0) {
+            printf(
+                    "\nInvalid address/ Address not supported \n");
+        }
+
+        if ((client_fd
+                     = connect(sock, (struct sockaddr*)&serv_addr,
+                               sizeof(serv_addr)))
+            < 0) {
+            printf("\nConnection Failed \n");
+        }
+
         while (read(fd, &ie, sizeof(struct input_event))) {
+            char str[16];
             if (ie.code == REL_X)
-                (*env)->CallVoidMethod(env, pctx->mainActivityObj, updateX, (jint) ie.value);
+                printf("%d %s\n", ie.value, "REL_X");
+               // (*env)->CallVoidMethod(env, pctx->InputObj, updateX, (jint) ie.value);
+            sprintf(str, "REL_X %d \n", ie.value);
+            send(sock, str, strlen(str), 0);
 
             if (ie.code == REL_Y)
-                (*env)->CallVoidMethod(env, pctx->mainActivityObj, updateY, (jint) ie.value);
+                printf("%d %s\n", ie.value, "REL_Y");
+            //  (*env)->CallVoidMethod(env, pctx->InputObj, updateY, (jint) ie.value);
+            sprintf(str, "REL_Y %d \n", ie.value);
+            send(sock, str, strlen(str), 0);
         }
         close(fd);
-        (*env)->CallVoidMethod(env, pctx->mainActivityObj, timerId);
+        // closing the connected socket
+        close(client_fd);
+        return 0;
+       // (*env)->CallVoidMethod(env, pctx->InputObj, timerId);
 
 
     }
@@ -203,7 +168,7 @@ void*  UpdateMouse(void* context) {
 
 
     JNIEXPORT void JNICALL
-    Java_com_xtr_keymapper_MainActivity_startMouse(JNIEnv *env, jobject instance) {
+    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance) {
         pthread_t threadInfo_;
         pthread_attr_t threadAttr_;
 
@@ -214,10 +179,10 @@ void*  UpdateMouse(void* context) {
 
         jclass clz = (*env)->GetObjectClass(env, instance);
         g_ctx.
-                mainActivityClz = (*env)->NewGlobalRef(env, clz);
+                InputClz = (*env)->NewGlobalRef(env, clz);
         g_ctx.
-                mainActivityObj = (*env)->NewGlobalRef(env, instance);
-        system("su -c 'chmod 777 /dev/input/event2'");
+                InputObj = (*env)->NewGlobalRef(env, instance);
+        //system("chown -hR $(whoami) -R /dev/input");
         int result = pthread_create(&threadInfo_, &threadAttr_, UpdateMouse, &g_ctx);
         assert(result == 0);
 

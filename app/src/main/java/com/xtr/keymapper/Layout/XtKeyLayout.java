@@ -31,6 +31,9 @@ public class XtKeyLayout extends MovableFrameLayout {
 
     private void init() {
         Context context = getContext();
+        setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER));
         key = new ImageView(context);
         key.setMaxHeight(50);
         key.setMaxWidth(50);
@@ -41,7 +44,7 @@ public class XtKeyLayout extends MovableFrameLayout {
         KeyText.setHeight(55);
         KeyText.setTextColor(Color.WHITE);
         KeyText.setCursorVisible(false);
-        KeyText.setTextSize(30);
+        KeyText.setTextSize(28);
         KeyText.setFilters(new InputFilter[] { new InputFilter.LengthFilter(1) });
 
         LayoutParams l1 = new LayoutParams(LayoutParams.WRAP_CONTENT,
@@ -53,7 +56,7 @@ public class XtKeyLayout extends MovableFrameLayout {
         LayoutParams l2 = new LayoutParams(LayoutParams.WRAP_CONTENT,
                 LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER);
-        l2.height = 55; l2.width = 28;
+        l2.height = 55; l2.width = 30;
         addView(KeyText, l2);
     }
     public String getData(){

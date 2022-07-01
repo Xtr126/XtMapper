@@ -26,8 +26,7 @@ public class ForegroundService extends Service {
             startMyOwnForeground();
         // create an instance of Window class
         // and display the content on screen
-        TouchPointer window=new TouchPointer(this);
-        window.open();
+
     }
 
     @Override

@@ -3,42 +3,59 @@ package com.xtr.keymapper;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.widget.Button;
+
 import android.widget.TextView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.io.IOException;
+
 
 public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
-    public TextView cmdView;
+
+    TouchPointer pointerOverlay;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        cmdView = findViewById(R.id.mouseView);
-        FloatingActionButton startButton = findViewById(R.id.startPointer);
+        FloatingActionButton startOverlayButton = findViewById(R.id.startPointer);
         FloatingActionButton startServerButton = findViewById(R.id.startServer);
-        FloatingActionButton startServerButton2 = findViewById(R.id.startServerM);
+        FloatingActionButton startInTerminal = findViewById(R.id.startServerM);
         FloatingActionButton keymap = findViewById(R.id.start_editor);
-
-        startButton.setOnClickListener(v -> startService());
-        keymap.setOnClickListener(v -> startEditor());
+        FloatingActionButton configureButton = findViewById(R.id.config_pointer);
 
         Server server = new Server(this);
-        startServerButton.setOnClickListener(v -> server.startServer());
-        startServerButton2.setOnClickListener(v -> server.setupServer());
-        checkOverlayPermission();
+        new Thread(server::startSocketTest).start();
+        startServerButton.setOnClickListener(v -> new Thread(server::startServer).start());
+        startInTerminal.setOnClickListener(v -> server.setupServer());
+
+        startOverlayButton.setOnClickListener(v -> startService(startOverlayButton));
+        keymap.setOnClickListener(v -> startEditor());
+        configureButton.setOnClickListener(v -> startActivity(new Intent(this, InputDeviceSelector.class)));
+        
     }
+    
+ 
+    public void startService(FloatingActionButton startButton){
+        checkOverlayPermission();
 
+        startButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.teal_200)));
+        startButton.setImageTintList(ColorStateList.valueOf(getColor(R.color.colorAccent)));
 
-    public void startService(){
         if(Settings.canDrawOverlays(this)) {
-            // start the service based on the android version
-            startForegroundService(new Intent(this, ForegroundService.class));
+             pointerOverlay = new TouchPointer(this);
+             pointerOverlay.open();
+            startButton.setOnClickListener(v -> {
+                startButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.grey)));
+                startButton.setImageTintList(ColorStateList.valueOf(getColor(R.color.white2)));
+                pointerOverlay.hideCursor();
+                startButton.setOnClickListener(view -> startService(startButton));
+            });
         }
     }
     public void startEditor(){
@@ -54,9 +71,11 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(myIntent);
             }
     }
+    
     @Override
     protected void onResume() {
         super.onResume();
     }
+
 
 }

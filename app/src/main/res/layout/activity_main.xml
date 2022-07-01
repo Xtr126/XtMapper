@@ -7,23 +7,55 @@
     android:layout_height="match_parent"
     android:background="@android:color/background_dark"
     tools:context=".MainActivity"
-    tools:ignore="ContentDescription,SpUsage" >
+    tools:ignore="ContentDescription,SpUsage">
 
     <TextView
-        android:id="@+id/mouseView"
-        android:layout_width="391dp"
-        android:layout_height="132dp"
+        android:id="@+id/cmdview"
+        android:layout_width="250dp"
+        android:layout_height="341dp"
         android:layout_marginTop="16dp"
         android:isScrollContainer="true"
-        android:scrollHorizontally="true"
         android:text="@string/run_script_info"
+        android:textAlignment="center"
         android:textAppearance="@android:style/TextAppearance.Material.Large"
         android:textColor="@color/white"
         android:textSize="16sp"
-        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintHorizontal_bias="0.99"
         app:layout_constraintLeft_toLeftOf="@+id/activity_mouse_jnicallback"
         app:layout_constraintRight_toRightOf="@+id/activity_mouse_jnicallback"
         app:layout_constraintTop_toTopOf="@+id/activity_mouse_jnicallback" />
+
+    <TextView
+        android:id="@+id/cmdview2"
+        android:layout_width="120dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="16dp"
+        android:gravity="bottom"
+        android:isScrollContainer="true"
+        android:maxLines="8"
+        android:scrollbars="vertical"
+        android:textAppearance="@android:style/TextAppearance.Material.Large"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        app:layout_constraintHorizontal_bias="0.134"
+        app:layout_constraintLeft_toLeftOf="@+id/activity_mouse_jnicallback"
+        app:layout_constraintRight_toRightOf="@+id/activity_mouse_jnicallback"
+        app:layout_constraintTop_toTopOf="@+id/activity_mouse_jnicallback" />
+
+    <TextView
+        android:id="@+id/cmdview3"
+        android:layout_width="120dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="16dp"
+        android:isScrollContainer="true"
+        android:textAlignment="center"
+        android:textAppearance="@android:style/TextAppearance.Material.Large"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        app:layout_constraintHorizontal_bias="0.134"
+        app:layout_constraintLeft_toLeftOf="@+id/activity_mouse_jnicallback"
+        app:layout_constraintRight_toRightOf="@+id/activity_mouse_jnicallback"
+        app:layout_constraintTop_toBottomOf="@+id/cmdview2" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constrained"
@@ -60,14 +92,16 @@
             app:layout_constraintLeft_toLeftOf="parent">
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/stop_pointer"
+                android:id="@+id/config_pointer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_create_white_24dp"
+                android:src="@drawable/settings"
+                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
                 app:maxImageSize="40dp"
+                app:tint="@color/white2"
                 tools:ignore="ContentDescription" />
 
             <TextView
@@ -75,7 +109,8 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|center"
                 android:elevation="16dp"
-                android:text="@string/stop_pointer_overlay"
+                android:text="@string/configure"
+                android:textAlignment="center"
                 android:textAppearance="?android:attr/textAppearanceMedium"
                 android:textColor="@android:color/white"
                 android:textSize="14dp" />
@@ -98,9 +133,11 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_create_white_24dp"
+                android:src="@drawable/start"
+                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
-                app:maxImageSize="40dp" />
+                app:maxImageSize="40dp"
+                app:tint="@color/white2" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -138,9 +175,11 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_create_white_24dp"
+                android:src="@drawable/terminal"
+                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
-                app:maxImageSize="40dp" />
+                app:maxImageSize="40dp"
+                app:tint="@color/white2" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -171,14 +210,16 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_create_white_24dp"
+                android:src="@drawable/touch_p"
+                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
-                app:maxImageSize="40dp" />
+                app:maxImageSize="40dp"
+                app:tint="@color/white2" />
 
             <TextView
-                android:layout_width="140dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="bottom"
+                android:layout_gravity="bottom|center"
                 android:elevation="16dp"
                 android:text="@string/start_touch_pointer"
                 android:textAppearance="?android:attr/textAppearanceMedium"
@@ -201,9 +242,11 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_create_white_24dp"
+                android:src="@drawable/about"
+                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
-                app:maxImageSize="40dp" />
+                app:maxImageSize="40dp"
+                app:tint="@color/white2" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -232,8 +275,10 @@
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_create_white_24dp"
+                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
-                app:maxImageSize="40dp" />
+                app:maxImageSize="35dp"
+                app:tint="@color/white2" />
 
             <TextView
                 android:layout_width="wrap_content"

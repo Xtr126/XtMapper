@@ -3,6 +3,7 @@ package com.xtr.keymapper;
 import java.math.BigInteger;
 
 public class Utils {
+    public static String alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     public static Number hexToDec(String hex)  {
         if (hex == null) {
             throw new NullPointerException("hexToDec: hex String is null.");
@@ -39,4 +40,8 @@ public class Utils {
         if (hex.length() <= 16) { return temp.longValue(); }
         return temp;
     }
+    public static int obtainIndex(String s) {
+        return alphabet.indexOf(s.substring(4));
+    }
+
 }

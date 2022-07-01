@@ -18,6 +18,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
 
 public class TouchPointer {
 
@@ -30,9 +33,10 @@ public class TouchPointer {
     int x2 = 100;
     int y1 = 100;
     int y2 = 100;
+    String[] key; Float[] x; Float[] y;
+
     public TouchPointer(Context context){
         this.context=context;
-
         // set the layout parameters of the cursor
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
@@ -53,6 +57,7 @@ public void open() {
         if(cursorView.getWindowToken()==null) {
             if(cursorView.getParent()==null) {
                 mWindowManager.addView(cursorView, mParams);
+                loadKeymap();
             }
         }
     } catch (Exception e) {
@@ -67,148 +72,46 @@ public void open() {
             DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
             BufferedReader stdInput = new BufferedReader(new InputStreamReader(sh.getInputStream()));
 
-            outputStream.writeBytes("getevent -ql"+"\n");
-            outputStream.flush();
-
+            outputStream.writeBytes("//data/data/com.termux/files/usr/bin/stdbuf -oL getevent -ql"+"\n");
             outputStream.writeBytes("exit\n");
+
             outputStream.flush();
             String line;
             boolean pointer_down = false;
             while ((line = stdInput.readLine()) != null) {
                 String[] xy = line.split("\\s+");
+                // keyboard input be like: /dev/input/event3: EV_KEY KEY_X DOWN
+                // mouse input be like: /dev/input/event2: EV_REL REL_X ffffffff
                 switch (xy[2]) {
                     case "REL_X": {
                         x2 += (int) Utils.hexToDec(xy[3]);
-                        if (pointer_down)
-                            Xout.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
+                        /*if (pointer_down)
+                            Xout.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");*/
                         x1 = x2;
                         break;
                     }
                     case "REL_Y": {
                         y2 += (int) Utils.hexToDec(xy[3]);
-                        if (pointer_down)
-                            Xout.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
+                        /*if (pointer_down)
+                            Xout.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");*/
                         y1 = y2;
                         break;
                     }
-                    /*case "BTN_MOUSE": {
-                        pointer_down = xy[3].equals("DOWN");
-                        Xout.writeBytes(x1 + " " + y1 + " " + xy[3] + "\n");
+                    case "BTN_MOUSE": {
+                       //pointer_down = xy[3].equals("DOWN");
+                       //Xout.writeBytes(x1 + " " + y1 + " " + xy[3] + "\n");
                         break;
-                    }*/
-                    case "KEY_0": {
-
                     }
-                    case "KEY_1": {
 
-                    }
-                    case "KEY_2": {
-
-                    }
-                    case "KEY_3": {
-
-                    }
-                    case "KEY_4": {
-
-                    }
-                    case "KEY_5": {
-
-                    }
-                    case "KEY_6": {
-
-                    }
-                    case "KEY_7": {
-
-                    }
-                    case "KEY_8": {
-
-                    }
-                    case "KEY_9": {
-
-                    }
-                    case "KEY_A": {
-
-                    }
-                    case "KEY_B": {
-
-                    }
-                    case "KEY_C": {
-
-                    }
-                    case "KEY_D": {
-
-                    }
-                    case "KEY_E": {
-
-                    }
-                    case "KEY_F": {
-
-                    }
-                    case "KEY_G": {
-
-                    }
-                    case "KEY_H": {
-
-                    }
-                    case "KEY_I": {
-
-                    }
-                    case "KEY_J": {
-
-                    }
-                    case "KEY_K": {
-
-                    }
-                    case "KEY_L": {
-
-                    }
-                    case "KEY_M": {
-
-                    }
-                    case "KEY_N": {
-
-                    }
-                    case "KEY_O": {
-
-                    }
-                    case "KEY_P": {
-
-                    }
-                    case "KEY_Q": {
-
-                    }
-                    case "KEY_R": {
-
-                    }
-                    case "KEY_S": {
-
-                    }
-                    case "KEY_T": {
-
-                    }
-                    case "KEY_U": {
-
-                    }
-                    case "KEY_V": {
-
-                    }
-                    case "KEY_W": {
-
-                    }
-                    case "KEY_X": {
-
-                    }
-                    case "KEY_Y": {
-
-                    }
-                    case "KEY_Z": {
-
-                    }
                 }
-               /*
-                 cursorView.setX(x1);
+                int i = Utils.obtainIndex(xy[2]);
+               /* if (i >= 0 && i <= 35) {
+                    if (x[i] != null) {
+                        Xout.writeBytes(x[i] + " " + y[i] + " " + xy[3] + "\n");
+                    }
+                }  */
+                cursorView.setX(x1);
                 cursorView.setY(y1);
-                */
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -227,5 +130,14 @@ public void open() {
         } catch (Exception e) {
             Log.d("Error2",e.toString());
         }
+    }
+
+    public void loadKeymap() throws IOException {
+        KeymapConfig keymapConfig =  new KeymapConfig(context);
+        List<String> stream = Files.readAllLines(Paths.get(KeymapConfig.configPath));
+        stream.forEach(keymapConfig::loadConfig);
+        key = keymapConfig.getKey();
+        x = keymapConfig.getX();
+        y = keymapConfig.getY();
     }
 }

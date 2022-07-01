@@ -3,7 +3,7 @@ import android.content.Context;
 
 public class KeymapConfig {
     Context context;
-    public static final String configPath = "//data/data/com.xtr.keymapper/files/keymap_config";
+    public static final String configPath = "//data/data/com.xtr.keymapper/keymap_config";
     String[] key; Float[] x; Float[] y;
 
     public KeymapConfig(Context context) {
@@ -26,13 +26,10 @@ public class KeymapConfig {
     }
 
     public void loadConfig(String s) {
-        String alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         String[] xy = s.split("\\s+");
+        int i = Utils.obtainIndex(xy[0]);
 
-        String keyX = xy[0].substring(4);
-        int i = alphabet.indexOf(keyX);
-
-        key[i] = keyX;
+        key[i] = xy[0].substring(4);
         x[i] = Float.valueOf(xy[1]);
         y[i] = Float.valueOf(xy[2]);
     }
