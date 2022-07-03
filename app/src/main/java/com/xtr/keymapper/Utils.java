@@ -6,6 +6,10 @@ import android.content.pm.PackageManager;
 import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigInteger;
 
 public class Utils {
@@ -16,7 +20,15 @@ public class Utils {
         return alphabet.indexOf(s.substring(4));
     }
 
+    public static BufferedReader geteventStream(Context context) throws IOException {
+        Process sh = Runtime.getRuntime().exec("su");
+        DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
+        outputStream.writeBytes(context.getApplicationInfo().nativeLibraryDir + "/libgetevent.so -ql"+"\n");
+        outputStream.writeBytes("exit\n");
 
+        outputStream.flush();
+        return new BufferedReader(new InputStreamReader(sh.getInputStream()));
+    }
 
     public int obtainAccent(Context context){
         TypedValue typedValue = new TypedValue();

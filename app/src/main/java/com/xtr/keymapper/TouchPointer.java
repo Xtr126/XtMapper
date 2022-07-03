@@ -9,6 +9,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 
 
 import static android.content.Context.WINDOW_SERVICE;
@@ -18,6 +20,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -63,22 +66,17 @@ public void open() {
     } catch (Exception e) {
         Log.d("Error1",e.toString());
     }
-
+    TextView cmdView = ((MainActivity)context).findViewById(R.id.cmdview);
     new Thread(() -> {
         try{
             Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
             DataOutputStream Xout = new DataOutputStream(socket.getOutputStream());
-            Process sh = Runtime.getRuntime().exec("su");
-            DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-            BufferedReader stdInput = new BufferedReader(new InputStreamReader(sh.getInputStream()));
 
-            outputStream.writeBytes(context.getApplicationInfo().nativeLibraryDir + "/libgetevent.so -ql"+"\n");
-            outputStream.writeBytes("exit\n");
-
-            outputStream.flush();
             String line;
             boolean pointer_down = false;
-            while ((line = stdInput.readLine()) != null) {
+
+            BufferedReader stdInput = Utils.geteventStream(context);
+            while ((line = stdInput.readLine()) != null) { //read events
                 String[] xy = line.split("\\s+");
                 // keyboard input be like: /dev/input/event3: EV_KEY KEY_X DOWN
                 // mouse input be like: /dev/input/event2: EV_REL REL_X ffffffff
@@ -104,15 +102,22 @@ public void open() {
                     }
 
                 }
+
+                //for keyboard input
                 int i = Utils.obtainIndex(xy[2]);
                 if (i >= 0 && i <= 35) {
-                    if (x[i] != null) {
-                        Xout.writeBytes(x[i] + " " + y[i] + " " + xy[3] + "\n");
+                    if (x != null) {
+                        if (x[i] != null) {
+                            Xout.writeBytes(x[i] + " " + y[i] + " " + xy[3] + "\n");
+                        }
                     }
                 }
-                cursorView.setX(x1);
+                cursorView.setX(x1); //move pointer
                 cursorView.setY(y1);
             }
+        } catch ( SocketException e ) {
+            cmdView.append("Unable to start overlay: server not started\n");
+            hideCursor();
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
         FloatingActionButton configureButton = findViewById(R.id.config_pointer);
 
         Server server = new Server(this);
-        //new Thread(server::startSocketTest).start();
+        new Thread(server::startSocketTest).start(); //start app side listener socket
 
         startServerButton.setOnClickListener(v -> new Thread(server::startServer).start());
         startInTerminal.setOnClickListener(v -> server.setupServer());
