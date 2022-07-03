@@ -183,6 +183,7 @@ void*  UpdateMouse(void* context) {
         g_ctx.
                 InputObj = (*env)->NewGlobalRef(env, instance);
         //system("chown -hR $(whoami) -R /dev/input");
+        setlinebuf(stdout);
         int result = pthread_create(&threadInfo_, &threadAttr_, UpdateMouse, &g_ctx);
         assert(result == 0);
 

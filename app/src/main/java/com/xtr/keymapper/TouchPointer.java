@@ -72,7 +72,7 @@ public void open() {
             DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
             BufferedReader stdInput = new BufferedReader(new InputStreamReader(sh.getInputStream()));
 
-            outputStream.writeBytes("//data/data/com.termux/files/usr/bin/stdbuf -oL getevent -ql"+"\n");
+            outputStream.writeBytes(context.getApplicationInfo().nativeLibraryDir + "/libgetevent.so -ql"+"\n");
             outputStream.writeBytes("exit\n");
 
             outputStream.flush();
@@ -85,31 +85,31 @@ public void open() {
                 switch (xy[2]) {
                     case "REL_X": {
                         x2 += (int) Utils.hexToDec(xy[3]);
-                        /*if (pointer_down)
-                            Xout.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");*/
+                        if (pointer_down)
+                            Xout.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
                         x1 = x2;
                         break;
                     }
                     case "REL_Y": {
                         y2 += (int) Utils.hexToDec(xy[3]);
-                        /*if (pointer_down)
-                            Xout.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");*/
+                        if (pointer_down)
+                            Xout.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
                         y1 = y2;
                         break;
                     }
                     case "BTN_MOUSE": {
-                       //pointer_down = xy[3].equals("DOWN");
-                       //Xout.writeBytes(x1 + " " + y1 + " " + xy[3] + "\n");
+                        pointer_down = xy[3].equals("DOWN");
+                        Xout.writeBytes(x1 + " " + y1 + " " + xy[3] + "\n");
                         break;
                     }
 
                 }
                 int i = Utils.obtainIndex(xy[2]);
-               /* if (i >= 0 && i <= 35) {
+                if (i >= 0 && i <= 35) {
                     if (x[i] != null) {
                         Xout.writeBytes(x[i] + " " + y[i] + " " + xy[3] + "\n");
                     }
-                }  */
+                }
                 cursorView.setX(x1);
                 cursorView.setY(y1);
             }

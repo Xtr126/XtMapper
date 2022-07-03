@@ -90,9 +90,9 @@ public class Server {
         }
         in.close(); out.close();
         clientSocket.close(); serverSocket.close();
+        ((MainActivity)context).finish(); System.exit(0);
     } catch ( IOException e) {
         e.printStackTrace();
     }
-        ((MainActivity)context).finish(); System.exit(0);
     }
 }

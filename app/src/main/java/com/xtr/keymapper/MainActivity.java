@@ -16,7 +16,6 @@ import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
-
     TouchPointer pointerOverlay;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,20 +29,20 @@ public class MainActivity extends AppCompatActivity {
         FloatingActionButton configureButton = findViewById(R.id.config_pointer);
 
         Server server = new Server(this);
-        new Thread(server::startSocketTest).start();
+        //new Thread(server::startSocketTest).start();
+
         startServerButton.setOnClickListener(v -> new Thread(server::startServer).start());
         startInTerminal.setOnClickListener(v -> server.setupServer());
 
         startOverlayButton.setOnClickListener(v -> startService(startOverlayButton));
         keymap.setOnClickListener(v -> startEditor());
         configureButton.setOnClickListener(v -> startActivity(new Intent(this, InputDeviceSelector.class)));
-        
+
     }
     
  
     public void startService(FloatingActionButton startButton){
         checkOverlayPermission();
-
         startButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.teal_200)));
         startButton.setImageTintList(ColorStateList.valueOf(getColor(R.color.colorAccent)));
 
@@ -71,7 +70,10 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(myIntent);
             }
     }
-    
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();

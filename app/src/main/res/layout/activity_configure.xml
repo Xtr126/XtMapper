@@ -1,9 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/activity_input"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".InputDeviceSelector">
+    android:background="@color/white"
+    tools:context=".InputDeviceSelector"
+    tools:ignore="ContentDescription,SpUsage">
+
+    <TextView
+        android:layout_width="336dp"
+        android:layout_height="54dp"
+        android:layout_marginTop="52dp"
+        android:text="Select Input device:"
+        android:textAlignment="viewStart"
+        android:textSize="20sp"
+        app:layout_constraintHorizontal_bias="0.493"
+        app:layout_constraintLeft_toLeftOf="@+id/activity_input"
+        app:layout_constraintRight_toRightOf="@+id/activity_input"
+        app:layout_constraintTop_toTopOf="@+id/activity_input" />
+
+    <Spinner
+        android:id="@+id/spinner"
+        android:layout_width="fill_parent"
+        android:layout_height="100dp"
+        android:layout_marginTop="128dp"
+        android:prompt="@string/configure"
+        android:textSize="20sp"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintLeft_toLeftOf="@+id/activity_input"
+        app:layout_constraintRight_toRightOf="@+id/activity_input"
+        app:layout_constraintTop_toTopOf="@+id/activity_input" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
