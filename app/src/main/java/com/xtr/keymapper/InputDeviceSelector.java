@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
@@ -16,13 +17,18 @@ import java.util.List;
 
 public class InputDeviceSelector extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
 
-    List<String> devices;
+    private List<String> devices;
+    private Spinner spinner;
+    private ArrayAdapter<String> dataAdapter;
+    private TextView textView;
+    int i = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_configure);
-        Spinner spinner = findViewById(R.id.spinner);
+        spinner = findViewById(R.id.spinner);
+        textView = findViewById(R.id.textView);
 
         // Spinner click listener
         spinner.setOnItemSelectedListener(this);
@@ -31,7 +37,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         devices = new ArrayList<>();
         // Creating adapter for spinner
         new Thread(this::getDevices).start();
-        ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, devices);
+        dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, devices);
 
         // Drop down layout style - list view with radio button
         dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -40,15 +46,32 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         spinner.setAdapter(dataAdapter);
     }
 
-    public void getDevices(){
+    private void updateView(String s){
+        i++;
+        if(i == 8) {
+            i = 0;
+            runOnUiThread(() -> textView.setText(s));
+        } else {
+            runOnUiThread(() -> textView.append("\n" + s));
+        }
+    }
+
+    private void getDevices(){
         try {
             BufferedReader getevent = Utils.geteventStream(this);
-            String line;
-            while ((line = getevent.readLine()) != null) { //read events
-                String[] xy = line.split(":"); //split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
-                if (xy[1].equals("EV_REL"))
-                    devices.add(xy[0]);
-                
+            String stdout;
+            while ((stdout = getevent.readLine()) != null) { //read events
+                String[] xy = stdout.split("\\s+");
+                //split a string like "/dev/input/event2 EV_REL REL_X ffffffff"
+                if(!xy[2].equals("SYN_REPORT"))
+                updateView(stdout);
+
+                if(!devices.contains(xy[0]))
+                    if (xy[1].equals("EV_REL")) {
+                        devices.add(xy[0]);
+                        dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, devices);
+                        runOnUiThread(() -> spinner.setAdapter(dataAdapter));
+                   }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -62,7 +85,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         String item = parent.getItemAtPosition(position).toString();
 
         // Showing selected spinner item
-        Toast.makeText(parent.getContext(), "Selected: " + item, Toast.LENGTH_LONG).show();
+        Toast.makeText(parent.getContext(), item, Toast.LENGTH_LONG).show();
     }
 
     @Override

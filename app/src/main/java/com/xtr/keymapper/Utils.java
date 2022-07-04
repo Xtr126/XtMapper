@@ -23,10 +23,12 @@ public class Utils {
     public static BufferedReader geteventStream(Context context) throws IOException {
         Process sh = Runtime.getRuntime().exec("su");
         DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
+
+        outputStream.writeBytes("pkill libgetevent.so\n");
         outputStream.writeBytes(context.getApplicationInfo().nativeLibraryDir + "/libgetevent.so -ql"+"\n");
         outputStream.writeBytes("exit\n");
-
         outputStream.flush();
+
         return new BufferedReader(new InputStreamReader(sh.getInputStream()));
     }
 

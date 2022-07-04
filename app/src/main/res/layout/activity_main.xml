@@ -27,32 +27,21 @@
 
     <TextView
         android:id="@+id/cmdview2"
-        android:layout_width="120dp"
-        android:layout_height="80dp"
-        android:layout_marginTop="16dp"
-        android:gravity="bottom"
-        android:isScrollContainer="true"
-        android:maxLines="8"
-        android:scrollbars="vertical"
-        android:textAppearance="@android:style/TextAppearance.Material.Large"
+        android:layout_width="136dp"
+        android:layout_height="136dp"
         android:textColor="@color/white"
-        android:textSize="16sp"
-        app:layout_constraintHorizontal_bias="0.134"
+        app:layout_constraintHorizontal_bias="0.058"
         app:layout_constraintLeft_toLeftOf="@+id/activity_mouse_jnicallback"
         app:layout_constraintRight_toRightOf="@+id/activity_mouse_jnicallback"
-        app:layout_constraintTop_toTopOf="@+id/activity_mouse_jnicallback" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/cmdview3"
-        android:layout_width="120dp"
-        android:layout_height="80dp"
-        android:layout_marginTop="16dp"
-        android:isScrollContainer="true"
-        android:textAlignment="center"
-        android:textAppearance="@android:style/TextAppearance.Material.Large"
+        android:layout_width="156dp"
+        android:layout_height="134dp"
+        android:layout_marginTop="48dp"
         android:textColor="@color/white"
-        android:textSize="16sp"
-        app:layout_constraintHorizontal_bias="0.134"
+        app:layout_constraintHorizontal_bias="0.013"
         app:layout_constraintLeft_toLeftOf="@+id/activity_mouse_jnicallback"
         app:layout_constraintRight_toRightOf="@+id/activity_mouse_jnicallback"
         app:layout_constraintTop_toBottomOf="@+id/cmdview2" />

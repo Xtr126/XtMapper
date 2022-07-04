@@ -11,16 +11,25 @@ import android.widget.TextView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.io.IOException;
-
 
 public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
+    public static final int maxLines = 4;
     TouchPointer pointerOverlay;
+    public TextView cmdView;
+    public TextView cmdView2;
+    public TextView cmdView3;
+    int i = 0;
+    int x = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        cmdView =  findViewById(R.id.cmdview);
+        cmdView2 = findViewById(R.id.cmdview2);
+        cmdView3 = findViewById(R.id.cmdview3);
 
         FloatingActionButton startOverlayButton = findViewById(R.id.startPointer);
         FloatingActionButton startServerButton = findViewById(R.id.startServer);
@@ -39,8 +48,7 @@ public class MainActivity extends AppCompatActivity {
         configureButton.setOnClickListener(v -> startActivity(new Intent(this, InputDeviceSelector.class)));
 
     }
-    
- 
+
     public void startService(FloatingActionButton startButton){
         checkOverlayPermission();
         startButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.teal_200)));
@@ -71,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
             }
     }
     protected void onDestroy() {
+        this.finish(); System.exit(0);
         super.onDestroy();
     }
 
@@ -79,5 +88,26 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
     }
 
+    public void updateCmdView(String s){
+        runOnUiThread(() -> cmdView.append(s));
+    }
+    public void updateCmdView2(String s){
+        i++;
+        if(i == maxLines) {
+            i = 0;
+            runOnUiThread(() -> cmdView2.setText(s));
+        } else {
+            runOnUiThread(() -> cmdView2.append("\n" + s));
+        }
+    }
+    public void updateCmdView3(String s){
+        x++;
+        if(x == maxLines) {
+            x = 0;
+            runOnUiThread(() -> cmdView3.setText(s));
+        } else {
+            runOnUiThread(() -> cmdView3.append("\n" + s));
+        }
+    }
 
 }

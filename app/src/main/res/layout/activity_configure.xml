@@ -10,24 +10,49 @@
     tools:ignore="ContentDescription,SpUsage">
 
     <TextView
-        android:layout_width="336dp"
-        android:layout_height="54dp"
-        android:layout_marginTop="52dp"
-        android:text="Select Input device:"
+        android:id="@+id/text1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="80dp"
+        android:text="Select Input device"
         android:textAlignment="viewStart"
         android:textSize="20sp"
-        app:layout_constraintHorizontal_bias="0.493"
+        app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintLeft_toLeftOf="@+id/activity_input"
         app:layout_constraintRight_toRightOf="@+id/activity_input"
         app:layout_constraintTop_toTopOf="@+id/activity_input" />
 
     <Spinner
         android:id="@+id/spinner"
-        android:layout_width="fill_parent"
-        android:layout_height="100dp"
+        android:layout_width="340dp"
+        android:layout_height="70dp"
         android:layout_marginTop="128dp"
         android:prompt="@string/configure"
         android:textSize="20sp"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintLeft_toLeftOf="@+id/activity_input"
+        app:layout_constraintRight_toRightOf="@+id/activity_input"
+        app:layout_constraintTop_toTopOf="@+id/activity_input" />
+
+    <Button
+        android:id="@+id/button"
+        style="@style/Widget.MaterialComponents.ExtendedFloatingActionButton"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:layout_marginTop="128dp"
+        app:cornerRadius="35dp"
+        app:icon="@drawable/save"
+        app:iconPadding="0dp"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintLeft_toLeftOf="@+id/activity_input"
+        app:layout_constraintRight_toRightOf="@+id/activity_input"
+        app:layout_constraintTop_toTopOf="@+id/activity_input" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:layout_marginTop="228dp"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintLeft_toLeftOf="@+id/activity_input"
         app:layout_constraintRight_toRightOf="@+id/activity_input"

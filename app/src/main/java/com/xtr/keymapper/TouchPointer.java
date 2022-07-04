@@ -78,8 +78,8 @@ public void open() {
             BufferedReader stdInput = Utils.geteventStream(context);
             while ((line = stdInput.readLine()) != null) { //read events
                 String[] xy = line.split("\\s+");
-                // keyboard input be like: /dev/input/event3: EV_KEY KEY_X DOWN
-                // mouse input be like: /dev/input/event2: EV_REL REL_X ffffffff
+                // keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
+                // mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
                 switch (xy[2]) {
                     case "REL_X": {
                         x2 += (int) Utils.hexToDec(xy[3]);
