@@ -32,7 +32,7 @@ public class Utils {
         return new BufferedReader(new InputStreamReader(sh.getInputStream()));
     }
 
-    public int obtainAccent(Context context){
+    public static int obtainAccent(Context context){
         TypedValue typedValue = new TypedValue();
         ContextThemeWrapper contextThemeWrapper = new ContextThemeWrapper(context,
                 android.R.style.Theme_DeviceDefault);
