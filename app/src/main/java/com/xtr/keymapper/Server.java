@@ -1,9 +1,13 @@
 package com.xtr.keymapper;
 
+import static android.content.Context.MODE_PRIVATE;
+
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 
+import android.widget.ShareActionProvider;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -31,6 +35,11 @@ public class Server {
         cmdView3 = ((MainActivity)context).findViewById(R.id.cmdview3);
     }
 
+    public String getDeviceName(){
+        SharedPreferences sharedPref = context.getSharedPreferences("devices", MODE_PRIVATE);
+        return sharedPref.getString("device", null);
+    }
+
     public void setupServer() {
         try {
             PackageManager pm = context.getPackageManager();
@@ -42,7 +51,10 @@ public class Server {
             outputStream.writeBytes("cat > /data/xtr.keymapper.sh" + "\n");
             outputStream.writeBytes("#!/system/bin/sh\n");
             outputStream.writeBytes("pkill -f " + packageName + ".Input\n");
-            outputStream.writeBytes("LD_LIBRARY_PATH=\"" + ai.nativeLibraryDir + "\" CLASSPATH=\"" + apk + "\" /system/bin/app_process32 /system/bin " + packageName + ".Input" + "\n");
+            outputStream.writeBytes("LD_LIBRARY_PATH=\"" + ai.nativeLibraryDir + //path containing lib*.so
+                                        "\" CLASSPATH=\"" + apk +
+                                        "\" /system/bin/app_process32 /system/bin " +
+                                        packageName + ".Input " + getDeviceName() + "\n"); // input device node as argument
             outputStream.close();
             sh.waitFor();
             sh = Runtime.getRuntime().exec("su");

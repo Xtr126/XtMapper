@@ -31,7 +31,7 @@ public class Input {
 
     public static void main(String[] args) {
         try {
-            startMouse();
+        startMouse(args[0]); // Call native code
         String methodName = "getInstance";
         Object[] objArr = new Object[0];
         im = (InputManager) InputManager.class.getDeclaredMethod(methodName)
@@ -135,5 +135,5 @@ public class Input {
     static {
         System.loadLibrary("mouse_read");
     }
-    public static native void  startMouse();
+    public static native void startMouse(String arg);
 }

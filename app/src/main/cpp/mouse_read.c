@@ -26,10 +26,9 @@ typedef struct mouse_context {
 	JavaVM  *javaVM;
 	jclass   jniHelperClz;
 	jobject  jniHelperObj;
-	jclass   InputClz;
-	jobject  InputObj;
-	pthread_mutex_t  lock;
+    pthread_mutex_t  lock;
 	int      done;
+	const char* dev;
 } mouseContext;
 mouseContext g_ctx;
 
@@ -54,7 +53,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_ctx.jniHelperObj = (*env)->NewGlobalRef(env, handler);
 
     g_ctx.done = 0;
-    g_ctx.InputObj = NULL;
     return  JNI_VERSION_1_6;
 }
 void   sendJavaMsg(JNIEnv *env, jobject instance,
@@ -64,7 +62,7 @@ void   sendJavaMsg(JNIEnv *env, jobject instance,
     (*env)->DeleteLocalRef(env, javaMsg);
 }
 
-void*  UpdateMouse(void* context) {
+void * UpdateMouse(void* context) {
     mouseContext *pctx = (mouseContext*) context;
     JavaVM *javaVM = pctx->javaVM;
     JNIEnv *env;
@@ -81,11 +79,6 @@ void*  UpdateMouse(void* context) {
     sendJavaMsg(env, pctx->jniHelperObj, statusId,
                 "MouseThread status: initializing...");
 
-    // get Input updateTimer function
-    jmethodID timerId = (*env)->GetMethodID(env, pctx->InputClz,
-                                            "updateMouse", "()V");
-
-
     sendJavaMsg(env, pctx->jniHelperObj, statusId,
                 "MouseThread status: start mouseing ...");
     while(1) {
@@ -98,15 +91,10 @@ void*  UpdateMouse(void* context) {
         if (done) {
             break;
         }
-       /* jmethodID updateX = (*env)->GetMethodID(env, pctx->InputClz,
-                                                 "updateMouseX", "()V");
-        jmethodID updateY = (*env)->GetMethodID(env, pctx->InputClz,
-                                                "updateMouseX", "()V"); */
         int fd;
-        const char *dev = "/dev/input/event2";
         struct input_event ie;
 
-        if ((fd = open(dev, O_RDONLY)) == -1) {
+        if ((fd = open(pctx->dev, O_RDONLY)) == -1) {
             perror("opening device");
             exit(EXIT_FAILURE);
         }
@@ -141,13 +129,11 @@ void*  UpdateMouse(void* context) {
             char str[16];
             if (ie.code == REL_X)
                 printf("%d %s\n", ie.value, "REL_X");
-               // (*env)->CallVoidMethod(env, pctx->InputObj, updateX, (jint) ie.value);
             sprintf(str, "REL_X %d \n", ie.value);
             send(sock, str, strlen(str), 0);
 
             if (ie.code == REL_Y)
                 printf("%d %s\n", ie.value, "REL_Y");
-            //  (*env)->CallVoidMethod(env, pctx->InputObj, updateY, (jint) ie.value);
             sprintf(str, "REL_Y %d \n", ie.value);
             send(sock, str, strlen(str), 0);
         }
@@ -155,7 +141,6 @@ void*  UpdateMouse(void* context) {
         // closing the connected socket
         close(client_fd);
         return 0;
-       // (*env)->CallVoidMethod(env, pctx->InputObj, timerId);
 
 
     }
@@ -168,7 +153,7 @@ void*  UpdateMouse(void* context) {
 
 
     JNIEXPORT void JNICALL
-    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance) {
+    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring device) {
         pthread_t threadInfo_;
         pthread_attr_t threadAttr_;
 
@@ -178,12 +163,12 @@ void*  UpdateMouse(void* context) {
         pthread_mutex_init(&g_ctx.lock, NULL);
 
         jclass clz = (*env)->GetObjectClass(env, instance);
-        g_ctx.
-                InputClz = (*env)->NewGlobalRef(env, clz);
-        g_ctx.
-                InputObj = (*env)->NewGlobalRef(env, instance);
+        (*env)->NewGlobalRef(env, clz);
+        (*env)->NewGlobalRef(env, instance);
         //system("chown -hR $(whoami) -R /dev/input");
         setlinebuf(stdout);
+
+        g_ctx.dev = (*env)->GetStringUTFChars(env, device, 0);
         int result = pthread_create(&threadInfo_, &threadAttr_, UpdateMouse, &g_ctx);
         assert(result == 0);
 

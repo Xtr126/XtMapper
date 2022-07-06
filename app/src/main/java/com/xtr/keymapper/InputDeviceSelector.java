@@ -2,6 +2,7 @@ package com.xtr.keymapper;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -22,6 +23,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     private ArrayAdapter<String> dataAdapter;
     private TextView textView;
     int i = 0;
+    private SharedPreferences sharedPref;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,12 +32,19 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         spinner = findViewById(R.id.spinner);
         textView = findViewById(R.id.textView);
 
+        // Load stored device name
+        sharedPref = getSharedPreferences("devices", MODE_PRIVATE);
+        String devname = sharedPref.getString("device", null);
+
         // Spinner click listener
         spinner.setOnItemSelectedListener(this);
 
         // Spinner Drop down elements
         devices = new ArrayList<>();
+        if(devname != null)
+        devices.add(devname);
         // Creating adapter for spinner
+
         new Thread(this::getDevices).start();
         dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, devices);
 
@@ -83,7 +92,10 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         // On selecting a spinner item
         String item = parent.getItemAtPosition(position).toString();
-
+        // Store selected device
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString("device", item);
+        editor.apply();
         // Showing selected spinner item
         Toast.makeText(parent.getContext(), item, Toast.LENGTH_LONG).show();
     }

@@ -31,13 +31,13 @@ JNI_SRC_PATH := $(LOCAL_PATH)/src/main/cpp
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := getevent-bin
-LOCAL_SRC_FILES := $(JNI_SRC_PATH)/libgetevent.so
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/prebuilt/$(TARGET_ARCH_ABI)/libgetevent.so
 include $(PREBUILT_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := hello
-LOCAL_SRC_FILES := $(JNI_SRC_PATH)/hello.c
+LOCAL_MODULE    := 1e0e99df
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/prebuilt/placeholder.c
 LOCAL_SHARED_LIBRARIES := getevent-bin
 include $(BUILD_SHARED_LIBRARY)
 
