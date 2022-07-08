@@ -2,7 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/activity_mouse_jnicallback"
+    android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/background_dark"
@@ -21,18 +21,18 @@
         android:textColor="@color/white"
         android:textSize="16sp"
         app:layout_constraintHorizontal_bias="0.99"
-        app:layout_constraintLeft_toLeftOf="@+id/activity_mouse_jnicallback"
-        app:layout_constraintRight_toRightOf="@+id/activity_mouse_jnicallback"
-        app:layout_constraintTop_toTopOf="@+id/activity_mouse_jnicallback" />
+        app:layout_constraintLeft_toLeftOf="@+id/activity_main"
+        app:layout_constraintRight_toRightOf="@+id/activity_main"
+        app:layout_constraintTop_toTopOf="@+id/activity_main" />
 
     <TextView
         android:id="@+id/cmdview2"
         android:layout_width="136dp"
         android:layout_height="136dp"
         android:textColor="@color/white"
-        app:layout_constraintHorizontal_bias="0.058"
-        app:layout_constraintLeft_toLeftOf="@+id/activity_mouse_jnicallback"
-        app:layout_constraintRight_toRightOf="@+id/activity_mouse_jnicallback"
+        app:layout_constraintHorizontal_bias="0.1"
+        app:layout_constraintLeft_toLeftOf="@+id/activity_main"
+        app:layout_constraintRight_toRightOf="@+id/cmdview"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
@@ -42,8 +42,8 @@
         android:layout_marginTop="48dp"
         android:textColor="@color/white"
         app:layout_constraintHorizontal_bias="0.013"
-        app:layout_constraintLeft_toLeftOf="@+id/activity_mouse_jnicallback"
-        app:layout_constraintRight_toRightOf="@+id/activity_mouse_jnicallback"
+        app:layout_constraintLeft_toLeftOf="@+id/activity_main"
+        app:layout_constraintRight_toRightOf="@+id/activity_main"
         app:layout_constraintTop_toBottomOf="@+id/cmdview2" />
 
     <androidx.constraintlayout.widget.ConstraintLayout

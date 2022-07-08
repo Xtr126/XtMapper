@@ -30,8 +30,15 @@ public class Input {
 
 
     public static void main(String[] args) {
+        if(!args[0].equals("null")) {
+            startMouse(args[0]); // Call native code
+        } else {
+            System.out.println("exiting: input device not selected");
+            System.out.println("select input device, click run in terminal and try again\n or edit this script and replace null with input device node");
+            System.exit(2);
+        }
+
         try {
-        startMouse(args[0]); // Call native code
         String methodName = "getInstance";
         Object[] objArr = new Object[0];
         im = (InputManager) InputManager.class.getDeclaredMethod(methodName)

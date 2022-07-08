@@ -7,7 +7,6 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 
-import android.widget.ShareActionProvider;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -22,6 +21,8 @@ public class Server {
 
     private final Context context;
     public static final int maxLines = 4;
+    private final String script_name = "/data/xtr.keymapper.sh\n";
+
     public TextView cmdView;
     public TextView cmdView2;
     public TextView cmdView3;
@@ -40,50 +41,68 @@ public class Server {
         return sharedPref.getString("device", null);
     }
 
+    private void writeScript(String packageName, ApplicationInfo ai, String apk, DataOutputStream out) throws IOException, InterruptedException {
+        out.writeBytes("cat > " + script_name); // Write contents to file through pipe
+
+        out.writeBytes("#!/system/bin/sh\n");
+        out.writeBytes("pkill -f " + packageName + ".Input\n");
+
+        out.writeBytes("LD_LIBRARY_PATH=\"" + ai.nativeLibraryDir + //path containing lib*.so
+                "\" CLASSPATH=\"" + apk +
+                "\" /system/bin/app_process32 /system/bin " +
+                packageName + ".Input " + getDeviceName() + "\n"); // input device node as argument
+    }
+
+    private void setExecPermission(DataOutputStream out) throws IOException, InterruptedException {
+        out.writeBytes("touch " + script_name);
+        out.writeBytes("chmod 777 " + script_name);
+    }
+
     public void setupServer() {
         try {
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
-            String apk = ai.publicSourceDir;
+            String apk = ai.publicSourceDir; // Absolute path to apk in /data/app
+
             Process sh = Runtime.getRuntime().exec("su");
-            DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-            outputStream.writeBytes("cat > /data/xtr.keymapper.sh" + "\n");
-            outputStream.writeBytes("#!/system/bin/sh\n");
-            outputStream.writeBytes("pkill -f " + packageName + ".Input\n");
-            outputStream.writeBytes("LD_LIBRARY_PATH=\"" + ai.nativeLibraryDir + //path containing lib*.so
-                                        "\" CLASSPATH=\"" + apk +
-                                        "\" /system/bin/app_process32 /system/bin " +
-                                        packageName + ".Input " + getDeviceName() + "\n"); // input device node as argument
-            outputStream.close();
-            sh.waitFor();
-            sh = Runtime.getRuntime().exec("su");
-            outputStream = new DataOutputStream(sh.getOutputStream());
-            outputStream.writeBytes("chmod 777 /data/xtr.keymapper.sh\n");
-            outputStream.writeBytes("exit\n");
-            outputStream.close();
-            sh.waitFor();
-            updateCmdView("run /data/xtr.keymapper.sh\n");
+            DataOutputStream out = new DataOutputStream(sh.getOutputStream());
+
+            setExecPermission(out);
+            writeScript(packageName, ai, apk, out);
+            out.close(); sh.waitFor();
+            // Notify user
+            updateCmdView("run " + script_name);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
     }
 
     public void startServer() {
-        try {
+        if(getDeviceName() != null) {
+            try {
             setupServer();
             updateCmdView("starting server\n");
+            // TextView in MainActivity
             Process sh = Runtime.getRuntime().exec("su");
             DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-            outputStream.writeBytes("/data/xtr.keymapper.sh"+"\n");
+
+            outputStream.writeBytes(script_name);
             outputStream.close();
-            BufferedReader stdInput = new BufferedReader(new InputStreamReader(sh.getInputStream()));
+
+            BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
             String line;
-            while ((line = stdInput.readLine()) != null) {
+            while ((line = stdout.readLine()) != null) {
                 updateCmdView2("stdout: " + line);
             }
-        } catch ( IOException e) {
-            e.printStackTrace();
+
+            sh.waitFor();
+
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        } else {
+            updateCmdView("select Input device before starting server\n");
         }
     }
 
@@ -99,12 +118,13 @@ public class Server {
                 updateCmdView("initialized: listening for events through socket\n");
     
             while ((inputLine = in.readLine()) != null) {
-    
                 updateCmdView3("socket: " + inputLine);
             }
+
             in.close(); out.close();
             clientSocket.close(); serverSocket.close();
             ((MainActivity)context).finish(); System.exit(0);
+            // Exit app on socket closed
         } catch ( IOException e) {
             e.printStackTrace();
         }

@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -31,6 +32,8 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         setContentView(R.layout.activity_configure);
         spinner = findViewById(R.id.spinner);
         textView = findViewById(R.id.textView);
+
+        findViewById(R.id.button).setOnClickListener(v -> this.finish());
 
         // Load stored device name
         sharedPref = getSharedPreferences("devices", MODE_PRIVATE);
