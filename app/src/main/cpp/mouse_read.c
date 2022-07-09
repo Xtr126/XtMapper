@@ -19,19 +19,19 @@
 #include <sys/socket.h>
 #define PORT 6345
 
-
-static const char* kTAG = "mouse_read";
-
+char str[16];
 typedef struct mouse_context {
 	JavaVM  *javaVM;
-	jclass   jniHelperClz;
-	jobject  jniHelperObj;
     pthread_mutex_t  lock;
 	int      done;
 	const char* dev;
 } mouseContext;
 mouseContext g_ctx;
 
+struct Socket {
+    int sock;
+    int client_fd;
+};
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -42,24 +42,47 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
         return JNI_ERR; // JNI version not supported.
     }
 
-    jclass  clz = (*env)->FindClass(env,
-                                    "com/xtr/keymapper/JniHandler");
-    g_ctx.jniHelperClz = (*env)->NewGlobalRef(env, clz);
-
-    jmethodID  jniHelperCtor = (*env)->GetMethodID(env, g_ctx.jniHelperClz,
-                                                   "<init>", "()V");
-    jobject    handler = (*env)->NewObject(env, g_ctx.jniHelperClz,
-                                           jniHelperCtor);
-    g_ctx.jniHelperObj = (*env)->NewGlobalRef(env, handler);
-
     g_ctx.done = 0;
     return  JNI_VERSION_1_6;
 }
-void   sendJavaMsg(JNIEnv *env, jobject instance,
-                   jmethodID func,const char* msg) {
-    jstring javaMsg = (*env)->NewStringUTF(env, msg);
-    (*env)->CallVoidMethod(env, instance, func, javaMsg);
-    (*env)->DeleteLocalRef(env, javaMsg);
+
+
+void create_socket(struct Socket *Socket){
+    struct sockaddr_in serv_addr;
+    if ((Socket->sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("\n Socket creation error \n");
+    }
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
+
+    // Convert IPv4 and IPv6 addresses from text to binary
+    // form
+    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)
+        <= 0) {
+        printf(
+                "\nInvalid address/ Address not supported \n");
+    }
+
+    if ((Socket->client_fd
+                 = connect(Socket->sock, (struct sockaddr*)&serv_addr,
+                           sizeof(serv_addr)))
+        < 0) {
+        printf("\nConnection Failed \n");
+    }
+}
+
+void send_data(struct input_event *ie, struct Socket *x_cts)
+{
+    if (ie->code == REL_X)
+        printf("%d %s\n", ie->value, "REL_X");
+    sprintf(str, "REL_X %d \n", ie->value);
+    send(x_cts->sock, str, strlen(str), 0);
+
+    if (ie->code == REL_Y)
+        printf("%d %s\n", ie->value, "REL_Y");
+    sprintf(str, "REL_Y %d \n", ie->value);
+    send(x_cts->sock, str, strlen(str), 0);
 }
 
 void * UpdateMouse(void* context) {
@@ -73,14 +96,6 @@ void * UpdateMouse(void* context) {
             return NULL;
         }
     }
-    jmethodID statusId = (*env)->GetMethodID(env, pctx->jniHelperClz,
-                                             "updateStatus",
-                                             "(Ljava/lang/String;)V");
-    sendJavaMsg(env, pctx->jniHelperObj, statusId,
-                "MouseThread status: initializing...");
-
-    sendJavaMsg(env, pctx->jniHelperObj, statusId,
-                "MouseThread status: start mouseing ...");
     while(1) {
         pthread_mutex_lock(&pctx->lock);
         int done = pctx->done;
@@ -93,60 +108,27 @@ void * UpdateMouse(void* context) {
         }
         int fd;
         struct input_event ie;
+        struct Socket x_cts;
 
         if ((fd = open(pctx->dev, O_RDONLY)) == -1) {
             perror("opening device");
             exit(EXIT_FAILURE);
         }
-//        ioctl(fd, EVIOCGRAB, (void *)1);
+      //ioctl(fd, EVIOCGRAB, (void *)1);
 
-        int sock = 0, client_fd;
-        struct sockaddr_in serv_addr;
-
-        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-            printf("\n Socket creation error \n");
-        }
-
-        serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(PORT);
-
-        // Convert IPv4 and IPv6 addresses from text to binary
-        // form
-        if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)
-            <= 0) {
-            printf(
-                    "\nInvalid address/ Address not supported \n");
-        }
-
-        if ((client_fd
-                     = connect(sock, (struct sockaddr*)&serv_addr,
-                               sizeof(serv_addr)))
-            < 0) {
-            printf("\nConnection Failed \n");
-        }
+        create_socket(&x_cts);
 
         while (read(fd, &ie, sizeof(struct input_event))) {
-            char str[16];
-            if (ie.code == REL_X)
-                printf("%d %s\n", ie.value, "REL_X");
-            sprintf(str, "REL_X %d \n", ie.value);
-            send(sock, str, strlen(str), 0);
-
-            if (ie.code == REL_Y)
-                printf("%d %s\n", ie.value, "REL_Y");
-            sprintf(str, "REL_Y %d \n", ie.value);
-            send(sock, str, strlen(str), 0);
+            send_data(&ie, &x_cts);
         }
+
         close(fd);
         // closing the connected socket
-        close(client_fd);
+        close(x_cts.client_fd);
         return 0;
-
 
     }
 
-    sendJavaMsg(env, pctx->jniHelperObj, statusId,
-                "MouseThread status: read");
     (*javaVM)->DetachCurrentThread(javaVM);
     return context;
     }
