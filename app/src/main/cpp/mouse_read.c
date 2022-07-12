@@ -32,6 +32,7 @@ struct Socket {
     int sock;
     int client_fd;
 };
+int fd;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -74,15 +75,23 @@ void create_socket(struct Socket *Socket){
 
 void send_data(struct input_event *ie, struct Socket *x_cts)
 {
-    if (ie->code == REL_X)
-        printf("%d %s\n", ie->value, "REL_X");
-    sprintf(str, "REL_X %d \n", ie->value);
-    send(x_cts->sock, str, strlen(str), 0);
+    switch (ie->code) {
+        case REL_X :
+            printf("%d %s\n", ie->value, "REL_X");
+            sprintf(str, "REL_X %d \n", ie->value);
+            send(x_cts->sock, str, strlen(str), 0);
+            break;
+        case REL_Y :
+            printf("%d %s\n", ie->value, "REL_Y");
+            sprintf(str, "REL_Y %d \n", ie->value);
+            send(x_cts->sock, str, strlen(str), 0);
+            break;
 
-    if (ie->code == REL_Y)
-        printf("%d %s\n", ie->value, "REL_Y");
-    sprintf(str, "REL_Y %d \n", ie->value);
-    send(x_cts->sock, str, strlen(str), 0);
+        case BTN_MOUSE :
+            printf("BTN_MOUSE %d\n", ie->value);
+            sprintf(str, "BTN_MOUSE %d \n", ie->value);
+            send(x_cts->sock, str, strlen(str), 0);
+    }
 }
 
 void * UpdateMouse(void* context) {
@@ -106,7 +115,6 @@ void * UpdateMouse(void* context) {
         if (done) {
             break;
         }
-        int fd;
         struct input_event ie;
         struct Socket x_cts;
 
@@ -158,3 +166,15 @@ void * UpdateMouse(void* context) {
 
         (void) result;
     }
+
+
+JNIEXPORT void JNICALL
+Java_com_xtr_keymapper_Input_setIoctl(JNIEnv *env, jclass clazz, jboolean y) {
+    if ( fd != 0 ) {
+        ioctl(fd, EVIOCGRAB, y);
+        printf("ioctl successful: gained exclusive access to input device");
+    }
+    else {
+        printf("warning: unable to ioctl: fd not initialized");
+    }
+}

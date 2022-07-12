@@ -11,44 +11,51 @@
 
     <TextView
         android:id="@+id/cmdview"
-        android:layout_width="250dp"
-        android:layout_height="341dp"
-        android:layout_marginTop="16dp"
-        android:isScrollContainer="true"
-        android:text="@string/run_script_info"
-        android:textAlignment="center"
+        android:layout_width="200dp"
+        android:layout_height="0dp"
+        android:layout_marginVertical="10dp"
+        android:layout_marginEnd="10dp"
+        android:gravity="bottom"
         android:textAppearance="@android:style/TextAppearance.Material.Large"
         android:textColor="@color/white"
         android:textSize="16sp"
-        app:layout_constraintHorizontal_bias="0.99"
-        app:layout_constraintLeft_toLeftOf="@+id/activity_main"
-        app:layout_constraintRight_toRightOf="@+id/activity_main"
-        app:layout_constraintTop_toTopOf="@+id/activity_main" />
+        app:layout_constraintBottom_toTopOf="@id/constrained"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintRight_toRightOf="@+id/activity_main" />
 
     <TextView
         android:id="@+id/cmdview2"
-        android:layout_width="136dp"
-        android:layout_height="136dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginEnd="10dp"
         android:textColor="@color/white"
-        app:layout_constraintHorizontal_bias="0.1"
-        app:layout_constraintLeft_toLeftOf="@+id/activity_main"
-        app:layout_constraintRight_toRightOf="@+id/cmdview"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:gravity="bottom"
+        android:maxLines="8"
+        app:layout_constraintRight_toLeftOf="@+id/cmdview"
+        app:layout_constraintBottom_toTopOf="@id/cmdview3"
+        app:layout_constraintLeft_toLeftOf="@id/constrained"
+        app:layout_constraintTop_toTopOf="parent"/>
 
     <TextView
         android:id="@+id/cmdview3"
-        android:layout_width="156dp"
-        android:layout_height="134dp"
-        android:layout_marginTop="48dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="10dp"
+        android:layout_marginEnd="10dp"
         android:textColor="@color/white"
-        app:layout_constraintHorizontal_bias="0.013"
-        app:layout_constraintLeft_toLeftOf="@+id/activity_main"
-        app:layout_constraintRight_toRightOf="@+id/activity_main"
-        app:layout_constraintTop_toBottomOf="@+id/cmdview2" />
+        android:gravity="bottom"
+        android:maxLines="8"
+        app:layout_constraintRight_toLeftOf="@+id/cmdview"
+        app:layout_constraintBottom_toTopOf="@id/constrained"
+        app:layout_constraintTop_toBottomOf="@id/cmdview2"
+        app:layout_constraintLeft_toLeftOf="@id/constrained"/>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constrained"
-        android:layout_width="388dp"
+        android:layout_width="400dp"
         android:layout_height="257dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent">

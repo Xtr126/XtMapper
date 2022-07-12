@@ -6,12 +6,18 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Log;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
 
 
 public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
+    public static final int DEFAULT_PORT_2 = 6345;
     public TouchPointer pointerOverlay;
     public Server server;
 
@@ -28,8 +34,7 @@ public class MainActivity extends AppCompatActivity {
 
         server = new Server(this);
         pointerOverlay = new TouchPointer(this);
-
-        new Thread(server::startSocketTest).start(); //start app side listener socket
+        new Thread(pointerOverlay::handleMouseEvents).start();
 
         initFab(); setupFab();
     }
@@ -90,8 +95,7 @@ public class MainActivity extends AppCompatActivity {
             }
     }
     protected void onDestroy() {
-        this.finish(); System.exit(0);
-        super.onDestroy();
+            super.onDestroy();
     }
 
     @Override

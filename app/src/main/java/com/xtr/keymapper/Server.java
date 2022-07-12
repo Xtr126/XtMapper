@@ -25,15 +25,11 @@ public class Server {
 
     public TextView cmdView;
     public TextView cmdView2;
-    public TextView cmdView3;
-    int i = 0;
-    int x = 0;
 
     public Server(Context context){
         this.context=context;
         cmdView =  ((MainActivity)context).findViewById(R.id.cmdview);
         cmdView2 = ((MainActivity)context).findViewById(R.id.cmdview2);
-        cmdView3 = ((MainActivity)context).findViewById(R.id.cmdview3);
     }
 
     public String getDeviceName(){
@@ -82,8 +78,7 @@ public class Server {
         if(getDeviceName() != null) {
             try {
             setupServer();
-            updateCmdView("starting server\n");
-            // TextView in MainActivity
+            updateCmdView("starting server");
             Process sh = Runtime.getRuntime().exec("su");
             DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
 
@@ -102,54 +97,17 @@ public class Server {
                 e.printStackTrace();
             }
         } else {
-            updateCmdView("select Input device before starting server\n");
+            updateCmdView("Please select input device");
         }
     }
 
-    public void startSocketTest(){
-        try {
-            ServerSocket serverSocket = new ServerSocket(6345);
-            Socket clientSocket = serverSocket.accept();
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-    
-            String inputLine;
-            if (in.readLine() != null)
-                updateCmdView("initialized: listening for events through socket\n");
-    
-            while ((inputLine = in.readLine()) != null) {
-                updateCmdView3("socket: " + inputLine);
-            }
-
-            in.close(); out.close();
-            clientSocket.close(); serverSocket.close();
-            ((MainActivity)context).finish(); System.exit(0);
-            // Exit app on socket closed
-        } catch ( IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     public void updateCmdView(String s){
-        ((MainActivity)context).runOnUiThread(() -> cmdView.append(s));
+        ((MainActivity)context).runOnUiThread(() -> cmdView.append(s + "\n"));
     }
     public void updateCmdView2(String s){
-        i++;
-        if(i == maxLines) {
-            i = 0;
-            ((MainActivity)context).runOnUiThread(() -> cmdView2.setText(s));
-        } else {
-            ((MainActivity)context).runOnUiThread(() -> cmdView2.append("\n" + s));
-        }
+        ((MainActivity)context).runOnUiThread(() -> cmdView2.append(s + "\n"));
     }
-    public void updateCmdView3(String s){
-        x++;
-        if(x == maxLines) {
-            x = 0;
-            ((MainActivity)context).runOnUiThread(() -> cmdView3.setText(s));
-        } else {
-            ((MainActivity)context).runOnUiThread(() -> cmdView3.append("\n" + s));
-        }
-    }
+
     
 }

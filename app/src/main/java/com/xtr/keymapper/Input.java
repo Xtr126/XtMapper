@@ -58,7 +58,7 @@ public class Input {
         ServerSocket ss=new ServerSocket(MainActivity.DEFAULT_PORT);
         Socket socket=ss.accept();
         BufferedReader stdInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        System.out.println("server started at" + MainActivity.DEFAULT_PORT);
+        System.out.println("server started at port:" + MainActivity.DEFAULT_PORT);
         while ((line = stdInput.readLine()) != null) {
             System.out.println(line);
             String []xy = line.split("\\s+");
@@ -77,6 +77,7 @@ public class Input {
                             parseFloat(xy[1]),
                             parseFloat(xy[3]),
                             parseFloat(xy[4]));
+                    break;
                 }
                 case "MULTI": {
                     if(xy[3].equals("DOWN")) {
@@ -84,6 +85,11 @@ public class Input {
                     } else {
                         sendMultiTouchUp(inputSource, parseFloat(xy[0]), parseFloat(xy[1]));
                     }
+                    break;
+                }
+
+                case "ioctl": {
+                    setIoctl(xy[1].equals("true"));
                     break;
                 }
             }
@@ -143,4 +149,6 @@ public class Input {
         System.loadLibrary("mouse_read");
     }
     public static native void startMouse(String arg);
+
+    public static native void setIoctl(boolean y);
 }

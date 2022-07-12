@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -23,7 +24,6 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     private Spinner spinner;
     private ArrayAdapter<String> dataAdapter;
     private TextView textView;
-    int i = 0;
     private SharedPreferences sharedPref;
 
     @Override
@@ -32,7 +32,6 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         setContentView(R.layout.activity_configure);
         spinner = findViewById(R.id.spinner);
         textView = findViewById(R.id.textView);
-
         findViewById(R.id.button).setOnClickListener(v -> this.finish());
 
         // Load stored device name
@@ -59,13 +58,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     }
 
     private void updateView(String s){
-        i++;
-        if(i == 8) {
-            i = 0;
-            runOnUiThread(() -> textView.setText(s));
-        } else {
-            runOnUiThread(() -> textView.append("\n" + s));
-        }
+        runOnUiThread(() -> textView.append(s + "\n"));
     }
 
     private void getDevices(){
@@ -77,7 +70,6 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
                 //split a string like "/dev/input/event2 EV_REL REL_X ffffffff"
                 if(!xy[2].equals("SYN_REPORT"))
                 updateView(stdout);
-
                 if(!devices.contains(xy[0]))
                     if (xy[1].equals("EV_REL")) {
                         devices.add(xy[0]);
@@ -90,6 +82,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         }
 
     }
+
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {

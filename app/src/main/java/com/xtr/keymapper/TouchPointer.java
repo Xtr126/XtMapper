@@ -2,6 +2,7 @@ package com.xtr.keymapper;
 
 import android.content.Context;
 import android.graphics.PixelFormat;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -17,6 +18,8 @@ import static android.content.Context.WINDOW_SERVICE;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -34,14 +37,15 @@ public class TouchPointer {
     int y1 = 100;
     int y2 = 100;
     String[] key; Float[] x; Float[] y;
-    public TextView cmdView;
+    public TextView cmdView3;
     boolean pointer_down = false;
-
+    private String[] xy;
+    private DataOutputStream x_out;
+    boolean pointer_visible = false;
 
     public TouchPointer(Context context){
-        this.context=context;
-
-        cmdView = ((MainActivity) context).findViewById(R.id.cmdview);
+        this.context= context;
+        cmdView3 = ((MainActivity)context).findViewById(R.id.cmdview3);
 
         // set the layout parameters of the cursor
         mParams = new WindowManager.LayoutParams(
@@ -64,42 +68,36 @@ public class TouchPointer {
        if(cursorView.getWindowToken()==null)
            if (cursorView.getParent() == null) {
                 mWindowManager.addView(cursorView, mParams);
-
+                pointer_visible = true;
                 try {
                     loadKeymap();
+                    pointerGrab(true);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
 
-               try {
-                   Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
-                   DataOutputStream x_out = new DataOutputStream(socket.getOutputStream());
-                   new Thread(() -> pointer(x_out)).start();
-               } catch (IOException e) {
-                   updateCmdView("Unable to start overlay: server not started\n");
-                   hideCursor();
-               }
+               new Thread(this::event_handler).start();
 
-            }
+           }
 
     }
 
-    private void pointer(DataOutputStream x_out) {
+    private void event_handler() {
         try {
+            Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
+            x_out = new DataOutputStream(socket.getOutputStream());
             String line;
-
-            BufferedReader stdInput = Utils.geteventStream(context);
-            while ((line = stdInput.readLine()) != null) { //read events
-                String[] xy = line.split("\\s+");
-                // keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
-                // mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
-                handleMouseEvents(xy, pointer_down, x_out);
-
-                //for keyboard input
-                handlekeyboardEvents(xy, x_out);
+            BufferedReader getevent = Utils.geteventStream(context);
+            while ((line = getevent.readLine()) != null) { //read events
+                xy = line.split("\\s+");
+                handleKeyboardEvents();
+                movePointer();
+                if(!pointer_visible) break;
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            updateCmdView("Unable to start overlay: server not started");
+            hideCursor();
+            Log.d("Error1",e.toString());
         }
     }
 
@@ -109,7 +107,8 @@ public class TouchPointer {
             cursorView.invalidate();
             // remove all views
             ((ViewGroup) cursorView.getParent()).removeAllViews();
-
+            pointer_visible = false;
+            pointerGrab(false);
             // the above steps are necessary when you are adding and removing
             // the view simultaneously, it might give some exceptions
         } catch (Exception e) {
@@ -126,44 +125,95 @@ public class TouchPointer {
         y = keymapConfig.getY();
     }
 
-    public void updateCmdView(String s){
-        ((MainActivity)context).runOnUiThread(() -> cmdView.append(s));
+    public void updateCmdView3(String s){
+        ((MainActivity)context).runOnUiThread(() -> cmdView3.append(s + "\n"));
     }
 
-    private void handleMouseEvents(String []xy, boolean pointer_down, DataOutputStream x_out) throws IOException {
-        switch (xy[2]) {
-            case "REL_X": {
-                x2 += (int) Utils.hexToDec(xy[3]);
-                if (pointer_down)
-                    x_out.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
-                x1 = x2;
-                break;
+    private void updateCmdView(String s) {
+        ((MainActivity)context).server.updateCmdView(s);
+    }
+
+    public void handleMouseEvents() {
+        try {
+            ServerSocket serverSocket = new ServerSocket(MainActivity.DEFAULT_PORT_2);
+            updateCmdView("waiting for server...");
+            Socket clientSocket = serverSocket.accept();
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+            updateCmdView("initialized: listening for events through socket");
+
+            String line;
+            while ((line = in.readLine()) != null) {
+                updateCmdView3("socket: " + line);
+                if (pointer_visible) {
+                    xy = line.split("\\s+");
+                    switch (xy[0]) {
+                        case "REL_X": {
+                            x2 += Integer.parseInt(xy[1]);
+                            if (pointer_down)
+                                x_out.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
+                            x1 = x2;
+                            break;
+                        }
+                        case "REL_Y": {
+                            y2 += Integer.parseInt(xy[1]);
+                            if (pointer_down)
+                                x_out.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
+                            y1 = y2;
+                            break;
+                        }
+                        case "BTN_MOUSE": {
+                            pointer_down = xy[3].equals("1");
+                            x_out.writeBytes(x1 + " " + y1 + " " + xy[3] + "\n");
+                            break;
+                        }
+                    }
+                    movePointer();
+                }
             }
-            case "REL_Y": {
-                y2 += (int) Utils.hexToDec(xy[3]);
-                if (pointer_down)
-                    x_out.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
-                y1 = y2;
-                break;
-            }
-            case "BTN_MOUSE": {
-                pointer_down = xy[3].equals("DOWN");
-                x_out.writeBytes(x1 + " " + y1 + " " + xy[3] + "\n");
-                break;
-            }
+            in.close();
+            clientSocket.close();
+            serverSocket.close();
+        } catch (IOException e) {
+            Log.d("Error2", e.toString());
+            tryStopSocket();
+            updateCmdView("app side listener crashed: please restart app");
         }
     }
 
-    private void handlekeyboardEvents(String[] xy, DataOutputStream x_out) throws IOException {
+    public void tryStopSocket(){
+        try {
+            DataOutputStream x_out = new DataOutputStream(new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2).getOutputStream());
+            x_out.writeBytes(null + "\n");
+            x_out.flush(); x_out.close();
+        } catch (IOException e) {
+            Log.d("Error2", e.toString());
+        }
+    }
+
+    private void handleKeyboardEvents() throws IOException {
+        // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
+        // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
         int i = Utils.obtainIndex(xy[2]);
-        if (i >= 0 && i <= 35) {
-            if (x != null) {
+        // Strips off KEY_ from KEY_X and return the index of X in alphabet
+        if (i >= 0 && i <= 35) { // Make sure valid
+            if (x != null) { // Avoid null array exception in case user has not set keymap already
                 if (x[i] != null) {
                     x_out.writeBytes(x[i] + " " + y[i] + " " + xy[3] + "\n");
+                    // Send coordinates to remote server to simulate touch
                 }
             }
         }
-        cursorView.setX(x1); //move pointer
-        cursorView.setY(y1);
     }
+
+    public void movePointer(){
+        ((MainActivity)context).runOnUiThread(() -> cursorView.setY(y1));
+        ((MainActivity)context).runOnUiThread(() -> cursorView.setX(x1));
+    }
+
+    private void pointerGrab(boolean ioctl) throws IOException {
+        x_out.writeBytes( "_ " + ioctl + " ioctl\n");
+        // Tell remote server running as root to ioctl to gain exclusive access to input device
+    }
+
 }

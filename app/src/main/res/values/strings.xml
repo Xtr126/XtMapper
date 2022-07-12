@@ -7,4 +7,5 @@
     <string name="configure">Select Input device</string>
     <string name="edit_keymap">Edit mode</string>
     <string name="about_info">About</string>
+    <string name="select_input_device">Select Input device</string>
 </resources>
