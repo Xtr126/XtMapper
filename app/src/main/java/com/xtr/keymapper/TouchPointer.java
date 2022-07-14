@@ -68,10 +68,8 @@ public class TouchPointer {
        if(cursorView.getWindowToken()==null)
            if (cursorView.getParent() == null) {
                 mWindowManager.addView(cursorView, mParams);
-                pointer_visible = true;
                 try {
                     loadKeymap();
-                    pointerGrab(true);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -86,13 +84,18 @@ public class TouchPointer {
         try {
             Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
             x_out = new DataOutputStream(socket.getOutputStream());
+            pointer_visible = true;
+            pointerGrab(true);
             String line;
             BufferedReader getevent = Utils.geteventStream(context);
             while ((line = getevent.readLine()) != null) { //read events
                 xy = line.split("\\s+");
+                if(!pointer_visible) {
+                    pointerGrab(false);
+                    break;
+                }
                 handleKeyboardEvents();
                 movePointer();
-                if(!pointer_visible) break;
             }
         } catch (IOException e) {
             updateCmdView("Unable to start overlay: server not started");
@@ -108,7 +111,6 @@ public class TouchPointer {
             // remove all views
             ((ViewGroup) cursorView.getParent()).removeAllViews();
             pointer_visible = false;
-            pointerGrab(false);
             // the above steps are necessary when you are adding and removing
             // the view simultaneously, it might give some exceptions
         } catch (Exception e) {
@@ -163,8 +165,8 @@ public class TouchPointer {
                             break;
                         }
                         case "BTN_MOUSE": {
-                            pointer_down = xy[3].equals("1");
-                            x_out.writeBytes(x1 + " " + y1 + " " + xy[3] + "\n");
+                            pointer_down = xy[1].equals("1");
+                            x_out.writeBytes(x1 + " " + y1 + " " + xy[1] + "\n");
                             break;
                         }
                     }

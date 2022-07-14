@@ -56,18 +56,21 @@ public class Input {
         injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
         String line;
         ServerSocket ss=new ServerSocket(MainActivity.DEFAULT_PORT);
+        System.out.println("waiting for overlay...");
         Socket socket=ss.accept();
         BufferedReader stdInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        System.out.println("server started at port:" + MainActivity.DEFAULT_PORT);
+        System.out.println("connected at port: " + MainActivity.DEFAULT_PORT);
         while ((line = stdInput.readLine()) != null) {
             System.out.println(line);
             String []xy = line.split("\\s+");
             switch (xy[2]) {
-                case "UP": {
+                case "UP":
+                case "0": {
                     sendTapUp(inputSource, parseFloat(xy[0]), parseFloat(xy[1]));
                     break;
                 }
-                case "DOWN": {
+                case "DOWN":
+                case "1": {
                     sendTapDown(inputSource, parseFloat(xy[0]), parseFloat(xy[1]));
                     break;
                 }
