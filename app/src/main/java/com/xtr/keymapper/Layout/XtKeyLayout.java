@@ -12,7 +12,6 @@ import com.xtr.keymapper.R;
 
 
 public class XtKeyLayout extends MovableFrameLayout {
-    private ImageView key;
     private  UppercaseEditText KeyText;
     public XtKeyLayout(Context context) {
         super(context);
@@ -34,7 +33,7 @@ public class XtKeyLayout extends MovableFrameLayout {
         setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
                 LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER));
-        key = new ImageView(context);
+        ImageView key = new ImageView(context);
         key.setMaxHeight(50);
         key.setMaxWidth(50);
         key.setImageResource(R.drawable.key);

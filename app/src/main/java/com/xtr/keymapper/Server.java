@@ -20,7 +20,6 @@ import java.net.Socket;
 public class Server {
 
     private final Context context;
-    public static final int maxLines = 4;
     private final String script_name = "/data/xtr.keymapper.sh\n";
 
     public TextView cmdView;
@@ -47,6 +46,17 @@ public class Server {
                 "\" CLASSPATH=\"" + apk +
                 "\" /system/bin/app_process32 /system/bin " +
                 packageName + ".Input " + getDeviceName() + "\n"); // input device node as argument
+    }
+
+    public static void killServer(String packageName){
+        try {
+        Process sh = Runtime.getRuntime().exec("su");
+        DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
+        outputStream.writeBytes("pkill -f " + packageName + ".Input\n");
+        outputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void setExecPermission(DataOutputStream out) throws IOException, InterruptedException {

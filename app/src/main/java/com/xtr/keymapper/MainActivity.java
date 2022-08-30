@@ -61,14 +61,8 @@ public class MainActivity extends AppCompatActivity {
         setButtonActive(startButton);
 
         if(Settings.canDrawOverlays(this)) {
-            pointerOverlay.open();
+            pointerOverlay.open(startButton);
         }
-
-        startButton.setOnClickListener(v -> {
-            setButtonInactive(startButton);
-            pointerOverlay.hideCursor();
-            startButton.setOnClickListener(view -> startService(startButton));
-        });
     }
 
     public void setButtonActive(FloatingActionButton button){

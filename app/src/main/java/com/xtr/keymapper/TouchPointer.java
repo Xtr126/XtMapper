@@ -15,6 +15,8 @@ import android.widget.TextView;
 
 import static android.content.Context.WINDOW_SERVICE;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -64,7 +66,15 @@ public class TouchPointer {
         mWindowManager = (WindowManager)context.getSystemService(WINDOW_SERVICE);
     }
 
-    public void open() {
+    public void open(FloatingActionButton startButton) {
+        ((MainActivity)context).setButtonActive(startButton);
+        startButton.setOnClickListener(v -> {
+            Server.killServer(context.getPackageName());
+            hideCursor();
+            ((MainActivity)context).setButtonInactive(startButton);
+            startButton.setOnClickListener(view -> open(startButton));
+        });
+
        if(cursorView.getWindowToken()==null)
            if (cursorView.getParent() == null) {
                 mWindowManager.addView(cursorView, mParams);
@@ -73,28 +83,24 @@ public class TouchPointer {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-
                new Thread(this::event_handler).start();
-
+               pointer_visible = true;
            }
-
     }
 
     private void event_handler() {
         try {
             Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
             x_out = new DataOutputStream(socket.getOutputStream());
-            pointer_visible = true;
             pointerGrab(true);
             String line;
             BufferedReader getevent = Utils.geteventStream(context);
             while ((line = getevent.readLine()) != null) { //read events
                 xy = line.split("\\s+");
-                if(!pointer_visible) {
-                    pointerGrab(false);
-                    break;
+                updateCmdView(line);
+                if (xy[3].equals("DOWN") || xy[3].equals("UP")) {
+                    handleKeyboardEvents();
                 }
-                handleKeyboardEvents();
                 movePointer();
             }
         } catch (IOException e) {
@@ -111,6 +117,7 @@ public class TouchPointer {
             // remove all views
             ((ViewGroup) cursorView.getParent()).removeAllViews();
             pointer_visible = false;
+            pointerGrab(false);
             // the above steps are necessary when you are adding and removing
             // the view simultaneously, it might give some exceptions
         } catch (Exception e) {
@@ -148,25 +155,25 @@ public class TouchPointer {
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
                 if (pointer_visible) {
-                    xy = line.split("\\s+");
-                    switch (xy[0]) {
+                    String []xy2 = line.split("\\s+");
+                    switch (xy2[0]) {
                         case "REL_X": {
-                            x2 += Integer.parseInt(xy[1]);
+                            x2 += Integer.parseInt(xy2[1]);
                             if (pointer_down)
                                 x_out.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
                             x1 = x2;
                             break;
                         }
                         case "REL_Y": {
-                            y2 += Integer.parseInt(xy[1]);
+                            y2 += Integer.parseInt(xy2[1]);
                             if (pointer_down)
                                 x_out.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
                             y1 = y2;
                             break;
                         }
                         case "BTN_MOUSE": {
-                            pointer_down = xy[1].equals("1");
-                            x_out.writeBytes(x1 + " " + y1 + " " + xy[1] + "\n");
+                            pointer_down = xy2[1].equals("1");
+                            x_out.writeBytes(x1 + " " + y1 + " " + xy2[1] + "\n");
                             break;
                         }
                     }
@@ -179,7 +186,7 @@ public class TouchPointer {
         } catch (IOException e) {
             Log.d("Error2", e.toString());
             tryStopSocket();
-            updateCmdView("app side listener crashed: please restart app");
+            updateCmdView("app side listener crashed::restart app");
         }
     }
 
