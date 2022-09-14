@@ -14,7 +14,7 @@ import android.widget.ImageView;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
-import com.xtr.keymapper.Layout.XtKeyLayout;
+import com.xtr.keymapper.Layout.MovableFloatingActionButton;
 import com.xtr.keymapper.Layout.MovableFloatingActionButton;
 
 import java.io.FileWriter;
@@ -40,7 +40,7 @@ public class EditorUI {
     FabOption dPad;
     FabOption crossHair;
 
-    List<XtKeyLayout> KeyX;
+    List<MovableFloatingActionButton> KeyX;
 
     private int i;
 
@@ -91,9 +91,9 @@ public class EditorUI {
 
         for (int n = 0; n < key.length; n++) {
             if (key[n] != null) {
-                KeyX.add(i, new XtKeyLayout(context));
+                KeyX.add(i, new MovableFloatingActionButton(context));
                 mainView.addView(KeyX.get(i));
-                KeyX.get(i).setKeyText(key[n]);
+                KeyX.get(i).setText(key[n]);
                 KeyX.get(i).setX(x[n]);
                 KeyX.get(i).setY(y[n]);
                 i++;
@@ -145,14 +145,10 @@ public class EditorUI {
     }
 
     private void addKey() {
-        KeyX.add(i,new XtKeyLayout(context));
+        KeyX.add(i,new MovableFloatingActionButton(context));
         mainView.addView(KeyX.get(i));
-        KeyX.get(i).setKeyText(String.valueOf(i));
+        KeyX.get(i).setText(String.valueOf(i));
         i++;
     }
-    private MovableFloatingActionButton MakeKey(String key) {
-        MovableFloatingActionButton KeyA = new MovableFloatingActionButton(context);
-        KeyA.setText(key);
-        return KeyA;
-    }
+
 }

@@ -35,9 +35,7 @@ public class TouchPointer {
     private final WindowManager.LayoutParams mParams;
     private final WindowManager mWindowManager;
     int x1 = 100;
-    int x2 = 100;
     int y1 = 100;
-    int y2 = 100;
     String[] key; Float[] x; Float[] y;
     public TextView cmdView3;
     boolean pointer_down = false;
@@ -97,9 +95,20 @@ public class TouchPointer {
             BufferedReader getevent = Utils.geteventStream(context);
             while ((line = getevent.readLine()) != null) { //read events
                 xy = line.split("\\s+");
+                // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
+                // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
                 updateCmdView(line);
                 if (xy[3].equals("DOWN") || xy[3].equals("UP")) {
-                    handleKeyboardEvents();
+                    int i = Utils.obtainIndex(xy[2]);
+                    // Strips off KEY_ from KEY_X and return the index of X in alphabet
+                    if (i >= 0 && i <= 35) { // Make sure valid
+                        if (x != null) { // Avoid null array exception in case user has not set keymap already
+                            if (x[i] != null) {
+                                x_out.writeBytes(x[i] + " " + y[i] + " " + xy[3] + " " + i + "\n");
+                                // Send coordinates to remote server to simulate touch
+                            }
+                        }
+                    }
                 }
                 movePointer();
             }
@@ -158,22 +167,20 @@ public class TouchPointer {
                     String []xy2 = line.split("\\s+");
                     switch (xy2[0]) {
                         case "REL_X": {
-                            x2 += Integer.parseInt(xy2[1]);
+                            x1 += Integer.parseInt(xy2[1]);
                             if (pointer_down)
-                                x_out.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
-                            x1 = x2;
+                                x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 0" + "\n");
                             break;
                         }
                         case "REL_Y": {
-                            y2 += Integer.parseInt(xy2[1]);
+                            y1 += Integer.parseInt(xy2[1]);
                             if (pointer_down)
-                                x_out.writeBytes(x1 + " " + y1 + " " + "MOVE " + x2 + " " + y2 + "\n");
-                            y1 = y2;
+                                x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 0" + "\n");
                             break;
                         }
                         case "BTN_MOUSE": {
                             pointer_down = xy2[1].equals("1");
-                            x_out.writeBytes(x1 + " " + y1 + " " + xy2[1] + "\n");
+                            x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + xy2[1] + " 0" + "\n");
                             break;
                         }
                     }
@@ -200,28 +207,13 @@ public class TouchPointer {
         }
     }
 
-    private void handleKeyboardEvents() throws IOException {
-        // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
-        // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
-        int i = Utils.obtainIndex(xy[2]);
-        // Strips off KEY_ from KEY_X and return the index of X in alphabet
-        if (i >= 0 && i <= 35) { // Make sure valid
-            if (x != null) { // Avoid null array exception in case user has not set keymap already
-                if (x[i] != null) {
-                    x_out.writeBytes(x[i] + " " + y[i] + " " + xy[3] + "\n");
-                    // Send coordinates to remote server to simulate touch
-                }
-            }
-        }
-    }
-
     public void movePointer(){
         ((MainActivity)context).runOnUiThread(() -> cursorView.setY(y1));
         ((MainActivity)context).runOnUiThread(() -> cursorView.setX(x1));
     }
 
     private void pointerGrab(boolean ioctl) throws IOException {
-        x_out.writeBytes( "_ " + ioctl + " ioctl\n");
+        x_out.writeBytes( "_ " + ioctl + " ioctl" + " 0\n");
         // Tell remote server running as root to ioctl to gain exclusive access to input device
     }
 

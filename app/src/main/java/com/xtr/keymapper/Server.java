@@ -53,6 +53,7 @@ public class Server {
         Process sh = Runtime.getRuntime().exec("su");
         DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
         outputStream.writeBytes("pkill -f " + packageName + ".Input\n");
+        outputStream.writeBytes("pkill -f libgetevent.so\n");
         outputStream.close();
         } catch (IOException e) {
             e.printStackTrace();

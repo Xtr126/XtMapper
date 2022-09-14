@@ -1,10 +1,12 @@
 package com.xtr.keymapper.Layout;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -12,6 +14,10 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.xtr.keymapper.R;
+
+import java.util.Locale;
+import java.util.Random;
 
 public class MovableFloatingActionButton extends FloatingActionButton implements View.OnTouchListener {
 
@@ -19,6 +25,7 @@ public class MovableFloatingActionButton extends FloatingActionButton implements
 
     private float downRawX, downRawY;
     private float dX, dY;
+    public String key;
 
     public MovableFloatingActionButton(Context context) {
         super(context);
@@ -41,7 +48,7 @@ public class MovableFloatingActionButton extends FloatingActionButton implements
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent){
-
+        setButtonInactive();
         ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams)view.getLayoutParams();
 
         int action = motionEvent.getAction();
@@ -51,9 +58,8 @@ public class MovableFloatingActionButton extends FloatingActionButton implements
             downRawY = motionEvent.getRawY();
             dX = view.getX() - downRawX;
             dY = view.getY() - downRawY;
-
+            setButtonInactive();
             return true; // Consumed
-
         }
         else if (action == MotionEvent.ACTION_MOVE) {
 
@@ -77,7 +83,7 @@ public class MovableFloatingActionButton extends FloatingActionButton implements
                     .y(newY)
                     .setDuration(0)
                     .start();
-
+            setButtonInactive();
             return true; // Consumed
 
         }
@@ -90,9 +96,11 @@ public class MovableFloatingActionButton extends FloatingActionButton implements
             float upDY = upRawY - downRawY;
 
             if (Math.abs(upDX) < CLICK_DRAG_TOLERANCE && Math.abs(upDY) < CLICK_DRAG_TOLERANCE) { // A click
+                setButtonActive();
                 return performClick();
             }
             else { // A drag
+                setButtonActive();
                 return true; // Consumed
             }
 
@@ -100,12 +108,30 @@ public class MovableFloatingActionButton extends FloatingActionButton implements
         else {
             return super.onTouchEvent(motionEvent);
         }
-
+    }
+    public String getData(){
+        return "KEY_" + key.toUpperCase() + " " + getX() + " " + getY() + "\n";
     }
 
-public void setText(String text) {
+    public void setButtonActive(){
+        Random rnd = new Random();
+        int color = Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256));
+        setBackgroundTintList(ColorStateList.valueOf(color));
+        setImageTintList(ColorStateList.valueOf(getContext().getColor(R.color.colorAccent)));
+    }
+
+    public void setButtonInactive(){
+        setBackgroundTintList(ColorStateList.valueOf(getContext().getColor(R.color.grey)));
+        setImageTintList(ColorStateList.valueOf(getContext().getColor(R.color.white2)));
+    }
+
+    public void setText(String text) {
+        this.key = text;
+        setButtonActive();
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setTextSize(40);
+        paint.setTextSize(50);
+        paint.setTypeface(Typeface.MONOSPACE);
+        paint.setFakeBoldText(true);
         paint.setColor(Color.WHITE);
         paint.setTextAlign(Paint.Align.LEFT);
         float baseline = -paint.ascent(); // ascent() is negative
@@ -117,5 +143,6 @@ public void setText(String text) {
         canvas.drawText(text, 0, baseline, paint);
         setImageBitmap(image);
         setScaleType(ScaleType.CENTER_INSIDE);
+        setMaxImageSize(30);
     }
 }

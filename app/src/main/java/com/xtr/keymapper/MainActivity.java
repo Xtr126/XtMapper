@@ -7,6 +7,7 @@ import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -26,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton startInTerminal;
     private FloatingActionButton keymap;
     private FloatingActionButton configureButton;
+    private FloatingActionButton infoButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
         startOverlayButton.setOnClickListener(v -> startService(startOverlayButton));
         keymap.setOnClickListener(v -> startEditor());
         configureButton.setOnClickListener(v -> startActivity(new Intent(this, InputDeviceSelector.class)));
+        infoButton.setOnClickListener(v -> startActivity(new Intent(this, InfoActivity.class)));
     }
 
     private void initFab(){
@@ -53,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         startInTerminal = findViewById(R.id.startServerM);
         keymap = findViewById(R.id.start_editor);
         configureButton = findViewById(R.id.config_pointer);
-
+        infoButton = findViewById(R.id.about_button);
     }
 
     private void startService(FloatingActionButton startButton){
