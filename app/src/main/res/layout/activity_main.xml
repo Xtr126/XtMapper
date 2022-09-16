@@ -5,7 +5,6 @@
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/background_dark"
     tools:context=".MainActivity"
     tools:ignore="ContentDescription,SpUsage">
 
@@ -17,41 +16,38 @@
         android:layout_marginEnd="10dp"
         android:gravity="bottom"
         android:textAppearance="@android:style/TextAppearance.Material.Large"
-        android:textColor="@color/white"
         android:textSize="16sp"
         app:layout_constraintBottom_toTopOf="@id/constrained"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintRight_toRightOf="@+id/activity_main" />
+        app:layout_constraintRight_toRightOf="@+id/activity_main"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/cmdview2"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="10dp"
-        android:layout_marginBottom="5dp"
         android:layout_marginEnd="10dp"
-        android:textColor="@color/white"
+        android:layout_marginBottom="5dp"
         android:gravity="bottom"
         android:maxLines="8"
-        app:layout_constraintRight_toLeftOf="@+id/cmdview"
         app:layout_constraintBottom_toTopOf="@id/cmdview3"
         app:layout_constraintLeft_toLeftOf="@id/constrained"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintRight_toLeftOf="@+id/cmdview"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/cmdview3"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="5dp"
-        android:layout_marginBottom="10dp"
         android:layout_marginEnd="10dp"
-        android:textColor="@color/white"
+        android:layout_marginBottom="10dp"
         android:gravity="bottom"
         android:maxLines="8"
-        app:layout_constraintRight_toLeftOf="@+id/cmdview"
         app:layout_constraintBottom_toTopOf="@id/constrained"
-        app:layout_constraintTop_toBottomOf="@id/cmdview2"
-        app:layout_constraintLeft_toLeftOf="@id/constrained"/>
+        app:layout_constraintLeft_toLeftOf="@id/constrained"
+        app:layout_constraintRight_toLeftOf="@+id/cmdview"
+        app:layout_constraintTop_toBottomOf="@id/cmdview2" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constrained"
@@ -94,10 +90,8 @@
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
                 android:src="@drawable/settings"
-                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
                 app:maxImageSize="40dp"
-                app:tint="@color/white2"
                 tools:ignore="ContentDescription" />
 
             <TextView
@@ -108,7 +102,6 @@
                 android:text="@string/configure"
                 android:textAlignment="center"
                 android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textColor="@android:color/white"
                 android:textSize="14dp" />
         </FrameLayout>
 
@@ -130,10 +123,8 @@
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
                 android:src="@drawable/start"
-                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
-                app:maxImageSize="40dp"
-                app:tint="@color/white2" />
+                app:maxImageSize="40dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -142,7 +133,6 @@
                 android:elevation="16dp"
                 android:text="@string/start_server"
                 android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textColor="@android:color/white"
                 android:textSize="14dp" />
         </FrameLayout>
 
@@ -172,10 +162,8 @@
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
                 android:src="@drawable/terminal"
-                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
-                app:maxImageSize="40dp"
-                app:tint="@color/white2" />
+                app:maxImageSize="40dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -184,7 +172,6 @@
                 android:elevation="16dp"
                 android:text="@string/start_server_manual"
                 android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textColor="@android:color/white"
                 android:textSize="14dp"
                 tools:ignore="SpUsage" />
         </FrameLayout>
@@ -207,10 +194,8 @@
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
                 android:src="@drawable/touch_p"
-                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
-                app:maxImageSize="40dp"
-                app:tint="@color/white2" />
+                app:maxImageSize="40dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -219,7 +204,6 @@
                 android:elevation="16dp"
                 android:text="@string/start_touch_pointer"
                 android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textColor="@android:color/white"
                 android:textSize="14dp" />
         </FrameLayout>
 
@@ -240,10 +224,8 @@
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
                 android:src="@drawable/about"
-                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
-                app:maxImageSize="40dp"
-                app:tint="@color/white2" />
+                app:maxImageSize="40dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -252,7 +234,6 @@
                 android:elevation="16dp"
                 android:text="@string/about_info"
                 android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textColor="@android:color/white"
                 android:textSize="14dp" />
         </FrameLayout>
 
@@ -272,10 +253,8 @@
                 android:layout_gravity="top|center"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_create_white_24dp"
-                app:backgroundTint="@color/grey"
                 app:fabCustomSize="55dp"
-                app:maxImageSize="35dp"
-                app:tint="@color/white2" />
+                app:maxImageSize="35dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -284,7 +263,6 @@
                 android:elevation="16dp"
                 android:text="@string/edit_keymap"
                 android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textColor="@android:color/white"
                 android:textSize="14dp" />
         </FrameLayout>
 
