@@ -57,11 +57,9 @@ public class EditorUI {
                         WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
-
         layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         keymapView = layoutInflater.inflate(R.layout.keymap, new ExpandableFabLayout(context), false);
         mainView = keymapView.findViewById(R.id.MainView);
-
         initFab();
         mParams.gravity = Gravity.CENTER;
         mWindowManager = (WindowManager) context.getSystemService(WINDOW_SERVICE);
@@ -148,6 +146,8 @@ public class EditorUI {
         KeyX.add(i,new MovableFloatingActionButton(context));
         mainView.addView(KeyX.get(i));
         KeyX.get(i).setText(String.valueOf(i));
+        KeyX.get(i).setX(100);
+        KeyX.get(i).setY(100);
         i++;
     }
 

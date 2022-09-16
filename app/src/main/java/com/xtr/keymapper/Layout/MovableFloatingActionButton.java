@@ -130,7 +130,6 @@ public class MovableFloatingActionButton extends FloatingActionButton implements
         setButtonActive();
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setTextSize(50);
-        paint.setTypeface(Typeface.MONOSPACE);
         paint.setFakeBoldText(true);
         paint.setColor(Color.WHITE);
         paint.setTextAlign(Paint.Align.LEFT);

@@ -6,7 +6,8 @@
         xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_gravity="center"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:theme="@style/Theme.MaterialComponents">
     <com.nambimobile.widgets.efab.Overlay
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -19,13 +20,14 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_marginEnd="10dp"
-        android:layout_marginBottom="10dp"
-        app:efab_firstFabOptionMarginPx="60"
-        app:efab_successiveFabOptionMarginPx="60"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
         app:efab_color="#9374DE"
+        app:efab_firstFabOptionMarginPx="60"
         app:efab_icon="@drawable/ic_create_white_24dp"
-        app:efab_iconAnimationRotationDeg="-225" />
+        app:efab_iconAnimationRotationDeg="-225"
+        app:efab_size="auto"
+        app:efab_successiveFabOptionMarginPx="60"/>
 
         <com.nambimobile.widgets.efab.FabOption
             android:id="@+id/add_button"
