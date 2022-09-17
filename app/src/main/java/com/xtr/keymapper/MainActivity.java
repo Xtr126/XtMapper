@@ -6,14 +6,8 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.util.Log;
-import android.view.View;
+import android.widget.Button;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.Socket;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -22,12 +16,12 @@ public class MainActivity extends AppCompatActivity {
     public TouchPointer pointerOverlay;
     public Server server;
 
-    private FloatingActionButton startOverlayButton;
-    private FloatingActionButton startServerButton;
-    private FloatingActionButton startInTerminal;
-    private FloatingActionButton keymap;
-    private FloatingActionButton configureButton;
-    private FloatingActionButton infoButton;
+    private Button startOverlayButton;
+    private Button startServerButton;
+    private Button startInTerminal;
+    private Button keymap;
+    private Button configureButton;
+    private Button infoButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
         infoButton = findViewById(R.id.about_button);
     }
 
-    private void startService(FloatingActionButton startButton){
+    private void startService(Button startButton){
         checkOverlayPermission();
         setButtonActive(startButton);
 
@@ -68,14 +62,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void setButtonActive(FloatingActionButton button){
-        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.teal_200)));
-        button.setImageTintList(ColorStateList.valueOf(getColor(R.color.colorAccent)));
+    public void setButtonActive(Button button){
+        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.purple_700)));
     }
 
-    public void setButtonInactive(FloatingActionButton button){
+    public void setButtonInactive(Button button){
         button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.grey)));
-        button.setImageTintList(ColorStateList.valueOf(getColor(R.color.white2)));
     }
 
     private void startEditor(){

@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -64,7 +65,7 @@ public class TouchPointer {
         mWindowManager = (WindowManager)context.getSystemService(WINDOW_SERVICE);
     }
 
-    public void open(FloatingActionButton startButton) {
+    public void open(Button startButton) {
         ((MainActivity)context).setButtonActive(startButton);
         startButton.setOnClickListener(v -> {
             Server.killServer(context.getPackageName());

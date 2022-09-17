@@ -51,220 +51,80 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constrained"
-        android:layout_width="400dp"
-        android:layout_height="257dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        app:layout_constraintBottom_toBottomOf="parent">
 
-        <androidx.constraintlayout.widget.Barrier
-            android:id="@+id/barrierVertical"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
+
+        <LinearLayout
+            android:id="@+id/L2"
+            android:layout_width="160dp"
+            android:layout_height="match_parent"
             android:orientation="vertical"
-            app:barrierDirection="right"
-            app:constraint_referenced_ids="L1, L2"
-            tools:layout_editor_absoluteX="125dp" />
+            app:layout_constraintLeft_toRightOf="@id/L1"
+            app:layout_constraintRight_toRightOf="parent">
 
-        <androidx.constraintlayout.widget.Barrier
-            android:id="@+id/barrierVertical2"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:orientation="vertical"
-            app:barrierDirection="right"
-            app:constraint_referenced_ids="R2, L2"
-            tools:layout_editor_absoluteX="125dp" />
-
-        <FrameLayout
-            android:id="@+id/L1"
-            android:layout_width="120dp"
-            android:layout_height="90dp"
-            android:layout_gravity="bottom|end"
-            android:layout_marginEnd="10dp"
-            android:layout_marginBottom="128dp"
-            app:layout_constraintLeft_toLeftOf="parent">
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
+            <Button
                 android:id="@+id/config_pointer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|center"
-                android:scaleType="centerInside"
-                android:src="@drawable/settings"
-                app:fabCustomSize="55dp"
-                app:maxImageSize="40dp"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:layout_marginVertical="10dp"
+                android:text="@string/configure"
+                app:icon="@drawable/settings"
                 tools:ignore="ContentDescription" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center"
-                android:elevation="16dp"
-                android:text="@string/configure"
-                android:textAlignment="center"
-                android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textSize="14dp" />
-        </FrameLayout>
-
-
-        <FrameLayout
-            android:id="@+id/R1"
-            android:layout_width="120dp"
-            android:layout_height="90dp"
-            android:layout_gravity="bottom|end"
-            app:layout_constraintHorizontal_bias="0.051"
-            app:layout_constraintLeft_toRightOf="@+id/barrierVertical"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/startServer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|center"
-                android:scaleType="centerInside"
-                android:src="@drawable/start"
-                app:fabCustomSize="55dp"
-                app:maxImageSize="40dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center"
-                android:elevation="16dp"
-                android:text="@string/start_server"
-                android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textSize="14dp" />
-        </FrameLayout>
-
-        <androidx.constraintlayout.widget.Barrier
-            android:id="@+id/barrier1"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:orientation="horizontal"
-            app:barrierDirection="bottom"
-            app:constraint_referenced_ids="L1, R1"
-            tools:layout_editor_absoluteY="44dp" />
-
-
-        <FrameLayout
-            android:id="@+id/L2"
-            android:layout_width="120dp"
-            android:layout_height="90dp"
-            android:layout_gravity="bottom|end"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/barrier1">
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/startServerM"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|center"
-                android:scaleType="centerInside"
-                android:src="@drawable/terminal"
-                app:fabCustomSize="55dp"
-                app:maxImageSize="40dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center"
-                android:elevation="16dp"
-                android:text="@string/start_server_manual"
-                android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textSize="14dp"
-                tools:ignore="SpUsage" />
-        </FrameLayout>
-
-        <FrameLayout
-            android:id="@+id/R2"
-            android:layout_width="120dp"
-            android:layout_height="90dp"
-            android:layout_gravity="bottom|end"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintHorizontal_bias="0.058"
-            app:layout_constraintLeft_toRightOf="@+id/barrierVertical"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/barrier1">
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
+            <Button
                 android:id="@+id/startPointer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|center"
-                android:scaleType="centerInside"
-                android:src="@drawable/touch_p"
-                app:fabCustomSize="55dp"
-                app:maxImageSize="40dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center"
-                android:elevation="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:layout_marginVertical="10dp"
                 android:text="@string/start_touch_pointer"
-                android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textSize="14dp" />
-        </FrameLayout>
+                app:icon="@drawable/touch_p" />
 
-        <FrameLayout
-            android:id="@+id/R3"
-            android:layout_width="120dp"
-            android:layout_height="90dp"
-            android:layout_gravity="bottom|end"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintLeft_toRightOf="@+id/barrierVertical2"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/barrier1">
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
+            <Button
                 android:id="@+id/about_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|center"
-                android:scaleType="centerInside"
-                android:src="@drawable/about"
-                app:fabCustomSize="55dp"
-                app:maxImageSize="40dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center"
-                android:elevation="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:layout_marginVertical="10dp"
                 android:text="@string/about_info"
-                android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textSize="14dp" />
-        </FrameLayout>
+                app:icon="@drawable/about" />
+        </LinearLayout>
 
-        <FrameLayout
-            android:id="@+id/L3"
-            android:layout_width="120dp"
-            android:layout_height="90dp"
-            android:layout_gravity="bottom|end"
-            app:layout_constraintLeft_toRightOf="@+id/barrierVertical2"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
 
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
+        <LinearLayout
+            android:id="@+id/L1"
+            android:layout_width="160dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toLeftOf="@id/L2">
+
+            <Button
                 android:id="@+id/start_editor"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|center"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_create_white_24dp"
-                app:fabCustomSize="55dp"
-                app:maxImageSize="35dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center"
-                android:elevation="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:layout_marginVertical="10dp"
                 android:text="@string/edit_keymap"
-                android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textSize="14dp" />
-        </FrameLayout>
+                app:icon="@drawable/ic_create_white_24dp" />
+
+            <Button
+                android:id="@+id/startServerM"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:layout_marginVertical="10dp"
+                android:text="@string/start_server_manual"
+                app:icon="@drawable/terminal" />
+
+            <Button
+                android:id="@+id/startServer"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:layout_marginVertical="10dp"
+                android:text="@string/start_server"
+                app:icon="@drawable/start" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
