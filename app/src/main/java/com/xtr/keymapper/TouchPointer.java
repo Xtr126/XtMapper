@@ -2,7 +2,6 @@ package com.xtr.keymapper;
 
 import android.content.Context;
 import android.graphics.PixelFormat;
-import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -15,8 +14,6 @@ import android.widget.TextView;
 
 
 import static android.content.Context.WINDOW_SERVICE;
-
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -38,16 +35,14 @@ public class TouchPointer {
     int x1 = 100;
     int y1 = 100;
     String[] key; Float[] x; Float[] y;
-    public TextView cmdView3;
+    public final TextView cmdView3;
+    final Button startButton;
     boolean pointer_down = false;
-    private String[] xy;
-    private DataOutputStream x_out;
-    boolean pointer_visible = false;
 
     public TouchPointer(Context context){
         this.context= context;
         cmdView3 = ((MainActivity)context).findViewById(R.id.cmdview3);
-
+        startButton  = ((MainActivity)context).findViewById(R.id.startPointer);
         // set the layout parameters of the cursor
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
@@ -65,13 +60,13 @@ public class TouchPointer {
         mWindowManager = (WindowManager)context.getSystemService(WINDOW_SERVICE);
     }
 
-    public void open(Button startButton) {
+    public void open() {
         ((MainActivity)context).setButtonActive(startButton);
         startButton.setOnClickListener(v -> {
             Server.killServer(context.getPackageName());
             hideCursor();
             ((MainActivity)context).setButtonInactive(startButton);
-            startButton.setOnClickListener(view -> open(startButton));
+            startButton.setOnClickListener(view -> open());
         });
 
        if(cursorView.getWindowToken()==null)
@@ -83,19 +78,17 @@ public class TouchPointer {
                     e.printStackTrace();
                 }
                new Thread(this::event_handler).start();
-               pointer_visible = true;
            }
     }
 
     private void event_handler() {
         try {
             Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
-            x_out = new DataOutputStream(socket.getOutputStream());
-            pointerGrab(true);
+            DataOutputStream x_out = new DataOutputStream(socket.getOutputStream());
             String line;
             BufferedReader getevent = Utils.geteventStream(context);
             while ((line = getevent.readLine()) != null) { //read events
-                xy = line.split("\\s+");
+                String[] xy = line.split("\\s+");
                 // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
                 // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
                 updateCmdView(line);
@@ -126,8 +119,6 @@ public class TouchPointer {
             cursorView.invalidate();
             // remove all views
             ((ViewGroup) cursorView.getParent()).removeAllViews();
-            pointer_visible = false;
-            pointerGrab(false);
             // the above steps are necessary when you are adding and removing
             // the view simultaneously, it might give some exceptions
         } catch (Exception e) {
@@ -161,36 +152,40 @@ public class TouchPointer {
 
             updateCmdView("initialized: listening for events through socket");
 
+            Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
+            DataOutputStream x_out = new DataOutputStream(socket.getOutputStream());
+            pointerGrab(x_out);
+            ((MainActivity)context).runOnUiThread(this::open);
             String line;
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
-                if (pointer_visible) {
                     String []xy2 = line.split("\\s+");
                     switch (xy2[0]) {
                         case "REL_X": {
                             x1 += Integer.parseInt(xy2[1]);
                             if (pointer_down)
-                                x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 0" + "\n");
+                                x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
                             break;
                         }
                         case "REL_Y": {
                             y1 += Integer.parseInt(xy2[1]);
                             if (pointer_down)
-                                x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 0" + "\n");
+                                x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
                             break;
                         }
                         case "BTN_MOUSE": {
                             pointer_down = xy2[1].equals("1");
-                            x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + xy2[1] + " 0" + "\n");
+                            x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + xy2[1] + " 36" + "\n");
                             break;
                         }
                     }
                     movePointer();
-                }
+
             }
             in.close();
             clientSocket.close();
             serverSocket.close();
+            socket.close();
         } catch (IOException e) {
             Log.d("Error2", e.toString());
             tryStopSocket();
@@ -213,8 +208,8 @@ public class TouchPointer {
         ((MainActivity)context).runOnUiThread(() -> cursorView.setX(x1));
     }
 
-    private void pointerGrab(boolean ioctl) throws IOException {
-        x_out.writeBytes( "_ " + ioctl + " ioctl" + " 0\n");
+    private void pointerGrab(DataOutputStream x_out) throws IOException {
+        x_out.writeBytes( "_ " + true + " ioctl" + " 0\n");
         // Tell remote server running as root to ioctl to gain exclusive access to input device
     }
 

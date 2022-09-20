@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
         setButtonActive(startButton);
 
         if(Settings.canDrawOverlays(this)) {
-            pointerOverlay.open(startButton);
+            pointerOverlay.open();
         }
     }
 
@@ -82,14 +82,6 @@ public class MainActivity extends AppCompatActivity {
                 Intent myIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
                 startActivity(myIntent);
             }
-    }
-    protected void onDestroy() {
-            super.onDestroy();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
     }
 
 }

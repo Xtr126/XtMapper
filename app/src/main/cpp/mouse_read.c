@@ -17,7 +17,6 @@
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#define PORT 6345
 
 char str[16];
 typedef struct mouse_context {
@@ -25,6 +24,7 @@ typedef struct mouse_context {
     pthread_mutex_t  lock;
 	int      done;
 	const char* dev;
+    int port;
 } mouseContext;
 mouseContext g_ctx;
 
@@ -48,7 +48,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 }
 
 
-void create_socket(struct Socket *Socket){
+void create_socket(struct Socket *Socket, int PORT){
     struct sockaddr_in serv_addr;
     if ((Socket->sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("\n Socket creation error \n");
@@ -70,6 +70,7 @@ void create_socket(struct Socket *Socket){
                            sizeof(serv_addr)))
         < 0) {
         printf("\nConnection Failed \n");
+
     }
 }
 
@@ -124,7 +125,7 @@ void * UpdateMouse(void* context) {
         }
       //ioctl(fd, EVIOCGRAB, (void *)1);
 
-        create_socket(&x_cts);
+        create_socket(&x_cts, pctx->port);
 
         while (read(fd, &ie, sizeof(struct input_event))) {
             send_data(&ie, &x_cts);
@@ -143,7 +144,7 @@ void * UpdateMouse(void* context) {
 
 
     JNIEXPORT void JNICALL
-    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring device) {
+    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring device, jint port) {
         pthread_t threadInfo_;
         pthread_attr_t threadAttr_;
 
@@ -159,6 +160,7 @@ void * UpdateMouse(void* context) {
         setlinebuf(stdout);
 
         g_ctx.dev = (*env)->GetStringUTFChars(env, device, 0);
+        g_ctx.port = port;
         int result = pthread_create(&threadInfo_, &threadAttr_, UpdateMouse, &g_ctx);
         assert(result == 0);
 

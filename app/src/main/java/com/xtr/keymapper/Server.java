@@ -13,17 +13,14 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
 
 public class Server {
 
     private final Context context;
     private final String script_name = "/data/xtr.keymapper.sh\n";
 
-    public TextView cmdView;
-    public TextView cmdView2;
+    public final TextView cmdView;
+    public final TextView cmdView2;
 
     public Server(Context context){
         this.context=context;
