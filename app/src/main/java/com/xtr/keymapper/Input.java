@@ -36,7 +36,7 @@ public class Input {
 
     public void start(String[] args) {
         if(!args[0].equals("null")) {
-            startMouse(args[0]); // Call native code
+            startMouse(args[0], MainActivity.DEFAULT_PORT_2); // Call native code
         } else {
             System.out.println("exiting: input device not selected");
             System.out.println("select input device, click run in terminal and try again\n or edit this script and replace null with input device node");
@@ -69,7 +69,13 @@ public class Input {
         while ((line = stdInput.readLine()) != null) {
             System.out.println(line);
             String []xy = line.split("\\s+");
-            int pointerId = Integer.parseInt(xy[3]);
+            int pointerId;
+            try {
+                pointerId = Integer.parseInt(xy[3]);
+            } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
+                e.printStackTrace(System.out);
+                continue;
+            }
             switch (xy[2]) {
                 case "UP":
                 case "0": {
@@ -104,7 +110,7 @@ public class Input {
                 IllegalAccessException |
                 InvocationTargetException |
                 IOException e) {
-            System.out.println(e);
+            e.printStackTrace(System.out);
         }
     }
 
@@ -154,7 +160,7 @@ public class Input {
         try {
             injectInputEventMethod.invoke(im, event, 2);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+            e.printStackTrace(System.out);
         }
     }
 
@@ -196,14 +202,14 @@ public class Input {
         try {
             injectInputEventMethod.invoke(im, event, 0);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+            e.printStackTrace(System.out);
         }
     }
 
     static {
         System.loadLibrary("mouse_read");
     }
-    public static native void startMouse(String arg);
+    public static native void startMouse(String arg0, int arg1);
 
     public static native void setIoctl(boolean y);
 
