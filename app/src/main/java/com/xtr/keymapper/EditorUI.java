@@ -15,7 +15,6 @@ import android.widget.ImageView;
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
 import com.xtr.keymapper.Layout.MovableFloatingActionButton;
-import com.xtr.keymapper.Layout.MovableFloatingActionButton;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -27,20 +26,20 @@ import java.util.List;
 
 
 public class EditorUI {
-    Context context;
-    View keymapView;
+    final Context context;
+    final View keymapView;
 
-    WindowManager.LayoutParams mParams;
-    WindowManager mWindowManager;
-    LayoutInflater layoutInflater;
-    ExpandableFabLayout mainView;
+    final WindowManager.LayoutParams mParams;
+    final WindowManager mWindowManager;
+    final LayoutInflater layoutInflater;
+    final ExpandableFabLayout mainView;
 
     FabOption saveButton;
     FabOption addKey;
     FabOption dPad;
     FabOption crossHair;
 
-    List<MovableFloatingActionButton> KeyX;
+    final List<MovableFloatingActionButton> KeyX;
 
     private int i;
 

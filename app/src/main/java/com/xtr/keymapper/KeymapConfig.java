@@ -2,9 +2,9 @@ package com.xtr.keymapper;
 import android.content.Context;
 
 public class KeymapConfig {
-    Context context;
+    final Context context;
     public static final String configPath = "//data/data/com.xtr.keymapper/keymap_config";
-    String[] key; Float[] x; Float[] y;
+    final String[] key; final Float[] x; final Float[] y;
 
     public KeymapConfig(Context context) {
         this.context = context;

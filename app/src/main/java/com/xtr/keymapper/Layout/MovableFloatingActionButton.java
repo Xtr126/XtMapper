@@ -6,17 +6,14 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.xtr.keymapper.R;
 
-import java.util.Locale;
 import java.util.Random;
 
 public class MovableFloatingActionButton extends FloatingActionButton implements View.OnTouchListener {

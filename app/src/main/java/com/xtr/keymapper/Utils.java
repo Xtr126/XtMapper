@@ -1,8 +1,6 @@
 package com.xtr.keymapper;
 
 import android.content.Context;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 
@@ -13,7 +11,7 @@ import java.io.InputStreamReader;
 import java.math.BigInteger;
 
 public class Utils {
-    public static String alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    public static final String alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 
     public static int obtainIndex(String s) {
