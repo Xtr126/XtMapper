@@ -34,16 +34,8 @@ public class Input {
     private long lastTouchDown;
 
 
-    public void start(String[] args) {
-        if(!args[0].equals("null")) {
-            startMouse(args[0], MainActivity.DEFAULT_PORT_2); // Call native code
-        } else {
-            System.out.println("exiting: input device not selected");
-            System.out.println("select input device, click run in terminal and try again\n or edit this script and replace null with input device node");
-            System.exit(2);
-        }
-
-        try {
+    public void start(Socket socket) {
+    try {
         String methodName = "getInstance";
         Object[] objArr = new Object[0];
         im = (InputManager) InputManager.class.getDeclaredMethod(methodName)
@@ -61,9 +53,7 @@ public class Input {
         injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
         initPointers();
         String line;
-        ServerSocket ss=new ServerSocket(MainActivity.DEFAULT_PORT);
         System.out.println("waiting for overlay...");
-        Socket socket=ss.accept();
         BufferedReader stdInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         System.out.println("connected at port: " + MainActivity.DEFAULT_PORT);
         while ((line = stdInput.readLine()) != null) {
@@ -214,7 +204,31 @@ public class Input {
     public static native void setIoctl(boolean y);
 
     public static void main(String[] args) {
-        Input input=new Input();
-        input.start(args);
+        if(!args[0].equals("null")) {
+            startMouse(args[0], MainActivity.DEFAULT_PORT_2); // Call native code
+        } else {
+            System.out.println("exiting: input device not selected");
+            System.out.println("select input device, click run in terminal and try again\n or edit this script and replace null with input device node");
+            System.exit(2);
+        }
+        ServerSocket serverSocket = null;
+        Input input = new Input();
+
+        try {
+            serverSocket = new ServerSocket(MainActivity.DEFAULT_PORT);
+        } catch (IOException e) {
+            e.printStackTrace(System.out);
+            System.exit(2);
+        }
+        while (true) {
+            try {
+                Socket socket = serverSocket.accept();
+                new Thread(() -> input.start(socket)).start();
+            } catch (IOException e) {
+                System.out.println("I/O error: " + e);
+            }
+        }
     }
 }
+
+
