@@ -22,7 +22,9 @@
         <activity
             android:name=".InputDeviceSelector"
             android:exported="false" />
-
+        <activity
+            android:name=".EditorUI"
+            android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">

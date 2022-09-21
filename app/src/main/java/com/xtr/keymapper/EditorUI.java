@@ -1,16 +1,19 @@
 package com.xtr.keymapper;
 
-import static android.content.Context.WINDOW_SERVICE;
 
 import android.content.Context;
 import android.graphics.PixelFormat;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageView;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
@@ -25,27 +28,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class EditorUI {
-    final Context context;
-    final View keymapView;
+public class EditorUI extends AppCompatActivity {
+    View keymapView;
 
-    final WindowManager.LayoutParams mParams;
-    final WindowManager mWindowManager;
-    final LayoutInflater layoutInflater;
-    final ExpandableFabLayout mainView;
+    WindowManager.LayoutParams mParams;
+    WindowManager mWindowManager;
+    LayoutInflater layoutInflater;
+    ExpandableFabLayout mainView;
 
     FabOption saveButton;
     FabOption addKey;
     FabOption dPad;
     FabOption crossHair;
+    private MovableFloatingActionButton KeyInFocus;
 
-    final List<MovableFloatingActionButton> KeyX;
-
+    List<MovableFloatingActionButton> KeyX;
     private int i;
 
-    public EditorUI(Context context) {
-        this.context = context;
-        i=0;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        i = 0;
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -56,15 +59,16 @@ public class EditorUI {
                         WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
-        layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        keymapView = layoutInflater.inflate(R.layout.keymap, new ExpandableFabLayout(context), false);
+        layoutInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        keymapView = layoutInflater.inflate(R.layout.keymap, new ExpandableFabLayout(this), false);
         mainView = keymapView.findViewById(R.id.MainView);
         initFab();
         mParams.gravity = Gravity.CENTER;
-        mWindowManager = (WindowManager) context.getSystemService(WINDOW_SERVICE);
+        mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         KeyX = new ArrayList<>();
-
+        open();
     }
+
     public void open() {
         try {
             if (keymapView.getWindowToken() == null) {
@@ -79,7 +83,7 @@ public class EditorUI {
     }
 
     private void loadKeymap() throws IOException {
-        KeymapConfig keymapConfig =  new KeymapConfig(context);
+        KeymapConfig keymapConfig =  new KeymapConfig(this);
         List<String> stream = Files.readAllLines(Paths.get(KeymapConfig.configPath));
         stream.forEach(keymapConfig::loadConfig);
         String[] key = keymapConfig.getKey();
@@ -88,11 +92,12 @@ public class EditorUI {
 
         for (int n = 0; n < key.length; n++) {
             if (key[n] != null) {
-                KeyX.add(i, new MovableFloatingActionButton(context));
+                KeyX.add(i, new MovableFloatingActionButton(this));
                 mainView.addView(KeyX.get(i));
                 KeyX.get(i).setText(key[n]);
                 KeyX.get(i).setX(x[n]);
                 KeyX.get(i).setY(y[n]);
+                KeyX.get(i).setOnClickListener(this::setKeyInFocus);
                 i++;
             }
         }
@@ -102,10 +107,12 @@ public class EditorUI {
     public void hideView() {
         try {
             saveKeymap();
-            ((WindowManager) context.getSystemService(WINDOW_SERVICE)).removeView(keymapView);
+            this.finish();
+            ((WindowManager) getSystemService(WINDOW_SERVICE)).removeView(keymapView);
             keymapView.invalidate();
             // remove all views
             ((ViewGroup) keymapView.getParent()).removeAllViews();
+            this.finish();
             // the above steps are necessary when you are adding and removing
             // the view simultaneously, it might give some exceptions
         } catch (Exception e) {
@@ -125,6 +132,7 @@ public class EditorUI {
     }
 
 
+
     public void initFab() {
         saveButton = mainView.findViewById(R.id.save_button);
         addKey = mainView.findViewById(R.id.add_button);
@@ -142,12 +150,24 @@ public class EditorUI {
     }
 
     private void addKey() {
-        KeyX.add(i,new MovableFloatingActionButton(context));
+        KeyX.add(i,new MovableFloatingActionButton(this));
         mainView.addView(KeyX.get(i));
         KeyX.get(i).setText(String.valueOf(i));
         KeyX.get(i).setX(100);
         KeyX.get(i).setY(100);
+        KeyX.get(i).setOnClickListener(this::setKeyInFocus);
         i++;
     }
 
+    private void setKeyInFocus(View v){
+       KeyInFocus = (MovableFloatingActionButton) v;
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (KeyInFocus != null) {
+            KeyInFocus.setText(String.valueOf(event.getDisplayLabel()));
+        }
+        return true;
+    }
 }

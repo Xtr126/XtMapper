@@ -12,6 +12,9 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.shape.RelativeCornerSize;
+import com.google.android.material.shape.RoundedCornerTreatment;
+import com.google.android.material.shape.ShapeAppearanceModel;
 import com.xtr.keymapper.R;
 
 import java.util.Random;
@@ -41,6 +44,10 @@ public class MovableFloatingActionButton extends FloatingActionButton implements
 
     private void init() {
         setOnTouchListener(this);
+        setShapeAppearanceModel(new ShapeAppearanceModel()
+                .toBuilder()
+                .setAllCorners(new RoundedCornerTreatment()).setAllCornerSizes(new RelativeCornerSize(0.5f))
+                .build());
     }
 
     @Override
@@ -121,6 +128,7 @@ public class MovableFloatingActionButton extends FloatingActionButton implements
         setBackgroundTintList(ColorStateList.valueOf(getContext().getColor(R.color.grey)));
         setImageTintList(ColorStateList.valueOf(getContext().getColor(R.color.white2)));
     }
+
 
     public void setText(String text) {
         this.key = text;

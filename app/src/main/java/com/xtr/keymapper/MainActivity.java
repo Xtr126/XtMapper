@@ -9,7 +9,6 @@ import android.provider.Settings;
 import android.widget.Button;
 
 
-
 public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
     public static final int DEFAULT_PORT_2 = 6345;
@@ -27,7 +26,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         server = new Server(this);
         pointerOverlay = new TouchPointer(this);
         new Thread(pointerOverlay::handleMouseEvents).start();
@@ -72,16 +70,15 @@ public class MainActivity extends AppCompatActivity {
 
     private void startEditor(){
         if(Settings.canDrawOverlays(this)) {
-            EditorUI window=new EditorUI(this);
-            window.open();
+            startActivity(new Intent(this, EditorUI.class));
         }
     }
     private void checkOverlayPermission(){
-            if (!Settings.canDrawOverlays(this)) {
-                // send user to the device settings
-                Intent myIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
-                startActivity(myIntent);
-            }
+        if (!Settings.canDrawOverlays(this)) {
+            // send user to the device settings
+            Intent myIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+            startActivity(myIntent);
+        }
     }
 
 }
