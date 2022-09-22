@@ -2,7 +2,10 @@ package com.xtr.keymapper;
 
 import android.content.Context;
 import android.graphics.PixelFormat;
+import android.graphics.Point;
+import android.os.Handler;
 import android.util.Log;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -37,11 +40,15 @@ public class TouchPointer {
     String[] key; Float[] x; Float[] y;
     public final TextView cmdView3;
     final Button startButton;
+    private StringBuilder c3;
     boolean pointer_down = false;
+    private final Handler outputUpdater = new Handler();
+    private int counter = 0;
 
     public TouchPointer(Context context){
         this.context= context;
         cmdView3 = ((MainActivity)context).findViewById(R.id.cmdview3);
+        c3 = new StringBuilder();
         startButton  = ((MainActivity)context).findViewById(R.id.startPointer);
         // set the layout parameters of the cursor
         mParams = new WindowManager.LayoutParams(
@@ -58,6 +65,13 @@ public class TouchPointer {
         cursorView = layoutInflater.inflate(R.layout.cursor, new LinearLayout(context),false);
         mParams.gravity = Gravity.CENTER;
         mWindowManager = (WindowManager)context.getSystemService(WINDOW_SERVICE);
+        Runnable cmdView3updater = new Runnable() {
+            public void run() {
+                ((MainActivity) context).runOnUiThread(() -> cmdView3.setText(c3));
+                outputUpdater.postDelayed(this, Server.REFRESH_INTERVAL);
+            }
+        };
+        outputUpdater.post(cmdView3updater);
     }
 
     public void open() {
@@ -136,9 +150,14 @@ public class TouchPointer {
     }
 
     public void updateCmdView3(String s){
-        ((MainActivity)context).runOnUiThread(() -> cmdView3.append(s + "\n"));
+        if(counter < Server.MAX_LINES_1) {
+            c3.append(s).append("\n");
+            counter++;
+        } else {
+            counter = 0;
+            c3 = new StringBuilder();
+        }
     }
-
     private void updateCmdView(String s) {
         ((MainActivity)context).server.updateCmdView(s);
     }
@@ -169,14 +188,17 @@ public class TouchPointer {
     }
 
     private void handleMouseEvents(Socket clientSocket) throws IOException {
-
         BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-
         updateCmdView("initialized: listening for events through socket");
-
         Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
         DataOutputStream x_out = new DataOutputStream(socket.getOutputStream());
         pointerGrab(x_out);
+        Display display = mWindowManager.getDefaultDisplay();
+        Point size = new Point();
+        display.getRealSize(size);
+        int width = size.x;
+        int height = size.y;
+
         String line;
         while ((line = in.readLine()) != null) {
             updateCmdView3("socket: " + line);
@@ -184,14 +206,18 @@ public class TouchPointer {
                 switch (xy2[0]) {
                     case "REL_X": {
                         x1 += Integer.parseInt(xy2[1]);
+                        if ( x1 < 0 ) x1 -= Integer.parseInt(xy2[1]);
+                        if ( x1 > width ) x1 -= Integer.parseInt(xy2[1]);
                         if (pointer_down)
                             x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
                         break;
                     }
                     case "REL_Y": {
                         y1 += Integer.parseInt(xy2[1]);
+                        if ( y1 < 0 ) y1 -= Integer.parseInt(xy2[1]);
+                        if ( y1 > height ) y1 -= Integer.parseInt(xy2[1]);
                         if (pointer_down)
-                            x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
+                        x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
                         break;
                     }
                     case "BTN_MOUSE": {
