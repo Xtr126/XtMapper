@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 
+import android.os.Handler;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -17,15 +18,43 @@ import java.io.InputStreamReader;
 public class Server {
 
     private final Context context;
-    private final String script_name = "/data/xtr.keymapper.sh\n";
+    private final String script_name = "/data/local/tmp/xtMapper.sh\n";
+
+    public static final int MAX_LINES_1 = 16;
+    public static final int MAX_LINES_2 = 32;
+    public static final long REFRESH_INTERVAL = 200;
 
     public final TextView cmdView;
     public final TextView cmdView2;
+    private StringBuilder c1;
+    private StringBuilder c2;
+    private final Handler outputUpdater = new Handler();
+    private int counter1 = 0;
+    private int counter2 = 0;
+
 
     public Server(Context context){
         this.context=context;
         cmdView =  ((MainActivity)context).findViewById(R.id.cmdview);
         cmdView2 = ((MainActivity)context).findViewById(R.id.cmdview2);
+        c1 = new StringBuilder();
+        c2 = new StringBuilder();
+
+        Runnable cmdViewUpdater = new Runnable() {
+            public void run() {
+                ((MainActivity) context).runOnUiThread(() -> cmdView.setText(c1));
+                outputUpdater.postDelayed(this, REFRESH_INTERVAL);
+            }
+        };
+        outputUpdater.post(cmdViewUpdater);
+
+        Runnable cmdView2Updater = new Runnable() {
+            public void run() {
+                ((MainActivity) context).runOnUiThread(() -> cmdView2.setText(c2));
+                outputUpdater.postDelayed(this, REFRESH_INTERVAL);
+            }
+        };
+        outputUpdater.post(cmdView2Updater);
     }
 
     public String getDeviceName(){
@@ -111,10 +140,22 @@ public class Server {
 
 
     public void updateCmdView(String s){
-        ((MainActivity)context).runOnUiThread(() -> cmdView.append(s + "\n"));
+        if(counter1 < MAX_LINES_2) {
+            c1.append(s).append("\n");
+            counter1++;
+        } else {
+            counter1 = 0;
+            c1 = new StringBuilder();
+        }
     }
     public void updateCmdView2(String s){
-        ((MainActivity)context).runOnUiThread(() -> cmdView2.append(s + "\n"));
+        if(counter2 < MAX_LINES_1) {
+            c2.append(s).append("\n");
+            counter2++;
+        } else {
+            counter2 = 0;
+            c2 = new StringBuilder();
+        }
     }
 
     
