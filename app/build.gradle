@@ -35,12 +35,12 @@ android {
     }
 
 
-    ndkVersion '23.0.7599858'
+    ndkVersion '25.1.8937393'
 }
 
 dependencies {
 
-    implementation 'androidx.appcompat:appcompat:1.5.0'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
     implementation 'com.google.android.material:material:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'com.nambimobile.widgets:expandable-fab:1.2.1'
