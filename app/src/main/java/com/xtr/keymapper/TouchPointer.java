@@ -143,54 +143,69 @@ public class TouchPointer {
         ((MainActivity)context).server.updateCmdView(s);
     }
 
-    public void handleMouseEvents() {
-        try {
-            ServerSocket serverSocket = new ServerSocket(MainActivity.DEFAULT_PORT_2);
-            updateCmdView("waiting for server...");
-            Socket clientSocket = serverSocket.accept();
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-
-            updateCmdView("initialized: listening for events through socket");
-
-            Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
-            DataOutputStream x_out = new DataOutputStream(socket.getOutputStream());
-            pointerGrab(x_out);
-            ((MainActivity)context).runOnUiThread(this::open);
-            String line;
-            while ((line = in.readLine()) != null) {
-                updateCmdView3("socket: " + line);
-                    String []xy2 = line.split("\\s+");
-                    switch (xy2[0]) {
-                        case "REL_X": {
-                            x1 += Integer.parseInt(xy2[1]);
-                            if (pointer_down)
-                                x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
-                            break;
-                        }
-                        case "REL_Y": {
-                            y1 += Integer.parseInt(xy2[1]);
-                            if (pointer_down)
-                                x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
-                            break;
-                        }
-                        case "BTN_MOUSE": {
-                            pointer_down = xy2[1].equals("1");
-                            x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + xy2[1] + " 36" + "\n");
-                            break;
-                        }
+    public void startSocket() {
+            try {
+                ServerSocket serverSocket = new ServerSocket(MainActivity.DEFAULT_PORT_2);
+                while (true) {
+                    try {
+                        Socket socket = serverSocket.accept();
+                        ((MainActivity)context).runOnUiThread(this::open);
+                        new Thread(() -> {
+                            try {
+                                handleMouseEvents(socket);
+                            } catch (IOException e) {
+                                updateCmdView(e.toString());
+                            }
+                        }).start();
+                    } catch (IOException e) {
+                        updateCmdView(e.toString());
                     }
-                    movePointer();
-
+                }
+            } catch (IOException e) {
+                Log.d("Error", e.toString());
+                tryStopSocket();
             }
-            in.close();
-            clientSocket.close();
-            serverSocket.close();
-            socket.close();
-        } catch (IOException e) {
-            Log.d("Error2", e.toString());
-            tryStopSocket();
-            updateCmdView("app side listener crashed::restart app");
+            updateCmdView("waiting for server...");
+    }
+
+    private void handleMouseEvents(Socket clientSocket) throws IOException {
+
+        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+        updateCmdView("initialized: listening for events through socket");
+
+        Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
+        DataOutputStream x_out = new DataOutputStream(socket.getOutputStream());
+        pointerGrab(x_out);
+        String line;
+        while ((line = in.readLine()) != null) {
+            updateCmdView3("socket: " + line);
+                String []xy2 = line.split("\\s+");
+                switch (xy2[0]) {
+                    case "REL_X": {
+                        x1 += Integer.parseInt(xy2[1]);
+                        if (pointer_down)
+                            x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
+                        break;
+                    }
+                    case "REL_Y": {
+                        y1 += Integer.parseInt(xy2[1]);
+                        if (pointer_down)
+                            x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
+                        break;
+                    }
+                    case "BTN_MOUSE": {
+                        pointer_down = xy2[1].equals("1");
+                        x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + xy2[1] + " 36" + "\n");
+                        break;
+                    }
+                }
+                movePointer();
+
         }
+        in.close();
+        clientSocket.close();
+        socket.close();
     }
 
     public void tryStopSocket(){

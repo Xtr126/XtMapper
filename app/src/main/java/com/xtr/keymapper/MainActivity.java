@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         server = new Server(this);
         pointerOverlay = new TouchPointer(this);
-        new Thread(pointerOverlay::handleMouseEvents).start();
+        new Thread(pointerOverlay::startSocket).start();
 
         initFab(); setupFab();
     }
