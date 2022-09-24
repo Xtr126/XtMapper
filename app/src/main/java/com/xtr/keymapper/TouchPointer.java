@@ -199,6 +199,8 @@ public class TouchPointer {
         int width = size.x;
         int height = size.y;
 
+        int x2 = width / 100;
+        int y2 = height / 100;
         String line;
         while ((line = in.readLine()) != null) {
             updateCmdView3("socket: " + line);
@@ -209,7 +211,7 @@ public class TouchPointer {
                         if ( x1 < 0 ) x1 -= Integer.parseInt(xy2[1]);
                         if ( x1 > width ) x1 -= Integer.parseInt(xy2[1]);
                         if (pointer_down)
-                            x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
+                            x_out.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + "MOVE" + " 36" + "\n");
                         break;
                     }
                     case "REL_Y": {
@@ -217,12 +219,12 @@ public class TouchPointer {
                         if ( y1 < 0 ) y1 -= Integer.parseInt(xy2[1]);
                         if ( y1 > height ) y1 -= Integer.parseInt(xy2[1]);
                         if (pointer_down)
-                        x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + "MOVE" + " 36" + "\n");
+                        x_out.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + "MOVE" + " 36" + "\n");
                         break;
                     }
                     case "BTN_MOUSE": {
                         pointer_down = xy2[1].equals("1");
-                        x_out.writeBytes(Integer.sum(x1, 15) + " " + Integer.sum(y1, 18) + " " + xy2[1] + " 36" + "\n");
+                        x_out.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + xy2[1] + " 36" + "\n");
                         break;
                     }
                 }
