@@ -8,6 +8,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 
 import android.os.Handler;
+import android.util.Log;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -28,7 +29,6 @@ public class Server {
     public final TextView cmdView2;
     private StringBuilder c1;
     private StringBuilder c2;
-    private final Handler outputUpdater = new Handler();
     private int counter1 = 0;
     private int counter2 = 0;
 
@@ -39,22 +39,25 @@ public class Server {
         cmdView2 = ((MainActivity)context).findViewById(R.id.cmdview2);
         c1 = new StringBuilder();
         c2 = new StringBuilder();
+        textViewUpdaterTask((MainActivity) context);
+    }
 
-        Runnable cmdViewUpdater = new Runnable() {
+    private void textViewUpdaterTask(MainActivity context) {
+        Handler outputUpdater = new Handler();
+
+        outputUpdater.post(new Runnable() {
             public void run() {
-                ((MainActivity) context).runOnUiThread(() -> cmdView.setText(c1));
+                context.runOnUiThread(() -> cmdView.setText(c1));
                 outputUpdater.postDelayed(this, REFRESH_INTERVAL);
             }
-        };
-        outputUpdater.post(cmdViewUpdater);
+        });
 
-        Runnable cmdView2Updater = new Runnable() {
+        outputUpdater.post(new Runnable() {
             public void run() {
-                ((MainActivity) context).runOnUiThread(() -> cmdView2.setText(c2));
+                context.runOnUiThread(() -> cmdView2.setText(c2));
                 outputUpdater.postDelayed(this, REFRESH_INTERVAL);
             }
-        };
-        outputUpdater.post(cmdView2Updater);
+        });
     }
 
     public String getDeviceName(){
@@ -91,7 +94,7 @@ public class Server {
         out.writeBytes("chmod 777 " + script_name);
     }
 
-    public void setupServer() {
+    public void setupServer () {
         try {
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
@@ -105,41 +108,37 @@ public class Server {
             writeScript(packageName, ai, apk, out);
             out.close(); sh.waitFor();
             // Notify user
-            updateCmdView("run " + script_name);
+            updateCmdView1("run " + script_name);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
+            Log.e("Server", e.toString());
         }
+
     }
 
     public void startServer() {
         if(getDeviceName() != null) {
+            updateCmdView1("starting server");
             try {
-            setupServer();
-            updateCmdView("starting server");
-            Process sh = Runtime.getRuntime().exec("su");
-            DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
+                Process sh = Runtime.getRuntime().exec("su");
+                DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
+                outputStream.writeBytes(script_name);
+                outputStream.close();
 
-            outputStream.writeBytes(script_name);
-            outputStream.close();
-
-            BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
-            String line;
-            while ((line = stdout.readLine()) != null) {
-                updateCmdView2("stdout: " + line);
-            }
-
-            sh.waitFor();
-
+                BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
+                String line;
+                while ((line = stdout.readLine()) != null) {
+                    updateCmdView2("stdout: " + line);
+                }
+                sh.waitFor();
             } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
+                Log.e("Server", e.toString());
             }
         } else {
-            updateCmdView("Please select input device");
+            updateCmdView1("Please select input device");
         }
     }
 
-
-    public void updateCmdView(String s){
+    public void updateCmdView1(String s){
         if(counter1 < MAX_LINES_2) {
             c1.append(s).append("\n");
             counter1++;
@@ -157,6 +156,4 @@ public class Server {
             c2 = new StringBuilder();
         }
     }
-
-    
 }

@@ -65,13 +65,13 @@ public class TouchPointer {
         cursorView = layoutInflater.inflate(R.layout.cursor, new LinearLayout(context),false);
         mParams.gravity = Gravity.CENTER;
         mWindowManager = (WindowManager)context.getSystemService(WINDOW_SERVICE);
-        Runnable cmdView3updater = new Runnable() {
+
+        outputUpdater.post(new Runnable() {
             public void run() {
-                ((MainActivity) context).runOnUiThread(() -> cmdView3.setText(c3));
+                ((MainActivity)context).runOnUiThread(() -> cmdView3.setText(c3));
                 outputUpdater.postDelayed(this, Server.REFRESH_INTERVAL);
             }
-        };
-        outputUpdater.post(cmdView3updater);
+        });
     }
 
     public void open() {
@@ -123,7 +123,7 @@ public class TouchPointer {
         } catch (IOException e) {
             updateCmdView("Unable to start overlay: server not started");
             hideCursor();
-            Log.d("Error1",e.toString());
+            Log.d("I/O Error",e.toString());
         }
     }
 
@@ -136,7 +136,7 @@ public class TouchPointer {
             // the above steps are necessary when you are adding and removing
             // the view simultaneously, it might give some exceptions
         } catch (Exception e) {
-            Log.d("Error2",e.toString());
+            Log.e("Error2",e.toString());
         }
     }
 
@@ -159,7 +159,7 @@ public class TouchPointer {
         }
     }
     private void updateCmdView(String s) {
-        ((MainActivity)context).server.updateCmdView(s);
+        ((MainActivity)context).server.updateCmdView1(s);
     }
 
     public void startSocket() {
@@ -181,7 +181,7 @@ public class TouchPointer {
                     }
                 }
             } catch (IOException e) {
-                Log.d("Error", e.toString());
+                Log.e("I/O Error", e.toString());
                 tryStopSocket();
             }
             updateCmdView("waiting for server...");
@@ -240,7 +240,7 @@ public class TouchPointer {
             x_out.writeBytes(null + "\n");
             x_out.flush(); x_out.close();
         } catch (IOException e) {
-            Log.d("Error2", e.toString());
+            Log.e("I/O error", e.toString());
         }
     }
 

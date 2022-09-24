@@ -34,9 +34,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupFab() {
-        startServerButton.setOnClickListener(v -> new Thread(server::startServer).start());
-        startInTerminal.setOnClickListener(v -> server.setupServer());
-        startOverlayButton.setOnClickListener(v -> startService(startOverlayButton));
+        startServerButton.setOnClickListener(v -> startServer(true));
+        startInTerminal.setOnClickListener(v -> startServer(false));
+        startOverlayButton.setOnClickListener(v -> startService());
         keymap.setOnClickListener(v -> startEditor());
         configureButton.setOnClickListener(v -> startActivity(new Intent(this, InputDeviceSelector.class)));
         infoButton.setOnClickListener(v -> startActivity(new Intent(this, InfoActivity.class)));
@@ -51,10 +51,8 @@ public class MainActivity extends AppCompatActivity {
         infoButton = findViewById(R.id.about_button);
     }
 
-    private void startService(Button startButton){
+    private void startService(){
         checkOverlayPermission();
-        setButtonActive(startButton);
-
         if(Settings.canDrawOverlays(this)) {
             pointerOverlay.open();
         }
@@ -69,10 +67,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startEditor(){
+        checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
             startActivity(new Intent(this, EditorUI.class));
         }
     }
+
+    private void startServer(boolean autorun){
+        checkOverlayPermission();
+        if(Settings.canDrawOverlays(this)) {
+            server.setupServer();
+            if (autorun) {
+                new Thread(server::startServer).start();
+            }
+        }
+    }
+
     private void checkOverlayPermission(){
         if (!Settings.canDrawOverlays(this)) {
             // send user to the device settings
