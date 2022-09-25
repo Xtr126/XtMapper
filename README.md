@@ -8,3 +8,6 @@ It can be used to play certain Android games that require a touchscreen, with ke
 
 More functionality will be added over time.  
 Download a debug APK from GitHub actions.
+
+# Notes:
+- This app uses a patched getevent binary to read keyboard events. A pre-built binary is provided for simplicity. To build it from source yourself, check [getevent-patch](../getevent-patch/README.md).
