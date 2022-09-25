@@ -1,0 +1,31 @@
+--- orig/getevent.c	2022-09-25 10:25:08.092373684 +0530
++++ ./getevent.c	2022-09-25 10:36:49.054030181 +0530
+@@ -511,7 +511,7 @@
+     fprintf(stderr, "    -r: print rate events are received\n");
+ }
+ 
+-int getevent_main(int argc, char *argv[])
++int main(int argc, char *argv[])
+ {
+     int c;
+     int i;
+@@ -530,8 +530,8 @@
+     const char *device = NULL;
+     const char *device_path = "/dev/input";
+ 
+-    /* disable buffering on stdout */
+-    setbuf(stdout, NULL);
++    setlinebuf(stdout);
++    setlinebuf(stderr);
+ 
+     opterr = 0;
+     do {
+@@ -672,7 +672,7 @@
+                         printf("[%8ld.%06ld] ", event.time.tv_sec, event.time.tv_usec);
+                     }
+                     if(print_device)
+-                        printf("%s: ", device_names[i]);
++                        printf("%s ", device_names[i]);
+                     print_event(event.type, event.code, event.value, print_flags);
+                     if(sync_rate && event.type == 0 && event.code == 0) {
+                         int64_t now = event.time.tv_sec * 1000000LL + event.time.tv_usec;
