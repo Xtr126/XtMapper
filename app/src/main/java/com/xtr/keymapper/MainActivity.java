@@ -26,14 +26,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         server = new Server(this);
         pointerOverlay = new TouchPointer(this);
         new Thread(pointerOverlay::startSocket).start();
-
-        initFab(); setupFab();
+        initButtons(); setupButtons();
     }
 
-    private void setupFab() {
+    private void setupButtons() {
         startServerButton.setOnClickListener(v -> startServer(true));
         startInTerminal.setOnClickListener(v -> startServer(false));
         startOverlayButton.setOnClickListener(v -> startService());
@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
         infoButton.setOnClickListener(v -> startActivity(new Intent(this, InfoActivity.class)));
     }
 
-    private void initFab(){
+    private void initButtons(){
         startOverlayButton = findViewById(R.id.startPointer);
         startServerButton = findViewById(R.id.startServer);
         startInTerminal = findViewById(R.id.startServerM);

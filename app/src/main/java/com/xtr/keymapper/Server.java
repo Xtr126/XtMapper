@@ -79,7 +79,7 @@ public class Server {
 
     public static void killServer(String packageName){
         try {
-        Process sh = Runtime.getRuntime().exec("su");
+        Process sh = Utils.getRootAccess();
         DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
         outputStream.writeBytes("pkill -f " + packageName + ".Input\n");
         outputStream.writeBytes("pkill -f libgetevent.so\n");
@@ -101,7 +101,7 @@ public class Server {
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
             String apk = ai.publicSourceDir; // Absolute path to apk in /data/app
 
-            Process sh = Runtime.getRuntime().exec("su");
+            Process sh = Utils.getRootAccess();
             DataOutputStream out = new DataOutputStream(sh.getOutputStream());
 
             setExecPermission(out);
@@ -119,7 +119,7 @@ public class Server {
         if(getDeviceName() != null) {
             updateCmdView1("starting server");
             try {
-                Process sh = Runtime.getRuntime().exec("su");
+                Process sh = Utils.getRootAccess();
                 DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
                 outputStream.writeBytes(script_name);
                 outputStream.close();
