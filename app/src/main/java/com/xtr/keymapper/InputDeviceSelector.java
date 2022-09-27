@@ -66,8 +66,10 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
             while ((stdout = getevent.readLine()) != null) { //read events
                 String[] xy = stdout.split("\\s+");
                 //split a string like "/dev/input/event2 EV_REL REL_X ffffffff"
-                if(!xy[2].equals("SYN_REPORT"))
-                updateView(stdout);
+                if(!xy[2].equals("SYN_REPORT")) {
+                    updateView(stdout);
+                }
+                if(xy[0].equals("root")) runOnUiThread(() -> textView.setTextSize(20));
                 if(!devices.contains(xy[0]))
                     if (xy[1].equals("EV_REL")) {
                         devices.add(xy[0]);
