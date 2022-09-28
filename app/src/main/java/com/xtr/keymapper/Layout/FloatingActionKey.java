@@ -39,6 +39,21 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
         key = new MovableFloatingActionButton(getContext());
         key.setClickable(false);
         key.setLayoutParams(new ViewGroup.LayoutParams(50,50));
+        key.setElevation(1);
+
+        MovableFloatingActionButton closeButton = new MovableFloatingActionButton(getContext());
+        closeButton.setClickable(true);
+
+        LayoutParams x = new LayoutParams(20,20);
+        x.gravity = Gravity.BOTTOM | Gravity.END;
+        closeButton.setLayoutParams(x);
+        closeButton.setForegroundGravity(Gravity.BOTTOM | Gravity.END);
+        closeButton.setElevation(2);
+        closeButton.setPadding(0,0,0,0);
+        closeButton.setOnClickListener(v -> removeAllViews());
+
+        addView(key);
+        addView(closeButton);
     }
 
     public String getData(){
