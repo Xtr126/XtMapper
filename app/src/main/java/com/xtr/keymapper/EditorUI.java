@@ -17,7 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
-import com.xtr.keymapper.Layout.MovableFloatingActionButton;
+import com.xtr.keymapper.Layout.FloatingActionKey;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -40,9 +40,9 @@ public class EditorUI extends AppCompatActivity {
     FabOption addKey;
     FabOption dPad;
     FabOption crossHair;
-    private MovableFloatingActionButton KeyInFocus;
+    private FloatingActionKey KeyInFocus;
 
-    List<MovableFloatingActionButton> KeyX;
+    List<FloatingActionKey> KeyX;
     private int i;
 
     @Override
@@ -92,7 +92,7 @@ public class EditorUI extends AppCompatActivity {
 
         for (int n = 0; n < key.length; n++) {
             if (key[n] != null) {
-                KeyX.add(i, new MovableFloatingActionButton(this));
+                KeyX.add(i, new FloatingActionKey(this));
                 mainView.addView(KeyX.get(i));
                 KeyX.get(i).setText(key[n]);
                 KeyX.get(i).setX(x[n]);
@@ -102,7 +102,6 @@ public class EditorUI extends AppCompatActivity {
             }
         }
     }
-
 
     public void hideView() {
         try {
@@ -131,8 +130,6 @@ public class EditorUI extends AppCompatActivity {
         printWriter.close();
     }
 
-
-
     public void initFab() {
         saveButton = mainView.findViewById(R.id.save_button);
         addKey = mainView.findViewById(R.id.add_button);
@@ -150,7 +147,7 @@ public class EditorUI extends AppCompatActivity {
     }
 
     private void addKey() {
-        KeyX.add(i,new MovableFloatingActionButton(this));
+        KeyX.add(i,new FloatingActionKey(this));
         mainView.addView(KeyX.get(i));
         KeyX.get(i).setText(String.valueOf(i));
         KeyX.get(i).setX(100);
@@ -160,7 +157,7 @@ public class EditorUI extends AppCompatActivity {
     }
 
     private void setKeyInFocus(View v){
-       KeyInFocus = (MovableFloatingActionButton) v;
+       KeyInFocus = (FloatingActionKey) v;
     }
 
     @Override
