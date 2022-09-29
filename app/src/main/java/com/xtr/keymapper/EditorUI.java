@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
 import com.xtr.keymapper.Layout.FloatingActionKey;
+import com.xtr.keymapper.Layout.MovableFrameLayout;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -29,20 +30,16 @@ import java.util.List;
 
 
 public class EditorUI extends AppCompatActivity {
-    View keymapView;
+    private View keymapView;
 
-    WindowManager.LayoutParams mParams;
-    WindowManager mWindowManager;
-    LayoutInflater layoutInflater;
-    ExpandableFabLayout mainView;
+    private WindowManager.LayoutParams mParams;
+    private WindowManager mWindowManager;
+    private LayoutInflater layoutInflater;
+    private ExpandableFabLayout mainView;
 
-    FabOption saveButton;
-    FabOption addKey;
-    FabOption dPad;
-    FabOption crossHair;
     private FloatingActionKey KeyInFocus;
-
-    List<FloatingActionKey> KeyX;
+    private List<FloatingActionKey> KeyX;
+    private MovableFrameLayout dpad1;
     private int i;
 
     @Override
@@ -131,13 +128,14 @@ public class EditorUI extends AppCompatActivity {
     }
 
     public void initFab() {
-        saveButton = mainView.findViewById(R.id.save_button);
-        addKey = mainView.findViewById(R.id.add_button);
-        dPad = mainView.findViewById(R.id.d_pad);
-        crossHair = mainView.findViewById(R.id.cross_hair);
+        FabOption saveButton = mainView.findViewById(R.id.save_button);
+        FabOption addKey = mainView.findViewById(R.id.add_button);
+        FabOption dPad = mainView.findViewById(R.id.d_pad);
+        FabOption crossHair = mainView.findViewById(R.id.cross_hair);
 
         saveButton.setOnClickListener(v -> hideView());
         addKey.setOnClickListener(v -> addKey());
+        dPad.setOnClickListener(v -> addDpad());
 
         dPad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         crossHair.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
@@ -146,6 +144,16 @@ public class EditorUI extends AppCompatActivity {
 
     }
 
+    private void addDpad() {
+        if (dpad1 != null) {
+            mainView.removeView(dpad1);
+        }
+        layoutInflater.inflate(R.layout.d_pad, mainView, true);
+        dpad1 = mainView.findViewById(R.id.rootView);
+        mainView.findViewById(R.id.closeButton).setOnClickListener(v -> dpad1.removeAllViews());
+        dpad1.setX(100);
+        dpad1.setY(100);
+    }
     private void addKey() {
         KeyX.add(i,new FloatingActionKey(this));
         mainView.addView(KeyX.get(i));
