@@ -73,7 +73,7 @@ public class Server {
 
         out.writeBytes("LD_LIBRARY_PATH=\"" + ai.nativeLibraryDir + //path containing lib*.so
                 "\" CLASSPATH=\"" + apk +
-                "\" /system/bin/app_process32 /system/bin " +
+                "\" /system/bin/app_process /system/bin " +
                 packageName + ".Input " + getDeviceName() + "\n"); // input device node as argument
     }
 

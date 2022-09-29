@@ -49,8 +49,10 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
         closeButton.setLayoutParams(layoutParams);
         closeButton.setForegroundGravity(Gravity.BOTTOM | Gravity.END);
         closeButton.setElevation(2);
-        closeButton.setPadding(0,0,0,0);
         closeButton.setOnClickListener(v -> removeAllViews());
+        closeButton.setText("X");
+        closeButton.setMaxImageSize(40);
+        closeButton.setImageResource(android.R.drawable.ic_delete);
 
         addView(key);
         addView(closeButton);

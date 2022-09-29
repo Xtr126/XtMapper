@@ -150,7 +150,7 @@ public class EditorUI extends AppCompatActivity {
         }
         layoutInflater.inflate(R.layout.d_pad, mainView, true);
         dpad1 = mainView.findViewById(R.id.rootView);
-        mainView.findViewById(R.id.closeButton).setOnClickListener(v -> dpad1.removeAllViews());
+        mainView.findViewById(R.id.closeButton).setOnClickListener(v -> mainView.removeView(dpad1));
         dpad1.setX(100);
         dpad1.setY(100);
     }
