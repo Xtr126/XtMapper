@@ -69,22 +69,23 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent){
-        key.setButtonInactive();
+        key.setButtonActive();
 
         ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams)view.getLayoutParams();
 
         int action = motionEvent.getAction();
         if (action == MotionEvent.ACTION_DOWN) {
 
+            key.setButtonActive();
             downRawX = motionEvent.getRawX();
             downRawY = motionEvent.getRawY();
             dX = view.getX() - downRawX;
             dY = view.getY() - downRawY;
-            key.setButtonInactive();
             return true; // Consumed
         }
         else if (action == MotionEvent.ACTION_MOVE) {
 
+            key.setButtonActive();
             int viewWidth = view.getWidth();
             int viewHeight = view.getHeight();
 
@@ -105,12 +106,12 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
                     .y(newY)
                     .setDuration(0)
                     .start();
-            key.setButtonInactive();
             return true; // Consumed
 
         }
         else if (action == MotionEvent.ACTION_UP) {
 
+            key.setButtonInactive();
             float upRawX = motionEvent.getRawX();
             float upRawY = motionEvent.getRawY();
 
@@ -118,11 +119,9 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
             float upDY = upRawY - downRawY;
 
             if (Math.abs(upDX) < CLICK_DRAG_TOLERANCE && Math.abs(upDY) < CLICK_DRAG_TOLERANCE) { // A click
-                key.setButtonActive();
                 return performClick();
             }
             else { // A drag
-                key.setButtonActive();
                 return true; // Consumed
             }
 

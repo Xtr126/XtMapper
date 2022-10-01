@@ -204,7 +204,7 @@ public class EditorUI extends AppCompatActivity {
                 });
         }
         dpad2.animate().x(x).y(y)
-                .setDuration(200)
+                .setDuration(500)
                 .start();
     }
 
