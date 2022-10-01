@@ -39,9 +39,10 @@ public class EditorUI extends AppCompatActivity {
     private List<FloatingActionKey> KeyX;
     private MovableFrameLayout dpad1;
     private MovableFrameLayout dpad2;
-    private int i = 0;
     private final Float DEFAULT_X = 200f;
     private final Float DEFAULT_Y = 200f;
+    int i = 0;
+    int x = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,6 +108,21 @@ public class EditorUI extends AppCompatActivity {
                 addKey(keys[n], key_x[n], key_y[n]);
             }
         }
+
+        String[] dpad1 = keymapConfig.dpad1Config;
+        String[] dpad2 = keymapConfig.dpad2Config;
+
+        if (dpad1 != null) {
+            Float x1 = Float.parseFloat(dpad1[1]);
+            Float y1 = Float.parseFloat(dpad1[2]);
+            addDpad1(x1, y1);
+        }
+
+        if (dpad2 != null) {
+            Float x2 = Float.parseFloat(dpad2[1]);
+            Float y2 = Float.parseFloat(dpad2[2]);
+            addDpad1(x2, y2);
+        }
     }
 
     private void saveKeymap() throws IOException {
@@ -140,7 +156,13 @@ public class EditorUI extends AppCompatActivity {
 
         saveButton.setOnClickListener(v -> hideView());
         addKey.setOnClickListener(v -> addKey("A", DEFAULT_X, DEFAULT_Y));
-        dPad.setOnClickListener(v -> addDpad(DEFAULT_X, DEFAULT_Y));
+        dPad.setOnClickListener((View v) -> {
+            addDpad1(DEFAULT_X, DEFAULT_Y);
+            // TODO
+            dPad.setOnClickListener(view -> {
+                addDpad2(DEFAULT_X, DEFAULT_Y);
+            });
+        });
 
         dPad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         crossHair.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
@@ -148,8 +170,10 @@ public class EditorUI extends AppCompatActivity {
         addKey.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
     }
 
-    private void addDpad(Float x, Float y) {
-        if (dpad1 == null) {
+    private void addDpad1(Float x, Float y) {
+        if (dpad1 != null) {
+            dpad1.removeAllViews();
+        }
             dpad1 = layoutInflater.inflate(R.layout.d_pad_1, mainView, true)
                     .findViewById(R.id.dpad1);
 
@@ -162,21 +186,24 @@ public class EditorUI extends AppCompatActivity {
             dpad1.animate().x(x).y(y)
                     .setDuration(500)
                     .start();
-        } else
-            if (dpad2 == null) {
-                dpad2 = layoutInflater.inflate(R.layout.d_pad_2, mainView, true)
-                        .findViewById(R.id.dpad2);
+    }
 
-                dpad2.findViewById(R.id.closeButton)
-                        .setOnClickListener(v -> {
-                            mainView.removeView(dpad2);
-                            dpad2 = null;
-                        });
-
-                dpad2.animate().x(x).y(y)
-                        .setDuration(200)
-                        .start();
+    private void addDpad2(Float x, Float y) {
+        if (dpad2 != null) {
+            dpad2.removeAllViews();
         }
+            dpad2 = layoutInflater.inflate(R.layout.d_pad_2, mainView, true)
+                    .findViewById(R.id.dpad2);
+
+            dpad2.findViewById(R.id.closeButton)
+                    .setOnClickListener(v -> {
+                        mainView.removeView(dpad2);
+                        dpad2 = null;
+                    });
+
+            dpad2.animate().x(x).y(y)
+                    .setDuration(200)
+                    .start();
     }
 
     private void addKey(String key, Float x ,Float y) {

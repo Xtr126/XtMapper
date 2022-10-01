@@ -13,8 +13,8 @@ public class KeymapConfig {
     private final Float[] x = new Float[36];
     private final Float[] y = new Float[36];
 
-    public String[] dpad1Config = new String[3];
-    public String[] dpad2Config = new String[3];
+    public String[] dpad1Config;
+    public String[] dpad2Config;
 
     public KeymapConfig(Context context) {
         this.context = context;
