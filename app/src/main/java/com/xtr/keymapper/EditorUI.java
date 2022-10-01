@@ -42,7 +42,6 @@ public class EditorUI extends AppCompatActivity {
     private final Float DEFAULT_X = 200f;
     private final Float DEFAULT_Y = 200f;
     int i = 0;
-    int x = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,12 +155,19 @@ public class EditorUI extends AppCompatActivity {
 
         saveButton.setOnClickListener(v -> hideView());
         addKey.setOnClickListener(v -> addKey("A", DEFAULT_X, DEFAULT_Y));
-        dPad.setOnClickListener((View v) -> {
-            addDpad1(DEFAULT_X, DEFAULT_Y);
-            // TODO
-            dPad.setOnClickListener(view -> {
-                addDpad2(DEFAULT_X, DEFAULT_Y);
-            });
+
+        dPad.setOnClickListener(new View.OnClickListener() {
+            int x = 0;
+            @Override
+            public void onClick(View v) {
+                if (x == 0) {
+                    addDpad1(DEFAULT_X, DEFAULT_Y);
+                    x = 1;
+                } else {
+                    addDpad2(DEFAULT_X, DEFAULT_Y);
+                    x = 0;
+                }
+            }
         });
 
         dPad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
@@ -174,36 +180,36 @@ public class EditorUI extends AppCompatActivity {
         if (dpad1 != null) {
             dpad1.removeAllViews();
         }
-            dpad1 = layoutInflater.inflate(R.layout.d_pad_1, mainView, true)
-                    .findViewById(R.id.dpad1);
+        dpad1 = layoutInflater.inflate(R.layout.d_pad_1, mainView, true)
+                .findViewById(R.id.dpad1);
 
-            dpad1.findViewById(R.id.closeButton)
-                    .setOnClickListener(v -> {
-                        mainView.removeView(dpad1);
-                        dpad1 = null;
-                    });
+        dpad1.findViewById(R.id.closeButton)
+                .setOnClickListener(v -> {
+                    mainView.removeView(dpad1);
+                    dpad1 = null;
+                });
 
-            dpad1.animate().x(x).y(y)
-                    .setDuration(500)
-                    .start();
+        dpad1.animate().x(x).y(y)
+                .setDuration(500)
+                .start();
     }
 
     private void addDpad2(Float x, Float y) {
         if (dpad2 != null) {
             dpad2.removeAllViews();
         }
-            dpad2 = layoutInflater.inflate(R.layout.d_pad_2, mainView, true)
-                    .findViewById(R.id.dpad2);
+        dpad2 = layoutInflater.inflate(R.layout.d_pad_2, mainView, true)
+                .findViewById(R.id.dpad2);
 
-            dpad2.findViewById(R.id.closeButton)
-                    .setOnClickListener(v -> {
-                        mainView.removeView(dpad2);
-                        dpad2 = null;
-                    });
+        dpad2.findViewById(R.id.closeButton)
+                .setOnClickListener(v -> {
+                    mainView.removeView(dpad2);
+                    dpad2 = null;
+                });
 
-            dpad2.animate().x(x).y(y)
-                    .setDuration(200)
-                    .start();
+        dpad2.animate().x(x).y(y)
+                .setDuration(200)
+                .start();
     }
 
     private void addKey(String key, Float x ,Float y) {
