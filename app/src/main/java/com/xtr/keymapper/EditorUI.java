@@ -120,7 +120,7 @@ public class EditorUI extends AppCompatActivity {
         if (dpad2 != null) {
             Float x2 = Float.parseFloat(dpad2[1]);
             Float y2 = Float.parseFloat(dpad2[2]);
-            addDpad1(x2, y2);
+            addDpad2(x2, y2);
         }
     }
 
@@ -177,9 +177,7 @@ public class EditorUI extends AppCompatActivity {
     }
 
     private void addDpad1(Float x, Float y) {
-        if (dpad1 != null) {
-            dpad1.removeAllViews();
-        }
+        if (dpad1 == null) {
         dpad1 = layoutInflater.inflate(R.layout.d_pad_1, mainView, true)
                 .findViewById(R.id.dpad1);
 
@@ -188,16 +186,14 @@ public class EditorUI extends AppCompatActivity {
                     mainView.removeView(dpad1);
                     dpad1 = null;
                 });
-
+        }
         dpad1.animate().x(x).y(y)
                 .setDuration(500)
                 .start();
     }
 
     private void addDpad2(Float x, Float y) {
-        if (dpad2 != null) {
-            dpad2.removeAllViews();
-        }
+        if (dpad2 == null) {
         dpad2 = layoutInflater.inflate(R.layout.d_pad_2, mainView, true)
                 .findViewById(R.id.dpad2);
 
@@ -206,7 +202,7 @@ public class EditorUI extends AppCompatActivity {
                     mainView.removeView(dpad2);
                     dpad2 = null;
                 });
-
+        }
         dpad2.animate().x(x).y(y)
                 .setDuration(200)
                 .start();
