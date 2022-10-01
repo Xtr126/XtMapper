@@ -1,5 +1,7 @@
 package com.xtr.keymapper;
 
+import static android.content.Context.WINDOW_SERVICE;
+
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
@@ -15,18 +17,12 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-
-import static android.content.Context.WINDOW_SERVICE;
-
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.List;
 
 public class TouchPointer {
 
@@ -37,12 +33,12 @@ public class TouchPointer {
     private final WindowManager mWindowManager;
     int x1 = 100;
     int y1 = 100;
-    String[] key; Float[] x; Float[] y;
+    String[] keys; Float[] keys_x; Float[] keys_y;
     public final TextView cmdView3;
     final Button startButton;
     private StringBuilder c3;
     boolean pointer_down = false;
-    private final Handler outputUpdater = new Handler();
+    private final Handler textViewUpdater = new Handler();
     private int counter = 0;
 
     public TouchPointer(Context context){
@@ -66,10 +62,10 @@ public class TouchPointer {
         mParams.gravity = Gravity.CENTER;
         mWindowManager = (WindowManager)context.getSystemService(WINDOW_SERVICE);
 
-        outputUpdater.post(new Runnable() {
+        textViewUpdater.post(new Runnable() {
             public void run() {
                 ((MainActivity)context).runOnUiThread(() -> cmdView3.setText(c3));
-                outputUpdater.postDelayed(this, Server.REFRESH_INTERVAL);
+                textViewUpdater.postDelayed(this, Server.REFRESH_INTERVAL);
             }
         });
     }
@@ -110,9 +106,9 @@ public class TouchPointer {
                     int i = Utils.obtainIndex(xy[2]);
                     // Strips off KEY_ from KEY_X and return the index of X in alphabet
                     if (i >= 0 && i <= 35) { // Make sure valid
-                        if (x != null) { // Avoid null array exception in case user has not set keymap already
-                            if (x[i] != null) {
-                                x_out.writeBytes(x[i] + " " + y[i] + " " + xy[3] + " " + i + "\n");
+                        if (keys_x != null) { // Avoid null array exception in case user has not set keymap already
+                            if (keys_x[i] != null) {
+                                x_out.writeBytes(keys_x[i] + " " + keys_y[i] + " " + xy[3] + " " + i + "\n");
                                 // Send coordinates to remote server to simulate touch
                             }
                         }
@@ -141,12 +137,11 @@ public class TouchPointer {
     }
 
     public void loadKeymap() throws IOException {
-        KeymapConfig keymapConfig =  new KeymapConfig(context);
-        List<String> stream = Files.readAllLines(Paths.get(KeymapConfig.configPath));
-        stream.forEach(keymapConfig::loadConfig);
-        key = keymapConfig.getKey();
-        x = keymapConfig.getX();
-        y = keymapConfig.getY();
+        KeymapConfig keymapConfig = new KeymapConfig(context);
+        keymapConfig.loadConfig();
+        keys = keymapConfig.getKeys();
+        keys_x = keymapConfig.getX();
+        keys_y = keymapConfig.getY();
     }
 
     public void updateCmdView3(String s){

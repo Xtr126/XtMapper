@@ -6,7 +6,7 @@
     tools:ignore="HardcodedText,ContentDescription"
     android:layout_width="200dp"
     android:layout_height="200dp"
-    android:id="@+id/rootView">
+    android:id="@+id/dpad2">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"

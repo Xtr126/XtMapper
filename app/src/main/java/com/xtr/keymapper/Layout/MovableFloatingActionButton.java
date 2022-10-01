@@ -7,9 +7,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.ViewGroup;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.shape.RelativeCornerSize;
@@ -21,10 +18,6 @@ import java.util.Random;
 
 public class MovableFloatingActionButton extends FloatingActionButton  {
 
-    private final static float CLICK_DRAG_TOLERANCE = 10; // Often, there will be a slight, unintentional, drag when the user taps the FAB, so we need to account for this.
-
-    private float downRawX, downRawY;
-    private float dX, dY;
     public String key;
 
     public MovableFloatingActionButton(Context context) {
@@ -66,7 +59,7 @@ public class MovableFloatingActionButton extends FloatingActionButton  {
         this.key = text;
         setButtonActive();
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setTextSize(50);
+        paint.setTextSize(30);
         paint.setFakeBoldText(true);
         paint.setColor(Color.WHITE);
         paint.setTextAlign(Paint.Align.LEFT);
@@ -78,7 +71,7 @@ public class MovableFloatingActionButton extends FloatingActionButton  {
         Canvas canvas = new Canvas(image);
         canvas.drawText(text, 0, baseline, paint);
         setImageBitmap(image);
-        setScaleType(ScaleType.CENTER_INSIDE);
-        setMaxImageSize(30);
+        setScaleType(ScaleType.CENTER);
+        //setMaxImageSize(30);
     }
 }
