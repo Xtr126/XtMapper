@@ -13,49 +13,57 @@
         android:layout_height="match_parent"
         android:translationZ="2dp">
 
-        <ImageView
+        <TextView
             android:id="@+id/key_left"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="32dp"
             android:layout_marginTop="38dp"
             android:layout_marginBottom="38dp"
+            android:textSize="30sp"
+            android:text="A"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:srcCompat="@drawable/ic_baseline_keyboard_arrow_left_24" />
 
-        <ImageView
+        <TextView
             android:id="@+id/key_down"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="38dp"
             android:layout_marginEnd="38dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="32dp"
+            android:textSize="30sp"
+            android:text="S"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:srcCompat="@drawable/ic_baseline_keyboard_arrow_down_24" />
 
-        <ImageView
+        <TextView
             android:id="@+id/key_right"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="38dp"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="32dp"
             android:layout_marginBottom="38dp"
+            android:textSize="30sp"
+            android:text="D"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:srcCompat="@drawable/ic_baseline_keyboard_arrow_right_24" />
 
-        <ImageView
+        <TextView
             android:id="@+id/key_up"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="38dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="32dp"
             android:layout_marginEnd="38dp"
+            android:textSize="30sp"
+            android:text="W"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
