@@ -7,10 +7,11 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 
 public class FloatingActionKey extends FrameLayout implements View.OnTouchListener {
 
-    private MovableFloatingActionButton key;
+    public MovableFloatingActionButton key;
 
     private final static float CLICK_DRAG_TOLERANCE = 10; // Often, there will be a slight, unintentional, drag when the user taps the FAB, so we need to account for this.
 
@@ -34,25 +35,25 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
 
     private void init() {
         setOnTouchListener(this);
-        setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         key = new MovableFloatingActionButton(getContext());
         key.setClickable(false);
-        key.setLayoutParams(new ViewGroup.LayoutParams(50,50));
+        key.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         key.setElevation(1);
 
         MovableFloatingActionButton closeButton = new MovableFloatingActionButton(getContext());
-        closeButton.setClickable(true);
+        closeButton.setImageResource(android.R.drawable.ic_delete);
+        closeButton.setElevation(2);
+        closeButton.setOnClickListener(v -> {
+            removeAllViews();
+            key = null;
+        });
+        closeButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
 
-        LayoutParams layoutParams = new LayoutParams(20,20);
+        LayoutParams layoutParams = new LayoutParams(20, 20);
         layoutParams.gravity = Gravity.BOTTOM | Gravity.END;
         closeButton.setLayoutParams(layoutParams);
-        closeButton.setForegroundGravity(Gravity.BOTTOM | Gravity.END);
-        closeButton.setElevation(2);
-        closeButton.setOnClickListener(v -> removeAllViews());
-        closeButton.setText("X");
-        closeButton.setMaxImageSize(40);
-        closeButton.setImageResource(android.R.drawable.ic_delete);
 
         addView(key);
         addView(closeButton);
@@ -68,22 +69,23 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent){
-        key.setButtonInactive();
+        key.setButtonActive();
 
         ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams)view.getLayoutParams();
 
         int action = motionEvent.getAction();
         if (action == MotionEvent.ACTION_DOWN) {
 
+            key.setButtonActive();
             downRawX = motionEvent.getRawX();
             downRawY = motionEvent.getRawY();
             dX = view.getX() - downRawX;
             dY = view.getY() - downRawY;
-            key.setButtonInactive();
             return true; // Consumed
         }
         else if (action == MotionEvent.ACTION_MOVE) {
 
+            key.setButtonActive();
             int viewWidth = view.getWidth();
             int viewHeight = view.getHeight();
 
@@ -104,12 +106,12 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
                     .y(newY)
                     .setDuration(0)
                     .start();
-            key.setButtonInactive();
             return true; // Consumed
 
         }
         else if (action == MotionEvent.ACTION_UP) {
 
+            key.setButtonInactive();
             float upRawX = motionEvent.getRawX();
             float upRawY = motionEvent.getRawY();
 
@@ -117,11 +119,9 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
             float upDY = upRawY - downRawY;
 
             if (Math.abs(upDX) < CLICK_DRAG_TOLERANCE && Math.abs(upDY) < CLICK_DRAG_TOLERANCE) { // A click
-                key.setButtonActive();
                 return performClick();
             }
             else { // A drag
-                key.setButtonActive();
                 return true; // Consumed
             }
 

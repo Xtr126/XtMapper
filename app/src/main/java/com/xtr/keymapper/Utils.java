@@ -11,7 +11,6 @@ import java.io.InputStreamReader;
 public class Utils {
     public static final String alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-
     public static int obtainIndex(String s) {
         return alphabet.indexOf(s.substring(4));
     }
@@ -31,7 +30,7 @@ public class Utils {
     public static Process getRootAccess() throws IOException {
         String[] paths = {"/sbin/su", "/system/sbin/su", "/system/bin/su", "/system/xbin/su", "/su/bin/su", "/magisk/.core/bin/su"};
         for (String path : paths) {
-            if (new File(path).exists())
+            if (new File(path).canExecute())
                 return Runtime.getRuntime().exec(path);
         }
         return Runtime.getRuntime().exec("echo root access not found!");
