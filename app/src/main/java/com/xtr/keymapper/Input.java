@@ -69,17 +69,23 @@ public class Input {
             switch (xy[2]) {
                 case "UP":
                 case "0": {
+                    /*injectTouch(inputSource, parseFloat(xy[0]), parseFloat(xy[1]),
+                            MotionEvent.ACTION_UP, 0.0f);*/
                     injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f,
                             parseFloat(xy[0]), parseFloat(xy[1]));
                     break;
                 }
                 case "DOWN":
                 case "1": {
+                    /*injectTouch(inputSource, parseFloat(xy[0]), parseFloat(xy[1]),
+                            MotionEvent.ACTION_DOWN, 1.0f);*/
                     injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f,
                             parseFloat(xy[0]), parseFloat(xy[1]));
                     break;
                 }
                 case "MOVE": {
+                    /*injectTouch(inputSource, parseFloat(xy[0]), parseFloat(xy[1]),
+                            MotionEvent.ACTION_MOVE, 1.0f);*/
                     injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f,
                     parseFloat(xy[0]), parseFloat(xy[1]));
                     break;
@@ -114,6 +120,37 @@ public class Input {
 
             pointerProperties[i] = props;
             pointerCoords[i] = coords;
+        }
+    }
+
+    private void injectTouch(int inputSource, float x, float y, int action, float pressure) {
+        long now = SystemClock.uptimeMillis();
+        final float DEFAULT_SIZE = 1.0f;
+        final int DEFAULT_META_STATE = 0;
+        final float DEFAULT_PRECISION_X = 1.0f;
+        final float DEFAULT_PRECISION_Y = 1.0f;
+        final int DEFAULT_EDGE_FLAGS = 0;
+        if (action == MotionEvent.ACTION_DOWN) {
+            lastTouchDown = now;
+        }
+       /* MotionEvent event = MotionEvent.obtain(lastTouchDown, now, action, x, y, pressure, DEFAULT_SIZE,
+                DEFAULT_META_STATE, DEFAULT_PRECISION_X, DEFAULT_PRECISION_Y,
+                inputSource, DEFAULT_EDGE_FLAGS);*/
+        /*int i = 0;
+        pointerProperties[i].id = 0;
+        pointerCoords[i].x = x;
+        pointerCoords[i].y = y;
+        pointerCoords[i].pressure = pressure;*/
+        pointersState.update(pointerProperties, pointerCoords);
+        MotionEvent event = MotionEvent.obtain(lastTouchDown, now, action, 1,
+                pointerProperties, pointerCoords,
+                DEFAULT_META_STATE, 0, DEFAULT_PRECISION_X, DEFAULT_PRECISION_Y,
+                0, DEFAULT_EDGE_FLAGS, InputDevice.SOURCE_TOUCHSCREEN, 0);
+        event.setSource(inputSource);
+        try {
+            injectInputEventMethod.invoke(im, event, 2);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace(System.out);
         }
     }
 
