@@ -39,22 +39,22 @@ public class Server {
         cmdView2 = ((MainActivity)context).findViewById(R.id.cmdview2);
         c1 = new StringBuilder();
         c2 = new StringBuilder();
-        textViewUpdaterTask((MainActivity) context);
+        textViewUpdaterTask();
     }
 
-    private void textViewUpdaterTask(MainActivity context) {
+    private void textViewUpdaterTask() {
         Handler outputUpdater = new Handler();
 
         outputUpdater.post(new Runnable() {
             public void run() {
-                context.runOnUiThread(() -> cmdView.setText(c1));
+                cmdView.setText(c1);
                 outputUpdater.postDelayed(this, REFRESH_INTERVAL);
             }
         });
 
         outputUpdater.post(new Runnable() {
             public void run() {
-                context.runOnUiThread(() -> cmdView2.setText(c2));
+                cmdView2.setText(c2);
                 outputUpdater.postDelayed(this, REFRESH_INTERVAL);
             }
         });

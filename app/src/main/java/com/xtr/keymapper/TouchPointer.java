@@ -64,7 +64,7 @@ public class TouchPointer {
 
         textViewUpdater.post(new Runnable() {
             public void run() {
-                ((MainActivity)context).runOnUiThread(() -> cmdView3.setText(c3));
+                cmdView3.setText(c3);
                 textViewUpdater.postDelayed(this, Server.REFRESH_INTERVAL);
             }
         });
