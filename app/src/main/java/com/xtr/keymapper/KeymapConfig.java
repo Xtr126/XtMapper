@@ -12,8 +12,8 @@ public class KeymapConfig {
     private final String[] keys = new String[38]; // element 0 to 35 for A-Z 0-9
     private final Float[] keyX = new Float[38]; // element 36 and 37 for dpad1 dpad2
     private final Float[] keyY = new Float[38];
-    private final String[] dpad1 = new String[3];
-    private final String[] dpad2 = new String[3];
+    public String[] dpad1;
+    public String[] dpad2;
 
     public KeymapConfig(Context context) {
         this.context = context;
@@ -44,6 +44,7 @@ public class KeymapConfig {
                     keys[36] = xy[0];
                     keyX[36] = Float.parseFloat(xy[1]);
                     keyY[36] = Float.parseFloat(xy[2]);
+                    dpad1 = new String[3];
                     dpad1[0] = xy[3]; // diameter
                     dpad1[1] = xy[4]; // absolute x position of pivot (center)
                     dpad1[2] = xy[5]; // absolute y position of pivot (center)
@@ -53,6 +54,7 @@ public class KeymapConfig {
                     keys[37] = xy[0];
                     keyX[37] = Float.parseFloat(xy[1]);
                     keyY[37] = Float.parseFloat(xy[2]);
+                    dpad2 = new String[3];
                     dpad2[0] = xy[3];
                     dpad2[1] = xy[4];
                     dpad2[2] = xy[5];

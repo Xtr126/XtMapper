@@ -38,8 +38,9 @@ public class TouchPointer {
     final Button startButton;
     private StringBuilder c3;
     boolean pointer_down = false;
-    private final Handler textViewUpdater = new Handler();
     private int counter = 0;
+    private final Handler textViewUpdater = new Handler();
+    private Dpad1Handler dpad1Handler;
 
     public TouchPointer(Context context){
         this.context= context;
@@ -105,13 +106,12 @@ public class TouchPointer {
                 if (xy[3].equals("DOWN") || xy[3].equals("UP")) {
                     int i = Utils.obtainIndex(xy[2]);
                     // Strips off KEY_ from KEY_X and return the index of X in alphabet
-                    if (i >= 0 && i <= 35) { // Make sure valid
-                        if (keys_x != null) { // Avoid null array exception in case user has not set keymap already
-                            if (keys_x[i] != null) {
-                                x_out.writeBytes(keys_x[i] + " " + keys_y[i] + " " + xy[3] + " " + i + "\n");
-                                // Send coordinates to remote server to simulate touch
-                            }
+                    if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
+                        if (keys_x != null && keys_x[i] != null) { // null if keymap not set
+                            x_out.writeBytes(keys_x[i] + " " + keys_y[i] + " " + xy[3] + " " + i + "\n"); // Send coordinates to remote server to simulate touch
                         }
+                    } else if (dpad1Handler != null) {
+                        x_out.writeBytes(dpad1Handler.getMotionEvent(xy[2], xy[3]));
                     }
                 }
                 movePointer();
@@ -139,9 +139,13 @@ public class TouchPointer {
     public void loadKeymap() throws IOException {
         KeymapConfig keymapConfig = new KeymapConfig(context);
         keymapConfig.loadConfig();
+
         keys = keymapConfig.getKeys();
         keys_x = keymapConfig.getX();
         keys_y = keymapConfig.getY();
+
+        if (keymapConfig.dpad1 != null)
+            dpad1Handler = new Dpad1Handler(keymapConfig.dpad1);
     }
 
     public void updateCmdView3(String s){
