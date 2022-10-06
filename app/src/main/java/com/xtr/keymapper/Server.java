@@ -8,6 +8,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -43,7 +44,7 @@ public class Server {
     }
 
     private void textViewUpdaterTask() {
-        Handler outputUpdater = new Handler();
+        Handler outputUpdater = new Handler(Looper.getMainLooper());
 
         outputUpdater.post(new Runnable() {
             public void run() {

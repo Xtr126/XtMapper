@@ -247,8 +247,9 @@ public class EditorUI extends AppCompatActivity {
             String key = String.valueOf(event.getDisplayLabel());
             if ( key.matches("[a-zA-Z0-9]+" )) {
                 KeyInFocus.setText(key);
+                return true;
             }
         }
-        return true;
+        return false;
     }
 }
