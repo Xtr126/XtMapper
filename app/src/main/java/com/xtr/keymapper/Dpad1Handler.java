@@ -1,11 +1,13 @@
 package com.xtr.keymapper;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 public class Dpad1Handler {
 
-    private Float radius;
-    private Float xOfCenter;
-    private Float yOfCenter;
-    private final int pointerId = 37;
+    private final Float radius;
+    private final Float xOfCenter;
+    private final Float yOfCenter;
 
     public Dpad1Handler(String[] data){
         radius = Float.parseFloat(data[0]);
@@ -13,21 +15,26 @@ public class Dpad1Handler {
         yOfCenter = Float.parseFloat(data[2]);
     }
 
-    public String getMotionEvent(String key, String event){
+    public void sendEvent(String key, String event, DataOutputStream xOut) throws IOException {
+        int pointerId = 37;
         switch (key){
             case "KEY_UP":{
 
+                xOut.writeBytes(xOfCenter + " " + Float.sum(yOfCenter, -radius) + " MOVE " + pointerId + "\n");
+                break;
             }
             case "KEY_DOWN":{
-
+                xOut.writeBytes(xOfCenter + " " + Float.sum(yOfCenter, radius) + " MOVE " + pointerId + "\n");
+                break;
             }
             case "KEY_LEFT":{
-
+                xOut.writeBytes(Float.sum(xOfCenter, -radius) + " " + yOfCenter + " MOVE " + pointerId + "\n");
+                break;
             }
             case "KEY_RIGHT":{
-            
+                xOut.writeBytes(Float.sum(xOfCenter, radius) + " " + yOfCenter + " MOVE " + pointerId + "\n");
+                break;
             }
         }
-        return "X Y DOWN pointerId\n";
     }
 }
