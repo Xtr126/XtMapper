@@ -108,43 +108,55 @@ public class EditorUI extends AppCompatActivity {
             }
         }
 
-        String[] dpad1 = keymapConfig.dpad1Config;
-        String[] dpad2 = keymapConfig.dpad2Config;
+        String dpad1 = keys[36];
+        String dpad2 = keys[37];
 
         if (dpad1 != null) {
-            Float x1 = Float.parseFloat(dpad1[1]);
-            Float y1 = Float.parseFloat(dpad1[2]);
-            addDpad1(x1, y1);
+            addDpad1(key_x[36], key_y[36]);
         }
 
         if (dpad2 != null) {
-            Float x2 = Float.parseFloat(dpad2[1]);
-            Float y2 = Float.parseFloat(dpad2[2]);
-            addDpad2(x2, y2);
+            addDpad2(key_x[37], key_y[37]);
         }
     }
 
     private void saveKeymap() throws IOException {
         StringBuilder linesToWrite = new StringBuilder();
+
         for (int i = 0; i < KeyX.size(); i++) {
             if(KeyX.get(i).key != null) {
                 linesToWrite.append(KeyX.get(i).getData());
             }
         }
         if (dpad1 != null) {
+            Float xOfPivot = dpad1.getX() + dpad1.getPivotX();
+            Float yOfPivot = dpad1.getY() + dpad1.getPivotY();
+
             linesToWrite.append("UDLR_DPAD ")
                         .append(dpad1.getX()).append(" ")
-                        .append(dpad1.getY()).append("\n");
+                        .append(dpad1.getY()).append(" ")
+                        .append(dpad1.getHeight()).append(" ")
+                        .append(xOfPivot).append(" ")
+                        .append(yOfPivot).append("\n");
         }
+
         if (dpad2 != null) {
+            Float xOfPivot = dpad2.getX() + dpad2.getPivotX();
+            Float yOfPivot = dpad2.getY() + dpad2.getPivotY();
+
             linesToWrite.append("WASD_DPAD ")
                         .append(dpad2.getX()).append(" ")
-                        .append(dpad2.getY()).append("\n");
+                        .append(dpad2.getY()).append(" ")
+                        .append(dpad2.getHeight()).append(" ")
+                        .append(xOfPivot).append(" ")
+                        .append(yOfPivot).append("\n");
         }
+
         FileWriter fileWriter = new FileWriter(KeymapConfig.getConfigPath(this));
         PrintWriter printWriter = new PrintWriter(fileWriter);
         printWriter.print(linesToWrite);
         printWriter.close();
+
     }
 
     public void initFab() {
