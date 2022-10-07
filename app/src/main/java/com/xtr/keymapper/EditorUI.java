@@ -102,7 +102,7 @@ public class EditorUI extends AppCompatActivity {
         Float[] key_x = keymapConfig.getX();
         Float[] key_y = keymapConfig.getY();
 
-        for (int n = 0; n < keys.length; n++) {
+        for (int n = 0; n < 36; n++) {
             if (keys[n] != null) {
                 addKey(keys[n], key_x[n], key_y[n]);
             }
