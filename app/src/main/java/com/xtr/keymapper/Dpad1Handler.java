@@ -53,7 +53,9 @@ public class Dpad1Handler {
                     xOut.writeBytes(tapUp);
                     KEY_UP = false;
                 }
-                xOut.writeBytes(moveUp);
+                if (KEY_LEFT) xOut.writeBytes(moveUpLeft);
+                else if (KEY_RIGHT) xOut.writeBytes(moveUpRight);
+                else xOut.writeBytes(moveUp);
                 break;
             }
             case "KEY_DOWN":{
@@ -64,7 +66,9 @@ public class Dpad1Handler {
                     xOut.writeBytes(tapUp);
                     KEY_DOWN = false;
                 }
-                xOut.writeBytes(moveDown);
+                if (KEY_LEFT) xOut.writeBytes(moveDownLeft);
+                else if (KEY_RIGHT) xOut.writeBytes(moveDownRight);
+                else xOut.writeBytes(moveDown);
                 break;
             }
             case "KEY_LEFT":{
@@ -75,7 +79,9 @@ public class Dpad1Handler {
                     xOut.writeBytes(tapUp);
                     KEY_LEFT = false;
                 }
-                xOut.writeBytes(moveLeft);
+                if (KEY_UP) xOut.writeBytes(moveUpLeft);
+                else if (KEY_DOWN) xOut.writeBytes(moveDownLeft);
+                else xOut.writeBytes(moveLeft);
                 break;
             }
             case "KEY_RIGHT":{
@@ -86,7 +92,9 @@ public class Dpad1Handler {
                     xOut.writeBytes(tapUp);
                     KEY_RIGHT = false;
                 }
-                xOut.writeBytes(moveRight);
+                if (KEY_UP) xOut.writeBytes(moveUpRight);
+                else if (KEY_DOWN) xOut.writeBytes(moveDownRight);
+                else xOut.writeBytes(moveRight);
                 break;
             }
         }
