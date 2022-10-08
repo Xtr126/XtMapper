@@ -14,6 +14,7 @@ public class Dpad1Handler {
     private final String moveUpRight;
     private final String moveDownLeft;
     private final String moveDownRight;
+
     private final String tapUp;
     private final String tapDown;
 
@@ -26,7 +27,7 @@ public class Dpad1Handler {
         float radius = Float.parseFloat(data[0]);
         float xOfCenter = Float.parseFloat(data[1]);
         float yOfCenter = Float.parseFloat(data[2]);
-        int pointerId = 36;
+        int pointerId = 37;
 
         moveUp = xOfCenter + " " + Float.sum(yOfCenter, -radius) + " MOVE " + pointerId + "\n";
         moveDown = xOfCenter + " " + Float.sum(yOfCenter, radius) + " MOVE " + pointerId + "\n";
@@ -52,6 +53,7 @@ public class Dpad1Handler {
                 } else {
                     xOut.writeBytes(tapUp);
                     KEY_UP = false;
+                    break;
                 }
                 if (KEY_LEFT) xOut.writeBytes(moveUpLeft);
                 else if (KEY_RIGHT) xOut.writeBytes(moveUpRight);
@@ -65,6 +67,7 @@ public class Dpad1Handler {
                 } else {
                     xOut.writeBytes(tapUp);
                     KEY_DOWN = false;
+                    break;
                 }
                 if (KEY_LEFT) xOut.writeBytes(moveDownLeft);
                 else if (KEY_RIGHT) xOut.writeBytes(moveDownRight);
@@ -78,6 +81,7 @@ public class Dpad1Handler {
                 } else {
                     xOut.writeBytes(tapUp);
                     KEY_LEFT = false;
+                    break;
                 }
                 if (KEY_UP) xOut.writeBytes(moveUpLeft);
                 else if (KEY_DOWN) xOut.writeBytes(moveDownLeft);
@@ -91,6 +95,7 @@ public class Dpad1Handler {
                 } else {
                     xOut.writeBytes(tapUp);
                     KEY_RIGHT = false;
+                    break;
                 }
                 if (KEY_UP) xOut.writeBytes(moveUpRight);
                 else if (KEY_DOWN) xOut.writeBytes(moveDownRight);
