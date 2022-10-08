@@ -16,7 +16,6 @@
         app:overlay_openingAnimationDurationMs="1000"/>
 
     <com.nambimobile.widgets.efab.ExpandableFab
-        android:id="@+id/expandable_fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
