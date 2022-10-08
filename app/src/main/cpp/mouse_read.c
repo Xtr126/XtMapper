@@ -78,20 +78,21 @@ void send_data(struct input_event *ie, struct Socket *x_cts)
 {
     switch (ie->code) {
         case REL_X :
-            //printf("%d %s\n", ie->value, "REL_X");
             sprintf(str, "REL_X %d \n", ie->value);
             send(x_cts->sock, str, strlen(str), 0);
             break;
         case REL_Y :
-            //printf("%d %s\n", ie->value, "REL_Y");
             sprintf(str, "REL_Y %d \n", ie->value);
             send(x_cts->sock, str, strlen(str), 0);
             break;
-
+        case REL_WHEEL :
+            sprintf(str, "REL_WHEEL %d \n", ie->value);
+            send(x_cts->sock, str, strlen(str), 0);
+            break;
         case BTN_MOUSE :
-            //printf("BTN_MOUSE %d\n", ie->value);
             sprintf(str, "BTN_MOUSE %d \n", ie->value);
             send(x_cts->sock, str, strlen(str), 0);
+            break;
     }
 }
 
