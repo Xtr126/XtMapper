@@ -12,8 +12,8 @@ public class KeymapConfig {
     private final String[] keys = new String[38]; // element 0 to 35 for A-Z 0-9
     private final Float[] keyX = new Float[38]; // element 36 and 37 for dpad1 dpad2
     private final Float[] keyY = new Float[38];
-    public String[] dpad1;
-    public String[] dpad2;
+    public String[] dpad1 = null;
+    public String[] dpad2 = null;
 
     public KeymapConfig(Context context) {
         this.context = context;

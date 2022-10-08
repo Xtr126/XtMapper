@@ -26,7 +26,7 @@ public class Dpad1Handler {
         float radius = Float.parseFloat(data[0]);
         float xOfCenter = Float.parseFloat(data[1]);
         float yOfCenter = Float.parseFloat(data[2]);
-        int pointerId = 37;
+        int pointerId = 36;
 
         moveUp = xOfCenter + " " + Float.sum(yOfCenter, -radius) + " MOVE " + pointerId + "\n";
         moveDown = xOfCenter + " " + Float.sum(yOfCenter, radius) + " MOVE " + pointerId + "\n";

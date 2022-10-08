@@ -116,7 +116,6 @@ public class TouchPointer {
                         dpad1Handler.sendEvent(xy[2], xy[3], xOut);
                     }
                 }
-                movePointer();
             }
         } catch (IOException e) {
             updateCmdView("Unable to start overlay: server not started");
@@ -234,6 +233,7 @@ public class TouchPointer {
         in.close();
         clientSocket.close();
         socket.close();
+        ((MainActivity)context).runOnUiThread(this::hideCursor);
     }
 
     public void tryStopSocket(){

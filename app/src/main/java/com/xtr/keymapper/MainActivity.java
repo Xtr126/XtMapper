@@ -91,4 +91,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        Server.killServer(getPackageName());
+        super.onDestroy();
+    }
 }
