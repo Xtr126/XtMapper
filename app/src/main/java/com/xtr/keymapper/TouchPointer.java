@@ -98,6 +98,7 @@ public class TouchPointer {
         try {
             Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
             DataOutputStream xOut = new DataOutputStream(socket.getOutputStream());
+            if (dpad1Handler != null) dpad1Handler.setOutputStream(xOut);
             String line;
             BufferedReader getevent = Utils.geteventStream(context);
             while ((line = getevent.readLine()) != null) { //read events
@@ -113,7 +114,7 @@ public class TouchPointer {
                             xOut.writeBytes(keysX[i] + " " + keysY[i] + " " + xy[3] + " " + i + "\n"); // Send coordinates to remote server to simulate touch
                         }
                     } else if (dpad1Handler != null) {
-                        dpad1Handler.sendEvent(xy[2], xy[3], xOut);
+                        dpad1Handler.sendEvent(xy[2], xy[3]);
                     }
                 }
             }

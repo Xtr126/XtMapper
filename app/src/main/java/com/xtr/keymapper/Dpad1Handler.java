@@ -22,6 +22,7 @@ public class Dpad1Handler {
     private boolean KEY_DOWN;
     private boolean KEY_LEFT;
     private boolean KEY_RIGHT;
+    private DataOutputStream xOut;
 
     public Dpad1Handler(String[] data){
         float radius = Float.parseFloat(data[0]);
@@ -43,63 +44,96 @@ public class Dpad1Handler {
         tapDown = xOfCenter + " " + yOfCenter + " DOWN " + pointerId + "\n";
     }
 
-    public void sendEvent(String key, String event, DataOutputStream xOut) throws IOException {
-        boolean pointerDown = event.equals("DOWN");
+    public void setOutputStream(DataOutputStream xOut){
+        this.xOut = xOut;
+    }
+
+    public void sendEvent(String key, String event) throws IOException {
+        boolean keyDown = event.equals("DOWN");
+        if (keyDown) {
+            eventDown(key);
+        } else {
+            eventUp(key);
+        }
+    }
+
+    private void eventDown(String key) throws IOException {
         switch (key){
             case "KEY_UP":{
-                if (pointerDown) {
+                if (!KEY_DOWN && !KEY_LEFT && !KEY_RIGHT)
                     xOut.writeBytes(tapDown);
-                    KEY_UP = true;
-                } else {
-                    xOut.writeBytes(tapUp);
-                    KEY_UP = false;
-                    break;
-                }
+                KEY_UP = true;
+
                 if (KEY_LEFT) xOut.writeBytes(moveUpLeft);
                 else if (KEY_RIGHT) xOut.writeBytes(moveUpRight);
                 else xOut.writeBytes(moveUp);
                 break;
             }
             case "KEY_DOWN":{
-                if (pointerDown) {
+                if (!KEY_LEFT && !KEY_RIGHT && !KEY_UP)
                     xOut.writeBytes(tapDown);
-                    KEY_DOWN = true;
-                } else {
-                    xOut.writeBytes(tapUp);
-                    KEY_DOWN = false;
-                    break;
-                }
+                KEY_DOWN = true;
+
                 if (KEY_LEFT) xOut.writeBytes(moveDownLeft);
                 else if (KEY_RIGHT) xOut.writeBytes(moveDownRight);
                 else xOut.writeBytes(moveDown);
                 break;
             }
             case "KEY_LEFT":{
-                if (pointerDown) {
+                if (!KEY_DOWN && !KEY_RIGHT && !KEY_UP)
                     xOut.writeBytes(tapDown);
-                    KEY_LEFT = true;
-                } else {
-                    xOut.writeBytes(tapUp);
-                    KEY_LEFT = false;
-                    break;
-                }
+                KEY_LEFT = true;
+
                 if (KEY_UP) xOut.writeBytes(moveUpLeft);
                 else if (KEY_DOWN) xOut.writeBytes(moveDownLeft);
                 else xOut.writeBytes(moveLeft);
                 break;
             }
             case "KEY_RIGHT":{
-                if (pointerDown) {
+                if (!KEY_DOWN && !KEY_LEFT && !KEY_UP)
                     xOut.writeBytes(tapDown);
-                    KEY_RIGHT = true;
-                } else {
-                    xOut.writeBytes(tapUp);
-                    KEY_RIGHT = false;
-                    break;
-                }
+                KEY_RIGHT = true;
+
                 if (KEY_UP) xOut.writeBytes(moveUpRight);
                 else if (KEY_DOWN) xOut.writeBytes(moveDownRight);
                 else xOut.writeBytes(moveRight);
+                break;
+            }
+        }
+    }
+
+    private void eventUp(String key) throws IOException {
+        switch (key){
+            case "KEY_UP":{
+                if (KEY_LEFT) xOut.writeBytes(moveLeft);
+                if (KEY_RIGHT) xOut.writeBytes(moveRight);
+                if (!KEY_DOWN && !KEY_LEFT && !KEY_RIGHT)
+                    xOut.writeBytes(tapUp);
+                KEY_UP = false;
+                break;
+            }
+            case "KEY_DOWN":{
+                if (KEY_LEFT) xOut.writeBytes(moveLeft);
+                if (KEY_RIGHT) xOut.writeBytes(moveRight);
+                if (!KEY_LEFT && !KEY_RIGHT && !KEY_UP)
+                    xOut.writeBytes(tapUp);
+                KEY_DOWN = false;
+                break;
+            }
+            case "KEY_LEFT":{
+                if (KEY_UP) xOut.writeBytes(moveUp);
+                if (KEY_DOWN) xOut.writeBytes(moveDown);
+                if (!KEY_DOWN && !KEY_RIGHT && !KEY_UP)
+                    xOut.writeBytes(tapUp);
+                KEY_LEFT = false;
+                break;
+            }
+            case "KEY_RIGHT":{
+                if (KEY_UP) xOut.writeBytes(moveUp);
+                if (KEY_DOWN) xOut.writeBytes(moveDown);
+                if (!KEY_DOWN && !KEY_LEFT && !KEY_UP)
+                    xOut.writeBytes(tapUp);
+                KEY_RIGHT = false;
                 break;
             }
         }

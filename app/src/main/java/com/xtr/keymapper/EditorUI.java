@@ -129,25 +129,27 @@ public class EditorUI extends AppCompatActivity {
             }
         }
         if (dpad1 != null) {
-            Float xOfPivot = dpad1.getX() + dpad1.getPivotX();
-            Float yOfPivot = dpad1.getY() + dpad1.getPivotY();
+            float radius = dpad1.getPivotX();
+            Float xOfPivot = dpad1.getX() + radius;
+            Float yOfPivot = dpad1.getY() + radius;
 
             linesToWrite.append("UDLR_DPAD ")
                         .append(dpad1.getX()).append(" ")
                         .append(dpad1.getY()).append(" ")
-                        .append(dpad1.getHeight()).append(" ")
+                        .append(radius).append(" ")
                         .append(xOfPivot).append(" ")
                         .append(yOfPivot).append("\n");
         }
 
         if (dpad2 != null) {
-            Float xOfPivot = dpad2.getX() + dpad2.getPivotX();
-            Float yOfPivot = dpad2.getY() + dpad2.getPivotY();
+            float radius = dpad2.getPivotX();
+            Float xOfPivot = dpad2.getX() + radius;
+            Float yOfPivot = dpad2.getY() + radius;
 
             linesToWrite.append("WASD_DPAD ")
                         .append(dpad2.getX()).append(" ")
                         .append(dpad2.getY()).append(" ")
-                        .append(dpad2.getHeight()).append(" ")
+                        .append(radius).append(" ")
                         .append(xOfPivot).append(" ")
                         .append(yOfPivot).append("\n");
         }
