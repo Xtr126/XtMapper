@@ -1,10 +1,11 @@
-package com.xtr.keymapper;
+package com.xtr.keymapper.activity;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.app.Activity;
 import android.os.Bundle;
 
-public class InfoActivity extends AppCompatActivity {
+import com.xtr.keymapper.R;
+
+public class InfoActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

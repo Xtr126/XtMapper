@@ -1,4 +1,4 @@
-package com.xtr.keymapper.Layout;
+package com.xtr.keymapper.layout;
 
 import android.content.Context;
 import android.content.res.ColorStateList;

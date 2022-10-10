@@ -18,6 +18,8 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.xtr.keymapper.activity.MainActivity;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;

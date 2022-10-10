@@ -16,16 +16,16 @@
         android:theme="@style/Theme.XtMapper"
         android:extractNativeLibs="true">
         <activity
-            android:name=".InfoActivity"
+            android:name=".activity.InfoActivity"
             android:exported="false" />
         <activity
             android:name=".InputDeviceSelector"
             android:exported="false" />
         <activity
-            android:name=".EditorUI"
+            android:name=".activity.EditorUI"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name=".activity.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
