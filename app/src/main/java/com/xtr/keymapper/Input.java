@@ -152,6 +152,10 @@ public class Input {
                         setIoctl(xy[1].equals("true"));
                         break;
                     }
+                    case "exit": {
+                        System.exit(1);
+                        break;
+                    }
                 }
             }
         } catch (NoSuchMethodException |
@@ -173,7 +177,6 @@ public class Input {
             System.exit(2);
         }
         ServerSocket serverSocket = null;
-        Input input = new Input();
 
         try {
             serverSocket = new ServerSocket(MainActivity.DEFAULT_PORT);
@@ -181,10 +184,18 @@ public class Input {
             e.printStackTrace(System.out);
             System.exit(2);
         }
+
         while (true) {
             try {
                 Socket socket = serverSocket.accept();
-                new Thread(() -> input.start(socket)).start();
+                new Thread(new Runnable() {
+                    Input input;
+                    @Override
+                    public void run() {
+                        input = new Input();
+                        input.start(socket);
+                    }
+                }).start();
             } catch (IOException e) {
                 System.out.println("I/O error: " + e);
             }

@@ -78,10 +78,10 @@ public class TouchPointer {
     public void open() {
         ((MainActivity)context).setButtonActive(startButton);
         startButton.setOnClickListener(v -> {
+            Server.killServer().start();
             hideCursor();
             ((MainActivity)context).setButtonInactive(startButton);
             startButton.setOnClickListener(view -> open());
-            Server.killServer(context.getPackageName());
         });
 
        if(cursorView.getWindowToken()==null)
@@ -119,6 +119,7 @@ public class TouchPointer {
                         dpad1Handler.sendEvent(xy[2], xy[3]);
                     }
                 }
+                getevent.close();
             }
         } catch (IOException e) {
             updateCmdView("Unable to start overlay: server not started");
@@ -184,7 +185,6 @@ public class TouchPointer {
             }
         } catch (IOException e) {
             Log.e("I/O Error", e.toString());
-            tryStopSocket();
         }
         updateCmdView("waiting for server...");
     }
@@ -239,15 +239,6 @@ public class TouchPointer {
         ((MainActivity)context).runOnUiThread(this::hideCursor);
     }
 
-    public void tryStopSocket(){
-        try {
-            DataOutputStream xOut = new DataOutputStream(new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2).getOutputStream());
-            xOut.writeBytes(null + "\n");
-            xOut.flush(); xOut.close();
-        } catch (IOException e) {
-            Log.e("I/O error", e.toString());
-        }
-    }
 
     public void movePointer(){
         ((MainActivity)context).runOnUiThread(() -> {

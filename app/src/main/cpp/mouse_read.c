@@ -19,6 +19,7 @@
 #include <sys/socket.h>
 
 char str[16];
+
 typedef struct mouse_context {
 	JavaVM  *javaVM;
     pthread_mutex_t  lock;
@@ -107,7 +108,7 @@ void * UpdateMouse(void* context) {
             return NULL;
         }
     }
-    while(1) {
+    while(true) {
         pthread_mutex_lock(&pctx->lock);
         int done = pctx->done;
         if (pctx->done) {
@@ -124,7 +125,6 @@ void * UpdateMouse(void* context) {
             perror("opening device");
             exit(EXIT_FAILURE);
         }
-      //ioctl(fd, EVIOCGRAB, (void *)1);
 
         create_socket(&x_cts, pctx->port);
 
@@ -136,7 +136,6 @@ void * UpdateMouse(void* context) {
         // closing the connected socket
         close(x_cts.client_fd);
         return 0;
-
     }
 
     (*javaVM)->DetachCurrentThread(javaVM);
@@ -146,6 +145,9 @@ void * UpdateMouse(void* context) {
 
     JNIEXPORT void JNICALL
     Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring device, jint port) {
+        setlinebuf(stdout);
+        g_ctx.dev = (*env)->GetStringUTFChars(env, device, 0);
+        g_ctx.port = port;
         pthread_t threadInfo_;
         pthread_attr_t threadAttr_;
 
@@ -157,17 +159,12 @@ void * UpdateMouse(void* context) {
         jclass clz = (*env)->GetObjectClass(env, instance);
         (*env)->NewGlobalRef(env, clz);
         (*env)->NewGlobalRef(env, instance);
-        //system("chown -hR $(whoami) -R /dev/input");
-        setlinebuf(stdout);
 
-        g_ctx.dev = (*env)->GetStringUTFChars(env, device, 0);
-        g_ctx.port = port;
         int result = pthread_create(&threadInfo_, &threadAttr_, UpdateMouse, &g_ctx);
         assert(result == 0);
-
         pthread_attr_destroy(&threadAttr_);
-
         (void) result;
+
     }
 
 
@@ -175,9 +172,9 @@ JNIEXPORT void JNICALL
 Java_com_xtr_keymapper_Input_setIoctl(JNIEnv *env, jclass clazz, jboolean y) {
     if ( fd != 0 ) {
         ioctl(fd, EVIOCGRAB, y);
-        printf("ioctl successful: gained exclusive access to input device");
+        printf("ioctl successful\n");
     }
     else {
-        printf("warning: unable to ioctl: fd not initialized");
+        printf("ioctl failed: fd not initialized\n");
     }
 }

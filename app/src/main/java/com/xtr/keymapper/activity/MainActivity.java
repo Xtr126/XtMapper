@@ -1,12 +1,12 @@
 package com.xtr.keymapper.activity;
 
-import android.app.Activity;
+import androidx.appcompat.app.AppCompatActivity;
+
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Button;
-
 
 import com.xtr.keymapper.InputDeviceSelector;
 import com.xtr.keymapper.R;
@@ -14,7 +14,7 @@ import com.xtr.keymapper.Server;
 import com.xtr.keymapper.TouchPointer;
 
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
     public static final int DEFAULT_PORT_2 = 6345;
     public TouchPointer pointerOverlay;
@@ -43,10 +43,8 @@ public class MainActivity extends Activity {
         startInTerminal.setOnClickListener(v -> startServer(false));
         startOverlayButton.setOnClickListener(v -> startService());
         keymap.setOnClickListener(v -> startEditor());
-        configureButton.setOnClickListener(v -> startActivity(
-                new Intent(this, InputDeviceSelector.class)));
-        infoButton.setOnClickListener(v -> startActivity(
-                new Intent(this, InfoActivity.class)));
+        configureButton.setOnClickListener(v -> startActivity(new Intent(this, InputDeviceSelector.class)));
+        infoButton.setOnClickListener(v -> startActivity(new Intent(this, InfoActivity.class)));
     }
 
     private void initButtons(){
@@ -66,13 +64,11 @@ public class MainActivity extends Activity {
     }
 
     public void setButtonActive(Button button){
-        button.setBackgroundTintList(
-                ColorStateList.valueOf(getColor(R.color.purple_700)));
+        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.purple_700)));
     }
 
     public void setButtonInactive(Button button){
-        button.setBackgroundTintList(
-                ColorStateList.valueOf(getColor(R.color.grey)));
+        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.grey)));
     }
 
     private void startEditor(){
@@ -102,7 +98,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        Server.killServer(getPackageName());
+        Server.killServer().start();
         super.onDestroy();
     }
 }

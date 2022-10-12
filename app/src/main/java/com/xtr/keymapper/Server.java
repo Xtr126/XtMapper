@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -16,13 +17,15 @@ import com.xtr.keymapper.activity.MainActivity;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.Socket;
 
 public class Server {
 
     private final Context context;
-    private final String script_name = "/data/local/tmp/xtMapper.sh\n";
+    private final String script_name    ;
 
     public static final int MAX_LINES_1 = 16;
     public static final int MAX_LINES_2 = 32;
@@ -43,6 +46,7 @@ public class Server {
         c1 = new StringBuilder();
         c2 = new StringBuilder();
         textViewUpdaterTask();
+        script_name = context.getExternalFilesDir(null) + "/xtMapper.sh";
     }
 
     private void textViewUpdaterTask() {
@@ -68,33 +72,32 @@ public class Server {
         return sharedPref.getString("device", null);
     }
 
-    private void writeScript(String packageName, ApplicationInfo ai, String apk, DataOutputStream out) throws IOException, InterruptedException {
-        out.writeBytes("cat > " + script_name); // Write contents to file through pipe
+    private void writeScript(String packageName, ApplicationInfo ai, String apk) throws IOException, InterruptedException {
+        FileWriter linesToWrite = new FileWriter(script_name);
+        
+        linesToWrite.append("#!/system/bin/sh\n");
+        linesToWrite.append("pkill -f ").append(packageName).append(".Input\n");
 
-        out.writeBytes("#!/system/bin/sh\n");
-        out.writeBytes("pkill -f " + packageName + ".Input\n");
+        linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
+                .append("\" CLASSPATH=\"").append(apk) 
+                .append("\" /system/bin/app_process /system/bin ")
+                .append(packageName).append(".Input ")
+                .append(getDeviceName()).append("\n"); // input device node as argument
 
-        out.writeBytes("LD_LIBRARY_PATH=\"" + ai.nativeLibraryDir + //path containing lib*.so
-                "\" CLASSPATH=\"" + apk +
-                "\" /system/bin/app_process /system/bin " +
-                packageName + ".Input " + getDeviceName() + "\n"); // input device node as argument
+        linesToWrite.flush();
+        linesToWrite.close();
     }
 
-    public static void killServer(String packageName){
-        try {
-        Process sh = Utils.getRootAccess();
-        DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-        outputStream.writeBytes("pkill -f " + packageName + ".Input\n");
-        outputStream.writeBytes("pkill -f libgetevent.so\n");
-        outputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void setExecPermission(DataOutputStream out) throws IOException, InterruptedException {
-        out.writeBytes("touch " + script_name);
-        out.writeBytes("chmod 777 " + script_name);
+    public static Thread killServer(){
+        return new Thread(() -> {
+            try {
+                DataOutputStream xOut = new DataOutputStream(new Socket("127.0.0.1", MainActivity.DEFAULT_PORT).getOutputStream());
+                xOut.writeBytes(". . exit 1\n");
+                xOut.flush(); xOut.close();
+            } catch (IOException e) {
+                Log.e("I/O error", e.toString());
+            }
+        });
     }
 
     public void setupServer () {
@@ -104,14 +107,13 @@ public class Server {
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
             String apk = ai.publicSourceDir; // Absolute path to apk in /data/app
 
-            Process sh = Utils.getRootAccess();
+            Process sh = Runtime.getRuntime().exec("sh");
             DataOutputStream out = new DataOutputStream(sh.getOutputStream());
 
-            setExecPermission(out);
-            writeScript(packageName, ai, apk, out);
+            writeScript(packageName, ai, apk);
             out.close(); sh.waitFor();
             // Notify user
-            updateCmdView1("run " + script_name);
+            updateCmdView1("script written to file:\n" + script_name);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException e) {
             Log.e("Server", e.toString());
         }
@@ -120,11 +122,11 @@ public class Server {
 
     public void startServer() {
         if(getDeviceName() != null) {
-            updateCmdView1("starting server");
+            updateCmdView1("exec sh " + script_name);
             try {
                 Process sh = Utils.getRootAccess();
                 DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-                outputStream.writeBytes(script_name);
+                outputStream.writeBytes("/system/bin/sh " + script_name);
                 outputStream.close();
 
                 BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
