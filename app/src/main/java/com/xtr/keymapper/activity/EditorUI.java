@@ -1,5 +1,7 @@
 package com.xtr.keymapper.activity;
 
+
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
@@ -12,8 +14,6 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageView;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
 import com.xtr.keymapper.KeymapConfig;
@@ -21,12 +21,14 @@ import com.xtr.keymapper.R;
 import com.xtr.keymapper.layout.FloatingActionKey;
 import com.xtr.keymapper.layout.MovableFrameLayout;
 
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
 
-public class EditorUI extends AppCompatActivity {
+public class EditorUI extends Activity {
     private View keymapView;
 
     private WindowManager.LayoutParams mParams;
@@ -45,7 +47,6 @@ public class EditorUI extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -97,7 +98,6 @@ public class EditorUI extends AppCompatActivity {
     }
 
     private void loadKeymap() throws IOException {
-
         KeymapConfig keymapConfig = new KeymapConfig(this);
         keymapConfig.loadConfig();
         String[] keys = keymapConfig.getKeys();
@@ -156,8 +156,10 @@ public class EditorUI extends AppCompatActivity {
                         .append(yOfCenter).append("\n");
         }
 
-        KeymapConfig keymapConfig = new KeymapConfig(this);
-        keymapConfig.writeConfig(linesToWrite);
+        FileWriter fileWriter = new FileWriter(KeymapConfig.getConfigPath(this));
+        fileWriter.write(linesToWrite.toString());
+        fileWriter.flush();
+        fileWriter.close();
     }
 
     public void initFab() {
