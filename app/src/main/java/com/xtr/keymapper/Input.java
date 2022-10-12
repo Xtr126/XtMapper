@@ -117,9 +117,9 @@ public class Input {
             injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
             initPointers();
             String line;
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            BufferedReader stdInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             System.out.println("Server: new connection at port: " + MainActivity.DEFAULT_PORT);
-            while ((line = in.readLine()) != null) {
+            while ((line = stdInput.readLine()) != null) {
                 System.out.println(line);
                 String []xy = line.split("\\s+");
                 int pointerId;

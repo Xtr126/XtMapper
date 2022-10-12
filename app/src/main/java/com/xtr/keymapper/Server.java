@@ -25,7 +25,7 @@ import java.net.Socket;
 public class Server {
 
     private final Context context;
-    private final String script_name    ;
+    public final String script_name;
 
     public static final int MAX_LINES_1 = 16;
     public static final int MAX_LINES_2 = 32;
@@ -112,8 +112,6 @@ public class Server {
 
             writeScript(packageName, ai, apk);
             out.close(); sh.waitFor();
-            // Notify user
-            updateCmdView1("script written to file:\n" + script_name);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException e) {
             Log.e("Server", e.toString());
         }
