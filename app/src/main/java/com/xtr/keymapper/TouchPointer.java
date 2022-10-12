@@ -86,14 +86,22 @@ public class TouchPointer {
 
        if(cursorView.getWindowToken()==null)
            if (cursorView.getParent() == null) {
-                mWindowManager.addView(cursorView, mParams);
-                try {
-                    loadKeymap();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-               new Thread(this::event_handler).start();
-           }
+            mWindowManager.addView(cursorView, mParams);
+            try {
+                loadKeymap();
+                new Thread(this::event_handler).start();
+                new Thread(() -> {
+                    try {
+                        handleMouseEvents();
+                    } catch (IOException e) {
+                        updateCmdView(e.toString());
+                    }
+                }).start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+       }
+
     }
 
     private void event_handler() {
@@ -165,42 +173,21 @@ public class TouchPointer {
         ((MainActivity)context).server.updateCmdView1(s);
     }
 
-    public void startSocket() {
-        try {
-            ServerSocket serverSocket = new ServerSocket(MainActivity.DEFAULT_PORT_2);
-            while (true) {
-                try {
-                    Socket socket = serverSocket.accept();
-                    ((MainActivity)context).runOnUiThread(this::open);
-                    new Thread(() -> {
-                        try {
-                            handleMouseEvents(socket);
-                        } catch (IOException e) {
-                            updateCmdView(e.toString());
-                        }
-                    }).start();
-                } catch (IOException e) {
-                    updateCmdView(e.toString());
-                }
-            }
-        } catch (IOException e) {
-            Log.e("I/O Error", e.toString());
-        }
-        updateCmdView("waiting for server...");
-    }
-
-    private void handleMouseEvents(Socket clientSocket) throws IOException {
-        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-        updateCmdView("initialized: listening for events through socket");
-        Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
-        DataOutputStream xOut = new DataOutputStream(socket.getOutputStream());
+    private void handleMouseEvents() throws IOException {
+        Socket mouseSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+        BufferedReader in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
+        updateCmdView("pointer: connection initialized \n" +
+                         "listening for mouse events from server..");
+        Socket xOutSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
+        DataOutputStream xOut = new DataOutputStream(xOutSocket.getOutputStream());
         pointerGrab(xOut);
+
         Display display = mWindowManager.getDefaultDisplay();
         Point size = new Point();
         display.getRealSize(size);
         int width = size.x;
         int height = size.y;
-        int x2 = width / 100;
+        int x2 = width / 80;
         int y2 = height / 100;
         String line;
         while ((line = in.readLine()) != null) {
@@ -234,8 +221,8 @@ public class TouchPointer {
 
         }
         in.close();
-        clientSocket.close();
-        socket.close();
+        mouseSocket.close();
+        xOutSocket.close();
         ((MainActivity)context).runOnUiThread(this::hideCursor);
     }
 

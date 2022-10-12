@@ -34,7 +34,6 @@ public class MainActivity extends AppCompatActivity {
 
         server = new Server(this);
         pointerOverlay = new TouchPointer(this);
-        new Thread(pointerOverlay::startSocket).start();
         initButtons(); setupButtons();
     }
 
@@ -43,8 +42,10 @@ public class MainActivity extends AppCompatActivity {
         startInTerminal.setOnClickListener(v -> startServer(false));
         startOverlayButton.setOnClickListener(v -> startService());
         keymap.setOnClickListener(v -> startEditor());
-        configureButton.setOnClickListener(v -> startActivity(new Intent(this, InputDeviceSelector.class)));
-        infoButton.setOnClickListener(v -> startActivity(new Intent(this, InfoActivity.class)));
+        configureButton.setOnClickListener
+                (v -> startActivity(new Intent(this, InputDeviceSelector.class)));
+        infoButton.setOnClickListener
+                (v -> startActivity(new Intent(this, InfoActivity.class)));
     }
 
     private void initButtons(){
@@ -84,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
             server.setupServer();
             if (autorun) {
                 new Thread(server::startServer).start();
+            } else {
+                server.updateCmdView1("run in adb shell:\n sh " + server.script_name);
             }
         }
     }

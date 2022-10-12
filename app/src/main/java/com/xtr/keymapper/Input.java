@@ -117,9 +117,8 @@ public class Input {
             injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
             initPointers();
             String line;
-            System.out.println("waiting for overlay...");
             BufferedReader stdInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            System.out.println("connected at port: " + MainActivity.DEFAULT_PORT);
+            System.out.println("Server: new connection at port: " + MainActivity.DEFAULT_PORT);
             while ((line = stdInput.readLine()) != null) {
                 System.out.println(line);
                 String []xy = line.split("\\s+");

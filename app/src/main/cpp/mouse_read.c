@@ -23,15 +23,15 @@ char str[16];
 typedef struct mouse_context {
 	JavaVM  *javaVM;
     pthread_mutex_t  lock;
-	int      done;
+	int done;
 	const char* dev;
     int port;
 } mouseContext;
 mouseContext g_ctx;
 
 struct Socket {
-    int sock;
     int client_fd;
+    int server_fd;
 };
 int fd;
 
@@ -50,49 +50,60 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 
 
 void create_socket(struct Socket *Socket, int PORT){
-    struct sockaddr_in serv_addr;
-    if ((Socket->sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        printf("\n Socket creation error \n");
+    struct sockaddr_in address;
+    int opt = 1;
+    int addrlen = sizeof(address);
+    // Creating socket file descriptor
+    if ((Socket->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("mouse_read: Socket creation error \n");
     }
 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
+    // Forcefully attaching socket to the port
+    if (setsockopt(Socket->server_fd, SOL_SOCKET,
+                   SO_REUSEADDR | SO_REUSEPORT, &opt,
+                   sizeof(opt))) {
+        printf("mouse_read: setsockopt error \n");
+    }
 
-    // Convert IPv4 and IPv6 addresses from text to binary
-    // form
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)
-        <= 0) {
-        printf(
-                "\nInvalid address/ Address not supported \n");
+    address.sin_family = AF_INET;
+    address.sin_port = htons(PORT);
+    address.sin_addr.s_addr = INADDR_ANY;
+
+    if (bind(Socket->server_fd, (struct sockaddr*)&address,
+             sizeof(address)) < 0) {
+        printf("mouse_read: socket bind error \n");
+    }
+
+    printf("mouse_read: waiting for overlay\n");
+    if (listen(Socket->server_fd, 3) < 0) {
+        printf("mouse_read: socket listen failed \n");
     }
 
     if ((Socket->client_fd
-                 = connect(Socket->sock, (struct sockaddr*)&serv_addr,
-                           sizeof(serv_addr)))
-        < 0) {
-        printf("\nConnection Failed \n");
-
+                 = accept(Socket->server_fd, (struct sockaddr*)&address,
+                          (socklen_t*)&addrlen)) < 0) {
+        printf("mouse_read: connection failed \n");
     }
 }
 
-void send_data(struct input_event *ie, struct Socket *x_cts)
+void send_data(struct input_event *ie, int sock)
 {
     switch (ie->code) {
         case REL_X :
             sprintf(str, "REL_X %d \n", ie->value);
-            send(x_cts->sock, str, strlen(str), 0);
+            send(sock, str, strlen(str), 0);
             break;
         case REL_Y :
             sprintf(str, "REL_Y %d \n", ie->value);
-            send(x_cts->sock, str, strlen(str), 0);
+            send(sock, str, strlen(str), 0);
             break;
         case REL_WHEEL :
             sprintf(str, "REL_WHEEL %d \n", ie->value);
-            send(x_cts->sock, str, strlen(str), 0);
+            send(sock, str, strlen(str), 0);
             break;
         case BTN_MOUSE :
             sprintf(str, "BTN_MOUSE %d \n", ie->value);
-            send(x_cts->sock, str, strlen(str), 0);
+            send(sock, str, strlen(str), 0);
             break;
     }
 }
@@ -118,23 +129,23 @@ void * UpdateMouse(void* context) {
         if (done) {
             break;
         }
-        struct input_event ie;
-        struct Socket x_cts;
 
         if ((fd = open(pctx->dev, O_RDONLY)) == -1) {
             perror("opening device");
             exit(EXIT_FAILURE);
         }
 
-        create_socket(&x_cts, pctx->port);
+        struct Socket socket;
+        create_socket(&socket, pctx->port);
 
+        struct input_event ie;
         while (read(fd, &ie, sizeof(struct input_event))) {
-            send_data(&ie, &x_cts);
+            send_data(&ie, socket.client_fd);
         }
 
         close(fd);
-        // closing the connected socket
-        close(x_cts.client_fd);
+        close(socket.client_fd); // closing the connected socket
+        close(socket.server_fd); // closing the listening socket
         return 0;
     }
 
@@ -164,7 +175,6 @@ void * UpdateMouse(void* context) {
         assert(result == 0);
         pthread_attr_destroy(&threadAttr_);
         (void) result;
-
     }
 
 
