@@ -43,8 +43,9 @@ public class TouchPointer {
     private StringBuilder c3;
     boolean pointer_down = false;
     private int counter = 0;
-    private final Handler textViewUpdater = new Handler(Looper.getMainLooper());
     private Dpad1Handler dpad1Handler;
+    private final Handler textViewUpdater = new Handler(Looper.getMainLooper());
+    private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
 
     public TouchPointer(Context context){
         this.context= context;
@@ -92,7 +93,9 @@ public class TouchPointer {
                 eventHandler.start();
                 new Thread(() -> {
                     try {
-                        handleMouseEvents();
+                        mouseEventHandler.connectSocket();
+                        mouseEventHandler.start();
+                        mouseEventHandler.stop();
                     } catch (IOException e) {
                         updateCmdView(e.toString());
                     }
@@ -176,71 +179,89 @@ public class TouchPointer {
         ((MainActivity)context).server.updateCmdView1(s);
     }
 
-    private void handleMouseEvents() throws IOException {
-        Socket mouseSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
-        PrintWriter out = new PrintWriter(mouseSocket.getOutputStream());
-        out.println("mouse_read"); out.flush();
-        BufferedReader in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
-        updateCmdView("pointer: connection initialized \n" +
-                         "listening for mouse events from server..");
+    private class MouseEventHandler {
+        private Socket mouseSocket;
+        private Socket xOutSocket;
+        private DataOutputStream xOut;
+        private BufferedReader in;
+        private PrintWriter out;
+        int width; int height;
+        int x2; int  y2;
+        String line; String[] input_event;
 
-        Socket xOutSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
-        DataOutputStream xOut = new DataOutputStream(xOutSocket.getOutputStream());
-        pointerGrab(xOut);
+        private void connectSocket() throws IOException {
+            mouseSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+            out = new PrintWriter(mouseSocket.getOutputStream());
+            in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
 
-        Display display = mWindowManager.getDefaultDisplay();
-        Point size = new Point();
-        display.getRealSize(size);
-        int width = size.x;
-        int height = size.y;
-        int x2 = width / 80;
-        int y2 = height / 100;
-        String line;
-        while ((line = in.readLine()) != null) {
-            updateCmdView3("socket: " + line);
-                String []xy2 = line.split("\\s+");
-                switch (xy2[0]) {
+            xOutSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
+            xOut = new DataOutputStream(xOutSocket.getOutputStream());
+        }
+
+        private void start() throws IOException {
+            out.println("mouse_read"); out.flush();
+            getDimensions(); pointerGrab();
+            handleEvents();
+        }
+
+        private void stop() throws IOException {
+            in.close(); out.close();
+            mouseSocket.close(); xOutSocket.close();
+            ((MainActivity)context).runOnUiThread
+            (TouchPointer.this::hideCursor);
+        }
+
+        private void getDimensions() {
+            Display display = mWindowManager.getDefaultDisplay();
+            Point size = new Point();
+            display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
+            width = size.x;
+            height = size.y;
+            x2 = width / 80;
+            y2 = height / 100;
+        }
+
+        private void pointerGrab() throws IOException {
+            xOut.writeBytes( "_ " + true + " ioctl" + " 0\n");
+        }
+
+        private void handleEvents() throws IOException {
+            while ((line = in.readLine()) != null) {
+                updateCmdView3("socket: " + line);
+                input_event = line.split("\\s+");
+                switch (input_event[0]) {
                     case "REL_X": {
-                        x1 += Integer.parseInt(xy2[1]);
-                        if ( x1 < 0 ) x1 -= Integer.parseInt(xy2[1]);
-                        if ( x1 > width ) x1 -= Integer.parseInt(xy2[1]);
+                        x1 += Integer.parseInt(input_event[1]);
+                        if ( x1 < 0 ) x1 -= Integer.parseInt(input_event[1]);
+                        if ( x1 > width ) x1 -= Integer.parseInt(input_event[1]);
                         if (pointer_down)
                             xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + "MOVE" + " 36" + "\n");
                         break;
                     }
                     case "REL_Y": {
-                        y1 += Integer.parseInt(xy2[1]);
-                        if ( y1 < 0 ) y1 -= Integer.parseInt(xy2[1]);
-                        if ( y1 > height ) y1 -= Integer.parseInt(xy2[1]);
+                        y1 += Integer.parseInt(input_event[1]);
+                        if ( y1 < 0 ) y1 -= Integer.parseInt(input_event[1]);
+                        if ( y1 > height ) y1 -= Integer.parseInt(input_event[1]);
                         if (pointer_down) {
                             xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + "MOVE" + " 36" + "\n");
                         }
                         break;
                     }
                     case "BTN_MOUSE": {
-                        pointer_down = xy2[1].equals("1");
-                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + xy2[1] + " 36" + "\n");
+                        pointer_down = input_event[1].equals("1");
+                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + input_event[1] + " 36" + "\n");
                         break;
                     }
                 }
                 movePointer();
-
+            }
         }
-        in.close(); out.close();
-        mouseSocket.close(); xOutSocket.close();
-        ((MainActivity)context).runOnUiThread(this::hideCursor);
     }
-
-
-    public void movePointer(){
+    
+    public void movePointer() {
         ((MainActivity)context).runOnUiThread(() -> {
             cursorView.setX(x1);
             cursorView.setY(y1);
         });
     }
-
-    private void pointerGrab(DataOutputStream xOut) throws IOException {
-        xOut.writeBytes( "_ " + true + " ioctl" + " 0\n");
-    }
-
 }
