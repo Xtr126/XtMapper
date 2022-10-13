@@ -24,7 +24,7 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.ServerSocket;
+import java.io.PrintWriter;
 import java.net.Socket;
 
 public class TouchPointer {
@@ -89,7 +89,7 @@ public class TouchPointer {
             mWindowManager.addView(cursorView, mParams);
             try {
                 loadKeymap();
-                new Thread(this::event_handler).start();
+                eventHandler.start();
                 new Thread(() -> {
                     try {
                         handleMouseEvents();
@@ -104,37 +104,40 @@ public class TouchPointer {
 
     }
 
-    private void event_handler() {
-        try {
-            Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
-            DataOutputStream xOut = new DataOutputStream(socket.getOutputStream());
-            if (dpad1Handler != null) dpad1Handler.setOutputStream(xOut);
-            String line;
-            BufferedReader getevent = Utils.geteventStream(context);
-            while ((line = getevent.readLine()) != null) { //read events
-                String[] xy = line.split("\\s+");
-                // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
-                // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
-                updateCmdView(line);
-                if (xy[3].equals("DOWN") || xy[3].equals("UP")) {
-                    int i = Utils.obtainIndex(xy[2]);
-                    // Strips off KEY_ from KEY_X and return the index of X in alphabet
-                    if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
-                        if (keysX != null && keysX[i] != null) { // null if keymap not set
-                            xOut.writeBytes(keysX[i] + " " + keysY[i] + " " + xy[3] + " " + i + "\n"); // Send coordinates to remote server to simulate touch
+    private final Thread eventHandler = new Thread(new Runnable() {
+        @Override
+        public void run() {
+            try {
+                Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
+                DataOutputStream xOut = new DataOutputStream(socket.getOutputStream());
+                if (dpad1Handler != null) dpad1Handler.setOutputStream(xOut);
+                String line;
+                BufferedReader getevent = Utils.geteventStream(context);
+                while ((line = getevent.readLine()) != null) { //read events
+                    String[] xy = line.split("\\s+");
+                    // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
+                    // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
+                    TouchPointer.this.updateCmdView(line);
+                    if (xy[3].equals("DOWN") || xy[3].equals("UP")) {
+                        int i = Utils.obtainIndex(xy[2]);
+                        // Strips off KEY_ from KEY_X and return the index of X in alphabet
+                        if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
+                            if (keysX != null && keysX[i] != null) { // null if keymap not set
+                                xOut.writeBytes(keysX[i] + " " + keysY[i] + " " + xy[3] + " " + i + "\n"); // Send coordinates to remote server to simulate touch
+                            }
+                        } else if (dpad1Handler != null) {
+                            dpad1Handler.sendEvent(xy[2], xy[3]);
                         }
-                    } else if (dpad1Handler != null) {
-                        dpad1Handler.sendEvent(xy[2], xy[3]);
                     }
+                    getevent.close();
                 }
-                getevent.close();
+            } catch (IOException e) {
+                TouchPointer.this.updateCmdView("Unable to start overlay: server not started");
+                TouchPointer.this.hideCursor();
+                Log.d("I/O Error", e.toString());
             }
-        } catch (IOException e) {
-            updateCmdView("Unable to start overlay: server not started");
-            hideCursor();
-            Log.d("I/O Error",e.toString());
         }
-    }
+    });
 
     public void hideCursor() {
         try {
@@ -175,9 +178,12 @@ public class TouchPointer {
 
     private void handleMouseEvents() throws IOException {
         Socket mouseSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+        PrintWriter out = new PrintWriter(mouseSocket.getOutputStream());
+        out.println("mouse_read"); out.flush();
         BufferedReader in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
         updateCmdView("pointer: connection initialized \n" +
                          "listening for mouse events from server..");
+
         Socket xOutSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
         DataOutputStream xOut = new DataOutputStream(xOutSocket.getOutputStream());
         pointerGrab(xOut);
@@ -220,9 +226,8 @@ public class TouchPointer {
                 movePointer();
 
         }
-        in.close();
-        mouseSocket.close();
-        xOutSocket.close();
+        in.close(); out.close();
+        mouseSocket.close(); xOutSocket.close();
         ((MainActivity)context).runOnUiThread(this::hideCursor);
     }
 

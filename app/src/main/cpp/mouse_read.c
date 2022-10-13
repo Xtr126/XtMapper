@@ -32,7 +32,7 @@ mouseContext g_ctx;
 struct Socket {
     int client_fd;
     int server_fd;
-};
+} s_cts;
 int fd;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
@@ -74,7 +74,7 @@ void create_socket(struct Socket *Socket, int PORT){
         printf("mouse_read: socket bind error \n");
     }
 
-    printf("mouse_read: waiting for overlay\n");
+    printf("Waiting for overlay...\n");
     if (listen(Socket->server_fd, 3) < 0) {
         printf("mouse_read: socket listen failed \n");
     }
@@ -135,17 +135,26 @@ void * UpdateMouse(void* context) {
             exit(EXIT_FAILURE);
         }
 
-        struct Socket socket;
-        create_socket(&socket, pctx->port);
+        create_socket(&s_cts, pctx->port);
 
-        struct input_event ie;
-        while (read(fd, &ie, sizeof(struct input_event))) {
-            send_data(&ie, socket.client_fd);
+        char buffer[12] = { 0 };
+
+        read(s_cts.client_fd, buffer, 12);
+        printf("%s", buffer);
+
+        if (strcmp(buffer, "mouse_read\n") == 0) {
+            struct input_event ie;
+            while (read(fd, &ie, sizeof(struct input_event))) {
+                send_data(&ie, s_cts.client_fd);
+            }
+            close(fd);
+        }
+        else if (strcmp(buffer, "getevent") == 0) {
+
         }
 
-        close(fd);
-        close(socket.client_fd); // closing the connected socket
-        close(socket.server_fd); // closing the listening socket
+        close(s_cts.client_fd); // closing the connected socket
+        close(s_cts.server_fd); // closing the listening socket
         return 0;
     }
 
