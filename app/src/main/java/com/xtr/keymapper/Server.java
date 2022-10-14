@@ -7,7 +7,6 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -27,13 +26,12 @@ public class Server {
     private final Context context;
     public final String script_name;
 
-    public static final int MAX_LINES_1 = 16;
-    public static final int MAX_LINES_2 = 32;
+    public static final int MAX_LINES = 16;
     public static final long REFRESH_INTERVAL = 200;
 
     public final TextView cmdView;
     public final TextView cmdView2;
-    private StringBuilder c1;
+    public StringBuilder c1;
     private StringBuilder c2;
     private int counter1 = 0;
     private int counter2 = 0;
@@ -50,19 +48,13 @@ public class Server {
     }
 
     private void textViewUpdaterTask() {
-        Handler outputUpdater = new Handler(Looper.getMainLooper());
+        Handler handler = new Handler(Looper.getMainLooper());
 
-        outputUpdater.post(new Runnable() {
+        handler.post(new Runnable() {
             public void run() {
                 cmdView.setText(c1);
-                outputUpdater.postDelayed(this, REFRESH_INTERVAL);
-            }
-        });
-
-        outputUpdater.post(new Runnable() {
-            public void run() {
                 cmdView2.setText(c2);
-                outputUpdater.postDelayed(this, REFRESH_INTERVAL);
+                handler.postDelayed(this, REFRESH_INTERVAL);
             }
         });
     }
@@ -76,7 +68,8 @@ public class Server {
         FileWriter linesToWrite = new FileWriter(script_name);
         
         linesToWrite.append("#!/system/bin/sh\n");
-        linesToWrite.append("pkill -f ").append(packageName).append(".Input\n");
+        linesToWrite.append("pkill -f -9 ").append(packageName).append(".Input\n");
+        linesToWrite.append("pkill -f -9 libgetevent.so\n");
 
         linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
                 .append("\" CLASSPATH=\"").append(apk) 
@@ -142,7 +135,7 @@ public class Server {
     }
 
     public void updateCmdView1(String s){
-        if(counter1 < MAX_LINES_2) {
+        if(counter1 < MAX_LINES) {
             c1.append(s).append("\n");
             counter1++;
         } else {
@@ -151,7 +144,7 @@ public class Server {
         }
     }
     public void updateCmdView2(String s){
-        if(counter2 < MAX_LINES_1) {
+        if(counter2 < MAX_LINES) {
             c2.append(s).append("\n");
             counter2++;
         } else {
