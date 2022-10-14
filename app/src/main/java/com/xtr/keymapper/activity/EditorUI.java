@@ -1,7 +1,5 @@
 package com.xtr.keymapper.activity;
 
-
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
@@ -14,6 +12,8 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageView;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
 import com.xtr.keymapper.KeymapConfig;
@@ -23,12 +23,11 @@ import com.xtr.keymapper.layout.MovableFrameLayout;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
 
-public class EditorUI extends Activity {
+public class EditorUI extends AppCompatActivity {
     private View keymapView;
 
     private WindowManager.LayoutParams mParams;

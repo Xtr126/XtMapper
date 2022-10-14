@@ -1,4 +1,4 @@
-package com.xtr.keymapper;
+package com.xtr.keymapper.dpad;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
