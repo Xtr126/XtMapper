@@ -1,4 +1,4 @@
-package com.xtr.keymapper;
+package com.xtr.keymapper.activity;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -7,6 +7,11 @@ import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Button;
+
+import com.xtr.keymapper.InputDeviceSelector;
+import com.xtr.keymapper.R;
+import com.xtr.keymapper.Server;
+import com.xtr.keymapper.TouchPointer;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -29,7 +34,6 @@ public class MainActivity extends AppCompatActivity {
 
         server = new Server(this);
         pointerOverlay = new TouchPointer(this);
-        new Thread(pointerOverlay::startSocket).start();
         initButtons(); setupButtons();
     }
 
@@ -38,8 +42,10 @@ public class MainActivity extends AppCompatActivity {
         startInTerminal.setOnClickListener(v -> startServer(false));
         startOverlayButton.setOnClickListener(v -> startService());
         keymap.setOnClickListener(v -> startEditor());
-        configureButton.setOnClickListener(v -> startActivity(new Intent(this, InputDeviceSelector.class)));
-        infoButton.setOnClickListener(v -> startActivity(new Intent(this, InfoActivity.class)));
+        configureButton.setOnClickListener
+                (v -> startActivity(new Intent(this, InputDeviceSelector.class)));
+        infoButton.setOnClickListener
+                (v -> startActivity(new Intent(this, InfoActivity.class)));
     }
 
     private void initButtons(){
@@ -79,6 +85,9 @@ public class MainActivity extends AppCompatActivity {
             server.setupServer();
             if (autorun) {
                 new Thread(server::startServer).start();
+                startService();
+            } else {
+                server.updateCmdView1("run in adb shell:\n sh " + server.script_name);
             }
         }
     }
@@ -93,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        Server.killServer(getPackageName());
+        Server.killServer().start();
         super.onDestroy();
     }
 }

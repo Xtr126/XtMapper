@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:theme="@style/Theme.Material3.DynamicColors.Dark"
-    tools:context=".InfoActivity">
+    tools:context=".activity.InfoActivity">
 
     <TextView
         android:layout_width="match_parent"

@@ -21,6 +21,7 @@ import java.net.Socket;
 import com.genymobile.scrcpy.Point;
 import com.genymobile.scrcpy.Pointer;
 import com.genymobile.scrcpy.PointersState;
+import com.xtr.keymapper.activity.MainActivity;
 
 public class Input {
 
@@ -116,10 +117,9 @@ public class Input {
             injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
             initPointers();
             String line;
-            System.out.println("waiting for overlay...");
-            BufferedReader stdInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            System.out.println("connected at port: " + MainActivity.DEFAULT_PORT);
-            while ((line = stdInput.readLine()) != null) {
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            System.out.println("Server: new connection at port: " + MainActivity.DEFAULT_PORT);
+            while ((line = in.readLine()) != null) {
                 System.out.println(line);
                 String []xy = line.split("\\s+");
                 int pointerId;
@@ -151,6 +151,10 @@ public class Input {
                         setIoctl(xy[1].equals("true"));
                         break;
                     }
+                    case "exit": {
+                        System.exit(1);
+                        break;
+                    }
                 }
             }
         } catch (NoSuchMethodException |
@@ -172,7 +176,6 @@ public class Input {
             System.exit(2);
         }
         ServerSocket serverSocket = null;
-        Input input = new Input();
 
         try {
             serverSocket = new ServerSocket(MainActivity.DEFAULT_PORT);
@@ -180,10 +183,18 @@ public class Input {
             e.printStackTrace(System.out);
             System.exit(2);
         }
+
         while (true) {
             try {
                 Socket socket = serverSocket.accept();
-                new Thread(() -> input.start(socket)).start();
+                new Thread(new Runnable() {
+                    Input input;
+                    @Override
+                    public void run() {
+                        input = new Input();
+                        input.start(socket);
+                    }
+                }).start();
             } catch (IOException e) {
                 System.out.println("I/O error: " + e);
             }

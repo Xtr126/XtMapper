@@ -1,6 +1,7 @@
-package com.xtr.keymapper;
+package com.xtr.keymapper.activity;
 
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
@@ -13,12 +14,12 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageView;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
-import com.xtr.keymapper.Layout.FloatingActionKey;
-import com.xtr.keymapper.Layout.MovableFrameLayout;
+import com.xtr.keymapper.KeymapConfig;
+import com.xtr.keymapper.R;
+import com.xtr.keymapper.layout.FloatingActionKey;
+import com.xtr.keymapper.layout.MovableFrameLayout;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -27,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class EditorUI extends AppCompatActivity {
+public class EditorUI extends Activity {
     private View keymapView;
 
     private WindowManager.LayoutParams mParams;
@@ -57,7 +58,8 @@ public class EditorUI extends AppCompatActivity {
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
         layoutInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        keymapView = layoutInflater.inflate(R.layout.keymap, new ExpandableFabLayout(this), false);
+        keymapView = layoutInflater.inflate(R.layout.keymap,
+                new ExpandableFabLayout(this), false);
         mainView = keymapView.findViewById(R.id.MainView);
         initFab();
         mParams.gravity = Gravity.CENTER;
@@ -130,35 +132,34 @@ public class EditorUI extends AppCompatActivity {
         }
         if (dpad1 != null) {
             float radius = dpad1.getPivotX();
-            Float xOfPivot = dpad1.getX() + radius;
-            Float yOfPivot = dpad1.getY() + radius;
+            Float xOfCenter = dpad1.getX() + radius;
+            Float yOfCenter = dpad1.getY() + radius;
 
             linesToWrite.append("UDLR_DPAD ")
                         .append(dpad1.getX()).append(" ")
                         .append(dpad1.getY()).append(" ")
                         .append(radius).append(" ")
-                        .append(xOfPivot).append(" ")
-                        .append(yOfPivot).append("\n");
+                        .append(xOfCenter).append(" ")
+                        .append(yOfCenter).append("\n");
         }
 
         if (dpad2 != null) {
             float radius = dpad2.getPivotX();
-            Float xOfPivot = dpad2.getX() + radius;
-            Float yOfPivot = dpad2.getY() + radius;
+            Float xOfCenter = dpad2.getX() + radius;
+            Float yOfCenter = dpad2.getY() + radius;
 
             linesToWrite.append("WASD_DPAD ")
                         .append(dpad2.getX()).append(" ")
                         .append(dpad2.getY()).append(" ")
                         .append(radius).append(" ")
-                        .append(xOfPivot).append(" ")
-                        .append(yOfPivot).append("\n");
+                        .append(xOfCenter).append(" ")
+                        .append(yOfCenter).append("\n");
         }
 
         FileWriter fileWriter = new FileWriter(KeymapConfig.getConfigPath(this));
-        PrintWriter printWriter = new PrintWriter(fileWriter);
-        printWriter.print(linesToWrite);
-        printWriter.close();
-
+        fileWriter.write(linesToWrite.toString());
+        fileWriter.flush();
+        fileWriter.close();
     }
 
     public void initFab() {

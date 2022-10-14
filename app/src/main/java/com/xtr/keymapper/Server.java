@@ -12,23 +12,26 @@ import android.os.Looper;
 import android.util.Log;
 import android.widget.TextView;
 
+import com.xtr.keymapper.activity.MainActivity;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.Socket;
 
 public class Server {
 
     private final Context context;
-    private final String script_name = "/data/local/tmp/xtMapper.sh\n";
+    public final String script_name;
 
-    public static final int MAX_LINES_1 = 16;
-    public static final int MAX_LINES_2 = 32;
+    public static final int MAX_LINES = 16;
     public static final long REFRESH_INTERVAL = 200;
 
     public final TextView cmdView;
     public final TextView cmdView2;
-    private StringBuilder c1;
+    public StringBuilder c1;
     private StringBuilder c2;
     private int counter1 = 0;
     private int counter2 = 0;
@@ -41,22 +44,17 @@ public class Server {
         c1 = new StringBuilder();
         c2 = new StringBuilder();
         textViewUpdaterTask();
+        script_name = context.getExternalFilesDir(null) + "/xtMapper.sh";
     }
 
     private void textViewUpdaterTask() {
-        Handler outputUpdater = new Handler(Looper.getMainLooper());
+        Handler handler = new Handler(Looper.getMainLooper());
 
-        outputUpdater.post(new Runnable() {
+        handler.post(new Runnable() {
             public void run() {
                 cmdView.setText(c1);
-                outputUpdater.postDelayed(this, REFRESH_INTERVAL);
-            }
-        });
-
-        outputUpdater.post(new Runnable() {
-            public void run() {
                 cmdView2.setText(c2);
-                outputUpdater.postDelayed(this, REFRESH_INTERVAL);
+                handler.postDelayed(this, REFRESH_INTERVAL);
             }
         });
     }
@@ -66,33 +64,33 @@ public class Server {
         return sharedPref.getString("device", null);
     }
 
-    private void writeScript(String packageName, ApplicationInfo ai, String apk, DataOutputStream out) throws IOException, InterruptedException {
-        out.writeBytes("cat > " + script_name); // Write contents to file through pipe
+    private void writeScript(String packageName, ApplicationInfo ai, String apk) throws IOException, InterruptedException {
+        FileWriter linesToWrite = new FileWriter(script_name);
+        
+        linesToWrite.append("#!/system/bin/sh\n");
+        linesToWrite.append("pkill -f -9 ").append(packageName).append(".Input\n");
+        linesToWrite.append("pkill -f -9 libgetevent.so\n");
 
-        out.writeBytes("#!/system/bin/sh\n");
-        out.writeBytes("pkill -f " + packageName + ".Input\n");
+        linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
+                .append("\" CLASSPATH=\"").append(apk) 
+                .append("\" /system/bin/app_process /system/bin ")
+                .append(packageName).append(".Input ")
+                .append(getDeviceName()).append("\n"); // input device node as argument
 
-        out.writeBytes("LD_LIBRARY_PATH=\"" + ai.nativeLibraryDir + //path containing lib*.so
-                "\" CLASSPATH=\"" + apk +
-                "\" /system/bin/app_process /system/bin " +
-                packageName + ".Input " + getDeviceName() + "\n"); // input device node as argument
+        linesToWrite.flush();
+        linesToWrite.close();
     }
 
-    public static void killServer(String packageName){
-        try {
-        Process sh = Utils.getRootAccess();
-        DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-        outputStream.writeBytes("pkill -f " + packageName + ".Input\n");
-        outputStream.writeBytes("pkill -f libgetevent.so\n");
-        outputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void setExecPermission(DataOutputStream out) throws IOException, InterruptedException {
-        out.writeBytes("touch " + script_name);
-        out.writeBytes("chmod 777 " + script_name);
+    public static Thread killServer(){
+        return new Thread(() -> {
+            try {
+                DataOutputStream xOut = new DataOutputStream(new Socket("127.0.0.1", MainActivity.DEFAULT_PORT).getOutputStream());
+                xOut.writeBytes(". . exit 1\n");
+                xOut.flush(); xOut.close();
+            } catch (IOException e) {
+                Log.e("I/O error", e.toString());
+            }
+        });
     }
 
     public void setupServer () {
@@ -102,14 +100,11 @@ public class Server {
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
             String apk = ai.publicSourceDir; // Absolute path to apk in /data/app
 
-            Process sh = Utils.getRootAccess();
+            Process sh = Runtime.getRuntime().exec("sh");
             DataOutputStream out = new DataOutputStream(sh.getOutputStream());
 
-            setExecPermission(out);
-            writeScript(packageName, ai, apk, out);
+            writeScript(packageName, ai, apk);
             out.close(); sh.waitFor();
-            // Notify user
-            updateCmdView1("run " + script_name);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException e) {
             Log.e("Server", e.toString());
         }
@@ -118,11 +113,11 @@ public class Server {
 
     public void startServer() {
         if(getDeviceName() != null) {
-            updateCmdView1("starting server");
+            updateCmdView1("exec sh " + script_name);
             try {
                 Process sh = Utils.getRootAccess();
                 DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-                outputStream.writeBytes(script_name);
+                outputStream.writeBytes("/system/bin/sh " + script_name);
                 outputStream.close();
 
                 BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
@@ -140,7 +135,7 @@ public class Server {
     }
 
     public void updateCmdView1(String s){
-        if(counter1 < MAX_LINES_2) {
+        if(counter1 < MAX_LINES) {
             c1.append(s).append("\n");
             counter1++;
         } else {
@@ -149,7 +144,7 @@ public class Server {
         }
     }
     public void updateCmdView2(String s){
-        if(counter2 < MAX_LINES_1) {
+        if(counter2 < MAX_LINES) {
             c2.append(s).append("\n");
             counter2++;
         } else {
