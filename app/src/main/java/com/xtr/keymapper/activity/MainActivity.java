@@ -85,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
             server.setupServer();
             if (autorun) {
                 new Thread(server::startServer).start();
+                startService();
             } else {
                 server.updateCmdView1("run in adb shell:\n sh " + server.script_name);
             }

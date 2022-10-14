@@ -6,6 +6,7 @@ import android.content.Context;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Display;
@@ -44,8 +45,11 @@ public class TouchPointer {
     boolean pointer_down = false;
     private int counter = 0;
     private Dpad1Handler dpad1Handler;
-    private final Handler textViewUpdater = new Handler(Looper.getMainLooper());
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
+    private final KeyEventHandler keyEventHandler = new KeyEventHandler();
+    private final Handler connectionHandler;
+    private boolean connected = false;
 
     public TouchPointer(Context context){
         this.context= context;
@@ -68,12 +72,15 @@ public class TouchPointer {
         mParams.gravity = Gravity.CENTER;
         mWindowManager = (WindowManager)context.getSystemService(WINDOW_SERVICE);
 
-        textViewUpdater.post(new Runnable() {
+        mHandler.post(new Runnable() {
             public void run() {
                 cmdView3.setText(c3);
-                textViewUpdater.postDelayed(this, Server.REFRESH_INTERVAL);
+                mHandler.postDelayed(this, Server.REFRESH_INTERVAL);
             }
         });
+        HandlerThread handlerThread = new HandlerThread("connect");
+        handlerThread.start();
+        connectionHandler = new Handler(handlerThread.getLooper());
     }
 
     public void open() {
@@ -90,16 +97,7 @@ public class TouchPointer {
             mWindowManager.addView(cursorView, mParams);
             try {
                 loadKeymap();
-                eventHandler.start();
-                new Thread(() -> {
-                    try {
-                        mouseEventHandler.connectSocket();
-                        mouseEventHandler.start();
-                        mouseEventHandler.stop();
-                    } catch (IOException e) {
-                        updateCmdView(e.toString());
-                    }
-                }).start();
+                startHandlers();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -107,40 +105,6 @@ public class TouchPointer {
 
     }
 
-    private final Thread eventHandler = new Thread(new Runnable() {
-        @Override
-        public void run() {
-            try {
-                Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
-                DataOutputStream xOut = new DataOutputStream(socket.getOutputStream());
-                if (dpad1Handler != null) dpad1Handler.setOutputStream(xOut);
-                String line;
-                BufferedReader getevent = Utils.geteventStream(context);
-                while ((line = getevent.readLine()) != null) { //read events
-                    String[] xy = line.split("\\s+");
-                    // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
-                    // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
-                    TouchPointer.this.updateCmdView(line);
-                    if (xy[3].equals("DOWN") || xy[3].equals("UP")) {
-                        int i = Utils.obtainIndex(xy[2]);
-                        // Strips off KEY_ from KEY_X and return the index of X in alphabet
-                        if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
-                            if (keysX != null && keysX[i] != null) { // null if keymap not set
-                                xOut.writeBytes(keysX[i] + " " + keysY[i] + " " + xy[3] + " " + i + "\n"); // Send coordinates to remote server to simulate touch
-                            }
-                        } else if (dpad1Handler != null) {
-                            dpad1Handler.sendEvent(xy[2], xy[3]);
-                        }
-                    }
-                    getevent.close();
-                }
-            } catch (IOException e) {
-                TouchPointer.this.updateCmdView("Unable to start overlay: server not started");
-                TouchPointer.this.hideCursor();
-                Log.d("I/O Error", e.toString());
-            }
-        }
-    });
 
     public void hideCursor() {
         try {
@@ -167,7 +131,7 @@ public class TouchPointer {
     }
 
     public void updateCmdView3(String s){
-        if(counter < Server.MAX_LINES_1) {
+        if(counter < Server.MAX_LINES) {
             c3.append(s).append("\n");
             counter++;
         } else {
@@ -175,11 +139,80 @@ public class TouchPointer {
             c3 = new StringBuilder();
         }
     }
+
     private void updateCmdView(String s) {
         ((MainActivity)context).server.updateCmdView1(s);
     }
 
+    private void startHandlers() {
+        Server server = ((MainActivity)context).server;
+        server.c1.append("connecting to server..");
+        connectionHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                server.c1.append(".");
+                try {
+                    mouseEventHandler.connect();
+                    keyEventHandler.connect();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                if (connected) {
+                    new Thread(mouseEventHandler::start).start();
+                    new Thread(keyEventHandler::start).start();
+                } else {
+                    connectionHandler.postDelayed(this, 600);
+                }
+            }
+        });
+    }
+
+    private class KeyEventHandler {
+        Socket socket;
+        DataOutputStream xOut;
+        String event;
+        BufferedReader getevent;
+
+        private void connect() throws IOException {
+            socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
+            xOut = new DataOutputStream(socket.getOutputStream());
+            if (dpad1Handler != null) dpad1Handler.setOutputStream(xOut);
+        }
+
+        private void stop() throws IOException {
+            getevent.close();
+            xOut.close();
+        }
+
+        private void start()  {
+            try {
+                getevent = Utils.geteventStream(context);
+                while ((event = getevent.readLine()) != null) { //read events
+                    String[] input_event = event.split("\\s+");
+                    // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
+                    // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
+                    TouchPointer.this.updateCmdView(event);
+                    if (input_event[3].equals("DOWN") || input_event[3].equals("UP")) {
+                        int i = Utils.obtainIndex(input_event[2]);
+                        // Strips off KEY_ from KEY_X and return the index of X in alphabet
+                        if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
+                            if (keysX != null && keysX[i] != null) { // null if keymap not set
+                                xOut.writeBytes(keysX[i] + " " + keysY[i] + " " + input_event[3] + " " + i + "\n"); // Send coordinates to remote server to simulate touch
+                            }
+                        } else if (dpad1Handler != null) {
+                            dpad1Handler.sendEvent(input_event[2], input_event[3]);
+                        }
+                    }
+                }
+                stop();
+            } catch (IOException e) {
+                updateCmdView(e.toString());
+            }
+        }
+    }
+
     private class MouseEventHandler {
+
         private Socket mouseSocket;
         private Socket xOutSocket;
         private DataOutputStream xOut;
@@ -189,26 +222,33 @@ public class TouchPointer {
         int x2; int  y2;
         String line; String[] input_event;
 
-        private void connectSocket() throws IOException {
+        private void connect() throws IOException {
             mouseSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
             out = new PrintWriter(mouseSocket.getOutputStream());
             in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
 
             xOutSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
             xOut = new DataOutputStream(xOutSocket.getOutputStream());
+            connected = true;
         }
 
-        private void start() throws IOException {
+        private void start() {
             out.println("mouse_read"); out.flush();
-            getDimensions(); pointerGrab();
-            handleEvents();
+            getDimensions();
+            try {
+                pointerGrab();
+                handleEvents();
+                stop();
+            } catch (IOException e) {
+                updateCmdView(e.toString());
+            }
         }
 
         private void stop() throws IOException {
             in.close(); out.close();
             mouseSocket.close(); xOutSocket.close();
-            ((MainActivity)context).runOnUiThread
-            (TouchPointer.this::hideCursor);
+            mHandler.post(TouchPointer.this::hideCursor);
+            connected = false;
         }
 
         private void getDimensions() {
@@ -223,6 +263,13 @@ public class TouchPointer {
 
         private void pointerGrab() throws IOException {
             xOut.writeBytes( "_ " + true + " ioctl" + " 0\n");
+        }
+
+        private void movePointer() {
+            mHandler.post(() -> {
+                cursorView.setX(x1);
+                cursorView.setY(y1);
+            });
         }
 
         private void handleEvents() throws IOException {
@@ -256,12 +303,5 @@ public class TouchPointer {
                 movePointer();
             }
         }
-    }
-    
-    public void movePointer() {
-        ((MainActivity)context).runOnUiThread(() -> {
-            cursorView.setX(x1);
-            cursorView.setY(y1);
-        });
     }
 }
