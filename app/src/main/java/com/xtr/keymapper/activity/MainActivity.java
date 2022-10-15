@@ -103,6 +103,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         Server.killServer().start();
+        pointerOverlay.hideCursor();
         super.onDestroy();
     }
 }
