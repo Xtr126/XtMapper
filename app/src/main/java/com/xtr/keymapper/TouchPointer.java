@@ -8,6 +8,7 @@ import android.graphics.Point;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
@@ -87,9 +88,7 @@ public class TouchPointer {
     public void open() {
         ((MainActivity)context).setButtonActive(startButton);
         startButton.setOnClickListener(v -> {
-            Server.killServer().start();
             hideCursor();
-            ((MainActivity)context).setButtonInactive(startButton);
             startButton.setOnClickListener(view -> open());
         });
 
@@ -111,6 +110,8 @@ public class TouchPointer {
 
     public void hideCursor() {
         try {
+            Server.killServer().start();
+            ((MainActivity)context).setButtonInactive(startButton);
             ((WindowManager)context.getSystemService(WINDOW_SERVICE)).removeView(cursorView);
             cursorView.invalidate();
             // remove all views
@@ -154,20 +155,26 @@ public class TouchPointer {
         Server server = ((MainActivity)context).server;
         server.c1.append("connecting to server..");
         connectionHandler.post(new Runnable() {
+            int counter = 5;
             @Override
             public void run() {
                 server.c1.append(".");
                 try {
                     mouseEventHandler.connect();
                     keyEventHandler.connect();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } catch (IOException ignored) {
                 }
                 if (connected) {
                     new Thread(mouseEventHandler::start).start();
                     new Thread(keyEventHandler::start).start();
                 } else {
-                    connectionHandler.postDelayed(this, 600);
+                    if (counter > 0) {
+                        connectionHandler.postDelayed(this, 1000);
+                        counter--;
+                    } else {
+                        mHandler.post(() -> hideCursor());
+                        server.c1.append("\n timeout: exiting after 5 tries \n");
+                    }
                 }
             }
         });
@@ -195,13 +202,10 @@ public class TouchPointer {
             try {
                 getevent = Utils.geteventStream(context);
                 while ((event = getevent.readLine()) != null) { //read events
-                    String[] input_event = event.split("\\s+");
-                    // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
-                    // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
-                    TouchPointer.this.updateCmdView(event);
+                    String[] input_event = event.split("\\s+"); // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
+                    TouchPointer.this.updateCmdView(event);           // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
                     if (input_event[3].equals("DOWN") || input_event[3].equals("UP")) {
-                        int i = Utils.obtainIndex(input_event[2]);
-                        // Strips off KEY_ from KEY_X and return the index of X in alphabet
+                        int i = Utils.obtainIndex(input_event[2]); // Strips off KEY_ from KEY_X and return the index of X in alphabet
                         if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
                             if (keysX != null && keysX[i] != null) { // null if keymap not set
                                 xOut.writeBytes(keysX[i] + " " + keysY[i] + " " + input_event[3] + " " + i + "\n"); // Send coordinates to remote server to simulate touch
