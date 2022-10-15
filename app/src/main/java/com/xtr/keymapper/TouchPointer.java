@@ -21,6 +21,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.xtr.keymapper.activity.MainActivity;
+import com.xtr.keymapper.dpad.Dpad1Handler;
+import com.xtr.keymapper.dpad.Dpad2Handler;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -46,10 +48,12 @@ public class TouchPointer {
     boolean pointer_down = false;
     private int counter = 0;
     private Dpad1Handler dpad1Handler;
+    private Dpad2Handler dpad2Handler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
+    private Handler connectionHandler;
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
-    private final Handler connectionHandler;
+    private HandlerThread handlerThread;
     private boolean connected = false;
 
     public TouchPointer(Context context){
@@ -79,9 +83,6 @@ public class TouchPointer {
                 mHandler.postDelayed(this, Server.REFRESH_INTERVAL);
             }
         });
-        HandlerThread handlerThread = new HandlerThread("connect");
-        handlerThread.start();
-        connectionHandler = new Handler(handlerThread.getLooper());
     }
 
     public void open() {
@@ -94,6 +95,9 @@ public class TouchPointer {
        if(cursorView.getWindowToken()==null)
            if (cursorView.getParent() == null) {
             mWindowManager.addView(cursorView, mParams);
+               handlerThread = new HandlerThread("connect");
+               handlerThread.start();
+               connectionHandler = new Handler(handlerThread.getLooper());
             try {
                 loadKeymap();
                 startHandlers();
@@ -103,7 +107,6 @@ public class TouchPointer {
        }
 
     }
-
 
     public void hideCursor() {
         try {
@@ -115,6 +118,7 @@ public class TouchPointer {
             ((ViewGroup) cursorView.getParent()).removeAllViews();
             // the above steps are necessary when you are adding and removing
             // the view simultaneously, it might give some exceptions
+            handlerThread.quit();
         } catch (Exception e) {
             Log.e("Error2",e.toString());
         }
@@ -129,6 +133,8 @@ public class TouchPointer {
 
         if (keymapConfig.dpad1 != null)
             dpad1Handler = new Dpad1Handler(keymapConfig.dpad1);
+        if (keymapConfig.dpad2 != null)
+            dpad2Handler = new Dpad2Handler(keymapConfig.dpad2);
     }
 
     public void updateCmdView3(String s){
@@ -166,7 +172,7 @@ public class TouchPointer {
                         connectionHandler.postDelayed(this, 1000);
                         counter--;
                     } else {
-                        mHandler.post(() -> hideCursor());
+                        hideCursor();
                         server.c1.append("\n timeout: exiting after 5 tries \n");
                     }
                 }
@@ -184,6 +190,7 @@ public class TouchPointer {
             socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
             xOut = new DataOutputStream(socket.getOutputStream());
             if (dpad1Handler != null) dpad1Handler.setOutputStream(xOut);
+            if (dpad2Handler != null) dpad2Handler.setOutputStream(xOut);
         }
 
         private void stop() throws IOException {
@@ -202,6 +209,8 @@ public class TouchPointer {
                         if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
                             if (keysX != null && keysX[i] != null) { // null if keymap not set
                                 xOut.writeBytes(keysX[i] + " " + keysY[i] + " " + input_event[3] + " " + i + "\n"); // Send coordinates to remote server to simulate touch
+                            } else if (dpad2Handler != null) {
+                                dpad2Handler.sendEvent(input_event[2], input_event[3]);
                             }
                         } else if (dpad1Handler != null) {
                             dpad1Handler.sendEvent(input_event[2], input_event[3]);
