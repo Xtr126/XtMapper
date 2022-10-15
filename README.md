@@ -9,6 +9,7 @@ It can be used to play certain Android games that require a touchscreen, with ke
 
 - Multi-touch emulation
 - Emulate a touch pointer with mouse - Useful for games that only accept touch events and not mouse clicks.
+- Emulate a D-pad with W,A,S,D or arrow keys
 - Keyboard events to touch - And editing config with GUI
 
 More functionality will be added over time.  
@@ -16,7 +17,7 @@ Download a debug APK from GitHub actions.
 
 # Contributing
 
-Pull requests for a bug fix or even new feature are welcome.  
+Pull requests for a bug fix or even a new feature are welcome.  
 If you want to contribute code, please base your commits on the latest dev branch.  
 
 Overview:
