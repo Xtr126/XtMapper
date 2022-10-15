@@ -130,7 +130,7 @@ public class Server {
                 Log.e("Server", e.toString());
             }
         } else {
-            updateCmdView1("Please select input device");
+            updateCmdView1("\n Please select input device");
         }
     }
 
