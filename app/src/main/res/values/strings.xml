@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">XtMapper</string>
     <string name="start_touch_pointer">Overlay</string>
-    <string name="start_server">Activate</string>
+    <string name="start_server">Activate with su</string>
     <string name="start_server_manual">Activate with adb</string>
     <string name="configure">Select Input device</string>
     <string name="edit_keymap">Edit mode</string>
