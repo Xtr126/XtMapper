@@ -68,8 +68,7 @@ public class Server {
         FileWriter linesToWrite = new FileWriter(script_name);
         
         linesToWrite.append("#!/system/bin/sh\n");
-        linesToWrite.append("pkill -f -9 ").append(packageName).append(".Input\n");
-        linesToWrite.append("pkill -f -9 libgetevent.so\n");
+        linesToWrite.append("pkill -f ").append(packageName).append(".Input\n");
 
         linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
                 .append("\" CLASSPATH=\"").append(apk) 
