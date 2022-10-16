@@ -102,7 +102,7 @@ public class TouchPointer {
                 loadKeymap();
                 startHandlers();
             } catch (IOException e) {
-                e.printStackTrace();
+                updateCmdView("error: keymap not set");
             }
        }
 
