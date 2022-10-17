@@ -13,7 +13,6 @@ import com.xtr.keymapper.R;
 import com.xtr.keymapper.Server;
 import com.xtr.keymapper.TouchPointer;
 
-
 public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
     public static final int DEFAULT_PORT_2 = 6345;

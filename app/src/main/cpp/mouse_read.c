@@ -17,23 +17,30 @@
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
+#include <paths.h>
+
 
 char str[16];
 
+typedef struct socket_context {
+    JavaVM  *javaVM;
+    int client_fd;
+    int server_fd;
+    struct sockaddr_in address;
+    int addrlen;
+} socketContext;
+socketContext s_ctx;
+
 typedef struct mouse_context {
-	JavaVM  *javaVM;
+    JavaVM  *javaVM;
     pthread_mutex_t  lock;
-	int done;
-	const char* dev;
-    int port;
+    int done;
 } mouseContext;
 mouseContext g_ctx;
 
-struct Socket {
-    int client_fd;
-    int server_fd;
-} s_cts;
-int fd;
+int fd; int port;
+const char* dev;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -49,40 +56,34 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 }
 
 
-void create_socket(struct Socket *Socket, int PORT){
-    struct sockaddr_in address;
+void create_socket(void* context){
+    socketContext *sock = (socketContext*) context;
+    int PORT = port;
     int opt = 1;
-    int addrlen = sizeof(address);
+    sock->addrlen = sizeof(sock->address);
     // Creating socket file descriptor
-    if ((Socket->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    if ((sock->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("mouse_read: Socket creation error \n");
     }
 
     // Forcefully attaching socket to the port
-    if (setsockopt(Socket->server_fd, SOL_SOCKET,
+    if (setsockopt(sock->server_fd, SOL_SOCKET,
                    SO_REUSEADDR | SO_REUSEPORT, &opt,
                    sizeof(opt))) {
         printf("mouse_read: setsockopt error \n");
     }
 
-    address.sin_family = AF_INET;
-    address.sin_port = htons(PORT);
-    address.sin_addr.s_addr = INADDR_ANY;
+    sock->address.sin_family = AF_INET;
+    sock->address.sin_port = htons(PORT);
+    sock->address.sin_addr.s_addr = INADDR_ANY;
 
-    if (bind(Socket->server_fd, (struct sockaddr*)&address,
-             sizeof(address)) < 0) {
+    if (bind(sock->server_fd, (struct sockaddr*)&(sock->address),
+             sizeof(sock->address)) < 0) {
         printf("mouse_read: socket bind error \n");
     }
 
-    printf("Waiting for overlay...\n");
-    if (listen(Socket->server_fd, 3) < 0) {
+    if (listen(sock->server_fd, 2) < 0) {
         printf("mouse_read: socket listen failed \n");
-    }
-
-    if ((Socket->client_fd
-                 = accept(Socket->server_fd, (struct sockaddr*)&address,
-                          (socklen_t*)&addrlen)) < 0) {
-        printf("mouse_read: connection failed \n");
     }
 }
 
@@ -108,8 +109,65 @@ void send_data(struct input_event *ie, int sock)
     }
 }
 
-void * UpdateMouse(void* context) {
+void* send_mouse_events(void* context) {
+    socketContext *sock = (socketContext*) context;
+    JavaVM *javaVM = sock->javaVM;
+    JNIEnv *env;
+    jint res = (*javaVM)->GetEnv(javaVM, (void**)&env, JNI_VERSION_1_6);
+    if (res != JNI_OK) {
+        res = (*javaVM)->AttachCurrentThread(javaVM, &env, NULL);
+        if (JNI_OK != res) {
+            return NULL;
+        }
+    }
+    struct input_event ie;
+    if ((fd = open(dev, O_RDONLY)) == -1) {
+        perror("opening device");
+        exit(EXIT_FAILURE);
+    }
+    while (read(fd, &ie, sizeof(struct input_event))) {
+        send_data(&ie, sock->client_fd);
+    }
+    close(fd);
+    close(sock->client_fd);
+    (*javaVM)->DetachCurrentThread(javaVM);
+    return context;
+}
+
+void* send_getevent(void *context) {
+    socketContext *sock = (socketContext*) context;
+    JavaVM *javaVM = sock->javaVM;
+    JNIEnv *env;
+    jint res = (*javaVM)->GetEnv(javaVM, (void**)&env, JNI_VERSION_1_6);
+    if (res != JNI_OK) {
+        res = (*javaVM)->AttachCurrentThread(javaVM, &env, NULL);
+        if (JNI_OK != res) {
+            return NULL;
+        }
+    }
+
+    pid_t cpid = fork();
+    if (cpid < 0) exit(1);  /* exit if fork() fails */
+    if ( cpid ) {
+        /* In the parent process: */
+        close(sock->client_fd ); /* new_socket is not needed in the parent after the fork */
+        waitpid( cpid, NULL, 0 ); /* wait for and reap child process */
+    } else {
+        /* In the child process: */
+        dup2( sock->client_fd, STDOUT_FILENO );  /* duplicate socket on stdout */
+        dup2( sock->client_fd, STDERR_FILENO );  /* duplicate socket on stderr too */
+        close( sock->client_fd );  /* can close the original after it's duplicated */
+        char *argp[] = {"sh", "-c",
+                        "$LD_LIBRARY_PATH/libgetevent.so -ql", NULL};
+        execve(_PATH_BSHELL, argp, environ);
+    }
+    (*javaVM)->DetachCurrentThread(javaVM);
+    return context;
+}
+
+void* init(void* context) {
     mouseContext *pctx = (mouseContext*) context;
+    s_ctx.javaVM = pctx->javaVM;
     JavaVM *javaVM = pctx->javaVM;
     JNIEnv *env;
     jint res = (*javaVM)->GetEnv(javaVM, (void**)&env, JNI_VERSION_1_6);
@@ -119,6 +177,8 @@ void * UpdateMouse(void* context) {
             return NULL;
         }
     }
+    create_socket(&s_ctx);
+
     while(true) {
         pthread_mutex_lock(&pctx->lock);
         int done = pctx->done;
@@ -129,45 +189,47 @@ void * UpdateMouse(void* context) {
         if (done) {
             break;
         }
-
-        if ((fd = open(pctx->dev, O_RDONLY)) == -1) {
-            perror("opening device");
-            exit(EXIT_FAILURE);
+        printf("Waiting for overlay...\n");
+        struct sockaddr_in address = s_ctx.address;
+        int addrlen = s_ctx.addrlen;
+        if ((s_ctx.client_fd
+                     = accept(s_ctx.server_fd, (struct sockaddr*)&address,
+                              (socklen_t*)&addrlen)) < 0) {
+            printf("mouse_read: connection failed \n");
         }
-
-        create_socket(&s_cts, pctx->port);
-
         char buffer[12] = { 0 };
 
-        read(s_cts.client_fd, buffer, 12);
-        printf("%s", buffer);
+        read(s_ctx.client_fd, buffer, 12);
 
         if (strcmp(buffer, "mouse_read\n") == 0) {
-            struct input_event ie;
-            while (read(fd, &ie, sizeof(struct input_event))) {
-                send_data(&ie, s_cts.client_fd);
-            }
-            close(fd);
-        }
-        else if (strcmp(buffer, "getevent") == 0) {
+            pthread_t threadInfo_;
+            pthread_attr_t threadAttr_;
 
+            pthread_attr_init(&threadAttr_);
+            pthread_attr_setdetachstate(&threadAttr_, PTHREAD_CREATE_DETACHED);
+            pthread_create(&threadInfo_, &threadAttr_, send_mouse_events, &s_ctx);
+            pthread_attr_destroy(&threadAttr_);
         }
+        else if (strcmp(buffer, "getevent\n") == 0) {
+            pthread_t threadInfo_;
+            pthread_attr_t threadAttr_;
 
-        close(s_cts.client_fd); // closing the connected socket
-        close(s_cts.server_fd); // closing the listening socket
-        return 0;
+            pthread_attr_init(&threadAttr_);
+            pthread_attr_setdetachstate(&threadAttr_, PTHREAD_CREATE_DETACHED);
+            pthread_create(&threadInfo_, &threadAttr_, send_getevent, &s_ctx);
+            pthread_attr_destroy(&threadAttr_);
+        }
     }
-
+    close(s_ctx.server_fd); // closing the listening socket
     (*javaVM)->DetachCurrentThread(javaVM);
     return context;
     }
 
-
-    JNIEXPORT void JNICALL
-    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring device, jint port) {
+JNIEXPORT void JNICALL
+    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring device, jint default_port) {
         setlinebuf(stdout);
-        g_ctx.dev = (*env)->GetStringUTFChars(env, device, 0);
-        g_ctx.port = port;
+        dev = (*env)->GetStringUTFChars(env, device, 0);
+        port = default_port;
         pthread_t threadInfo_;
         pthread_attr_t threadAttr_;
 
@@ -179,8 +241,7 @@ void * UpdateMouse(void* context) {
         jclass clz = (*env)->GetObjectClass(env, instance);
         (*env)->NewGlobalRef(env, clz);
         (*env)->NewGlobalRef(env, instance);
-
-        int result = pthread_create(&threadInfo_, &threadAttr_, UpdateMouse, &g_ctx);
+        int result = pthread_create(&threadInfo_, &threadAttr_, init, &g_ctx);
         assert(result == 0);
         pthread_attr_destroy(&threadAttr_);
         (void) result;
