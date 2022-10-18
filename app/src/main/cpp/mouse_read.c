@@ -25,7 +25,6 @@ char str[16];
 
 typedef struct socket_context {
     JavaVM  *javaVM;
-    pid_t pid;
     int client_fd;
     int server_fd;
     struct sockaddr_in address;
@@ -40,9 +39,10 @@ typedef struct mouse_context {
 } mouseContext;
 mouseContext g_ctx;
 
-int fd; int port;
-
+int fd;
+int port;
 const char* dev;
+pid_t cpid;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -138,10 +138,12 @@ void* send_mouse_events(void* context) {
 
 void* send_getevent(void *context) {
     socketContext *sock = (socketContext*) context;
-    switch (sock->pid = fork()) {
+    pid_t pid;
+    switch (pid = fork()) {
         case -1:    /* Error. */
             exit(EXIT_FAILURE);  /* exit if fork() fails */
         case  0: {    /* In the child process: */
+            cpid = pid;
             dup2(sock->client_fd, STDOUT_FILENO);  /* duplicate socket on stdout */
             dup2(sock->client_fd, STDERR_FILENO);  /* duplicate socket on stderr too */
             close(sock->client_fd);  /* can close the original after it's duplicated */
@@ -190,7 +192,7 @@ void* init(void* context) {
         char buffer[12] = { 0 };
 
         read(s_ctx.client_fd, buffer, 12);
-
+        printf("msg: %s", buffer);
         if (strcmp(buffer, "mouse_read\n") == 0) {
             pthread_t threadInfo_;
             pthread_attr_t threadAttr_;
@@ -202,6 +204,11 @@ void* init(void* context) {
         }
         else if (strcmp(buffer, "getevent\n") == 0) {
             send_getevent(&s_ctx);
+        }
+        else if (strcmp(buffer, "exit\n") == 0) {
+            printf("exit signal recieved\n");
+            kill(cpid, SIGKILL);
+            exit(EXIT_SUCCESS);
         }
     }
     close(s_ctx.server_fd); // closing the listening socket

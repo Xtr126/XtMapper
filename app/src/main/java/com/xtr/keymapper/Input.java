@@ -152,7 +152,6 @@ public class Input {
                         break;
                     }
                     case "exit": {
-                        Runtime.getRuntime().exec("pkill -f libgetevent.so");
                         System.exit(1);
                         break;
                     }
