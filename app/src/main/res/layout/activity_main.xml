@@ -12,43 +12,27 @@
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:translationZ="1dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        android:id="@+id/profiles_view"
         android:animateLayoutChanges="true">
+        <androidx.recyclerview.widget.RecyclerView
+            android:layout_width="300dp"
+            android:layout_height="300dp"
+            android:id="@+id/app_grid"
+            android:visibility="gone"/>
 
-        <TextView
-            android:id="@+id/profileTextView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textAlignment="center"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:id="@+id/profiles_view"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:animateLayoutChanges="true">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/app_grid"
-                android:layout_width="300dp"
-                android:layout_height="300dp"
-                android:visibility="gone" />
-
-            <ImageButton
-                android:id="@+id/profiles"
-                android:layout_width="20dp"
-                android:layout_height="160dp"
-                android:layout_gravity="center"
-                android:background="#00FFFFFF"
-                android:foreground="@drawable/ic_profiles_1"
-                android:foregroundTint="@color/white"
-                android:translationZ="0dp" />
-
-        </LinearLayout>
+        <ImageButton
+            android:layout_width="20dp"
+            android:layout_height="160dp"
+            android:layout_gravity="center"
+            android:foreground="@drawable/ic_profiles_1"
+            android:foregroundTint="@color/material_on_primary_emphasis_high_type"
+            android:background="@color/cardview_shadow_end_color"
+            android:translationZ="0dp"
+            android:id="@+id/profiles"/>
     </LinearLayout>
 
     <TextView
