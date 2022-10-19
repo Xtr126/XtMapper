@@ -19,7 +19,7 @@
             android:name=".activity.InfoActivity"
             android:exported="false" />
         <activity
-            android:name=".InputDeviceSelector"
+            android:name=".activity.InputDeviceSelector"
             android:exported="false" />
         <activity
             android:name=".activity.EditorUI"

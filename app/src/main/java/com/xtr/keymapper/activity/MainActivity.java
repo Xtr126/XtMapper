@@ -1,14 +1,19 @@
 package com.xtr.keymapper.activity;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 
-import com.xtr.keymapper.InputDeviceSelector;
 import com.xtr.keymapper.R;
 import com.xtr.keymapper.Server;
 import com.xtr.keymapper.TouchPointer;
@@ -54,8 +59,31 @@ public class MainActivity extends AppCompatActivity {
         keymap = findViewById(R.id.start_editor);
         configureButton = findViewById(R.id.config_pointer);
         infoButton = findViewById(R.id.about_button);
+        initProfilesView();
     }
 
+    private void initProfilesView(){
+        LinearLayout profilesView = findViewById(R.id.profiles_view);
+        ImageButton profilesButton = profilesView.findViewById(R.id.profiles);
+        RecyclerView recyclerView = profilesView.findViewById(R.id.app_grid);
+        Drawable profilesShow = AppCompatResources.getDrawable(this, R.drawable.ic_profiles_1);
+        Drawable profilesHide = AppCompatResources.getDrawable(this, R.drawable.ic_profiles_2);
+        profilesButton.setOnClickListener(v -> {
+            switch (recyclerView.getVisibility()) {
+                case View.VISIBLE:{
+                    recyclerView.setVisibility(View.GONE);
+                    profilesButton.setForeground(profilesShow);
+                    break;
+                }
+                case View.GONE:
+                case View.INVISIBLE: {
+                    recyclerView.setVisibility(View.VISIBLE);
+                    profilesButton.setForeground(profilesHide);
+                    break;
+                }
+            }
+        });
+    }
     private void startService(){
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
