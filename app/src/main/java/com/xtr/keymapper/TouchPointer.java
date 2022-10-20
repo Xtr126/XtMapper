@@ -93,17 +93,17 @@ public class TouchPointer {
 
        if(cursorView.getWindowToken()==null)
            if (cursorView.getParent() == null) {
-            mWindowManager.addView(cursorView, mParams);
+               mWindowManager.addView(cursorView, mParams);
                handlerThread = new HandlerThread("connect");
                handlerThread.start();
                connectionHandler = new Handler(handlerThread.getLooper());
-            try {
-                loadKeymap();
-                startHandlers();
-            } catch (IOException e) {
-                updateCmdView("error: keymap not set");
-            }
-       }
+                try {
+                    loadKeymap();
+                } catch (IOException e) {
+                    updateCmdView("warning: keymap not set");
+                }
+               startHandlers();
+           }
 
     }
 
@@ -161,8 +161,7 @@ public class TouchPointer {
 
     private void startHandlers() {
         Server server = ((MainActivity)context).server;
-        server.c1 = new StringBuilder();
-        server.c1.append("connecting to server..");
+        server.c1.append("\n connecting to server..");
         connectionHandler.post(new Runnable() {
             int counter = 5;
             @Override
