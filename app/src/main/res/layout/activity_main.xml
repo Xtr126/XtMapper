@@ -25,14 +25,14 @@
             android:visibility="gone"/>
 
         <ImageButton
+            android:id="@+id/profiles"
             android:layout_width="20dp"
             android:layout_height="160dp"
             android:layout_gravity="center"
+            android:background="#00FFFFFF"
             android:foreground="@drawable/ic_profiles_1"
-            android:foregroundTint="@color/material_on_primary_emphasis_high_type"
-            android:background="@color/cardview_shadow_end_color"
-            android:translationZ="0dp"
-            android:id="@+id/profiles"/>
+            android:foregroundTint="@color/white"
+            android:translationZ="0dp" />
     </LinearLayout>
 
     <TextView

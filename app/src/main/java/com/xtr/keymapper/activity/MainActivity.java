@@ -1,6 +1,7 @@
 package com.xtr.keymapper.activity;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.ColorStateList;
@@ -32,6 +33,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
     public static final int DEFAULT_PORT_2 = 6345;
+    public String currentProfile;
     public TouchPointer pointerOverlay;
     public Server server;
 
@@ -41,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private Button keymap;
     private Button configureButton;
     private Button infoButton;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,6 +159,17 @@ public class MainActivity extends AppCompatActivity {
     public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.RecyclerViewHolder> {
 
         private final ArrayList<RecyclerData> appsDataArrayList = new ArrayList<>();
+        private ColorStateList defaultTint;
+
+        private final ColorStateList selectedTint =
+                ColorStateList.valueOf(getColor(R.color.purple_700));
+
+        private View selectedView;
+
+        private final SharedPreferences sharedPref =
+                getSharedPreferences("settings", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+
 
         public RecyclerViewAdapter() {
             PackageManager pm = getPackageManager();
@@ -167,8 +181,10 @@ public class MainActivity extends AppCompatActivity {
                 RecyclerData app = new RecyclerData();
                 app.title = ri.loadLabel(pm);
                 app.icon = ri.activityInfo.loadIcon(pm);
+                app.packageName = ri.activityInfo.packageName;
                 appsDataArrayList.add(app);
             }
+            currentProfile = sharedPref.getString("profile", "com.xtr.keymapper.default");
         }
 
         @NonNull
@@ -176,6 +192,7 @@ public class MainActivity extends AppCompatActivity {
         public RecyclerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             // Inflate Layout
             View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.app_grid, parent, false);
+            defaultTint = view.getRootView().getBackgroundTintList();
             return new RecyclerViewHolder(view);
         }
 
@@ -185,6 +202,12 @@ public class MainActivity extends AppCompatActivity {
             RecyclerData recyclerData = appsDataArrayList.get(position);
             holder.appName.setText(recyclerData.title);
             holder.appIcon.setImageDrawable(recyclerData.icon);
+
+
+            if (recyclerData.packageName.equals(currentProfile) && selectedView == null) {
+                selectedView = holder.appName.getRootView();
+                selectedView.setBackgroundTintList(selectedTint);
+            }
         }
 
         @Override
@@ -194,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // View Holder Class to handle Recycler View.
-        private class RecyclerViewHolder extends RecyclerView.ViewHolder {
+        private class RecyclerViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
             private final TextView appName;
             private final ImageView appIcon;
@@ -203,12 +226,27 @@ public class MainActivity extends AppCompatActivity {
                 super(itemView);
                 appName = itemView.findViewById(R.id.app_name);
                 appIcon = itemView.findViewById(R.id.app_icon);
+
+                itemView.setOnClickListener(this);
+            }
+
+            @Override
+            public void onClick (View view) {
+                int i = getAdapterPosition();
+                currentProfile = appsDataArrayList.get(i).packageName;
+                editor.putString("profile", currentProfile);
+                editor.apply();
+
+                selectedView.setBackgroundTintList(defaultTint);
+                view.setBackgroundTintList(selectedTint);
+                selectedView = view;
             }
         }
 
         private class RecyclerData {
-            private CharSequence title;
-            private Drawable icon;
+            String packageName;
+            CharSequence title;
+            Drawable icon;
         }
     }
 

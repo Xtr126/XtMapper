@@ -61,7 +61,7 @@ public class Server {
     }
 
     public String getDeviceName(){
-        SharedPreferences sharedPref = context.getSharedPreferences("devices", MODE_PRIVATE);
+        SharedPreferences sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
         return sharedPref.getString("device", null);
     }
 
@@ -126,7 +126,7 @@ public class Server {
                 Log.e("Server", e.toString());
             }
         } else {
-            updateCmdView1("\n Please select input device");
+            updateCmdView1("\n Please select input device first");
         }
     }
 
