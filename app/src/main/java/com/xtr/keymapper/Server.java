@@ -61,7 +61,7 @@ public class Server {
     }
 
     public String getDeviceName(){
-        SharedPreferences sharedPref = context.getSharedPreferences("devices", MODE_PRIVATE);
+        SharedPreferences sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
         return sharedPref.getString("device", null);
     }
 
@@ -69,8 +69,7 @@ public class Server {
         FileWriter linesToWrite = new FileWriter(script_name);
         
         linesToWrite.append("#!/system/bin/sh\n");
-        linesToWrite.append("pkill -f -9 ").append(packageName).append(".Input\n");
-        linesToWrite.append("pkill -f -9 libgetevent.so\n");
+        linesToWrite.append("pkill -f ").append(packageName).append(".Input\n");
 
         linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
                 .append("\" CLASSPATH=\"").append(apk) 
@@ -127,7 +126,7 @@ public class Server {
                 Log.e("Server", e.toString());
             }
         } else {
-            updateCmdView1("Please select input device");
+            updateCmdView1("\n Please select input device first");
         }
     }
 

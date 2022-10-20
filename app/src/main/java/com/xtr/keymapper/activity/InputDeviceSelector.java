@@ -49,7 +49,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         // attaching data adapter to spinner
         spinner.setAdapter(dataAdapter);
 
-        sharedPref = getSharedPreferences("devices", MODE_PRIVATE);
+        sharedPref = getSharedPreferences("settings", MODE_PRIVATE);
         String device = sharedPref.getString("device", null);
         if (device != null) {
             devices.add(device);
