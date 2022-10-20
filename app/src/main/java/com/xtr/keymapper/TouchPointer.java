@@ -8,7 +8,6 @@ import android.graphics.Point;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
@@ -94,17 +93,17 @@ public class TouchPointer {
 
        if(cursorView.getWindowToken()==null)
            if (cursorView.getParent() == null) {
-            mWindowManager.addView(cursorView, mParams);
+               mWindowManager.addView(cursorView, mParams);
                handlerThread = new HandlerThread("connect");
                handlerThread.start();
                connectionHandler = new Handler(handlerThread.getLooper());
-            try {
-                loadKeymap();
-                startHandlers();
-            } catch (IOException e) {
-                updateCmdView("error: keymap not set");
-            }
-       }
+                try {
+                    loadKeymap();
+                } catch (IOException e) {
+                    updateCmdView("warning: keymap not set");
+                }
+               startHandlers();
+           }
 
     }
 
@@ -118,7 +117,16 @@ public class TouchPointer {
             ((ViewGroup) cursorView.getParent()).removeAllViews();
             // the above steps are necessary when you are adding and removing
             // the view simultaneously, it might give some exceptions
-            handlerThread.quit();
+            connectionHandler.post(() -> {
+                try {
+                    keyEventHandler.stop();
+                    mouseEventHandler.stop();
+                    handlerThread.quit();
+                } catch (IOException e) {
+                    updateCmdView(e.toString());
+                }
+            });
+
         } catch (Exception e) {
             Log.e("Error2",e.toString());
         }
@@ -153,27 +161,27 @@ public class TouchPointer {
 
     private void startHandlers() {
         Server server = ((MainActivity)context).server;
-        server.c1.append("connecting to server..");
+        server.c1.append("\n connecting to server..");
         connectionHandler.post(new Runnable() {
             int counter = 5;
             @Override
             public void run() {
                 server.c1.append(".");
                 try {
-                    mouseEventHandler.connect();
                     keyEventHandler.connect();
+                    mouseEventHandler.connect();
                 } catch (IOException ignored) {
                 }
                 if (connected) {
-                    new Thread(mouseEventHandler::start).start();
                     new Thread(keyEventHandler::start).start();
+                    new Thread(mouseEventHandler::start).start();
                 } else {
                     if (counter > 0) {
                         connectionHandler.postDelayed(this, 1000);
                         counter--;
                     } else {
-                        hideCursor();
-                        server.c1.append("\n timeout: exiting after 5 tries \n");
+                        mHandler.post(() -> hideCursor());
+                        server.c1.append("\n connection timeout\n Please retry activation \n");
                     }
                 }
             }
@@ -181,29 +189,37 @@ public class TouchPointer {
     }
 
     private class KeyEventHandler {
-        Socket socket;
-        DataOutputStream xOut;
-        String event;
-        BufferedReader getevent;
+        private Socket evSocket;
+        private DataOutputStream xOut;
+        private BufferedReader getevent;
+        private PrintWriter pOut;
 
         private void connect() throws IOException {
-            socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
+            evSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+            pOut = new PrintWriter(evSocket.getOutputStream());
+            pOut.println("getevent"); pOut.flush();
+
+            Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
             xOut = new DataOutputStream(socket.getOutputStream());
-            if (dpad1Handler != null) dpad1Handler.setOutputStream(xOut);
-            if (dpad2Handler != null) dpad2Handler.setOutputStream(xOut);
         }
 
         private void stop() throws IOException {
-            getevent.close();
+            pOut.close();
             xOut.close();
+            getevent.close();
         }
 
         private void start()  {
             try {
-                getevent = Utils.geteventStream(context);
+                if (dpad1Handler != null) dpad1Handler.setOutputStream(xOut);
+                if (dpad2Handler != null) dpad2Handler.setOutputStream(xOut);
+
+                getevent = new BufferedReader(new InputStreamReader(evSocket.getInputStream()));
+                String event;
                 while ((event = getevent.readLine()) != null) { //read events
-                    String[] input_event = event.split("\\s+"); // Keyboard input be like: /dev/input/event3 EV_KEY KEY_X DOWN
-                    TouchPointer.this.updateCmdView(event);           // Mouse input be like: /dev/input/event2 EV_REL REL_X ffffffff
+                    String[] input_event = event.split("\\s+"); // Keyboard input: /dev/input/event3 EV_KEY KEY_X DOWN
+                    if (input_event.length < 3) break; // Avoid ArrayIndexOutOfBoundsException
+                    TouchPointer.this.updateCmdView(event);
                     if (input_event[3].equals("DOWN") || input_event[3].equals("UP")) {
                         int i = Utils.obtainIndex(input_event[2]); // Strips off KEY_ from KEY_X and return the index of X in alphabet
                         if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
@@ -238,7 +254,7 @@ public class TouchPointer {
         private void connect() throws IOException {
             mouseSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
             out = new PrintWriter(mouseSocket.getOutputStream());
-            in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
+            out.println("mouse_read"); out.flush();
 
             xOutSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
             xOut = new DataOutputStream(xOutSocket.getOutputStream());
@@ -246,7 +262,6 @@ public class TouchPointer {
         }
 
         private void start() {
-            out.println("mouse_read"); out.flush();
             getDimensions();
             try {
                 pointerGrab();
@@ -286,6 +301,7 @@ public class TouchPointer {
         }
 
         private void handleEvents() throws IOException {
+            in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
                 input_event = line.split("\\s+");
