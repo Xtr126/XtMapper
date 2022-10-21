@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -43,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     private Button keymap;
     private Button configureButton;
     private Button infoButton;
+    private TextView textView;
 
 
     @Override
@@ -80,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout profilesView = findViewById(R.id.profiles_view);
         ImageButton profilesButton = profilesView.findViewById(R.id.profiles);
 
+        textView = findViewById(R.id.profileTextView);
         RecyclerView recyclerView = profilesView.findViewById(R.id.app_grid);
         RecyclerViewAdapter adapter = new RecyclerViewAdapter();
 
@@ -91,12 +95,14 @@ public class MainActivity extends AppCompatActivity {
         profilesButton.setOnClickListener(v -> {
             switch (recyclerView.getVisibility()) {
                 case View.VISIBLE:{
+                    textView.setVisibility(View.GONE);
                     recyclerView.setVisibility(View.GONE);
                     profilesButton.setForeground(profilesShow);
                     break;
                 }
                 case View.GONE:
                 case View.INVISIBLE: {
+                    textView.setVisibility(View.VISIBLE);
                     recyclerView.setVisibility(View.VISIBLE);
                     profilesButton.setForeground(profilesHide);
                     break;
@@ -168,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
 
         private final SharedPreferences sharedPref =
                 getSharedPreferences("settings", MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPref.edit();
+        SharedPreferences.Editor sharedPrefEditor = sharedPref.edit();
 
 
         public RecyclerViewAdapter() {
@@ -177,14 +183,20 @@ public class MainActivity extends AppCompatActivity {
             i.addCategory(Intent.CATEGORY_LAUNCHER);
 
             List<ResolveInfo> allApps = pm.queryIntentActivities(i, 0);
-            for(ResolveInfo ri:allApps) {
-                RecyclerData app = new RecyclerData();
-                app.title = ri.loadLabel(pm);
-                app.icon = ri.activityInfo.loadIcon(pm);
-                app.packageName = ri.activityInfo.packageName;
-                appsDataArrayList.add(app);
-            }
+
+            Drawable drawable = AppCompatResources.getDrawable(MainActivity.this, R.drawable.ic_launcher_foreground);
+            appsDataArrayList.add(
+                    new RecyclerData("com.xtr.keymapper.default",
+                            "Default",
+                            drawable));
+            for(ResolveInfo ri:allApps)
+                appsDataArrayList.add(new RecyclerData(
+                        ri.activityInfo.packageName,
+                        ri.loadLabel(pm),
+                        ri.activityInfo.loadIcon(pm)));
+
             currentProfile = sharedPref.getString("profile", "com.xtr.keymapper.default");
+            textView.setText("current profile: " + currentProfile);
         }
 
         @NonNull
@@ -234,8 +246,10 @@ public class MainActivity extends AppCompatActivity {
             public void onClick (View view) {
                 int i = getAdapterPosition();
                 currentProfile = appsDataArrayList.get(i).packageName;
-                editor.putString("profile", currentProfile);
-                editor.apply();
+                textView.setText("current profile: " + currentProfile);
+
+                sharedPrefEditor.putString("profile", currentProfile);
+                sharedPrefEditor.apply();
 
                 selectedView.setBackgroundTintList(defaultTint);
                 view.setBackgroundTintList(selectedTint);
@@ -244,6 +258,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         private class RecyclerData {
+            public RecyclerData(String packageName, CharSequence title, Drawable icon) {
+                this.packageName = packageName;
+                this.icon = icon;
+                this.title = title;
+            }
+
             String packageName;
             CharSequence title;
             Drawable icon;
