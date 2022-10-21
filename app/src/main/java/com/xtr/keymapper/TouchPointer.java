@@ -8,7 +8,6 @@ import android.graphics.Point;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
-import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -108,28 +107,23 @@ public class TouchPointer {
     }
 
     public void hideCursor() {
-        try {
-            Server.killServer().start();
-            ((MainActivity)context).setButtonInactive(startButton);
-            ((WindowManager)context.getSystemService(WINDOW_SERVICE)).removeView(cursorView);
-            cursorView.invalidate();
-            // remove all views
-            ((ViewGroup) cursorView.getParent()).removeAllViews();
-            // the above steps are necessary when you are adding and removing
-            // the view simultaneously, it might give some exceptions
-            connectionHandler.post(() -> {
-                try {
-                    keyEventHandler.stop();
-                    mouseEventHandler.stop();
-                    handlerThread.quit();
-                } catch (IOException e) {
-                    updateCmdView(e.toString());
-                }
-            });
-
-        } catch (Exception e) {
-            Log.e("Error2",e.toString());
-        }
+        Server.killServer().start();
+        ((MainActivity)context).setButtonInactive(startButton);
+        ((WindowManager)context.getSystemService(WINDOW_SERVICE)).removeView(cursorView);
+        cursorView.invalidate();
+        // remove all views
+        ((ViewGroup) cursorView.getParent()).removeAllViews();
+        // the above steps are necessary when you are adding and removing
+        // the view simultaneously, it might give some exceptions
+        connectionHandler.post(() -> {
+            try {
+                keyEventHandler.stop();
+                mouseEventHandler.stop();
+                handlerThread.quit();
+            } catch (IOException e) {
+                updateCmdView(e.toString());
+            }
+        });
     }
 
     public void loadKeymap() throws IOException {
