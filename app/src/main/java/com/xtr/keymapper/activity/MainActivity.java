@@ -5,8 +5,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.ColorStateList;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -25,6 +23,7 @@ import androidx.appcompat.content.res.AppCompatResources;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.xtr.keymapper.KeymapConfig;
 import com.xtr.keymapper.R;
 import com.xtr.keymapper.Server;
 import com.xtr.keymapper.TouchPointer;
@@ -35,6 +34,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
     public static final int DEFAULT_PORT_2 = 6345;
+    public static final String defaultProfile = "com.xtr.keymapper.default";
     public String currentProfile;
     public TouchPointer pointerOverlay;
     public Server server;
@@ -186,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
 
             Drawable drawable = AppCompatResources.getDrawable(MainActivity.this, R.drawable.ic_launcher_foreground);
             appsDataArrayList.add(
-                    new RecyclerData("com.xtr.keymapper.default",
+                    new RecyclerData(defaultProfile,
                             "Default",
                             drawable));
             for(ResolveInfo ri:allApps)
@@ -195,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
                         ri.loadLabel(pm),
                         ri.activityInfo.loadIcon(pm)));
 
-            currentProfile = sharedPref.getString("profile", "com.xtr.keymapper.default");
+            currentProfile = KeymapConfig.getProfile(MainActivity.this);
             textView.setText("current profile: " + currentProfile);
         }
 
