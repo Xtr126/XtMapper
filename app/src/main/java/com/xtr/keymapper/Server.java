@@ -19,6 +19,7 @@ import java.io.DataOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 
 public class Server {
@@ -60,7 +61,7 @@ public class Server {
     }
 
     public String getDeviceName(){
-        SharedPreferences sharedPref = context.getSharedPreferences("devices", MODE_PRIVATE);
+        SharedPreferences sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
         return sharedPref.getString("device", null);
     }
 
@@ -68,8 +69,7 @@ public class Server {
         FileWriter linesToWrite = new FileWriter(script_name);
         
         linesToWrite.append("#!/system/bin/sh\n");
-        linesToWrite.append("pkill -f -9 ").append(packageName).append(".Input\n");
-        linesToWrite.append("pkill -f -9 libgetevent.so\n");
+        linesToWrite.append("pkill -f ").append(packageName).append(".Input\n");
 
         linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
                 .append("\" CLASSPATH=\"").append(apk) 
@@ -84,9 +84,10 @@ public class Server {
     public static Thread killServer(){
         return new Thread(() -> {
             try {
-                DataOutputStream xOut = new DataOutputStream(new Socket("127.0.0.1", MainActivity.DEFAULT_PORT).getOutputStream());
-                xOut.writeBytes(". . exit 1\n");
-                xOut.flush(); xOut.close();
+                Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+                PrintWriter pOut = new PrintWriter(socket.getOutputStream());
+                pOut.println("exit");
+                pOut.flush(); pOut.close();
             } catch (IOException e) {
                 Log.e("I/O error", e.toString());
             }
@@ -99,12 +100,7 @@ public class Server {
             String packageName = context.getPackageName();
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
             String apk = ai.publicSourceDir; // Absolute path to apk in /data/app
-
-            Process sh = Runtime.getRuntime().exec("sh");
-            DataOutputStream out = new DataOutputStream(sh.getOutputStream());
-
             writeScript(packageName, ai, apk);
-            out.close(); sh.waitFor();
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException e) {
             Log.e("Server", e.toString());
         }
@@ -130,7 +126,7 @@ public class Server {
                 Log.e("Server", e.toString());
             }
         } else {
-            updateCmdView1("\n Please select input device");
+            updateCmdView1("\n Please select input device first");
         }
     }
 

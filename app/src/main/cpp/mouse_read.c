@@ -39,8 +39,10 @@ typedef struct mouse_context {
 } mouseContext;
 mouseContext g_ctx;
 
-int fd; int port;
+int fd;
+int port;
 const char* dev;
+pid_t cpid;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -136,32 +138,22 @@ void* send_mouse_events(void* context) {
 
 void* send_getevent(void *context) {
     socketContext *sock = (socketContext*) context;
-    JavaVM *javaVM = sock->javaVM;
-    JNIEnv *env;
-    jint res = (*javaVM)->GetEnv(javaVM, (void**)&env, JNI_VERSION_1_6);
-    if (res != JNI_OK) {
-        res = (*javaVM)->AttachCurrentThread(javaVM, &env, NULL);
-        if (JNI_OK != res) {
-            return NULL;
+    pid_t pid;
+    switch (pid = fork()) {
+        case -1:    /* Error. */
+            exit(EXIT_FAILURE);  /* exit if fork() fails */
+        case  0: {    /* In the child process: */
+            cpid = pid;
+            dup2(sock->client_fd, STDOUT_FILENO);  /* duplicate socket on stdout */
+            dup2(sock->client_fd, STDERR_FILENO);  /* duplicate socket on stderr too */
+            close(sock->client_fd);  /* can close the original after it's duplicated */
+            char *argp[] = {"sh", "-c",
+                            "$LD_LIBRARY_PATH/libgetevent.so -ql",NULL};
+            execve(_PATH_BSHELL, argp, environ);
+            _exit(127);
+            /* NOTREACHED */
         }
     }
-
-    pid_t cpid = fork();
-    if (cpid < 0) exit(1);  /* exit if fork() fails */
-    if ( cpid ) {
-        /* In the parent process: */
-        close(sock->client_fd ); /* new_socket is not needed in the parent after the fork */
-        waitpid( cpid, NULL, 0 ); /* wait for and reap child process */
-    } else {
-        /* In the child process: */
-        dup2( sock->client_fd, STDOUT_FILENO );  /* duplicate socket on stdout */
-        dup2( sock->client_fd, STDERR_FILENO );  /* duplicate socket on stderr too */
-        close( sock->client_fd );  /* can close the original after it's duplicated */
-        char *argp[] = {"sh", "-c",
-                        "$LD_LIBRARY_PATH/libgetevent.so -ql", NULL};
-        execve(_PATH_BSHELL, argp, environ);
-    }
-    (*javaVM)->DetachCurrentThread(javaVM);
     return context;
 }
 
@@ -200,7 +192,7 @@ void* init(void* context) {
         char buffer[12] = { 0 };
 
         read(s_ctx.client_fd, buffer, 12);
-
+        printf("msg: %s", buffer);
         if (strcmp(buffer, "mouse_read\n") == 0) {
             pthread_t threadInfo_;
             pthread_attr_t threadAttr_;
@@ -211,13 +203,12 @@ void* init(void* context) {
             pthread_attr_destroy(&threadAttr_);
         }
         else if (strcmp(buffer, "getevent\n") == 0) {
-            pthread_t threadInfo_;
-            pthread_attr_t threadAttr_;
-
-            pthread_attr_init(&threadAttr_);
-            pthread_attr_setdetachstate(&threadAttr_, PTHREAD_CREATE_DETACHED);
-            pthread_create(&threadInfo_, &threadAttr_, send_getevent, &s_ctx);
-            pthread_attr_destroy(&threadAttr_);
+            send_getevent(&s_ctx);
+        }
+        else if (strcmp(buffer, "exit\n") == 0) {
+            printf("exit signal recieved\n");
+            kill(cpid, SIGKILL);
+            exit(EXIT_SUCCESS);
         }
     }
     close(s_ctx.server_fd); // closing the listening socket

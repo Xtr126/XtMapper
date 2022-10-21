@@ -4,17 +4,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".InputDeviceSelector"
+    tools:context=".activity.InputDeviceSelector"
     tools:ignore="ContentDescription,SpUsage">
 
     <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/select_input_device"
-        android:textAlignment="viewStart"
+        android:layout_width="0dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="56dp"
         android:textSize="20sp"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
+        android:id="@+id/textView2"
+        android:textAlignment="center"
+        android:gravity="center"
+        app:layout_constraintLeft_toLeftOf="@id/spinner"
+        app:layout_constraintRight_toRightOf="@id/spinner"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Spinner
@@ -44,6 +46,7 @@
         android:layout_height="0dp"
         android:layout_margin="20dp"
         android:gravity="bottom"
+        android:fontFamily="monospace"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"

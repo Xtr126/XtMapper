@@ -1,4 +1,4 @@
-package com.xtr.keymapper;
+package com.xtr.keymapper.activity;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -11,6 +11,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.xtr.keymapper.R;
+import com.xtr.keymapper.Utils;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,10 +21,15 @@ import java.util.List;
 
 public class InputDeviceSelector extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
 
-    private List<String> devices;
     private Spinner spinner;
+    // Spinner Drop down elements
+    private final List<String> devices = new ArrayList<>();
+
     private ArrayAdapter<String> dataAdapter;
+
     private TextView textView;
+    private TextView textView2;
+
     private SharedPreferences sharedPref;
 
     @Override
@@ -30,29 +38,30 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         setContentView(R.layout.activity_configure);
         spinner = findViewById(R.id.spinner);
         textView = findViewById(R.id.textView);
-        findViewById(R.id.button).setOnClickListener(v -> this.finish());
-
-        // Load stored device name
-        sharedPref = getSharedPreferences("devices", MODE_PRIVATE);
-        String devname = sharedPref.getString("device", null);
+        textView2 = findViewById(R.id.textView2);
 
         // Spinner click listener
         spinner.setOnItemSelectedListener(this);
 
-        // Spinner Drop down elements
-        devices = new ArrayList<>();
-        if(devname != null)
-        devices.add(devname);
         // Creating adapter for spinner
+        dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, devices);
+
+        // attaching data adapter to spinner
+        spinner.setAdapter(dataAdapter);
+
+        sharedPref = getSharedPreferences("settings", MODE_PRIVATE);
+        String device = sharedPref.getString("device", null);
+        if (device != null) {
+            devices.add(device);
+            textView2.setText(device);
+        }
 
         new Thread(this::getDevices).start();
-        dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, devices);
 
         // Drop down layout style - list view with radio button
         dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        // attaching data adapter to spinner
-        spinner.setAdapter(dataAdapter);
+        findViewById(R.id.button).setOnClickListener(v -> this.finish());
     }
 
     private void updateView(String s){
@@ -88,7 +97,8 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         // On selecting a spinner item
         String item = parent.getItemAtPosition(position).toString();
-        // Store selected device
+        textView2.setText(item);
+
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString("device", item);
         editor.apply();
@@ -100,6 +110,5 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     public void onNothingSelected(AdapterView<?> parent) {
         // TODO Auto-generated method stub
     }
-
 
 }

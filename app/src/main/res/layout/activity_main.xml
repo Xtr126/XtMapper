@@ -8,14 +8,59 @@
     tools:context=".activity.MainActivity"
     tools:ignore="ContentDescription,SpUsage">
 
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:translationZ="1dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:animateLayoutChanges="true">
+
+        <TextView
+            android:id="@+id/profileTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/profiles_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:animateLayoutChanges="true">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/app_grid"
+                android:layout_width="300dp"
+                android:layout_height="300dp"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/profiles"
+                android:layout_width="20dp"
+                android:layout_height="160dp"
+                android:layout_gravity="center"
+                android:background="#00FFFFFF"
+                android:foreground="@drawable/ic_profiles_1"
+                android:foregroundTint="@color/white"
+                android:translationZ="0dp" />
+
+        </LinearLayout>
+    </LinearLayout>
+
     <TextView
         android:id="@+id/cmdview"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_margin="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginVertical="20dp"
         android:gravity="bottom"
         android:textAppearance="@android:style/TextAppearance.Material.Large"
         android:textSize="16sp"
+        android:fontFamily="monospace"
         app:layout_constraintBottom_toTopOf="@id/constrained"
         app:layout_constraintLeft_toRightOf="@id/cmdview3"
         app:layout_constraintRight_toRightOf="@+id/activity_main"
@@ -25,8 +70,10 @@
         android:id="@+id/cmdview2"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_margin="20dp"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="20dp"
         android:gravity="bottom"
+        android:fontFamily="monospace"
         app:layout_constraintBottom_toTopOf="@id/cmdview3"
         app:layout_constraintLeft_toLeftOf="@id/constrained"
         app:layout_constraintRight_toLeftOf="@+id/cmdview"
@@ -36,9 +83,10 @@
         android:id="@+id/cmdview3"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginStart="20dp"
+        android:layout_marginStart="30dp"
         android:layout_marginBottom="20dp"
         android:gravity="bottom"
+        android:fontFamily="monospace"
         app:layout_constraintBottom_toTopOf="@id/constrained"
         app:layout_constraintLeft_toLeftOf="@id/constrained"
         app:layout_constraintRight_toLeftOf="@+id/cmdview"

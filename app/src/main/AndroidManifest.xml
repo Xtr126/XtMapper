@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
     <uses-permission
         android:name="android.permission.INJECT_EVENTS"
         tools:ignore="ProtectedPermissions" />
@@ -19,7 +20,7 @@
             android:name=".activity.InfoActivity"
             android:exported="false" />
         <activity
-            android:name=".InputDeviceSelector"
+            android:name=".activity.InputDeviceSelector"
             android:exported="false" />
         <activity
             android:name=".activity.EditorUI"
@@ -29,10 +30,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
     </application>
-
 </manifest>

@@ -8,7 +8,6 @@ import android.graphics.Point;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
-import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -93,43 +92,38 @@ public class TouchPointer {
 
        if(cursorView.getWindowToken()==null)
            if (cursorView.getParent() == null) {
-            mWindowManager.addView(cursorView, mParams);
+               mWindowManager.addView(cursorView, mParams);
                handlerThread = new HandlerThread("connect");
                handlerThread.start();
                connectionHandler = new Handler(handlerThread.getLooper());
-            try {
-                loadKeymap();
-                startHandlers();
-            } catch (IOException e) {
-                updateCmdView("error: keymap not set");
-            }
-       }
+                try {
+                    loadKeymap();
+                } catch (IOException e) {
+                    updateCmdView("warning: keymap not set");
+                }
+               startHandlers();
+           }
 
     }
 
     public void hideCursor() {
-        try {
-            Server.killServer().start();
-            ((MainActivity)context).setButtonInactive(startButton);
-            ((WindowManager)context.getSystemService(WINDOW_SERVICE)).removeView(cursorView);
-            cursorView.invalidate();
-            // remove all views
-            ((ViewGroup) cursorView.getParent()).removeAllViews();
-            // the above steps are necessary when you are adding and removing
-            // the view simultaneously, it might give some exceptions
-            connectionHandler.post(() -> {
-                try {
-                    keyEventHandler.stop();
-                    mouseEventHandler.stop();
-                    handlerThread.quit();
-                } catch (IOException e) {
-                    updateCmdView(e.toString());
-                }
-            });
-
-        } catch (Exception e) {
-            Log.e("Error2",e.toString());
-        }
+        Server.killServer().start();
+        ((MainActivity)context).setButtonInactive(startButton);
+        ((WindowManager)context.getSystemService(WINDOW_SERVICE)).removeView(cursorView);
+        cursorView.invalidate();
+        // remove all views
+        ((ViewGroup) cursorView.getParent()).removeAllViews();
+        // the above steps are necessary when you are adding and removing
+        // the view simultaneously, it might give some exceptions
+        connectionHandler.post(() -> {
+            try {
+                keyEventHandler.stop();
+                mouseEventHandler.stop();
+                handlerThread.quit();
+            } catch (IOException e) {
+                updateCmdView(e.toString());
+            }
+        });
     }
 
     public void loadKeymap() throws IOException {
@@ -161,8 +155,7 @@ public class TouchPointer {
 
     private void startHandlers() {
         Server server = ((MainActivity)context).server;
-        server.c1 = new StringBuilder();
-        server.c1.append("connecting to server..");
+        server.c1.append("\n connecting to server..");
         connectionHandler.post(new Runnable() {
             int counter = 5;
             @Override
