@@ -12,7 +12,6 @@ import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -96,6 +95,7 @@ public class TouchPointer {
                handlerThread = new HandlerThread("connect");
                handlerThread.start();
                connectionHandler = new Handler(handlerThread.getLooper());
+               ((MainActivity)context).server.c1 = new StringBuilder();
                 try {
                     loadKeymap();
                 } catch (IOException e) {
@@ -110,20 +110,8 @@ public class TouchPointer {
         Server.killServer().start();
         ((MainActivity)context).setButtonInactive(startButton);
         ((WindowManager)context.getSystemService(WINDOW_SERVICE)).removeView(cursorView);
+        handlerThread.quit();
         cursorView.invalidate();
-        // remove all views
-        ((ViewGroup) cursorView.getParent()).removeAllViews();
-        // the above steps are necessary when you are adding and removing
-        // the view simultaneously, it might give some exceptions
-        connectionHandler.post(() -> {
-            try {
-                keyEventHandler.stop();
-                mouseEventHandler.stop();
-                handlerThread.quit();
-            } catch (IOException e) {
-                updateCmdView(e.toString());
-            }
-        });
     }
 
     public void loadKeymap() throws IOException {
@@ -269,7 +257,6 @@ public class TouchPointer {
         private void stop() throws IOException {
             in.close(); out.close();
             mouseSocket.close(); xOutSocket.close();
-            mHandler.post(TouchPointer.this::hideCursor);
             connected = false;
         }
 
