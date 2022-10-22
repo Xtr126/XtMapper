@@ -123,10 +123,7 @@ void* send_mouse_events(void* context) {
         }
     }
     struct input_event ie;
-    if ((fd = open(dev, O_RDONLY)) == -1) {
-        perror("opening device");
-        exit(EXIT_FAILURE);
-    }
+
     while (read(fd, &ie, sizeof(struct input_event))) {
         send_data(&ie, sock->client_fd);
     }
@@ -136,6 +133,10 @@ void* send_mouse_events(void* context) {
     return context;
 }
 
+void kill_child_process(int signal){
+    kill(cpid, SIGKILL);
+}
+
 void* send_getevent(void *context) {
     socketContext *sock = (socketContext*) context;
     pid_t pid;
@@ -143,7 +144,8 @@ void* send_getevent(void *context) {
         case -1:    /* Error. */
             exit(EXIT_FAILURE);  /* exit if fork() fails */
         case  0: {    /* In the child process: */
-            cpid = pid;
+            cpid = pid; /* save child pid for killing process later */
+            signal(SIGINT, kill_child_process);
             dup2(sock->client_fd, STDOUT_FILENO);  /* duplicate socket on stdout */
             dup2(sock->client_fd, STDERR_FILENO);  /* duplicate socket on stderr too */
             close(sock->client_fd);  /* can close the original after it's duplicated */
@@ -157,6 +159,12 @@ void* send_getevent(void *context) {
     return context;
 }
 
+/*
+ * Main working thread function. From a pthread,
+ *     create socket and listen for msg from TouchPointer::MouseEventHandler::connect()
+ *     according to msg received, create new pthread for send_mouse_events() or
+ *     redirect getevent stdout to socket for TouchPointer::KeyEventHandler
+ */
 void* init(void* context) {
     mouseContext *pctx = (mouseContext*) context;
     s_ctx.javaVM = pctx->javaVM;
@@ -170,6 +178,7 @@ void* init(void* context) {
         }
     }
     create_socket(&s_ctx);
+    printf("Waiting for overlay...\n");
 
     while(true) {
         pthread_mutex_lock(&pctx->lock);
@@ -181,7 +190,6 @@ void* init(void* context) {
         if (done) {
             break;
         }
-        printf("Waiting for overlay...\n");
         struct sockaddr_in address = s_ctx.address;
         int addrlen = s_ctx.addrlen;
         if ((s_ctx.client_fd
@@ -194,13 +202,19 @@ void* init(void* context) {
         read(s_ctx.client_fd, buffer, 12);
         printf("msg: %s", buffer);
         if (strcmp(buffer, "mouse_read\n") == 0) {
-            pthread_t threadInfo_;
-            pthread_attr_t threadAttr_;
+            if ((fd = open(dev, O_RDONLY)) == -1) {
+                printf("opening device failed\n");
+                write(s_ctx.client_fd, "error\n", strlen("error\n"));
+            } else {
+                pthread_t threadInfo_;
+                pthread_attr_t threadAttr_;
 
-            pthread_attr_init(&threadAttr_);
-            pthread_attr_setdetachstate(&threadAttr_, PTHREAD_CREATE_DETACHED);
-            pthread_create(&threadInfo_, &threadAttr_, send_mouse_events, &s_ctx);
-            pthread_attr_destroy(&threadAttr_);
+                pthread_attr_init(&threadAttr_);
+                pthread_attr_setdetachstate(&threadAttr_, PTHREAD_CREATE_DETACHED);
+
+                pthread_create(&threadInfo_, &threadAttr_, send_mouse_events, &s_ctx);
+                pthread_attr_destroy(&threadAttr_);
+            }
         }
         else if (strcmp(buffer, "getevent\n") == 0) {
             send_getevent(&s_ctx);
@@ -208,6 +222,7 @@ void* init(void* context) {
         else if (strcmp(buffer, "exit\n") == 0) {
             printf("exit signal recieved\n");
             kill(cpid, SIGKILL);
+            close(fd);
             exit(EXIT_SUCCESS);
         }
     }
@@ -216,6 +231,9 @@ void* init(void* context) {
     return context;
     }
 
+/*
+* Interface to Java side to start, caller is from main()
+*/
 JNIEXPORT void JNICALL
     Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring device, jint default_port) {
         setlinebuf(stdout);
