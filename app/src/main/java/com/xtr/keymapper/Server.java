@@ -108,25 +108,21 @@ public class Server {
     }
 
     public void startServer() {
-        if(getDeviceName() != null) {
-            updateCmdView1("exec sh " + script_name);
-            try {
-                Process sh = Utils.getRootAccess();
-                DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-                outputStream.writeBytes("/system/bin/sh " + script_name);
-                outputStream.close();
+        updateCmdView1("exec sh " + script_name);
+        try {
+            Process sh = Utils.getRootAccess();
+            DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
+            outputStream.writeBytes("/system/bin/sh " + script_name);
+            outputStream.close();
 
-                BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
-                String line;
-                while ((line = stdout.readLine()) != null) {
-                    updateCmdView2("stdout: " + line);
-                }
-                sh.waitFor();
-            } catch (IOException | InterruptedException e) {
-                Log.e("Server", e.toString());
+            BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
+            String line;
+            while ((line = stdout.readLine()) != null) {
+                updateCmdView2("stdout: " + line);
             }
-        } else {
-            updateCmdView1("\n Please select input device first");
+            sh.waitFor();
+        } catch (IOException | InterruptedException e) {
+            Log.e("Server", e.toString());
         }
     }
 

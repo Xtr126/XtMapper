@@ -169,12 +169,7 @@ public class Input {
     public static native void setIoctl(boolean y);
 
     public static void main(String[] args) {
-        if(!args[0].equals("null")) {
-            startMouse(args[0], MainActivity.DEFAULT_PORT_2); // Call native code
-        } else {
-            System.out.println("exiting: input device not selected");
-            System.exit(2);
-        }
+        startMouse(args[0], MainActivity.DEFAULT_PORT_2); // Call native code
         ServerSocket serverSocket = null;
 
         try {
