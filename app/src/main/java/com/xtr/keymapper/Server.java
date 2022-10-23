@@ -60,9 +60,11 @@ public class Server {
         });
     }
 
-    public String getDeviceName(){
+    public String getSettings(){
         SharedPreferences sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
-        return sharedPref.getString("device", null);
+        String device = sharedPref.getString("device", null);
+        int sensitivity = sharedPref.getInt("mouse_sensitivity_multiplier", 1);
+        return device + " " + sensitivity;
     }
 
     private void writeScript(String packageName, ApplicationInfo ai, String apk) throws IOException, InterruptedException {
@@ -75,7 +77,7 @@ public class Server {
                 .append("\" CLASSPATH=\"").append(apk) 
                 .append("\" /system/bin/app_process /system/bin ")
                 .append(packageName).append(".Input ")
-                .append(getDeviceName()).append("\n"); // input device node as argument
+                .append(getSettings()).append("\n"); // input device node as argument
 
         linesToWrite.flush();
         linesToWrite.close();
