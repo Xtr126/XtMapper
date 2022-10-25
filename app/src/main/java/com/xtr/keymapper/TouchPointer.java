@@ -3,6 +3,7 @@ package com.xtr.keymapper;
 import static android.content.Context.WINDOW_SERVICE;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Handler;
@@ -17,6 +18,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.xtr.keymapper.activity.InputDeviceSelector;
 import com.xtr.keymapper.activity.MainActivity;
 import com.xtr.keymapper.dpad.Dpad1Handler;
 import com.xtr.keymapper.dpad.Dpad2Handler;
@@ -56,7 +58,6 @@ public class TouchPointer {
     public TouchPointer(Context context){
         this.context= context;
         cmdView3 = ((MainActivity)context).findViewById(R.id.cmdview3);
-        c3 = new StringBuilder();
         startButton  = ((MainActivity)context).findViewById(R.id.startPointer);
         // set the layout parameters of the cursor
         mParams = new WindowManager.LayoutParams(
@@ -83,13 +84,11 @@ public class TouchPointer {
     }
 
     public void open() {
+        c3 = new StringBuilder();
         ((MainActivity)context).setButtonActive(startButton);
-        startButton.setOnClickListener(v -> {
-            hideCursor();
-            startButton.setOnClickListener(view -> open());
-        });
+        startButton.setOnClickListener(v -> hideCursor());
 
-       if(cursorView.getWindowToken()==null)
+        if(cursorView.getWindowToken()==null)
            if (cursorView.getParent() == null) {
                mWindowManager.addView(cursorView, mParams);
                handlerThread = new HandlerThread("connect");
@@ -107,8 +106,10 @@ public class TouchPointer {
     }
 
     public void hideCursor() {
-        Server.killServer().start();
         ((MainActivity)context).setButtonInactive(startButton);
+        startButton.setOnClickListener(view -> open());
+
+        Server.killServer().start();
         ((WindowManager)context.getSystemService(WINDOW_SERVICE)).removeView(cursorView);
         handlerThread.quit();
         cursorView.invalidate();
@@ -307,6 +308,17 @@ public class TouchPointer {
                     case "BTN_MOUSE": {
                         pointer_down = input_event[1].equals("1");
                         xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + input_event[1] + " 36" + "\n");
+                        break;
+                    }
+                    case "error": {
+                        context.startActivity(new Intent(context, InputDeviceSelector.class));
+                        break;
+                    }
+                    case "restart": {
+                        //in.close();
+                        stop();
+                        connect();
+                        start();
                         break;
                     }
                 }

@@ -60,9 +60,11 @@ public class Server {
         });
     }
 
-    public String getDeviceName(){
+    public String getSettings(){
         SharedPreferences sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
-        return sharedPref.getString("device", null);
+        String device = sharedPref.getString("device", null);
+        int sensitivity = sharedPref.getInt("mouse_sensitivity_multiplier", 1);
+        return device + " " + sensitivity;
     }
 
     private void writeScript(String packageName, ApplicationInfo ai, String apk) throws IOException, InterruptedException {
@@ -75,7 +77,7 @@ public class Server {
                 .append("\" CLASSPATH=\"").append(apk) 
                 .append("\" /system/bin/app_process /system/bin ")
                 .append(packageName).append(".Input ")
-                .append(getDeviceName()).append("\n"); // input device node as argument
+                .append(getSettings()).append("\n"); // input device node as argument
 
         linesToWrite.flush();
         linesToWrite.close();
@@ -87,7 +89,22 @@ public class Server {
                 Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
                 PrintWriter pOut = new PrintWriter(socket.getOutputStream());
                 pOut.println("exit");
-                pOut.flush(); pOut.close();
+                pOut.close(); socket.close();
+            } catch (IOException e) {
+                Log.e("I/O error", e.toString());
+            }
+        });
+    }
+
+    public static Thread changeDevice(String newDevice){
+        return new Thread(() -> {
+            try {
+                Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+                PrintWriter pOut = new PrintWriter(socket.getOutputStream());
+                pOut.println("change_device");
+                pOut.flush();
+                pOut.print(newDevice);
+                pOut.close(); socket.close();
             } catch (IOException e) {
                 Log.e("I/O error", e.toString());
             }
@@ -95,6 +112,8 @@ public class Server {
     }
 
     public void setupServer () {
+        c1 = new StringBuilder();
+        c2 = new StringBuilder();
         try {
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
@@ -108,25 +127,21 @@ public class Server {
     }
 
     public void startServer() {
-        if(getDeviceName() != null) {
-            updateCmdView1("exec sh " + script_name);
-            try {
-                Process sh = Utils.getRootAccess();
-                DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-                outputStream.writeBytes("/system/bin/sh " + script_name);
-                outputStream.close();
+        updateCmdView1("exec sh " + script_name);
+        try {
+            Process sh = Utils.getRootAccess();
+            DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
+            outputStream.writeBytes("/system/bin/sh " + script_name);
+            outputStream.close();
 
-                BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
-                String line;
-                while ((line = stdout.readLine()) != null) {
-                    updateCmdView2("stdout: " + line);
-                }
-                sh.waitFor();
-            } catch (IOException | InterruptedException e) {
-                Log.e("Server", e.toString());
+            BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
+            String line;
+            while ((line = stdout.readLine()) != null) {
+                updateCmdView2("stdout: " + line);
             }
-        } else {
-            updateCmdView1("\n Please select input device first");
+            sh.waitFor();
+        } catch (IOException | InterruptedException e) {
+            Log.e("Server", e.toString());
         }
     }
 

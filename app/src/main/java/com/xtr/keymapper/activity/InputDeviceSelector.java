@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -12,10 +13,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.xtr.keymapper.R;
-import com.xtr.keymapper.Utils;
+import com.xtr.keymapper.Server;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,6 +33,9 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
 
     private TextView textView;
     private TextView textView2;
+    private Socket evSocket;
+    private BufferedReader getevent;
+    private PrintWriter pOut;
 
     private SharedPreferences sharedPref;
 
@@ -50,11 +57,6 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         spinner.setAdapter(dataAdapter);
 
         sharedPref = getSharedPreferences("settings", MODE_PRIVATE);
-        String device = sharedPref.getString("device", null);
-        if (device != null) {
-            devices.add(device);
-            textView2.setText(device);
-        }
 
         new Thread(this::getDevices).start();
 
@@ -68,37 +70,18 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         runOnUiThread(() -> textView.append(s + "\n"));
     }
 
-    private void getDevices(){
-        try {
-            BufferedReader getevent = Utils.geteventStream(this);
-            String stdout;
-            while ((stdout = getevent.readLine()) != null) { //read events
-                String[] xy = stdout.split("\\s+");
-                //split a string like "/dev/input/event2 EV_REL REL_X ffffffff"
-                if(!xy[2].equals("SYN_REPORT")) {
-                    updateView(stdout);
-                }
-                if(xy[0].equals("root")) runOnUiThread(() -> textView.setTextSize(20));
-                if(!devices.contains(xy[0]))
-                    if (xy[1].equals("EV_REL")) {
-                        devices.add(xy[0]);
-                        dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, devices);
-                        runOnUiThread(() -> spinner.setAdapter(dataAdapter));
-                   }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+    @Override
+    protected void onDestroy() {
+        stop();
+        super.onDestroy();
     }
-
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         // On selecting a spinner item
         String item = parent.getItemAtPosition(position).toString();
         textView2.setText(item);
-
+        Server.changeDevice(item).start();
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString("device", item);
         editor.apply();
@@ -111,4 +94,39 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         // TODO Auto-generated method stub
     }
 
+    private void stop(){
+        try {
+            pOut.close();
+            getevent.close();
+            evSocket.close();
+        } catch (IOException e) {
+            Log.e("InputDeviceSelector", e.toString());
+        }
+    }
+
+    private void getDevices()  {
+        try {
+            evSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+            pOut = new PrintWriter(evSocket.getOutputStream());
+            pOut.println("getevent"); pOut.flush();
+            getevent = new BufferedReader(new InputStreamReader(evSocket.getInputStream()));
+            String input_event;
+            String[] event;
+            while ((input_event = getevent.readLine()) != null) {
+                event = input_event.split("\\s+"); // split a string like "/dev/input/event2 EV_REL REL_X ffffffff"
+
+                if(!event[2].equals("SYN_REPORT"))
+                    updateView(input_event);
+
+                if(!devices.contains(event[0]) && !textView2.getText().equals(event[0]))
+                    if (event[1].equals("EV_REL")) {
+                        devices.add(event[0]);
+                        dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, devices);
+                        runOnUiThread(() -> spinner.setAdapter(dataAdapter));
+                    }
+            }
+        } catch (IOException e) {
+            Log.e("InputDeviceSelector", e.toString());
+        }
+    }
 }
