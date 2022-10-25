@@ -89,7 +89,22 @@ public class Server {
                 Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
                 PrintWriter pOut = new PrintWriter(socket.getOutputStream());
                 pOut.println("exit");
-                pOut.flush(); pOut.close();
+                pOut.close(); socket.close();
+            } catch (IOException e) {
+                Log.e("I/O error", e.toString());
+            }
+        });
+    }
+
+    public static Thread changeDevice(String newDevice){
+        return new Thread(() -> {
+            try {
+                Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+                PrintWriter pOut = new PrintWriter(socket.getOutputStream());
+                pOut.println("change_device");
+                pOut.flush();
+                pOut.print(newDevice);
+                pOut.close(); socket.close();
             } catch (IOException e) {
                 Log.e("I/O error", e.toString());
             }
@@ -97,6 +112,8 @@ public class Server {
     }
 
     public void setupServer () {
+        c1 = new StringBuilder();
+        c2 = new StringBuilder();
         try {
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();

@@ -4,7 +4,7 @@
     <string name="start_server">Activate with su</string>
     <string name="start_server_manual">Activate with adb</string>
     <string name="configure">Select Input device</string>
-    <string name="edit_keymap">Edit mode</string>
+    <string name="edit_keymap">Edit keymap</string>
     <string name="about_info">About</string>
     <string name="select_input_device">Select Input device</string>
 </resources>

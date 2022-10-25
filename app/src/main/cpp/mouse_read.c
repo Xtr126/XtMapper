@@ -41,8 +41,8 @@ mouseContext g_ctx;
 
 int fd;
 int port;
-const char* dev;
-pid_t cpid;
+const char* device;
+pid_t child_pid;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -89,28 +89,6 @@ void create_socket(void* context){
     }
 }
 
-void send_data(struct input_event *ie, int sock)
-{
-    switch (ie->code) {
-        case REL_X :
-            sprintf(str, "REL_X %d \n", ie->value);
-            send(sock, str, strlen(str), 0);
-            break;
-        case REL_Y :
-            sprintf(str, "REL_Y %d \n", ie->value);
-            send(sock, str, strlen(str), 0);
-            break;
-        case REL_WHEEL :
-            sprintf(str, "REL_WHEEL %d \n", ie->value);
-            send(sock, str, strlen(str), 0);
-            break;
-        case BTN_MOUSE :
-            sprintf(str, "BTN_MOUSE %d \n", ie->value);
-            send(sock, str, strlen(str), 0);
-            break;
-    }
-}
-
 void* send_mouse_events(void* context) {
     socketContext *sock = (socketContext*) context;
     JavaVM *javaVM = sock->javaVM;
@@ -125,7 +103,24 @@ void* send_mouse_events(void* context) {
     struct input_event ie;
 
     while (read(fd, &ie, sizeof(struct input_event))) {
-        send_data(&ie, sock->client_fd);
+        switch (ie.code) {
+            case REL_X :
+                sprintf(str, "REL_X %d \n", ie.value);
+                send(sock->client_fd, str, strlen(str), 0);
+                break;
+            case REL_Y :
+                sprintf(str, "REL_Y %d \n", ie.value);
+                send(sock->client_fd, str, strlen(str), 0);
+                break;
+            case REL_WHEEL :
+                sprintf(str, "REL_WHEEL %d \n", ie.value);
+                send(sock->client_fd, str, strlen(str), 0);
+                break;
+            case BTN_MOUSE :
+                sprintf(str, "BTN_MOUSE %d \n", ie.value);
+                send(sock->client_fd, str, strlen(str), 0);
+                break;
+        }
     }
     close(fd);
     close(sock->client_fd);
@@ -133,19 +128,13 @@ void* send_mouse_events(void* context) {
     return context;
 }
 
-void kill_child_process(int signal){
-    kill(cpid, SIGKILL);
-}
-
 void* send_getevent(void *context) {
     socketContext *sock = (socketContext*) context;
-    pid_t pid;
-    switch (pid = fork()) {
+    switch (fork()) {
         case -1:    /* Error. */
             exit(EXIT_FAILURE);  /* exit if fork() fails */
         case  0: {    /* In the child process: */
-            cpid = pid; /* save child pid for killing process later */
-            signal(SIGINT, kill_child_process);
+            child_pid = getpid(); /* save child pid for killing process later */
             dup2(sock->client_fd, STDOUT_FILENO);  /* duplicate socket on stdout */
             dup2(sock->client_fd, STDERR_FILENO);  /* duplicate socket on stderr too */
             close(sock->client_fd);  /* can close the original after it's duplicated */
@@ -179,7 +168,9 @@ void* init(void* context) {
     }
     create_socket(&s_ctx);
     printf("Waiting for overlay...\n");
-
+    char dev[24] = { 0 };
+    strcpy(dev, device);
+    int mouse_read_fd;
     while(true) {
         pthread_mutex_lock(&pctx->lock);
         int done = pctx->done;
@@ -190,6 +181,12 @@ void* init(void* context) {
         if (done) {
             break;
         }
+        pthread_t threadInfo_;
+        pthread_attr_t threadAttr_;
+
+        pthread_attr_init(&threadAttr_);
+        pthread_attr_setdetachstate(&threadAttr_, PTHREAD_CREATE_DETACHED);
+
         struct sockaddr_in address = s_ctx.address;
         int addrlen = s_ctx.addrlen;
         if ((s_ctx.client_fd
@@ -197,34 +194,39 @@ void* init(void* context) {
                               (socklen_t*)&addrlen)) < 0) {
             printf("mouse_read: connection failed \n");
         }
-        char buffer[12] = { 0 };
 
-        read(s_ctx.client_fd, buffer, 12);
+        char buffer[24] = { 0 };
+        read(s_ctx.client_fd, buffer, 24);
         printf("msg: %s", buffer);
+
         if (strcmp(buffer, "mouse_read\n") == 0) {
             if ((fd = open(dev, O_RDONLY)) == -1) {
-                printf("opening device failed\n");
-                write(s_ctx.client_fd, "error\n", strlen("error\n"));
+                mouse_read_fd = s_ctx.client_fd;
+                perror("opening device");
+                write(mouse_read_fd, "error\n", strlen("error\n"));
             } else {
-                pthread_t threadInfo_;
-                pthread_attr_t threadAttr_;
-
-                pthread_attr_init(&threadAttr_);
-                pthread_attr_setdetachstate(&threadAttr_, PTHREAD_CREATE_DETACHED);
-
                 pthread_create(&threadInfo_, &threadAttr_, send_mouse_events, &s_ctx);
-                pthread_attr_destroy(&threadAttr_);
             }
         }
         else if (strcmp(buffer, "getevent\n") == 0) {
-            send_getevent(&s_ctx);
+            pthread_create(&threadInfo_, &threadAttr_, send_getevent, &s_ctx);
         }
         else if (strcmp(buffer, "exit\n") == 0) {
             printf("exit signal recieved\n");
-            kill(cpid, SIGKILL);
             close(fd);
+            close(s_ctx.server_fd);
+            kill(child_pid, SIGKILL);
             exit(EXIT_SUCCESS);
         }
+        else if (strcmp(buffer, "change_device\n") == 0) {
+            printf("device change");
+            char new_device[24];
+            read(s_ctx.client_fd, new_device, 24);
+            printf(": %s", new_device);
+            strcpy(dev, new_device);
+            write(mouse_read_fd, "restart\n", strlen("restart\n"));
+        }
+        pthread_attr_destroy(&threadAttr_);
     }
     close(s_ctx.server_fd); // closing the listening socket
     (*javaVM)->DetachCurrentThread(javaVM);
@@ -235,9 +237,9 @@ void* init(void* context) {
 * Interface to Java side to start, caller is from main()
 */
 JNIEXPORT void JNICALL
-    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring device, jint default_port) {
+    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring dev, jint default_port) {
         setlinebuf(stdout);
-        dev = (*env)->GetStringUTFChars(env, device, 0);
+        device = (*env)->GetStringUTFChars(env, dev, 0);
         port = default_port;
         pthread_t threadInfo_;
         pthread_attr_t threadAttr_;
@@ -258,12 +260,12 @@ JNIEXPORT void JNICALL
 
 
 JNIEXPORT void JNICALL
-Java_com_xtr_keymapper_Input_setIoctl(JNIEnv *env, jclass clazz, jboolean y) {
-    if ( fd != 0 ) {
-        ioctl(fd, EVIOCGRAB, y);
-        printf("ioctl successful\n");
+    Java_com_xtr_keymapper_Input_setIoctl(JNIEnv *env, jclass clazz, jboolean y) {
+        if ( fd != 0 ) {
+            ioctl(fd, EVIOCGRAB, y);
+            printf("ioctl successful\n");
+        }
+        else {
+            printf("ioctl failed: fd not initialized\n");
+        }
     }
-    else {
-        printf("ioctl failed: fd not initialized\n");
-    }
-}
