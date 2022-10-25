@@ -7,4 +7,5 @@
     <string name="edit_keymap">Edit keymap</string>
     <string name="about_info">About</string>
     <string name="select_input_device">Select Input device</string>
+    <string name="current_profile">current profile: </string>
 </resources>

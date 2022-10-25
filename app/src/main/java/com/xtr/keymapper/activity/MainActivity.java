@@ -155,8 +155,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        /*Server.killServer().start();
-        pointerOverlay.hideCursor();*/
         super.onDestroy();
     }
 
@@ -196,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
                         ri.activityInfo.loadIcon(pm)));
 
             currentProfile = KeymapConfig.getProfile(MainActivity.this);
-            textView.setText("current profile: " + currentProfile);
+            textView.setText(currentProfile);
         }
 
         @NonNull
@@ -246,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick (View view) {
                 int i = getAdapterPosition();
                 currentProfile = appsDataArrayList.get(i).packageName;
-                textView.setText("current profile: " + currentProfile);
+                textView.setText(currentProfile);
 
                 sharedPrefEditor.putString("profile", currentProfile);
                 sharedPrefEditor.apply();
