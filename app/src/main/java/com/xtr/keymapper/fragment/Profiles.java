@@ -34,14 +34,8 @@ import java.util.List;
 public class Profiles extends Fragment {
     private TextView textView;
     public String currentProfile;
-    private final Context context;
+    private Context context;
     public static final String defaultProfile = "com.xtr.keymapper.default";
-
-
-    public Profiles(Context context) {
-        this.context = context;
-    }
-
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -51,6 +45,7 @@ public class Profiles extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        this.context = getContext();
         View view = inflater.inflate(R.layout.fragment_profiles, container, false);
         LinearLayout profilesView = view.findViewById(R.id.profiles_view);
         ImageButton profilesButton = profilesView.findViewById(R.id.profiles);

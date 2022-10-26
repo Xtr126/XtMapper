@@ -10,15 +10,15 @@
 
 
     <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/profilesView"
+        android:name="com.xtr.keymapper.fragment.Profiles"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:translationZ="1dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:name="com.xtr.keymapper.fragment.Profiles"
-        tools:layout="@layout/fragment_profiles">
-    </androidx.fragment.app.FragmentContainerView>
+        tools:layout="@layout/fragment_profiles" />
 
     <TextView
         android:id="@+id/cmdview"
