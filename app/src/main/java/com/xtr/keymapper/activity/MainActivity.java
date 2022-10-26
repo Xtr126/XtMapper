@@ -5,13 +5,13 @@ import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Button;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.xtr.keymapper.R;
 import com.xtr.keymapper.Server;
 import com.xtr.keymapper.TouchPointer;
+import com.xtr.keymapper.fragment.SettingsFragment;
 
 public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_PORT = 6234;
@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
         startOverlayButton.setOnClickListener(v -> startService());
         keymap.setOnClickListener(v -> startEditor());
         configureButton.setOnClickListener
-                (v -> startActivity(new Intent(this, InputDeviceSelector.class)));
+                (v -> SettingsFragment.newInstance().show(getSupportFragmentManager(), "dialog"));
         infoButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
     }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.slider.Slider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/slider"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:stepSize="1"
+    tools:value="2"
+    android:valueFrom="1"
+    android:valueTo="5"
+    app:haloColor="@color/purple_700"
+    app:thumbColor="@color/purple_500"
+    app:trackColorActive="@color/teal_200"
+    app:trackHeight="10dp" />
