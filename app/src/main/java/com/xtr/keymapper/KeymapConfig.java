@@ -5,7 +5,7 @@ import static android.content.Context.MODE_PRIVATE;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.xtr.keymapper.activity.MainActivity;
+import com.xtr.keymapper.fragment.Profiles;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -30,7 +30,7 @@ public class KeymapConfig {
 
     public static String getProfile(Context context) {
         SharedPreferences sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
-        return sharedPref.getString("profile", MainActivity.defaultProfile);
+        return sharedPref.getString("profile", Profiles.defaultProfile);
     }
 
     public String getConfigPath(){
