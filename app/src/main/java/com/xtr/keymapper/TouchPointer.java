@@ -123,9 +123,9 @@ public class TouchPointer {
         keysY = keymapConfig.getY();
 
         if (keymapConfig.dpad1 != null)
-            dpad1Handler = new Dpad1Handler(keymapConfig.dpad1);
+            dpad1Handler = new Dpad1Handler(context, keymapConfig.dpad1);
         if (keymapConfig.dpad2 != null)
-            dpad2Handler = new Dpad2Handler(keymapConfig.dpad2);
+            dpad2Handler = new Dpad2Handler(context, keymapConfig.dpad2);
     }
 
     public void updateCmdView3(String s){

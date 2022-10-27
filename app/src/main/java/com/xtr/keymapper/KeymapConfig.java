@@ -22,19 +22,48 @@ public class KeymapConfig {
     public String[] dpad1 = null;
     public String[] dpad2 = null;
     private final String profile;
+    private final SharedPreferences sharedPref;
+    private final SharedPreferences.Editor sharedPrefEditor;
 
     public KeymapConfig(Context context) {
         this.context = context;
-        this.profile = getProfile(context);
+        this.profile = getProfile();
+        sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
+        sharedPrefEditor = sharedPref.edit();
     }
 
-    public static String getProfile(Context context) {
-        SharedPreferences sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
+    public static String getSettings(Context context){
+        KeymapConfig keymapConfig = new KeymapConfig(context);
+        String device = keymapConfig.getDevice();
+        float sensitivity = keymapConfig.getMouseSensitivity();
+        return device + " " + sensitivity;
+    }
+
+    public String getProfile(){
         return sharedPref.getString("profile", Profiles.defaultProfile);
     }
 
-    public String getConfigPath(){
-        return context.getFilesDir() + config_name + profile;
+    public String getDevice(){
+        return sharedPref.getString("device", null);
+    }
+
+    public Float getMouseSensitivity(){
+        return sharedPref.getFloat("mouse_sensitivity_multiplier", 1);
+    }
+
+    public void setProfile(String newProfile){
+        sharedPrefEditor.putString("profile", newProfile);
+        sharedPrefEditor.apply();
+    }
+
+    public void setDevice(String newDevice){
+        sharedPrefEditor.putString("device", newDevice);
+        sharedPrefEditor.apply();
+    }
+
+    public void setMouseSensitivity(Float sensitivity){
+        sharedPrefEditor.putFloat("mouse_sensitivity_multiplier", sensitivity);
+        sharedPrefEditor.apply();
     }
 
     public String[] getKeys() {
@@ -47,6 +76,10 @@ public class KeymapConfig {
 
     public Float[] getY() {
         return keyY;
+    }
+
+    public String getConfigPath(){
+        return context.getFilesDir() + config_name + profile;
     }
 
     public void writeConfig(StringBuilder linesToWrite) throws IOException {

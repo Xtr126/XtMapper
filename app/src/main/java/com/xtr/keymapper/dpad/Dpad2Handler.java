@@ -1,5 +1,7 @@
 package com.xtr.keymapper.dpad;
 
+import android.content.Context;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -24,7 +26,7 @@ public class Dpad2Handler {
     private boolean KEY_RIGHT;
     private DataOutputStream xOut;
 
-    public Dpad2Handler(String[] data){
+    public Dpad2Handler(Context context, String[] data){
         float radius = Float.parseFloat(data[0]);
         float xOfCenter = Float.parseFloat(data[1]);
         float yOfCenter = Float.parseFloat(data[2]);

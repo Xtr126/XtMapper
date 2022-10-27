@@ -1,10 +1,7 @@
 package com.xtr.keymapper.fragment;
 
-import static android.content.Context.MODE_PRIVATE;
-
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.ColorStateList;
@@ -89,11 +86,7 @@ public class Profiles extends Fragment {
                 ColorStateList.valueOf(context.getColor(R.color.purple_700));
 
         private View selectedView;
-
-        private final SharedPreferences sharedPref =
-                context.getSharedPreferences("settings", MODE_PRIVATE);
-        SharedPreferences.Editor sharedPrefEditor = sharedPref.edit();
-
+        private final KeymapConfig keymapConfig;
 
         public RecyclerViewAdapter() {
             PackageManager pm = context.getPackageManager();
@@ -113,7 +106,8 @@ public class Profiles extends Fragment {
                         ri.loadLabel(pm),
                         ri.activityInfo.loadIcon(pm)));
 
-            currentProfile = KeymapConfig.getProfile(context);
+            keymapConfig = new KeymapConfig(context);
+            currentProfile = keymapConfig.getProfile();
             textView.setText(currentProfile);
         }
 
@@ -166,8 +160,7 @@ public class Profiles extends Fragment {
                 currentProfile = appsDataArrayList.get(i).packageName;
                 textView.setText(currentProfile);
 
-                sharedPrefEditor.putString("profile", currentProfile);
-                sharedPrefEditor.apply();
+                keymapConfig.setProfile(currentProfile);
 
                 selectedView.setBackgroundTintList(defaultTint);
                 view.setBackgroundTintList(selectedTint);

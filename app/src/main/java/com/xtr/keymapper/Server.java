@@ -60,13 +60,6 @@ public class Server {
         });
     }
 
-    public String getSettings(){
-        SharedPreferences sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
-        String device = sharedPref.getString("device", null);
-        int sensitivity = sharedPref.getInt("mouse_sensitivity_multiplier", 1);
-        return device + " " + sensitivity;
-    }
-
     private void writeScript(String packageName, ApplicationInfo ai, String apk) throws IOException, InterruptedException {
         FileWriter linesToWrite = new FileWriter(script_name);
         
@@ -77,7 +70,8 @@ public class Server {
                 .append("\" CLASSPATH=\"").append(apk) 
                 .append("\" /system/bin/app_process /system/bin ")
                 .append(packageName).append(".Input ")
-                .append(getSettings()).append("\n"); // input device node as argument
+                .append(KeymapConfig.getSettings(context))
+                .append("\n");
 
         linesToWrite.flush();
         linesToWrite.close();

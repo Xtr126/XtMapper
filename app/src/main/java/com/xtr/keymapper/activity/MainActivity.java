@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
         startOverlayButton.setOnClickListener(v -> startService());
         keymap.setOnClickListener(v -> startEditor());
         configureButton.setOnClickListener
-                (v -> SettingsFragment.newInstance().show(getSupportFragmentManager(), "dialog"));
+                (v -> new SettingsFragment(this).show(getSupportFragmentManager(), "dialog"));
         infoButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
     }
