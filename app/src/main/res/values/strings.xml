@@ -7,4 +7,7 @@
     <string name="edit_keymap">Edit keymap</string>
     <string name="about_info">About</string>
     <string name="current_profile">current profile: </string>
+    <string name="mouse_sensitivity">Mouse Sensitivity</string>
+    <string name="dpad_radius">Dpad Radius</string>
+    <string name="mouse_input_device">Mouse Input Device</string>
 </resources>

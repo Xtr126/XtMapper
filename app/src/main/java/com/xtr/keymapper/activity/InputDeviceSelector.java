@@ -12,6 +12,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.xtr.keymapper.KeymapConfig;
 import com.xtr.keymapper.R;
 import com.xtr.keymapper.Server;
 
@@ -37,7 +38,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     private BufferedReader getevent;
     private PrintWriter pOut;
 
-    private SharedPreferences sharedPref;
+    private KeymapConfig keymapConfig;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,7 +57,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         // attaching data adapter to spinner
         spinner.setAdapter(dataAdapter);
 
-        sharedPref = getSharedPreferences("settings", MODE_PRIVATE);
+        keymapConfig = new KeymapConfig(this);
 
         new Thread(this::getDevices).start();
 
@@ -82,9 +83,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         String item = parent.getItemAtPosition(position).toString();
         textView2.setText(item);
         Server.changeDevice(item).start();
-        SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putString("device", item);
-        editor.apply();
+        keymapConfig.setDevice(item);
         // Showing selected spinner item
         Toast.makeText(parent.getContext(), item, Toast.LENGTH_LONG).show();
     }

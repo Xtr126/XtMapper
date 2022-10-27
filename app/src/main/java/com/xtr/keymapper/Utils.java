@@ -15,6 +15,7 @@ public class Utils {
         return alphabet.indexOf(s.substring(4));
     }
 
+    @Deprecated
     public static BufferedReader geteventStream(Context context) throws IOException {
         Process sh = getRootAccess();
         DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
