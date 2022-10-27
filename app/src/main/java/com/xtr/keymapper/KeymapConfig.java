@@ -21,13 +21,11 @@ public class KeymapConfig {
     private final Float[] keyY = new Float[38];
     public String[] dpad1 = null;
     public String[] dpad2 = null;
-    private final String profile;
     private final SharedPreferences sharedPref;
     private final SharedPreferences.Editor sharedPrefEditor;
 
     public KeymapConfig(Context context) {
         this.context = context;
-        this.profile = getProfile();
         sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
         sharedPrefEditor = sharedPref.edit();
     }
@@ -79,7 +77,7 @@ public class KeymapConfig {
     }
 
     public String getConfigPath(){
-        return context.getFilesDir() + config_name + profile;
+        return context.getFilesDir() + config_name + getProfile();
     }
 
     public void writeConfig(StringBuilder linesToWrite) throws IOException {
