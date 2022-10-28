@@ -42,6 +42,7 @@ mouseContext g_ctx;
 int fd;
 int port;
 const char* device;
+int s;
 pid_t child_pid;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
@@ -105,11 +106,11 @@ void* send_mouse_events(void* context) {
     while (read(fd, &ie, sizeof(struct input_event))) {
         switch (ie.code) {
             case REL_X :
-                sprintf(str, "REL_X %d \n", ie.value);
+                sprintf(str, "REL_X %d \n", ie.value * s);
                 send(sock->client_fd, str, strlen(str), 0);
                 break;
             case REL_Y :
-                sprintf(str, "REL_Y %d \n", ie.value);
+                sprintf(str, "REL_Y %d \n", ie.value * s);
                 send(sock->client_fd, str, strlen(str), 0);
                 break;
             case REL_WHEEL :
@@ -237,9 +238,15 @@ void* init(void* context) {
 * Interface to Java side to start, caller is from main()
 */
 JNIEXPORT void JNICALL
-    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring dev, jint default_port) {
+    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring dev, jstring mouse_sensitivity, jint default_port) {
         setlinebuf(stdout);
+
         device = (*env)->GetStringUTFChars(env, dev, 0);
+        s = atoi((*env)->GetStringUTFChars(env, mouse_sensitivity, 0));
+
+        (*env)->ReleaseStringUTFChars(env, dev ,0);
+        (*env)->ReleaseStringUTFChars(env, mouse_sensitivity ,0);
+
         port = default_port;
         pthread_t threadInfo_;
         pthread_attr_t threadAttr_;

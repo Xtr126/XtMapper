@@ -164,12 +164,12 @@ public class Input {
             e.printStackTrace(System.out);
         }
     }
-    public static native void startMouse(String arg0, int arg1);
+    public static native void startMouse(String dev, String s, int port);
 
     public static native void setIoctl(boolean y);
 
     public static void main(String[] args) {
-        startMouse(args[0], MainActivity.DEFAULT_PORT_2); // Call native code
+        startMouse(args[0], args[1], MainActivity.DEFAULT_PORT_2); // Call native code
         ServerSocket serverSocket = null;
 
         try {
