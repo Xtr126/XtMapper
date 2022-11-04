@@ -18,8 +18,8 @@ import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.nambimobile.widgets.efab.FabOption;
 import com.xtr.keymapper.KeymapConfig;
 import com.xtr.keymapper.R;
-import com.xtr.keymapper.layout.FloatingActionKey;
-import com.xtr.keymapper.layout.MovableFrameLayout;
+import com.xtr.keymapper.floatingkeys.MovableFloatingActionKey;
+import com.xtr.keymapper.floatingkeys.MovableFrameLayout;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,8 +34,8 @@ public class EditorUI extends AppCompatActivity {
     private LayoutInflater layoutInflater;
     private ExpandableFabLayout mainView;
 
-    private FloatingActionKey KeyInFocus;
-    private List<FloatingActionKey> KeyX;
+    private MovableFloatingActionKey KeyInFocus;
+    private List<MovableFloatingActionKey> KeyX;
     private MovableFrameLayout dpad1;
     private MovableFrameLayout dpad2;
     private final Float DEFAULT_X = 200f;
@@ -125,11 +125,6 @@ public class EditorUI extends AppCompatActivity {
     private void saveKeymap() throws IOException {
         StringBuilder linesToWrite = new StringBuilder();
 
-        for (int i = 0; i < KeyX.size(); i++) {
-            if(KeyX.get(i).key != null) {
-                linesToWrite.append(KeyX.get(i).getData());
-            }
-        }
         if (dpad1 != null) {
             float radius = dpad1.getPivotX();
             Float xOfCenter = dpad1.getX() + radius;
@@ -154,6 +149,19 @@ public class EditorUI extends AppCompatActivity {
                         .append(radius).append(" ")
                         .append(xOfCenter).append(" ")
                         .append(yOfCenter).append("\n");
+
+            for (int i = 0; i < KeyX.size(); i++) {
+                String key = KeyX.get(i).getText();
+                if(key.matches("[WASD]")) {
+                    KeyX.get(i).key = null; // If WASD keys already added, ignore them for dpad
+                }
+            }
+        }
+
+        for (int i = 0; i < KeyX.size(); i++) {
+            if(KeyX.get(i).key != null) {
+                linesToWrite.append(KeyX.get(i).getData());
+            }
         }
 
         KeymapConfig keymapConfig = new KeymapConfig(this);
@@ -222,7 +230,7 @@ public class EditorUI extends AppCompatActivity {
     }
 
     private void addKey(String key, Float x ,Float y) {
-        KeyX.add(i,new FloatingActionKey(this));
+        KeyX.add(i,new MovableFloatingActionKey(this));
 
         mainView.addView(KeyX.get(i));
 
@@ -239,7 +247,7 @@ public class EditorUI extends AppCompatActivity {
     }
 
     private void setKeyInFocus(View view){
-       KeyInFocus = ((FloatingActionKey)view);
+       KeyInFocus = ((MovableFloatingActionKey)view);
     }
 
     @Override

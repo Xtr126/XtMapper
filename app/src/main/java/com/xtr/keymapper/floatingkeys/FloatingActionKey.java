@@ -1,22 +1,24 @@
 package com.xtr.keymapper.floatingkeys;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.util.AttributeSet;
-import android.view.Gravity;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.FrameLayout;
-import android.widget.ImageView;
 
-public class FloatingActionKey extends FrameLayout implements View.OnTouchListener {
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.shape.RelativeCornerSize;
+import com.google.android.material.shape.RoundedCornerTreatment;
+import com.google.android.material.shape.ShapeAppearanceModel;
+import com.xtr.keymapper.R;
 
-    public MovableFloatingActionButton key;
+import java.util.Random;
 
-    private final static float CLICK_DRAG_TOLERANCE = 10; // Often, there will be a slight, unintentional, drag when the user taps the FAB, so we need to account for this.
+public class FloatingActionKey extends FloatingActionButton  {
 
-    private float downRawX, downRawY;
-    private float dX, dY;
+    public String key;
 
     public FloatingActionKey(Context context) {
         super(context);
@@ -34,101 +36,42 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
     }
 
     private void init() {
-        setOnTouchListener(this);
-        setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        key = new MovableFloatingActionButton(getContext());
-        key.setClickable(false);
-        key.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        key.setElevation(1);
-
-        MovableFloatingActionButton closeButton = new MovableFloatingActionButton(getContext());
-        closeButton.setImageResource(android.R.drawable.ic_delete);
-        closeButton.setElevation(2);
-        closeButton.setOnClickListener(v -> {
-            removeAllViews();
-            key = null;
-        });
-        closeButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-
-        LayoutParams layoutParams = new LayoutParams(20, 20);
-        layoutParams.gravity = Gravity.BOTTOM | Gravity.END;
-        closeButton.setLayoutParams(layoutParams);
-
-        addView(key);
-        addView(closeButton);
+        setShapeAppearanceModel(new ShapeAppearanceModel()
+                .toBuilder()
+                .setAllCorners(new RoundedCornerTreatment()).setAllCornerSizes(new RelativeCornerSize(0.5f))
+                .build());
     }
 
-    public String getData(){
-        return "KEY_" + key.key.toUpperCase() + " " + getX() + " " + getY() + "\n";
+    public void setButtonActive(){
+        Random rnd = new Random();
+        int color = Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256));
+        setBackgroundTintList(ColorStateList.valueOf(color));
+        setImageTintList(ColorStateList.valueOf(getContext().getColor(R.color.colorAccent)));
     }
 
-    public void setText(String s) {
-        key.setText(s);
+    public void setButtonInactive(){
+        setBackgroundTintList(ColorStateList.valueOf(getContext().getColor(R.color.grey)));
+        setImageTintList(ColorStateList.valueOf(getContext().getColor(R.color.white2)));
     }
 
-    @Override
-    public boolean onTouch(View view, MotionEvent motionEvent){
-        key.setButtonActive();
 
-        ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams)view.getLayoutParams();
+    public void setText(String text) {
+        this.key = text;
+        setButtonActive();
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setTextSize(30);
+        paint.setFakeBoldText(true);
+        paint.setColor(Color.WHITE);
+        paint.setTextAlign(Paint.Align.LEFT);
+        float baseline = -paint.ascent(); // ascent() is negative
+        int width = (int) (paint.measureText(text) + 0.0f); // round
+        int height = (int) (baseline + paint.descent() + 0.0f);
+        Bitmap image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
-        int action = motionEvent.getAction();
-        if (action == MotionEvent.ACTION_DOWN) {
-
-            key.setButtonActive();
-            downRawX = motionEvent.getRawX();
-            downRawY = motionEvent.getRawY();
-            dX = view.getX() - downRawX;
-            dY = view.getY() - downRawY;
-            return true; // Consumed
-        }
-        else if (action == MotionEvent.ACTION_MOVE) {
-
-            key.setButtonActive();
-            int viewWidth = view.getWidth();
-            int viewHeight = view.getHeight();
-
-            View viewParent = (View)view.getParent();
-            int parentWidth = viewParent.getWidth();
-            int parentHeight = viewParent.getHeight();
-
-            float newX = motionEvent.getRawX() + dX;
-            newX = Math.max(layoutParams.leftMargin, newX); // Don't allow the FAB past the left hand side of the parent
-            newX = Math.min(parentWidth - viewWidth - layoutParams.rightMargin, newX); // Don't allow the FAB past the right hand side of the parent
-
-            float newY = motionEvent.getRawY() + dY;
-            newY = Math.max(layoutParams.topMargin, newY); // Don't allow the FAB past the top of the parent
-            newY = Math.min(parentHeight - viewHeight - layoutParams.bottomMargin, newY); // Don't allow the FAB past the bottom of the parent
-
-            view.animate()
-                    .x(newX)
-                    .y(newY)
-                    .setDuration(0)
-                    .start();
-            return true; // Consumed
-
-        }
-        else if (action == MotionEvent.ACTION_UP) {
-
-            key.setButtonInactive();
-            float upRawX = motionEvent.getRawX();
-            float upRawY = motionEvent.getRawY();
-
-            float upDX = upRawX - downRawX;
-            float upDY = upRawY - downRawY;
-
-            if (Math.abs(upDX) < CLICK_DRAG_TOLERANCE && Math.abs(upDY) < CLICK_DRAG_TOLERANCE) { // A click
-                return performClick();
-            }
-            else { // A drag
-                return true; // Consumed
-            }
-
-        }
-        else {
-            return super.onTouchEvent(motionEvent);
-        }
+        Canvas canvas = new Canvas(image);
+        canvas.drawText(text, 0, baseline, paint);
+        setImageBitmap(image);
+        setScaleType(ScaleType.CENTER);
+        //setMaxImageSize(30);
     }
-
 }
