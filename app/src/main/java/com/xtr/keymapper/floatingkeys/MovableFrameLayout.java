@@ -1,91 +1,56 @@
-package com.xtr.keymapper.layout;
+package com.xtr.keymapper.floatingkeys;
 
 import android.content.Context;
 import android.util.AttributeSet;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 
-public class FloatingActionKey extends FrameLayout implements View.OnTouchListener {
-
-    public MovableFloatingActionButton key;
+public class MovableFrameLayout extends FrameLayout implements View.OnTouchListener {
 
     private final static float CLICK_DRAG_TOLERANCE = 10; // Often, there will be a slight, unintentional, drag when the user taps the FAB, so we need to account for this.
 
     private float downRawX, downRawY;
     private float dX, dY;
 
-    public FloatingActionKey(Context context) {
+    public MovableFrameLayout(Context context) {
         super(context);
         init();
     }
 
-    public FloatingActionKey(Context context, AttributeSet attrs) {
+    public MovableFrameLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public FloatingActionKey(Context context, AttributeSet attrs, int defStyleAttr) {
+    public MovableFrameLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }
 
     private void init() {
         setOnTouchListener(this);
-        setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        key = new MovableFloatingActionButton(getContext());
-        key.setClickable(false);
-        key.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        key.setElevation(1);
-
-        MovableFloatingActionButton closeButton = new MovableFloatingActionButton(getContext());
-        closeButton.setImageResource(android.R.drawable.ic_delete);
-        closeButton.setElevation(2);
-        closeButton.setOnClickListener(v -> {
-            removeAllViews();
-            key = null;
-        });
-        closeButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-
-        LayoutParams layoutParams = new LayoutParams(20, 20);
-        layoutParams.gravity = Gravity.BOTTOM | Gravity.END;
-        closeButton.setLayoutParams(layoutParams);
-
-        addView(key);
-        addView(closeButton);
-    }
-
-    public String getData(){
-        return "KEY_" + key.key.toUpperCase() + " " + getX() + " " + getY() + "\n";
-    }
-
-    public void setText(String s) {
-        key.setText(s);
     }
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent){
-        key.setButtonActive();
 
         ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams)view.getLayoutParams();
 
         int action = motionEvent.getAction();
         if (action == MotionEvent.ACTION_DOWN) {
 
-            key.setButtonActive();
             downRawX = motionEvent.getRawX();
             downRawY = motionEvent.getRawY();
             dX = view.getX() - downRawX;
             dY = view.getY() - downRawY;
+
             return true; // Consumed
+
         }
         else if (action == MotionEvent.ACTION_MOVE) {
 
-            key.setButtonActive();
             int viewWidth = view.getWidth();
             int viewHeight = view.getHeight();
 
@@ -106,12 +71,12 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
                     .y(newY)
                     .setDuration(0)
                     .start();
+
             return true; // Consumed
 
         }
         else if (action == MotionEvent.ACTION_UP) {
 
-            key.setButtonInactive();
             float upRawX = motionEvent.getRawX();
             float upRawY = motionEvent.getRawY();
 
@@ -129,6 +94,7 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
         else {
             return super.onTouchEvent(motionEvent);
         }
+
     }
 
 }

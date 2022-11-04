@@ -1,4 +1,4 @@
-package com.xtr.keymapper.layout;
+package com.xtr.keymapper.floatingkeys;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
