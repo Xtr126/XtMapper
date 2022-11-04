@@ -42,11 +42,7 @@ public class KeymapConfig {
     }
 
     public String getDevice(){
-<<<<<<< HEAD
-        return sharedPref.getString("device", null);
-=======
         return sharedPref.getString("device", "null");
->>>>>>> origin/dev
     }
 
     public Float getMouseSensitivity(){
