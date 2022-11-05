@@ -20,8 +20,7 @@ import android.widget.TextView;
 
 import com.xtr.keymapper.activity.InputDeviceSelector;
 import com.xtr.keymapper.activity.MainActivity;
-import com.xtr.keymapper.dpad.Dpad1Handler;
-import com.xtr.keymapper.dpad.Dpad2Handler;
+import com.xtr.keymapper.dpad.DpadHandler;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -46,8 +45,8 @@ public class TouchPointer {
     private StringBuilder c3;
     boolean pointer_down = false;
     private int counter = 0;
-    private Dpad1Handler dpad1Handler;
-    private Dpad2Handler dpad2Handler;
+    private DpadHandler dpad1Handler;
+    private DpadHandler dpad2Handler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private Handler connectionHandler;
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
@@ -123,9 +122,9 @@ public class TouchPointer {
         keysY = keymapConfig.getY();
 
         if (keymapConfig.dpad1 != null)
-            dpad1Handler = new Dpad1Handler(context, keymapConfig.dpad1);
+            dpad1Handler = new DpadHandler(context, keymapConfig.dpad1);
         if (keymapConfig.dpad2 != null)
-            dpad2Handler = new Dpad2Handler(context, keymapConfig.dpad2);
+            dpad2Handler = new DpadHandler(context, keymapConfig.dpad2);
     }
 
     public void updateCmdView3(String s){
@@ -208,11 +207,11 @@ public class TouchPointer {
                         if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
                             if (keysX != null && keysX[i] != null) { // null if keymap not set
                                 xOut.writeBytes(keysX[i] + " " + keysY[i] + " " + input_event[3] + " " + i + "\n"); // Send coordinates to remote server to simulate touch
-                            } else if (dpad2Handler != null) {
-                                dpad2Handler.sendEvent(input_event[2], input_event[3]);
+                            } else if (dpad2Handler != null) { // Dpad with WASD keys
+                                dpad2Handler.handleEvent(input_event[2], input_event[3]);
                             }
-                        } else if (dpad1Handler != null) {
-                            dpad1Handler.sendEvent(input_event[2], input_event[3]);
+                        } else if (dpad1Handler != null) { // Dpad with arrow keys
+                            dpad1Handler.handleEvent(input_event[2], input_event[3]);
                         }
                     }
                 }
