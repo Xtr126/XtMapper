@@ -95,7 +95,7 @@ public class Profiles extends Fragment {
 
             List<ResolveInfo> allApps = pm.queryIntentActivities(i, 0);
 
-            Drawable drawable = AppCompatResources.getDrawable(context, R.drawable.ic_launcher_foreground);
+            Drawable drawable = AppCompatResources.getDrawable(context, R.mipmap.ic_launcher_foreground);
             appsDataArrayList.add(
                     new RecyclerData(defaultProfile,
                             "Default",
