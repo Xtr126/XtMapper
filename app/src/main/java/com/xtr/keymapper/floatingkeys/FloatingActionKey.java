@@ -8,6 +8,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 
+import androidx.appcompat.content.res.AppCompatResources;
+
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.shape.RelativeCornerSize;
 import com.google.android.material.shape.RoundedCornerTreatment;
@@ -19,9 +21,13 @@ import java.util.Random;
 public class FloatingActionKey extends FloatingActionButton  {
 
     public String key;
+    private ColorStateList colorInactive;
+    private ColorStateList textColor;
 
     public FloatingActionKey(Context context) {
         super(context);
+        colorInactive = AppCompatResources.getColorStateList(context, R.color.grey);
+        textColor = AppCompatResources.getColorStateList(context, R.color.black);
         init();
     }
 
@@ -46,14 +52,13 @@ public class FloatingActionKey extends FloatingActionButton  {
         Random rnd = new Random();
         int color = Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256));
         setBackgroundTintList(ColorStateList.valueOf(color));
-        setImageTintList(ColorStateList.valueOf(getContext().getColor(R.color.colorAccent)));
+        setImageTintList(textColor);
     }
 
     public void setButtonInactive(){
-        setBackgroundTintList(ColorStateList.valueOf(getContext().getColor(R.color.grey)));
-        setImageTintList(ColorStateList.valueOf(getContext().getColor(R.color.white2)));
+        setBackgroundTintList(colorInactive);
+        setImageTintList(textColor);
     }
-
 
     public void setText(String text) {
         this.key = text;
@@ -61,7 +66,7 @@ public class FloatingActionKey extends FloatingActionButton  {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setTextSize(30);
         paint.setFakeBoldText(true);
-        paint.setColor(Color.WHITE);
+        paint.setColor(Color.BLACK);
         paint.setTextAlign(Paint.Align.LEFT);
         float baseline = -paint.ascent(); // ascent() is negative
         int width = (int) (paint.measureText(text) + 0.0f); // round
@@ -72,6 +77,5 @@ public class FloatingActionKey extends FloatingActionButton  {
         canvas.drawText(text, 0, baseline, paint);
         setImageBitmap(image);
         setScaleType(ScaleType.CENTER);
-        //setMaxImageSize(30);
     }
 }
