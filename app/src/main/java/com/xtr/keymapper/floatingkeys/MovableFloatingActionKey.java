@@ -1,4 +1,4 @@
-package com.xtr.keymapper.layout;
+package com.xtr.keymapper.floatingkeys;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -9,26 +9,26 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
-public class FloatingActionKey extends FrameLayout implements View.OnTouchListener {
+public class MovableFloatingActionKey extends FrameLayout implements View.OnTouchListener {
 
-    public MovableFloatingActionButton key;
+    public FloatingActionKey key;
 
     private final static float CLICK_DRAG_TOLERANCE = 10; // Often, there will be a slight, unintentional, drag when the user taps the FAB, so we need to account for this.
 
     private float downRawX, downRawY;
     private float dX, dY;
 
-    public FloatingActionKey(Context context) {
+    public MovableFloatingActionKey(Context context) {
         super(context);
         init();
     }
 
-    public FloatingActionKey(Context context, AttributeSet attrs) {
+    public MovableFloatingActionKey(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public FloatingActionKey(Context context, AttributeSet attrs, int defStyleAttr) {
+    public MovableFloatingActionKey(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }
@@ -37,12 +37,12 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
         setOnTouchListener(this);
         setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        key = new MovableFloatingActionButton(getContext());
+        key = new FloatingActionKey(getContext());
         key.setClickable(false);
         key.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         key.setElevation(1);
 
-        MovableFloatingActionButton closeButton = new MovableFloatingActionButton(getContext());
+        FloatingActionKey closeButton = new FloatingActionKey(getContext());
         closeButton.setImageResource(android.R.drawable.ic_delete);
         closeButton.setElevation(2);
         closeButton.setOnClickListener(v -> {
@@ -60,11 +60,15 @@ public class FloatingActionKey extends FrameLayout implements View.OnTouchListen
     }
 
     public String getData(){
-        return "KEY_" + key.key.toUpperCase() + " " + getX() + " " + getY() + "\n";
+        return "KEY_" + getText() + " " + getX() + " " + getY() + "\n";
     }
 
     public void setText(String s) {
         key.setText(s);
+    }
+
+    public String getText(){
+        return key.key.toUpperCase();
     }
 
     @Override

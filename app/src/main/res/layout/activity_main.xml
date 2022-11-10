@@ -78,7 +78,7 @@
             app:layout_constraintRight_toRightOf="parent">
 
             <Button
-                android:id="@+id/config_pointer"
+                android:id="@+id/config_button"
                 android:layout_width="match_parent"
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
@@ -87,7 +87,7 @@
                 tools:ignore="ContentDescription" />
 
             <Button
-                android:id="@+id/startPointer"
+                android:id="@+id/start_pointer"
                 android:layout_width="match_parent"
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
@@ -121,7 +121,7 @@
                 app:icon="@drawable/ic_create_white_24dp" />
 
             <Button
-                android:id="@+id/startServerM"
+                android:id="@+id/start_in_terminal"
                 android:layout_width="match_parent"
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
@@ -129,7 +129,7 @@
                 app:icon="@drawable/terminal" />
 
             <Button
-                android:id="@+id/startServer"
+                android:id="@+id/start_server"
                 android:layout_width="match_parent"
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"

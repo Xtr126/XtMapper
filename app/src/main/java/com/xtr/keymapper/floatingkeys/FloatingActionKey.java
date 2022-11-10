@@ -1,4 +1,4 @@
-package com.xtr.keymapper.layout;
+package com.xtr.keymapper.floatingkeys;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -16,21 +16,21 @@ import com.xtr.keymapper.R;
 
 import java.util.Random;
 
-public class MovableFloatingActionButton extends FloatingActionButton  {
+public class FloatingActionKey extends FloatingActionButton  {
 
     public String key;
 
-    public MovableFloatingActionButton(Context context) {
+    public FloatingActionKey(Context context) {
         super(context);
         init();
     }
 
-    public MovableFloatingActionButton(Context context, AttributeSet attrs) {
+    public FloatingActionKey(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public MovableFloatingActionButton(Context context, AttributeSet attrs, int defStyleAttr) {
+    public FloatingActionKey(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }

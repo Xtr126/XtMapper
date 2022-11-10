@@ -82,8 +82,7 @@ public class KeymapConfig {
 
     public void writeConfig(StringBuilder linesToWrite) throws IOException {
         FileWriter fileWriter = new FileWriter(getConfigPath());
-        fileWriter.write(linesToWrite.toString());
-        fileWriter.flush();
+        fileWriter.append(linesToWrite);
         fileWriter.close();
     }
 

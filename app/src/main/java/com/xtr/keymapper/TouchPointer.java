@@ -20,8 +20,8 @@ import android.widget.TextView;
 
 import com.xtr.keymapper.activity.InputDeviceSelector;
 import com.xtr.keymapper.activity.MainActivity;
-import com.xtr.keymapper.dpad.Dpad1Handler;
-import com.xtr.keymapper.dpad.Dpad2Handler;
+import com.xtr.keymapper.databinding.ActivityMainBinding;
+import com.xtr.keymapper.dpad.DpadHandler;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -37,17 +37,15 @@ public class TouchPointer {
     private final View cursorView;
     private final WindowManager.LayoutParams mParams;
     private final WindowManager mWindowManager;
-    int x1 = 100;
-    int y1 = 100;
-    private Float[] keysX;
-    private Float[] keysY;
+    int x1 = 100, y1 = 100;
+    private Float[] keysX, keysY;
     public final TextView cmdView3;
-    final Button startButton;
+    private final Button startButton;
     private StringBuilder c3;
+    private final Server server;
     boolean pointer_down = false;
     private int counter = 0;
-    private Dpad1Handler dpad1Handler;
-    private Dpad2Handler dpad2Handler;
+    private DpadHandler dpad1Handler, dpad2Handler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private Handler connectionHandler;
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
@@ -57,8 +55,10 @@ public class TouchPointer {
 
     public TouchPointer(Context context){
         this.context= context;
-        cmdView3 = ((MainActivity)context).findViewById(R.id.cmdview3);
-        startButton  = ((MainActivity)context).findViewById(R.id.startPointer);
+        ActivityMainBinding binding = ((MainActivity)context).binding;
+        server = ((MainActivity)context).server;
+        cmdView3 = binding.cmdview3;
+        startButton  = binding.startPointer;
         // set the layout parameters of the cursor
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
@@ -94,7 +94,7 @@ public class TouchPointer {
                handlerThread = new HandlerThread("connect");
                handlerThread.start();
                connectionHandler = new Handler(handlerThread.getLooper());
-               ((MainActivity)context).server.c1 = new StringBuilder();
+               server.c1 = new StringBuilder();
                 try {
                     loadKeymap();
                 } catch (IOException e) {
@@ -110,7 +110,7 @@ public class TouchPointer {
         startButton.setOnClickListener(view -> open());
 
         Server.killServer().start();
-        ((WindowManager)context.getSystemService(WINDOW_SERVICE)).removeView(cursorView);
+        mWindowManager.removeView(cursorView);
         handlerThread.quit();
         cursorView.invalidate();
     }
@@ -123,9 +123,9 @@ public class TouchPointer {
         keysY = keymapConfig.getY();
 
         if (keymapConfig.dpad1 != null)
-            dpad1Handler = new Dpad1Handler(context, keymapConfig.dpad1);
+            dpad1Handler = new DpadHandler(context, keymapConfig.dpad1);
         if (keymapConfig.dpad2 != null)
-            dpad2Handler = new Dpad2Handler(context, keymapConfig.dpad2);
+            dpad2Handler = new DpadHandler(context, keymapConfig.dpad2);
     }
 
     public void updateCmdView3(String s){
@@ -208,11 +208,11 @@ public class TouchPointer {
                         if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
                             if (keysX != null && keysX[i] != null) { // null if keymap not set
                                 xOut.writeBytes(keysX[i] + " " + keysY[i] + " " + input_event[3] + " " + i + "\n"); // Send coordinates to remote server to simulate touch
-                            } else if (dpad2Handler != null) {
-                                dpad2Handler.sendEvent(input_event[2], input_event[3]);
+                            } else if (dpad2Handler != null) { // Dpad with WASD keys
+                                dpad2Handler.handleEvent(input_event[2], input_event[3]);
                             }
-                        } else if (dpad1Handler != null) {
-                            dpad1Handler.sendEvent(input_event[2], input_event[3]);
+                        } else if (dpad1Handler != null) { // Dpad with arrow keys
+                            dpad1Handler.handleEvent(input_event[2], input_event[3]);
                         }
                     }
                 }
