@@ -18,12 +18,13 @@
         android:orientation="horizontal">
 
         <TextView
+            android:id="@+id/header"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/current_profile" />
 
         <TextView
-            android:id="@+id/profileTextView"
+            android:id="@+id/current_profile"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAlignment="center"
@@ -47,7 +48,7 @@
             tools:visibility="visible" />
 
         <ImageButton
-            android:id="@+id/profiles"
+            android:id="@+id/profiles_button"
             android:layout_width="20dp"
             android:layout_height="160dp"
             android:layout_gravity="center"

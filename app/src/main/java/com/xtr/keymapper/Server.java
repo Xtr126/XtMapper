@@ -13,6 +13,7 @@ import android.util.Log;
 import android.widget.TextView;
 
 import com.xtr.keymapper.activity.MainActivity;
+import com.xtr.keymapper.databinding.ActivityMainBinding;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -30,20 +31,15 @@ public class Server {
     public static final int MAX_LINES = 16;
     public static final long REFRESH_INTERVAL = 200;
 
-    public final TextView cmdView;
-    public final TextView cmdView2;
-    public StringBuilder c1;
-    private StringBuilder c2;
-    private int counter1 = 0;
-    private int counter2 = 0;
-
+    public final TextView cmdView, cmdView2;
+    public StringBuilder c1 = new StringBuilder(), c2 = new StringBuilder();
+    private int counter1 = 0, counter2 = 0;
 
     public Server(Context context){
-        this.context=context;
-        cmdView =  ((MainActivity)context).findViewById(R.id.cmdview);
-        cmdView2 = ((MainActivity)context).findViewById(R.id.cmdview2);
-        c1 = new StringBuilder();
-        c2 = new StringBuilder();
+        this.context = context;
+        ActivityMainBinding binding = ((MainActivity)context).binding;
+        cmdView =  binding.cmdview;
+        cmdView2 = binding.cmdview2;
         textViewUpdaterTask();
         script_name = context.getExternalFilesDir(null) + "/xtMapper.sh";
     }

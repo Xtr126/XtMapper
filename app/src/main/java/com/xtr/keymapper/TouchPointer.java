@@ -20,6 +20,7 @@ import android.widget.TextView;
 
 import com.xtr.keymapper.activity.InputDeviceSelector;
 import com.xtr.keymapper.activity.MainActivity;
+import com.xtr.keymapper.databinding.ActivityMainBinding;
 import com.xtr.keymapper.dpad.DpadHandler;
 
 import java.io.BufferedReader;
@@ -36,17 +37,15 @@ public class TouchPointer {
     private final View cursorView;
     private final WindowManager.LayoutParams mParams;
     private final WindowManager mWindowManager;
-    int x1 = 100;
-    int y1 = 100;
-    private Float[] keysX;
-    private Float[] keysY;
+    int x1 = 100, y1 = 100;
+    private Float[] keysX, keysY;
     public final TextView cmdView3;
-    final Button startButton;
+    private final Button startButton;
     private StringBuilder c3;
+    private final Server server;
     boolean pointer_down = false;
     private int counter = 0;
-    private DpadHandler dpad1Handler;
-    private DpadHandler dpad2Handler;
+    private DpadHandler dpad1Handler, dpad2Handler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private Handler connectionHandler;
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
@@ -56,8 +55,10 @@ public class TouchPointer {
 
     public TouchPointer(Context context){
         this.context= context;
-        cmdView3 = ((MainActivity)context).findViewById(R.id.cmdview3);
-        startButton  = ((MainActivity)context).findViewById(R.id.startPointer);
+        ActivityMainBinding binding = ((MainActivity)context).binding;
+        server = ((MainActivity)context).server;
+        cmdView3 = binding.cmdview3;
+        startButton  = binding.startPointer;
         // set the layout parameters of the cursor
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
@@ -93,7 +94,7 @@ public class TouchPointer {
                handlerThread = new HandlerThread("connect");
                handlerThread.start();
                connectionHandler = new Handler(handlerThread.getLooper());
-               ((MainActivity)context).server.c1 = new StringBuilder();
+               server.c1 = new StringBuilder();
                 try {
                     loadKeymap();
                 } catch (IOException e) {
@@ -109,7 +110,7 @@ public class TouchPointer {
         startButton.setOnClickListener(view -> open());
 
         Server.killServer().start();
-        ((WindowManager)context.getSystemService(WINDOW_SERVICE)).removeView(cursorView);
+        mWindowManager.removeView(cursorView);
         handlerThread.quit();
         cursorView.invalidate();
     }
