@@ -1,6 +1,5 @@
 package com.xtr.keymapper.activity;
 
-import android.content.Context;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
 import android.util.Log;
@@ -15,9 +14,10 @@ import android.widget.ImageView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
-import com.nambimobile.widgets.efab.FabOption;
 import com.xtr.keymapper.KeymapConfig;
-import com.xtr.keymapper.R;
+import com.xtr.keymapper.databinding.Dpad1Binding;
+import com.xtr.keymapper.databinding.Dpad2Binding;
+import com.xtr.keymapper.databinding.KeymapEditorBinding;
 import com.xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import com.xtr.keymapper.floatingkeys.MovableFrameLayout;
 
@@ -25,9 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class EditorUI extends AppCompatActivity {
-    private View keymapView;
 
     private WindowManager.LayoutParams mParams;
     private WindowManager mWindowManager;
@@ -35,16 +33,19 @@ public class EditorUI extends AppCompatActivity {
     private ExpandableFabLayout mainView;
 
     private MovableFloatingActionKey KeyInFocus;
-    private List<MovableFloatingActionKey> KeyX;
-    private MovableFrameLayout dpad1;
-    private MovableFrameLayout dpad2;
-    private final Float DEFAULT_X = 200f;
-    private final Float DEFAULT_Y = 200f;
-    int i = 0;
+    private final List<MovableFloatingActionKey> Keys = new ArrayList<>();
+
+    private MovableFrameLayout dpad1, dpad2;
+    private static final Float DEFAULT_X = 200f, DEFAULT_Y = 200f;
+    private int i = 0;
+    private KeymapEditorBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        layoutInflater = getLayoutInflater();
+        mWindowManager = getWindowManager();
 
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
@@ -56,23 +57,21 @@ public class EditorUI extends AppCompatActivity {
                         WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
-        layoutInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        keymapView = layoutInflater.inflate(R.layout.keymap,
-                new ExpandableFabLayout(this), false);
-        mainView = keymapView.findViewById(R.id.MainView);
-        initFab();
         mParams.gravity = Gravity.CENTER;
-        mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        KeyX = new ArrayList<>();
+
+        binding = KeymapEditorBinding.inflate(layoutInflater,
+                new ExpandableFabLayout(this), false);
+        mainView = binding.getRoot();
+        setupButtons();
         open();
     }
 
     public void open() {
         try {
-            if (keymapView.getWindowToken() == null) {
-                if (keymapView.getParent() == null) {
-                    mWindowManager.addView(mainView, mParams);
+            if (mainView.getWindowToken() == null) {
+                if (mainView.getParent() == null) {
                     loadKeymap();
+                    mWindowManager.addView(mainView, mParams);
                 }
             }
         } catch (Exception e) {
@@ -84,10 +83,10 @@ public class EditorUI extends AppCompatActivity {
         try {
             saveKeymap();
             this.finish();
-            ((WindowManager) getSystemService(WINDOW_SERVICE)).removeView(keymapView);
-            keymapView.invalidate();
+            mWindowManager.removeView(mainView);
+            mainView.invalidate();
             // remove all views
-            ((ViewGroup) keymapView.getParent()).removeAllViews();
+            ((ViewGroup) mainView.getParent()).removeAllViews();
             this.finish();
             // the above steps are necessary when you are adding and removing
             // the view simultaneously, it might give some exceptions
@@ -101,12 +100,12 @@ public class EditorUI extends AppCompatActivity {
         KeymapConfig keymapConfig = new KeymapConfig(this);
         keymapConfig.loadConfig();
         String[] keys = keymapConfig.getKeys();
-        Float[] key_x = keymapConfig.getX();
-        Float[] key_y = keymapConfig.getY();
+        Float[] keysX = keymapConfig.getX();
+        Float[] keysY = keymapConfig.getY();
 
         for (int n = 0; n < 36; n++) {
             if (keys[n] != null) {
-                addKey(keys[n], key_x[n], key_y[n]);
+                addKey(keys[n], keysX[n], keysY[n]);
             }
         }
 
@@ -114,11 +113,11 @@ public class EditorUI extends AppCompatActivity {
         String dpad2 = keys[37];
 
         if (dpad1 != null) {
-            addDpad1(key_x[36], key_y[36]);
+            addDpad1(keysX[36], keysY[36]);
         }
 
         if (dpad2 != null) {
-            addDpad2(key_x[37], key_y[37]);
+            addDpad2(keysX[37], keysY[37]);
         }
     }
 
@@ -150,17 +149,17 @@ public class EditorUI extends AppCompatActivity {
                         .append(xOfCenter).append(" ")
                         .append(yOfCenter).append("\n");
 
-            for (int i = 0; i < KeyX.size(); i++) {
-                String key = KeyX.get(i).getText();
+            for (int i = 0; i < Keys.size(); i++) {
+                String key = Keys.get(i).getText();
                 if(key.matches("[WASD]")) {
-                    KeyX.get(i).key = null; // If WASD keys already added, ignore them for dpad
+                    Keys.get(i).key = null; // If WASD keys already added, ignore them for dpad
                 }
             }
         }
 
-        for (int i = 0; i < KeyX.size(); i++) {
-            if(KeyX.get(i).key != null) {
-                linesToWrite.append(KeyX.get(i).getData());
+        for (int i = 0; i < Keys.size(); i++) {
+            if(Keys.get(i).key != null) {
+                linesToWrite.append(Keys.get(i).getData());
             }
         }
 
@@ -168,16 +167,11 @@ public class EditorUI extends AppCompatActivity {
         keymapConfig.writeConfig(linesToWrite);
     }
 
-    public void initFab() {
-        FabOption saveButton = mainView.findViewById(R.id.save_button);
-        FabOption addKey = mainView.findViewById(R.id.add_button);
-        FabOption dPad = mainView.findViewById(R.id.d_pad);
-        FabOption crossHair = mainView.findViewById(R.id.cross_hair);
+    public void setupButtons() {
+        binding.saveButton.setOnClickListener(v -> hideView());
+        binding.addButton.setOnClickListener(v -> addKey("A", DEFAULT_X, DEFAULT_Y));
 
-        saveButton.setOnClickListener(v -> hideView());
-        addKey.setOnClickListener(v -> addKey("A", DEFAULT_X, DEFAULT_Y));
-
-        dPad.setOnClickListener(new View.OnClickListener() {
+        binding.dPad.setOnClickListener(new View.OnClickListener() {
             int x = 0;
             @Override
             public void onClick(View v) {
@@ -191,22 +185,22 @@ public class EditorUI extends AppCompatActivity {
             }
         });
 
-        dPad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        crossHair.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        saveButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        addKey.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        binding.dPad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        binding.crossHair.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        binding.saveButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        binding.addButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
     }
 
     private void addDpad1(Float x, Float y) {
         if (dpad1 == null) {
-        dpad1 = layoutInflater.inflate(R.layout.d_pad_1, mainView, true)
-                .findViewById(R.id.dpad1);
+            Dpad1Binding binding = Dpad1Binding.inflate(layoutInflater, mainView, true);
+            dpad1 = binding.getRoot();
 
-        dpad1.findViewById(R.id.closeButton)
-                .setOnClickListener(v -> {
-                    mainView.removeView(dpad1);
-                    dpad1 = null;
-                });
+            binding.closeButton
+                    .setOnClickListener(v -> {
+                        mainView.removeView(dpad1);
+                        dpad1 = null;
+                    });
         }
         dpad1.animate().x(x).y(y)
                 .setDuration(500)
@@ -215,14 +209,14 @@ public class EditorUI extends AppCompatActivity {
 
     private void addDpad2(Float x, Float y) {
         if (dpad2 == null) {
-        dpad2 = layoutInflater.inflate(R.layout.d_pad_2, mainView, true)
-                .findViewById(R.id.dpad2);
+            Dpad2Binding binding = Dpad2Binding.inflate(layoutInflater, mainView, true);
+            dpad2 = binding.getRoot();
 
-        dpad2.findViewById(R.id.closeButton)
-                .setOnClickListener(v -> {
-                    mainView.removeView(dpad2);
-                    dpad2 = null;
-                });
+            binding.closeButton
+                    .setOnClickListener(v -> {
+                        mainView.removeView(dpad2);
+                        dpad2 = null;
+                    });
         }
         dpad2.animate().x(x).y(y)
                 .setDuration(500)
@@ -230,19 +224,19 @@ public class EditorUI extends AppCompatActivity {
     }
 
     private void addKey(String key, Float x ,Float y) {
-        KeyX.add(i,new MovableFloatingActionKey(this));
+        Keys.add(i,new MovableFloatingActionKey(this));
 
-        mainView.addView(KeyX.get(i));
+        mainView.addView(Keys.get(i));
 
-        KeyX.get(i).setText(key);
+        Keys.get(i).setText(key);
 
-        KeyX.get(i).animate()
+        Keys.get(i).animate()
                 .x(x)
                 .y(y)
                 .setDuration(1000)
                 .start();
 
-        KeyX.get(i).setOnClickListener(this::setKeyInFocus);
+        Keys.get(i).setOnClickListener(this::setKeyInFocus);
         i++;
     }
 
@@ -260,5 +254,11 @@ public class EditorUI extends AppCompatActivity {
             }
         }
         return false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        hideView();
+        super.onDestroy();
     }
 }

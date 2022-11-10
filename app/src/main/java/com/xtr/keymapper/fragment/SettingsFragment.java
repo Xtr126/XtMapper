@@ -18,12 +18,15 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.slider.Slider;
 import com.xtr.keymapper.KeymapConfig;
 import com.xtr.keymapper.R;
+import com.xtr.keymapper.databinding.CursorBinding;
+import com.xtr.keymapper.databinding.FragmentProfilesBinding;
+import com.xtr.keymapper.databinding.FragmentSettingsDialogBinding;
 import com.xtr.keymapper.dpad.DpadConfig;
 
 public class SettingsFragment extends BottomSheetDialogFragment {
     private final DpadConfig dpadConfig;
     private final KeymapConfig keymapConfig;
-    private EditText inputDevice;
+    private FragmentSettingsDialogBinding binding;
 
     public SettingsFragment(Context context) {
         dpadConfig = new DpadConfig(context);
@@ -32,27 +35,22 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
     @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_settings_dialog, container, false);
+        // Inflate the layout for this fragment
+        binding = FragmentSettingsDialogBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        binding.sliderDpad.setValue(dpadConfig.getDpadRadiusMultiplier());
+        binding.sliderMouse.setValue(keymapConfig.getMouseSensitivity());
 
-        final Slider sliderDpad = view.findViewById(R.id.slider_dpad);
-        final Slider sliderMouse = view.findViewById(R.id.slider_mouse);
-
-        sliderDpad.setValue(dpadConfig.getDpadRadiusMultiplier());
-        sliderMouse.setValue(keymapConfig.getMouseSensitivity());
-
-        sliderDpad.addOnChangeListener((slider, value, fromUser) -> dpadConfig.setDpadRadiusMultiplier(value));
-        sliderMouse.addOnChangeListener((slider, value, fromUser) -> keymapConfig.setMouseSensitivity(value));
-
-        inputDevice = view.findViewById(R.id.input_device);
-        inputDevice.setText(keymapConfig.getDevice());
+        binding.sliderDpad.addOnChangeListener((slider, value, fromUser) -> dpadConfig.setDpadRadiusMultiplier(value));
+        binding.sliderMouse.addOnChangeListener((slider, value, fromUser) -> keymapConfig.setMouseSensitivity(value));
+        binding.inputDevice.setText(keymapConfig.getDevice());
     }
-
 
     @NonNull @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -63,7 +61,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
     @Override
     public void onDestroyView() {
-        String[] device = inputDevice.getText().toString().split("\\s+"); // split the string to allow only one string without whitespaces
+        String[] device = binding.inputDevice.getText().toString().split("\\s+"); // split the string to allow only one string without whitespaces
         keymapConfig.setDevice(device[0]);
         super.onDestroyView();
     }

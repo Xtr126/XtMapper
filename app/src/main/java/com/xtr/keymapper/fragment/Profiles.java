@@ -9,6 +9,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -17,67 +18,68 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.xtr.keymapper.KeymapConfig;
 import com.xtr.keymapper.R;
+import com.xtr.keymapper.databinding.FragmentProfilesBinding;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class Profiles extends Fragment {
-    private TextView textView;
+    public static final String defaultProfile = "com.xtr.keymapper.default";
     public String currentProfile;
     private Context context;
-    public static final String defaultProfile = "com.xtr.keymapper.default";
+    private FragmentProfilesBinding binding;
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
+        binding = FragmentProfilesBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         this.context = getContext();
-        View view = inflater.inflate(R.layout.fragment_profiles, container, false);
-        LinearLayout profilesView = view.findViewById(R.id.profiles_view);
-        ImageButton profilesButton = profilesView.findViewById(R.id.profiles);
-
-        textView = view.findViewById(R.id.profileTextView);
-        RecyclerView recyclerView = profilesView.findViewById(R.id.app_grid);
-        RecyclerViewAdapter adapter = new RecyclerViewAdapter();
-
-        recyclerView.setAdapter(adapter);
-        recyclerView.setLayoutManager(new GridLayoutManager(context, 3));
+        super.onViewCreated(view, savedInstanceState);
+        AppsGridAdapter adapter = new AppsGridAdapter();
+        binding.appGrid.setAdapter(adapter);
+        binding.appGrid.setLayoutManager(new GridLayoutManager(context, 3));
 
         Drawable profilesShow = AppCompatResources.getDrawable(context, R.drawable.ic_profiles_1);
         Drawable profilesHide = AppCompatResources.getDrawable(context, R.drawable.ic_profiles_2);
-        profilesButton.setOnClickListener(v -> {
-            switch (recyclerView.getVisibility()) {
+        binding.profilesButton.setOnClickListener(v -> {
+            switch (binding.appGrid.getVisibility()) {
                 case View.VISIBLE:{
-                    textView.setVisibility(View.GONE);
-                    recyclerView.setVisibility(View.GONE);
-                    profilesButton.setForeground(profilesShow);
+                    binding.header.setVisibility(View.GONE);
+                    binding.currentProfile.setVisibility(View.GONE);
+                    binding.appGrid.setVisibility(View.GONE);
+                    binding.profilesButton.setForeground(profilesShow);
                     break;
                 }
                 case View.GONE:
                 case View.INVISIBLE: {
-                    textView.setVisibility(View.VISIBLE);
-                    recyclerView.setVisibility(View.VISIBLE);
-                    profilesButton.setForeground(profilesHide);
+                    binding.header.setVisibility(View.VISIBLE);
+                    binding.currentProfile.setVisibility(View.VISIBLE);
+                    binding.appGrid.setVisibility(View.VISIBLE);
+                    binding.profilesButton.setForeground(profilesHide);
                     break;
                 }
             }
         });
-        // Inflate the layout for this fragment
-        return view;
     }
 
-    public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.RecyclerViewHolder> {
+    @Override
+    public void onDestroyView() {
+        binding = null;
+        super.onDestroyView();
+    }
+
+    public class AppsGridAdapter extends RecyclerView.Adapter<AppsGridAdapter.RecyclerViewHolder> {
 
         private final ArrayList<RecyclerData> appsDataArrayList = new ArrayList<>();
         private ColorStateList defaultTint;
@@ -88,7 +90,7 @@ public class Profiles extends Fragment {
         private View selectedView;
         private final KeymapConfig keymapConfig;
 
-        public RecyclerViewAdapter() {
+        public AppsGridAdapter() {
             PackageManager pm = context.getPackageManager();
             Intent i = new Intent(Intent.ACTION_MAIN, null);
             i.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -108,7 +110,7 @@ public class Profiles extends Fragment {
 
             keymapConfig = new KeymapConfig(context);
             currentProfile = keymapConfig.getProfile();
-            textView.setText(currentProfile);
+            binding.currentProfile.setText(currentProfile);
         }
 
         @NonNull
@@ -158,7 +160,7 @@ public class Profiles extends Fragment {
             public void onClick (View view) {
                 int i = getAdapterPosition();
                 currentProfile = appsDataArrayList.get(i).packageName;
-                textView.setText(currentProfile);
+                binding.currentProfile.setText(currentProfile);
 
                 keymapConfig.setProfile(currentProfile);
 

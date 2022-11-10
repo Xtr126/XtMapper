@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.View;
 import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -11,50 +12,36 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.xtr.keymapper.R;
 import com.xtr.keymapper.Server;
 import com.xtr.keymapper.TouchPointer;
+import com.xtr.keymapper.databinding.ActivityMainBinding;
 import com.xtr.keymapper.fragment.SettingsFragment;
 
 public class MainActivity extends AppCompatActivity {
-    public static final int DEFAULT_PORT = 6234;
-    public static final int DEFAULT_PORT_2 = 6345;
+    public static final int DEFAULT_PORT = 6234, DEFAULT_PORT_2 = 6345;
     public TouchPointer pointerOverlay;
     public Server server;
 
-    private Button startOverlayButton;
-    private Button startServerButton;
-    private Button startInTerminal;
-    private Button keymap;
-    private Button configureButton;
-    private Button infoButton;
-
+    public ActivityMainBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        View view = binding.getRoot();
+        setContentView(view);
         server = new Server(this);
         pointerOverlay = new TouchPointer(this);
-        initButtons(); setupButtons();
+        setupButtons();
     }
 
     private void setupButtons() {
-        startServerButton.setOnClickListener(v -> startServer(true));
-        startInTerminal.setOnClickListener(v -> startServer(false));
-        startOverlayButton.setOnClickListener(v -> startService());
-        keymap.setOnClickListener(v -> startEditor());
-        configureButton.setOnClickListener
+        binding.startServer.setOnClickListener(v -> startServer(true));
+        binding.startInTerminal.setOnClickListener(v -> startServer(false));
+        binding.startPointer.setOnClickListener(v -> startService());
+        binding.startEditor.setOnClickListener(v -> startEditor());
+        binding.configButton.setOnClickListener
                 (v -> new SettingsFragment(this).show(getSupportFragmentManager(), "dialog"));
-        infoButton.setOnClickListener
+        binding.aboutButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
-    }
-
-    private void initButtons(){
-        startOverlayButton = findViewById(R.id.startPointer);
-        startServerButton = findViewById(R.id.startServer);
-        startInTerminal = findViewById(R.id.startServerM);
-        keymap = findViewById(R.id.start_editor);
-        configureButton = findViewById(R.id.config_pointer);
-        infoButton = findViewById(R.id.about_button);
     }
 
     private void startService(){
@@ -104,5 +91,4 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
     }
-
 }

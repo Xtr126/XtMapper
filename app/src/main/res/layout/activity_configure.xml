@@ -26,12 +26,12 @@
         android:layout_marginTop="48dp"
         android:prompt="@string/configure"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toLeftOf="@+id/button"
+        app:layout_constraintRight_toLeftOf="@+id/end_button"
         app:layout_constraintTop_toTopOf="parent"
         tools:layout_editor_absoluteY="127dp" />
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/end_button"
         android:layout_width="68dp"
         android:layout_height="50dp"
         android:layout_marginTop="48dp"

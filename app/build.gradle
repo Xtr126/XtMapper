@@ -6,6 +6,7 @@ android {
     compileSdk 32
 
     defaultConfig {
+
         applicationId "com.xtr.keymapper"
         minSdk 28
         targetSdk 32
@@ -21,7 +22,11 @@ android {
         ndkBuild {
             path 'Android.mk'
         }
-    } 
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
 
     buildTypes {
         release {
@@ -33,16 +38,15 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+    packagingOptions.jniLibs.useLegacyPackaging true
 
     ndkVersion '25.1.8937393'
     namespace 'com.xtr.keymapper'
 }
 
 dependencies {
-
     implementation 'androidx.appcompat:appcompat:1.5.1'
     implementation 'com.google.android.material:material:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'com.nambimobile.widgets:expandable-fab:1.2.1'
-
 }
