@@ -63,6 +63,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
     public void onDestroyView() {
         String[] device = binding.inputDevice.getText().toString().split("\\s+"); // split the string to allow only one string without whitespaces
         keymapConfig.setDevice(device[0]);
+        binding = null;
         super.onDestroyView();
     }
 }
