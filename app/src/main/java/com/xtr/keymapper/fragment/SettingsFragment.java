@@ -8,18 +8,13 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.android.material.slider.Slider;
 import com.xtr.keymapper.KeymapConfig;
-import com.xtr.keymapper.R;
-import com.xtr.keymapper.databinding.CursorBinding;
-import com.xtr.keymapper.databinding.FragmentProfilesBinding;
 import com.xtr.keymapper.databinding.FragmentSettingsDialogBinding;
 import com.xtr.keymapper.dpad.DpadConfig;
 
