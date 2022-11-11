@@ -8,10 +8,6 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 public class MovableFrameLayout extends FrameLayout implements View.OnTouchListener {
-
-    private final static float CLICK_DRAG_TOLERANCE = 10; // Often, there will be a slight, unintentional, drag when the user taps the FAB, so we need to account for this.
-
-    private float downRawX, downRawY;
     private float dX, dY;
 
     public MovableFrameLayout(Context context) {
@@ -40,25 +36,9 @@ public class MovableFrameLayout extends FrameLayout implements View.OnTouchListe
         int action = motionEvent.getAction();
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
-                downRawX = motionEvent.getRawX();
-                downRawY = motionEvent.getRawY();
-                dX = view.getX() - downRawX;
-                dY = view.getY() - downRawY;
+                dX = view.getX() - motionEvent.getRawX();
+                dY = view.getY() - motionEvent.getRawY();
                 return true; // Consumed
-            }
-            case MotionEvent.ACTION_UP: {
-                float upRawX = motionEvent.getRawX();
-                float upRawY = motionEvent.getRawY();
-
-                float upDX = upRawX - downRawX;
-                float upDY = upRawY - downRawY;
-
-                if (Math.abs(upDX) < CLICK_DRAG_TOLERANCE && Math.abs(upDY) < CLICK_DRAG_TOLERANCE) { // A click
-                    return performClick();
-                }
-                else { // A drag
-                    return true; // Consumed
-                }
             }
             case MotionEvent.ACTION_MOVE: {
                 int viewWidth = view.getWidth();
@@ -87,5 +67,4 @@ public class MovableFrameLayout extends FrameLayout implements View.OnTouchListe
                 return super.onTouchEvent(motionEvent);
         }
     }
-
 }

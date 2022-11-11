@@ -12,10 +12,6 @@ import android.widget.ImageView;
 public class MovableFloatingActionKey extends FrameLayout implements View.OnTouchListener {
 
     public FloatingActionKey key;
-
-    private final static float CLICK_DRAG_TOLERANCE = 10; // Often, there will be a slight, unintentional, drag when the user taps the FAB, so we need to account for this.
-
-    private float downRawX, downRawY;
     private float dX, dY;
 
     public MovableFloatingActionKey(Context context) {
@@ -79,26 +75,13 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
                 key.setButtonActive();
-                downRawX = motionEvent.getRawX();
-                downRawY = motionEvent.getRawY();
-                dX = view.getX() - downRawX;
-                dY = view.getY() - downRawY;
+                dX = view.getX() - motionEvent.getRawX();
+                dY = view.getY() - motionEvent.getRawY();
                 return true; // Consumed
             }
             case MotionEvent.ACTION_UP: {
                 key.setButtonInactive();
-                float upRawX = motionEvent.getRawX();
-                float upRawY = motionEvent.getRawY();
-
-                float upDX = upRawX - downRawX;
-                float upDY = upRawY - downRawY;
-
-                if (Math.abs(upDX) < CLICK_DRAG_TOLERANCE && Math.abs(upDY) < CLICK_DRAG_TOLERANCE) { // A click
-                    return performClick();
-                }
-                else { // A drag
-                    return true; // Consumed
-                }
+                return performClick();
             }
             case MotionEvent.ACTION_MOVE: {
                 int viewWidth = view.getWidth();

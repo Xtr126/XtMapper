@@ -23,11 +23,13 @@ public class FloatingActionKey extends FloatingActionButton  {
     public String key;
     private ColorStateList colorInactive;
     private ColorStateList textColor;
+    private ColorStateList textColorInactive;
 
     public FloatingActionKey(Context context) {
         super(context);
         colorInactive = AppCompatResources.getColorStateList(context, R.color.grey);
         textColor = AppCompatResources.getColorStateList(context, R.color.black);
+        textColorInactive = AppCompatResources.getColorStateList(context, R.color.white);
         init();
     }
 
@@ -57,7 +59,7 @@ public class FloatingActionKey extends FloatingActionButton  {
 
     public void setButtonInactive(){
         setBackgroundTintList(colorInactive);
-        setImageTintList(textColor);
+        setImageTintList(textColorInactive);
     }
 
     public void setText(String text) {
