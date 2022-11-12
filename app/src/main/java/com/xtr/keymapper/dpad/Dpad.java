@@ -45,4 +45,11 @@ public class Dpad {
             .append(yOfCenter).append("\n");
         return data;
     }
+
+    public float getX() {
+        return viewX;
+    }
+    public float getY() {
+        return viewY;
+    }
 }

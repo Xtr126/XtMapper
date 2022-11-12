@@ -26,12 +26,12 @@ public class DpadHandler {
     private boolean KEY_RIGHT;
     private DataOutputStream xOut;
 
-    public DpadHandler(Context context, String[] data){
+    public DpadHandler(Context context, Dpad dpad){
         DpadConfig dpadConfig = new DpadConfig(context);
-        float radius = Float.parseFloat(data[0]) * dpadConfig.getDpadRadiusMultiplier();
+        float radius = dpad.radius * dpadConfig.getDpadRadiusMultiplier();
 
-        float xOfCenter = Float.parseFloat(data[1]);
-        float yOfCenter = Float.parseFloat(data[2]);
+        float xOfCenter = dpad.xOfCenter;
+        float yOfCenter = dpad.yOfCenter;
         int pointerId = 37; // pointer id 37 is reserved for dpad events
 
         moveUp = xOfCenter + " " + Float.sum(yOfCenter, -radius) + " MOVE " + pointerId + "\n";
