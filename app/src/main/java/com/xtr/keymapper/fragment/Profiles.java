@@ -48,7 +48,6 @@ public class Profiles extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         AppsGridAdapter adapter = new AppsGridAdapter();
         binding.appGrid.setAdapter(adapter);
-        binding.appGrid.setLayoutManager(new GridLayoutManager(context, 3));
 
         Drawable profilesShow = AppCompatResources.getDrawable(context, R.drawable.ic_profiles_1);
         Drawable profilesHide = AppCompatResources.getDrawable(context, R.drawable.ic_profiles_2);
