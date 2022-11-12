@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.xtr.keymapper.KeymapConfig;
+import com.xtr.keymapper.databinding.CrosshairBinding;
 import com.xtr.keymapper.databinding.Dpad1Binding;
 import com.xtr.keymapper.databinding.Dpad2Binding;
 import com.xtr.keymapper.databinding.KeymapEditorBinding;
@@ -35,7 +36,7 @@ public class EditorUI extends AppCompatActivity {
     private MovableFloatingActionKey KeyInFocus;
     private final List<MovableFloatingActionKey> Keys = new ArrayList<>();
 
-    private MovableFrameLayout dpad1, dpad2;
+    private MovableFrameLayout dpad1, dpad2, crosshair;
     private static final Float DEFAULT_X = 200f, DEFAULT_Y = 200f;
     private int i = 0;
     private KeymapEditorBinding binding;
@@ -170,6 +171,7 @@ public class EditorUI extends AppCompatActivity {
     public void setupButtons() {
         binding.saveButton.setOnClickListener(v -> hideView());
         binding.addButton.setOnClickListener(v -> addKey("A", DEFAULT_X, DEFAULT_Y));
+        binding.crossHair.setOnClickListener(v -> addCrosshair(DEFAULT_X, DEFAULT_Y));
 
         binding.dPad.setOnClickListener(new View.OnClickListener() {
             int x = 0;
@@ -196,11 +198,10 @@ public class EditorUI extends AppCompatActivity {
             Dpad1Binding binding = Dpad1Binding.inflate(layoutInflater, mainView, true);
             dpad1 = binding.getRoot();
 
-            binding.closeButton
-                    .setOnClickListener(v -> {
-                        mainView.removeView(dpad1);
-                        dpad1 = null;
-                    });
+            binding.closeButton.setOnClickListener(v -> {
+                mainView.removeView(dpad1);
+                dpad1 = null;
+            });
         }
         dpad1.animate().x(x).y(y)
                 .setDuration(500)
@@ -212,11 +213,10 @@ public class EditorUI extends AppCompatActivity {
             Dpad2Binding binding = Dpad2Binding.inflate(layoutInflater, mainView, true);
             dpad2 = binding.getRoot();
 
-            binding.closeButton
-                    .setOnClickListener(v -> {
-                        mainView.removeView(dpad2);
-                        dpad2 = null;
-                    });
+            binding.closeButton.setOnClickListener(v -> {
+                mainView.removeView(dpad2);
+                dpad2 = null;
+            });
         }
         dpad2.animate().x(x).y(y)
                 .setDuration(500)
@@ -238,6 +238,21 @@ public class EditorUI extends AppCompatActivity {
 
         Keys.get(i).setOnClickListener(this::setKeyInFocus);
         i++;
+    }
+
+    private void addCrosshair(Float x, Float y) {
+        if (crosshair == null) {
+            CrosshairBinding binding = CrosshairBinding.inflate(layoutInflater, mainView, true);
+            crosshair = binding.getRoot();
+
+            binding.closeButton.setOnClickListener(v -> {
+                mainView.removeView(crosshair);
+                crosshair = null;
+            });
+        }
+        crosshair.animate().x(x).y(y)
+                .setDuration(500)
+                .start();
     }
 
     private void setKeyInFocus(View view){
