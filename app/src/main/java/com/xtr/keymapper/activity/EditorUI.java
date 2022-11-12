@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.xtr.keymapper.KeymapConfig;
+import com.xtr.keymapper.aim.MouseAimKey;
 import com.xtr.keymapper.databinding.CrosshairBinding;
 import com.xtr.keymapper.databinding.Dpad1Binding;
 import com.xtr.keymapper.databinding.Dpad2Binding;
@@ -114,6 +115,7 @@ public class EditorUI extends AppCompatActivity {
 
         Dpad dpad1 = keymapConfig.dpad1;
         Dpad dpad2 = keymapConfig.dpad2;
+        MouseAimKey mouseAimKey = keymapConfig.mouseAimKey;
 
         if (dpad1 != null) {
             addDpad1(dpad1.getX(), dpad1.getY());
@@ -121,6 +123,10 @@ public class EditorUI extends AppCompatActivity {
 
         if (dpad2 != null) {
             addDpad2(dpad2.getX(), dpad2.getY());
+        }
+
+        if (mouseAimKey != null) {
+            addCrosshair(mouseAimKey.getX(), mouseAimKey.getY());
         }
     }
 
@@ -142,6 +148,11 @@ public class EditorUI extends AppCompatActivity {
                     Keys.get(i).key = null; // If WASD keys already added, remove them
                 }
             }
+        }
+
+        if (crosshair != null) {
+            MouseAimKey mouseAimKey = new MouseAimKey(crosshair, "~");
+            linesToWrite.append(mouseAimKey.getData());
         }
 
         for (int i = 0; i < Keys.size(); i++) {
