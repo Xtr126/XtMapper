@@ -39,7 +39,7 @@
                 app:backgroundTint="#FF0000"
                 app:fabSize="mini"
                 app:fabCustomSize="30dp"
-                app:srcCompat="@drawable/settings"
+                app:srcCompat="@drawable/ic_baseline_settings_24"
                 app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"/>
         <com.google.android.material.floatingactionbutton.FloatingActionButton

@@ -32,7 +32,7 @@
             android:id="@+id/add_button"
             android:layout_width="50dp"
             android:layout_height="50dp"
-            app:fab_icon="@drawable/plus"
+            app:fab_icon="@drawable/newkey"
             app:label_text="Add key" />
 
         <com.nambimobile.widgets.efab.FabOption
@@ -53,6 +53,6 @@
             android:id="@+id/save_button"
             android:layout_width="50dp"
             android:layout_height="50dp"
-            app:fab_icon="@drawable/save"
+            app:fab_icon="@drawable/ic_baseline_done_24"
             app:label_text="Save" />
     </com.nambimobile.widgets.efab.ExpandableFabLayout>

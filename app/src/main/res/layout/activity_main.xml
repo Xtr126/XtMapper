@@ -83,8 +83,8 @@
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
                 android:text="@string/configure"
-                app:icon="@drawable/settings"
-                tools:ignore="ContentDescription" />
+                app:icon="@drawable/ic_baseline_settings_24"
+                app:iconSize="26dp" />
 
             <Button
                 android:id="@+id/start_pointer"
@@ -92,7 +92,8 @@
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
                 android:text="@string/start_touch_pointer"
-                app:icon="@drawable/touch_p" />
+                app:icon="@drawable/ic_pointer_arrow"
+                app:iconSize="24dp" />
 
             <Button
                 android:id="@+id/about_button"
@@ -100,7 +101,8 @@
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
                 android:text="@string/about_info"
-                app:icon="@drawable/about" />
+                app:icon="@drawable/about"
+                app:iconSize="24dp" />
         </LinearLayout>
 
 
@@ -118,7 +120,9 @@
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
                 android:text="@string/edit_keymap"
-                app:icon="@drawable/ic_create_white_24dp" />
+                app:icon="@drawable/ic_create_white_24dp"
+                app:iconSize="24dp"
+                android:drawablePadding="110dp"/>
 
             <Button
                 android:id="@+id/start_in_terminal"
@@ -126,7 +130,8 @@
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
                 android:text="@string/start_server_manual"
-                app:icon="@drawable/terminal" />
+                app:icon="@drawable/terminal"
+                app:iconSize="30dp" />
 
             <Button
                 android:id="@+id/start_server"
@@ -134,7 +139,8 @@
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
                 android:text="@string/start_server"
-                app:icon="@drawable/start" />
+                app:icon="@drawable/start"
+                app:iconSize="30dp"/>
 
         </LinearLayout>
 
