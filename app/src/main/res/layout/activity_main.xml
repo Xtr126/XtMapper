@@ -130,7 +130,7 @@
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
                 android:text="@string/start_server_manual"
-                app:icon="@drawable/terminal"
+                app:icon="@drawable/ic_terminal"
                 app:iconSize="30dp" />
 
             <Button
@@ -139,8 +139,8 @@
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
                 android:text="@string/start_server"
-                app:icon="@drawable/start"
-                app:iconSize="30dp"/>
+                app:icon="@drawable/ic_start_button"
+                app:iconSize="30dp" />
 
         </LinearLayout>
 
