@@ -62,7 +62,9 @@ public class MainActivity extends AppCompatActivity {
     private void startEditor(){
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
-            startActivity(new Intent(this, EditorUI.class));
+            Intent intent = new Intent(this, EditorUI.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+            startActivity(intent);
         }
     }
 

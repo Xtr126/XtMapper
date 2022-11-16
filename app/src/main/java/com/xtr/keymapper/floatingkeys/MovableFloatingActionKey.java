@@ -31,11 +31,13 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
 
     private void init() {
         setOnTouchListener(this);
-        setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        LayoutParams mParams = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+
+        this.setLayoutParams(mParams);
         key = new FloatingActionKey(getContext());
         key.setClickable(false);
-        key.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        key.setLayoutParams(mParams);
         key.setElevation(1);
 
         FloatingActionKey closeButton = new FloatingActionKey(getContext());

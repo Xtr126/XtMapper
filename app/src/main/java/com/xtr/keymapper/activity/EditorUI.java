@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class EditorUI extends AppCompatActivity {
+public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
 
     private WindowManager.LayoutParams mParams;
     private WindowManager mWindowManager;
@@ -46,24 +46,17 @@ public class EditorUI extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         layoutInflater = getLayoutInflater();
         mWindowManager = getWindowManager();
-
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
                         WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
         mParams.gravity = Gravity.CENTER;
 
-        binding = KeymapEditorBinding.inflate(layoutInflater,
-                new ExpandableFabLayout(this), false);
+        binding = KeymapEditorBinding.inflate(getLayoutInflater());
         mainView = binding.getRoot();
         setupButtons();
         open();
@@ -75,6 +68,8 @@ public class EditorUI extends AppCompatActivity {
                 if (mainView.getParent() == null) {
                     loadKeymap();
                     mWindowManager.addView(mainView, mParams);
+                    mainView.setOnKeyListener(this);
+                    mainView.setFocusable(true);
                 }
             }
         } catch (Exception e) {
@@ -257,7 +252,7 @@ public class EditorUI extends AppCompatActivity {
     }
 
     @Override
-    public boolean onKeyUp(int keyCode, KeyEvent event) {
+    public boolean onKey(View v, int keyCode, KeyEvent event) {
         if (KeyInFocus != null) {
             String key = String.valueOf(event.getDisplayLabel());
             if ( key.matches("[a-zA-Z0-9]+" )) {
