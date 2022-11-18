@@ -5,9 +5,14 @@
     <string name="start_server_manual">Activate with adb</string>
     <string name="configure">Settings</string>
     <string name="edit_keymap">Edit keymap</string>
-    <string name="about_info">About</string>
+    <string name="about">About</string>
     <string name="current_profile">current profile: </string>
     <string name="mouse_sensitivity">Mouse Sensitivity</string>
     <string name="dpad_radius">Dpad Radius</string>
     <string name="mouse_input_device">Mouse Input Device</string>
+    <string name="about_info">
+        XtMapper: free and open source keymapper for Android.
+
+        https://github.com/Xtr126/XtMapper
+    </string>
 </resources>

@@ -118,7 +118,7 @@ public class Input {
             initPointers();
             String line;
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            System.out.println("Server: new connection at port: " + MainActivity.DEFAULT_PORT);
+            System.out.println("Server: new connection at port: " + Server.DEFAULT_PORT);
             while ((line = in.readLine()) != null) {
                 System.out.println(line);
                 String []xy = line.split("\\s+");
@@ -169,11 +169,11 @@ public class Input {
     public static native void setIoctl(boolean y);
 
     public static void main(String[] args) {
-        startMouse(args[0], args[1], MainActivity.DEFAULT_PORT_2); // Call native code
+        startMouse(args[0], args[1], Server.DEFAULT_PORT_2); // Call native code
         ServerSocket serverSocket = null;
 
         try {
-            serverSocket = new ServerSocket(MainActivity.DEFAULT_PORT);
+            serverSocket = new ServerSocket(Server.DEFAULT_PORT);
         } catch (IOException e) {
             e.printStackTrace(System.out);
             System.exit(2);

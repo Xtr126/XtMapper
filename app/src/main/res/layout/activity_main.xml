@@ -100,7 +100,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="80dp"
                 android:layout_marginVertical="10dp"
-                android:text="@string/about_info"
+                android:text="@string/about"
                 app:icon="@drawable/about"
                 app:iconSize="24dp" />
         </LinearLayout>

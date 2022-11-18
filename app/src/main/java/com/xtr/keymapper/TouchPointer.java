@@ -1,26 +1,24 @@
 package com.xtr.keymapper;
 
-import static android.content.Context.WINDOW_SERVICE;
-
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.os.Binder;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.IBinder;
 import android.os.Looper;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import com.xtr.keymapper.activity.InputDeviceSelector;
 import com.xtr.keymapper.activity.MainActivity;
-import com.xtr.keymapper.databinding.ActivityMainBinding;
+import com.xtr.keymapper.databinding.CursorBinding;
 import com.xtr.keymapper.dpad.DpadHandler;
 
 import java.io.BufferedReader;
@@ -30,19 +28,15 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class TouchPointer {
+public class TouchPointer extends Service {
 
     // declaring required variables
-    private final Context context;
-    private final View cursorView;
-    private final WindowManager.LayoutParams mParams;
-    private final WindowManager mWindowManager;
+    private Context context;
+    private View cursorView;
+    private WindowManager mWindowManager;
     int x1 = 100, y1 = 100;
     private Float[] keysX, keysY;
-    public final TextView cmdView3;
-    private final Button startButton;
-    private StringBuilder c3;
-    private final Server server;
+    public StringBuilder c3, c1;
     boolean pointer_down = false;
     private int counter = 0;
     private DpadHandler dpad1Handler, dpad2Handler;
@@ -53,66 +47,73 @@ public class TouchPointer {
     private HandlerThread handlerThread;
     private boolean connected = false;
 
-    public TouchPointer(Context context){
+    private final IBinder binder = new TouchPointerBinder();
+
+    public class TouchPointerBinder extends Binder {
+        public TouchPointer getService() {
+            // Return this instance of TouchPointer so clients can call public methods
+            return TouchPointer.this;
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return binder;
+    }
+
+    public void init(Context context){
         this.context= context;
-        ActivityMainBinding binding = ((MainActivity)context).binding;
-        server = ((MainActivity)context).server;
-        cmdView3 = binding.cmdview3;
-        startButton  = binding.startPointer;
+        this.c1 = ((MainActivity)context).c1;
+        c3 = new StringBuilder();
+
+        try {
+            loadKeymap();
+        } catch (IOException e) {
+            updateCmdView("warning: keymap not set");
+        }
+
+        handlerThread = new HandlerThread("connect");
+        handlerThread.start();
+        connectionHandler = new Handler(handlerThread.getLooper());
+        startHandlers();
+    }
+
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Context context = getApplicationContext();
+        LayoutInflater layoutInflater = (LayoutInflater)context.getSystemService(LAYOUT_INFLATER_SERVICE);
+        // Inflate the layout for the cursor
+        cursorView = CursorBinding.inflate(layoutInflater).getRoot();
         // set the layout parameters of the cursor
-        mParams = new WindowManager.LayoutParams(
+        // Don't let the cursor grab the input focus
+        // Make the underlying application window visible
+        // through the cursor
+        WindowManager.LayoutParams mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 // Don't let the cursor grab the input focus
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
-                WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
+                        WindowManager.LayoutParams.FLAG_FULLSCREEN |
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                        WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 // Make the underlying application window visible
                 // through the cursor
                 PixelFormat.TRANSLUCENT);
-
-        LayoutInflater layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-
-        cursorView = layoutInflater.inflate(R.layout.cursor, new LinearLayout(context),false);
         mParams.gravity = Gravity.CENTER;
         mWindowManager = (WindowManager)context.getSystemService(WINDOW_SERVICE);
 
-        mHandler.post(new Runnable() {
-            public void run() {
-                cmdView3.setText(c3);
-                mHandler.postDelayed(this, Server.REFRESH_INTERVAL);
-            }
-        });
-    }
-
-    public void open() {
-        c3 = new StringBuilder();
-        ((MainActivity)context).setButtonActive(startButton);
-        startButton.setOnClickListener(v -> hideCursor());
-
         if(cursorView.getWindowToken()==null)
-           if (cursorView.getParent() == null) {
-               mWindowManager.addView(cursorView, mParams);
-               handlerThread = new HandlerThread("connect");
-               handlerThread.start();
-               connectionHandler = new Handler(handlerThread.getLooper());
-               server.c1 = new StringBuilder();
-                try {
-                    loadKeymap();
-                } catch (IOException e) {
-                    updateCmdView("warning: keymap not set");
-                }
-               startHandlers();
-           }
+            if (cursorView.getParent() == null) {
+                mWindowManager.addView(cursorView, mParams);
+            }
 
+        return super.onStartCommand(intent, flags, startId);
     }
+
 
     public void hideCursor() {
-        ((MainActivity)context).setButtonInactive(startButton);
-        startButton.setOnClickListener(view -> open());
-
         Server.killServer().start();
         mWindowManager.removeView(cursorView);
         handlerThread.quit();
@@ -140,20 +141,27 @@ public class TouchPointer {
             counter = 0;
             c3 = new StringBuilder();
         }
+        ((MainActivity)context).c3 = this.c3;
     }
 
     private void updateCmdView(String s) {
-        ((MainActivity)context).server.updateCmdView1(s);
+        if(counter < Server.MAX_LINES) {
+            c1.append(s).append("\n");
+            counter++;
+        } else {
+            counter = 0;
+            c1 = new StringBuilder();
+        }
+        ((MainActivity)context).c1 = this.c1;
     }
 
     private void startHandlers() {
-        Server server = ((MainActivity)context).server;
-        server.c1.append("\n connecting to server..");
+        c1.append("\n connecting to server..");
         connectionHandler.post(new Runnable() {
             int counter = 5;
             @Override
             public void run() {
-                server.c1.append(".");
+                c1.append(".");
                 try {
                     keyEventHandler.connect();
                     mouseEventHandler.connect();
@@ -168,7 +176,7 @@ public class TouchPointer {
                         counter--;
                     } else {
                         mHandler.post(() -> hideCursor());
-                        server.c1.append("\n connection timeout\n Please retry activation \n");
+                        c1.append("\n connection timeout\n Please retry activation \n");
                     }
                 }
             }
@@ -182,11 +190,11 @@ public class TouchPointer {
         private PrintWriter pOut;
 
         private void connect() throws IOException {
-            evSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+            evSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT_2);
             pOut = new PrintWriter(evSocket.getOutputStream());
             pOut.println("getevent"); pOut.flush();
 
-            Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
+            Socket socket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
             xOut = new DataOutputStream(socket.getOutputStream());
         }
 
@@ -239,11 +247,11 @@ public class TouchPointer {
         String line; String[] input_event;
 
         private void connect() throws IOException {
-            mouseSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+            mouseSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT_2);
             out = new PrintWriter(mouseSocket.getOutputStream());
             out.println("mouse_read"); out.flush();
 
-            xOutSocket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT);
+            xOutSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
             xOut = new DataOutputStream(xOutSocket.getOutputStream());
             connected = true;
         }
@@ -319,7 +327,6 @@ public class TouchPointer {
                         break;
                     }
                     case "restart": {
-                        //in.close();
                         stop();
                         connect();
                         start();
