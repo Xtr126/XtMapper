@@ -57,17 +57,18 @@ public class MainActivity extends AppCompatActivity {
         if(Settings.canDrawOverlays(this)) {
             intent = new Intent(this, TouchPointer.class);
             bindService(intent, connection, Context.BIND_AUTO_CREATE);
-            startService(intent);
+            startForegroundService(intent);
 
             setButtonActive(binding.startPointer);
             binding.startPointer.setOnClickListener(v -> stopPointer());
         }
     }
 
-    private void stopPointer(){
+    public void stopPointer(){
         pointerOverlay.hideCursor();
         unbindService(connection);
         stopService(intent);
+
         setButtonInactive(binding.startPointer);
         binding.startPointer.setOnClickListener(v -> startPointer());
     }

@@ -1,5 +1,8 @@
 package com.xtr.keymapper;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -78,10 +81,10 @@ public class TouchPointer extends Service {
         startHandlers();
     }
 
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Context context = getApplicationContext();
+        startNotification();
         LayoutInflater layoutInflater = (LayoutInflater)context.getSystemService(LAYOUT_INFLATER_SERVICE);
         // Inflate the layout for the cursor
         cursorView = CursorBinding.inflate(layoutInflater).getRoot();
@@ -112,6 +115,22 @@ public class TouchPointer extends Service {
         return super.onStartCommand(intent, flags, startId);
     }
 
+    private void startNotification() {
+        String CHANNEL_ID = "pointer_service";
+        String name = "Overlay";
+        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW);
+        
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.createNotificationChannel(channel);
+
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
+        Notification notification = builder.setOngoing(true)
+                .setContentTitle("Keymapper service running")
+                .setSmallIcon(R.mipmap.ic_launcher_foreground)
+                .setCategory(Notification.CATEGORY_SERVICE)
+                .build();
+        startForeground(2, notification);
+    }
 
     public void hideCursor() {
         Server.killServer().start();
@@ -175,7 +194,7 @@ public class TouchPointer extends Service {
                         connectionHandler.postDelayed(this, 1000);
                         counter--;
                     } else {
-                        mHandler.post(() -> hideCursor());
+                        mHandler.post(() -> ((MainActivity)context).stopPointer());
                         c1.append("\n connection timeout\n Please retry activation \n");
                     }
                 }
