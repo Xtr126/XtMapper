@@ -21,7 +21,9 @@
             android:id="@+id/header"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/current_profile" />
+            android:text="@string/current_profile"
+            android:visibility="gone"
+            tools:visibility="visible" />
 
         <TextView
             android:id="@+id/current_profile"
@@ -45,7 +47,9 @@
             android:layout_height="300dp"
             tools:listitem="@layout/app_grid"
             android:visibility="gone"
-            tools:visibility="visible" />
+            tools:visibility="visible"
+            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+            app:spanCount="3" />
 
         <ImageButton
             android:id="@+id/profiles_button"

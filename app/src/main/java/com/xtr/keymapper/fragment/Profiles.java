@@ -9,6 +9,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -36,15 +37,17 @@ public class Profiles extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        this.context = getContext();
-
         // Inflate the layout for this fragment
         binding = FragmentProfilesBinding.inflate(inflater, container, false);
-        View view = binding.getRoot();
+        return binding.getRoot();
+    }
 
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        this.context = getContext();
+        super.onViewCreated(view, savedInstanceState);
         AppsGridAdapter adapter = new AppsGridAdapter();
         binding.appGrid.setAdapter(adapter);
-        binding.appGrid.setLayoutManager(new GridLayoutManager(context, 3));
 
         Drawable profilesShow = AppCompatResources.getDrawable(context, R.drawable.ic_profiles_1);
         Drawable profilesHide = AppCompatResources.getDrawable(context, R.drawable.ic_profiles_2);
@@ -67,7 +70,6 @@ public class Profiles extends Fragment {
                 }
             }
         });
-        return view;
     }
 
     @Override

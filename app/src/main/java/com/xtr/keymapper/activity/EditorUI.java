@@ -15,9 +15,12 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 import com.xtr.keymapper.KeymapConfig;
+import com.xtr.keymapper.aim.MouseAimKey;
+import com.xtr.keymapper.databinding.CrosshairBinding;
 import com.xtr.keymapper.databinding.Dpad1Binding;
 import com.xtr.keymapper.databinding.Dpad2Binding;
 import com.xtr.keymapper.databinding.KeymapEditorBinding;
+import com.xtr.keymapper.dpad.Dpad;
 import com.xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import com.xtr.keymapper.floatingkeys.MovableFrameLayout;
 
@@ -25,7 +28,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class EditorUI extends AppCompatActivity {
+public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
 
     private WindowManager.LayoutParams mParams;
     private WindowManager mWindowManager;
@@ -35,7 +38,7 @@ public class EditorUI extends AppCompatActivity {
     private MovableFloatingActionKey KeyInFocus;
     private final List<MovableFloatingActionKey> Keys = new ArrayList<>();
 
-    private MovableFrameLayout dpad1, dpad2;
+    private MovableFrameLayout dpad1, dpad2, crosshair;
     private static final Float DEFAULT_X = 200f, DEFAULT_Y = 200f;
     private int i = 0;
     private KeymapEditorBinding binding;
@@ -43,24 +46,17 @@ public class EditorUI extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         layoutInflater = getLayoutInflater();
         mWindowManager = getWindowManager();
-
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
                         WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
         mParams.gravity = Gravity.CENTER;
 
-        binding = KeymapEditorBinding.inflate(layoutInflater,
-                new ExpandableFabLayout(this), false);
+        binding = KeymapEditorBinding.inflate(getLayoutInflater());
         mainView = binding.getRoot();
         setupButtons();
         open();
@@ -72,6 +68,8 @@ public class EditorUI extends AppCompatActivity {
                 if (mainView.getParent() == null) {
                     loadKeymap();
                     mWindowManager.addView(mainView, mParams);
+                    mainView.setOnKeyListener(this);
+                    mainView.setFocusable(true);
                 }
             }
         } catch (Exception e) {
@@ -99,25 +97,31 @@ public class EditorUI extends AppCompatActivity {
 
         KeymapConfig keymapConfig = new KeymapConfig(this);
         keymapConfig.loadConfig();
+
         String[] keys = keymapConfig.getKeys();
         Float[] keysX = keymapConfig.getX();
         Float[] keysY = keymapConfig.getY();
 
-        for (int n = 0; n < 36; n++) {
+        for (int n = 0; n < keys.length; n++) {
             if (keys[n] != null) {
                 addKey(keys[n], keysX[n], keysY[n]);
             }
         }
 
-        String dpad1 = keys[36];
-        String dpad2 = keys[37];
+        Dpad dpad1 = keymapConfig.dpad1;
+        Dpad dpad2 = keymapConfig.dpad2;
+        MouseAimKey mouseAimKey = keymapConfig.mouseAimKey;
 
         if (dpad1 != null) {
-            addDpad1(keysX[36], keysY[36]);
+            addDpad1(dpad1.getX(), dpad1.getY());
         }
 
         if (dpad2 != null) {
-            addDpad2(keysX[37], keysY[37]);
+            addDpad2(dpad2.getX(), dpad2.getY());
+        }
+
+        if (mouseAimKey != null) {
+            addCrosshair(mouseAimKey.getX(), mouseAimKey.getY());
         }
     }
 
@@ -125,36 +129,25 @@ public class EditorUI extends AppCompatActivity {
         StringBuilder linesToWrite = new StringBuilder();
 
         if (dpad1 != null) {
-            float radius = dpad1.getPivotX();
-            Float xOfCenter = dpad1.getX() + radius;
-            Float yOfCenter = dpad1.getY() + radius;
-
-            linesToWrite.append("UDLR_DPAD ")
-                        .append(dpad1.getX()).append(" ")
-                        .append(dpad1.getY()).append(" ")
-                        .append(radius).append(" ")
-                        .append(xOfCenter).append(" ")
-                        .append(yOfCenter).append("\n");
+            Dpad dpad = new Dpad(dpad1, Dpad.TYPE_UDLR);
+            linesToWrite.append(dpad.getData());
         }
 
         if (dpad2 != null) {
-            float radius = dpad2.getPivotX();
-            Float xOfCenter = dpad2.getX() + radius;
-            Float yOfCenter = dpad2.getY() + radius;
-
-            linesToWrite.append("WASD_DPAD ")
-                        .append(dpad2.getX()).append(" ")
-                        .append(dpad2.getY()).append(" ")
-                        .append(radius).append(" ")
-                        .append(xOfCenter).append(" ")
-                        .append(yOfCenter).append("\n");
+            Dpad dpad = new Dpad(dpad2, Dpad.TYPE_WASD);
+            linesToWrite.append(dpad.getData());
 
             for (int i = 0; i < Keys.size(); i++) {
                 String key = Keys.get(i).getText();
                 if(key.matches("[WASD]")) {
-                    Keys.get(i).key = null; // If WASD keys already added, ignore them for dpad
+                    Keys.get(i).key = null; // If WASD keys already added, remove them
                 }
             }
+        }
+
+        if (crosshair != null) {
+            MouseAimKey mouseAimKey = new MouseAimKey(crosshair, "~");
+            linesToWrite.append(mouseAimKey.getData());
         }
 
         for (int i = 0; i < Keys.size(); i++) {
@@ -170,6 +163,7 @@ public class EditorUI extends AppCompatActivity {
     public void setupButtons() {
         binding.saveButton.setOnClickListener(v -> hideView());
         binding.addButton.setOnClickListener(v -> addKey("A", DEFAULT_X, DEFAULT_Y));
+        binding.crossHair.setOnClickListener(v -> addCrosshair(DEFAULT_X, DEFAULT_Y));
 
         binding.dPad.setOnClickListener(new View.OnClickListener() {
             int x = 0;
@@ -196,11 +190,10 @@ public class EditorUI extends AppCompatActivity {
             Dpad1Binding binding = Dpad1Binding.inflate(layoutInflater, mainView, true);
             dpad1 = binding.getRoot();
 
-            binding.closeButton
-                    .setOnClickListener(v -> {
-                        mainView.removeView(dpad1);
-                        dpad1 = null;
-                    });
+            binding.closeButton.setOnClickListener(v -> {
+                mainView.removeView(dpad1);
+                dpad1 = null;
+            });
         }
         dpad1.animate().x(x).y(y)
                 .setDuration(500)
@@ -212,11 +205,10 @@ public class EditorUI extends AppCompatActivity {
             Dpad2Binding binding = Dpad2Binding.inflate(layoutInflater, mainView, true);
             dpad2 = binding.getRoot();
 
-            binding.closeButton
-                    .setOnClickListener(v -> {
-                        mainView.removeView(dpad2);
-                        dpad2 = null;
-                    });
+            binding.closeButton.setOnClickListener(v -> {
+                mainView.removeView(dpad2);
+                dpad2 = null;
+            });
         }
         dpad2.animate().x(x).y(y)
                 .setDuration(500)
@@ -240,12 +232,27 @@ public class EditorUI extends AppCompatActivity {
         i++;
     }
 
+    private void addCrosshair(Float x, Float y) {
+        if (crosshair == null) {
+            CrosshairBinding binding = CrosshairBinding.inflate(layoutInflater, mainView, true);
+            crosshair = binding.getRoot();
+
+            binding.closeButton.setOnClickListener(v -> {
+                mainView.removeView(crosshair);
+                crosshair = null;
+            });
+        }
+        crosshair.animate().x(x).y(y)
+                .setDuration(500)
+                .start();
+    }
+
     private void setKeyInFocus(View view){
        KeyInFocus = ((MovableFloatingActionKey)view);
     }
 
     @Override
-    public boolean onKeyUp(int keyCode, KeyEvent event) {
+    public boolean onKey(View v, int keyCode, KeyEvent event) {
         if (KeyInFocus != null) {
             String key = String.valueOf(event.getDisplayLabel());
             if ( key.matches("[a-zA-Z0-9]+" )) {

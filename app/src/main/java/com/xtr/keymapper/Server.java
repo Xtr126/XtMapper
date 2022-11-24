@@ -1,19 +1,11 @@
 package com.xtr.keymapper;
 
-import static android.content.Context.MODE_PRIVATE;
-
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
-import android.widget.TextView;
 
 import com.xtr.keymapper.activity.MainActivity;
-import com.xtr.keymapper.databinding.ActivityMainBinding;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -29,31 +21,14 @@ public class Server {
     public final String script_name;
 
     public static final int MAX_LINES = 16;
-    public static final long REFRESH_INTERVAL = 200;
+    public static final int DEFAULT_PORT = 6234, DEFAULT_PORT_2 = 6345;
 
-    public final TextView cmdView, cmdView2;
-    public StringBuilder c1 = new StringBuilder(), c2 = new StringBuilder();
+    public StringBuilder c1, c2;
     private int counter1 = 0, counter2 = 0;
 
     public Server(Context context){
         this.context = context;
-        ActivityMainBinding binding = ((MainActivity)context).binding;
-        cmdView =  binding.cmdview;
-        cmdView2 = binding.cmdview2;
-        textViewUpdaterTask();
         script_name = context.getExternalFilesDir(null) + "/xtMapper.sh";
-    }
-
-    private void textViewUpdaterTask() {
-        Handler handler = new Handler(Looper.getMainLooper());
-
-        handler.post(new Runnable() {
-            public void run() {
-                cmdView.setText(c1);
-                cmdView2.setText(c2);
-                handler.postDelayed(this, REFRESH_INTERVAL);
-            }
-        });
     }
 
     private void writeScript(String packageName, ApplicationInfo ai, String apk) throws IOException, InterruptedException {
@@ -76,7 +51,7 @@ public class Server {
     public static Thread killServer(){
         return new Thread(() -> {
             try {
-                Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+                Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
                 PrintWriter pOut = new PrintWriter(socket.getOutputStream());
                 pOut.println("exit");
                 pOut.close(); socket.close();
@@ -89,7 +64,7 @@ public class Server {
     public static Thread changeDevice(String newDevice){
         return new Thread(() -> {
             try {
-                Socket socket = new Socket("127.0.0.1", MainActivity.DEFAULT_PORT_2);
+                Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
                 PrintWriter pOut = new PrintWriter(socket.getOutputStream());
                 pOut.println("change_device");
                 pOut.flush();
@@ -113,7 +88,6 @@ public class Server {
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException e) {
             Log.e("Server", e.toString());
         }
-
     }
 
     public void startServer() {
@@ -143,6 +117,7 @@ public class Server {
             counter1 = 0;
             c1 = new StringBuilder();
         }
+        ((MainActivity)context).c1 = this.c1;
     }
     public void updateCmdView2(String s){
         if(counter2 < MAX_LINES) {
@@ -152,5 +127,6 @@ public class Server {
             counter2 = 0;
             c2 = new StringBuilder();
         }
+        ((MainActivity)context).c2 = this.c2;
     }
 }

@@ -36,7 +36,7 @@
         android:layout_height="50dp"
         android:layout_marginTop="48dp"
         app:cornerRadius="25dp"
-        app:icon="@drawable/save"
+        app:icon="@drawable/ic_baseline_done_24"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-    <com.nambimobile.widgets.efab.ExpandableFabLayout
-        android:id="@+id/MainView"
-        app:layout_constraintBottom_toBottomOf="parent"
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:layout_width="match_parent"
-        android:layout_gravity="center"
-        android:layout_height="match_parent"
-        android:theme="@style/Theme.MaterialComponents">
+<com.nambimobile.widgets.efab.ExpandableFabLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/MainView"
+    app:layout_constraintBottom_toBottomOf="parent"
+    android:layout_width="match_parent"
+    android:layout_gravity="center"
+    android:layout_height="match_parent"
+    android:theme="@style/Theme.MaterialComponents"
+    tools:context=".activity.EditorUI">
+
     <com.nambimobile.widgets.efab.Overlay
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -32,7 +35,7 @@
             android:id="@+id/add_button"
             android:layout_width="50dp"
             android:layout_height="50dp"
-            app:fab_icon="@drawable/plus"
+            app:fab_icon="@drawable/newkey"
             app:label_text="Add key" />
 
         <com.nambimobile.widgets.efab.FabOption
@@ -53,6 +56,6 @@
             android:id="@+id/save_button"
             android:layout_width="50dp"
             android:layout_height="50dp"
-            app:fab_icon="@drawable/save"
+            app:fab_icon="@drawable/ic_baseline_done_24"
             app:label_text="Save" />
     </com.nambimobile.widgets.efab.ExpandableFabLayout>

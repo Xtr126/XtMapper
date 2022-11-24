@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="30dp"
-        android:text="https://github.com/Xtr126/XtMapper"
+        android:text="@string/about_info"
         android:textAlignment="center"
         android:textSize="20sp"
         android:autoLink="web"
