@@ -170,6 +170,7 @@ public class Input {
     public static void main(String[] args) {
         startMouse(args[0], args[1], Server.DEFAULT_PORT_2); // Call native code
         ServerSocket serverSocket = null;
+        final Input input = new Input();
 
         try {
             serverSocket = new ServerSocket(Server.DEFAULT_PORT);
@@ -181,14 +182,7 @@ public class Input {
         while (true) {
             try {
                 Socket socket = serverSocket.accept();
-                new Thread(new Runnable() {
-                    Input input;
-                    @Override
-                    public void run() {
-                        input = new Input();
-                        input.start(socket);
-                    }
-                }).start();
+                new Thread(() -> input.start(socket)).start();
             } catch (IOException e) {
                 System.out.println("I/O error: " + e);
             }
