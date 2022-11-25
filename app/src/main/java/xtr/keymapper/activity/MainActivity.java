@@ -1,4 +1,4 @@
-package com.xtr.keymapper.activity;
+package xtr.keymapper.activity;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -15,11 +15,11 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.xtr.keymapper.R;
-import com.xtr.keymapper.Server;
-import com.xtr.keymapper.TouchPointer;
-import com.xtr.keymapper.databinding.ActivityMainBinding;
-import com.xtr.keymapper.fragment.SettingsFragment;
+import xtr.keymapper.R;
+import xtr.keymapper.Server;
+import xtr.keymapper.TouchPointer;
+import xtr.keymapper.databinding.ActivityMainBinding;
+import xtr.keymapper.fragment.SettingsFragment;
 
 public class MainActivity extends AppCompatActivity {
     public TouchPointer pointerOverlay;

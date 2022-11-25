@@ -1,4 +1,4 @@
-package com.xtr.keymapper;
+package xtr.keymapper;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -19,10 +19,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 
-import com.xtr.keymapper.activity.InputDeviceSelector;
-import com.xtr.keymapper.activity.MainActivity;
-import com.xtr.keymapper.databinding.CursorBinding;
-import com.xtr.keymapper.dpad.DpadHandler;
+import xtr.keymapper.activity.InputDeviceSelector;
+import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.databinding.CursorBinding;
+import xtr.keymapper.dpad.DpadHandler;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;

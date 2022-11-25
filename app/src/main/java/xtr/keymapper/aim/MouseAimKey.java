@@ -1,6 +1,6 @@
-package com.xtr.keymapper.aim;
+package xtr.keymapper.aim;
 
-import com.xtr.keymapper.floatingkeys.MovableFrameLayout;
+import xtr.keymapper.floatingkeys.MovableFrameLayout;
 
 public class MouseAimKey {
     float x, y;

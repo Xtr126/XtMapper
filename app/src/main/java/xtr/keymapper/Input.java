@@ -1,4 +1,4 @@
-package com.xtr.keymapper;
+package xtr.keymapper;
 
 import static java.lang.Float.parseFloat;
 
@@ -21,7 +21,6 @@ import java.net.Socket;
 import com.genymobile.scrcpy.Point;
 import com.genymobile.scrcpy.Pointer;
 import com.genymobile.scrcpy.PointersState;
-import com.xtr.keymapper.activity.MainActivity;
 
 public class Input {
 

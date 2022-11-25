@@ -1,4 +1,4 @@
-package com.xtr.keymapper;
+package xtr.keymapper;
 
 import android.content.Context;
 

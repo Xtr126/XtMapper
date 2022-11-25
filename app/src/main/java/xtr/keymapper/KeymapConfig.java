@@ -1,13 +1,13 @@
-package com.xtr.keymapper;
+package xtr.keymapper;
 
 import static android.content.Context.MODE_PRIVATE;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.xtr.keymapper.aim.MouseAimKey;
-import com.xtr.keymapper.dpad.Dpad;
-import com.xtr.keymapper.fragment.Profiles;
+import xtr.keymapper.aim.MouseAimKey;
+import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.fragment.Profiles;
 
 import java.io.FileWriter;
 import java.io.IOException;

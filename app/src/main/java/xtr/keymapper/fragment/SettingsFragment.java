@@ -1,4 +1,4 @@
-package com.xtr.keymapper.fragment;
+package xtr.keymapper.fragment;
 
 import static com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED;
 
@@ -14,9 +14,9 @@ import androidx.annotation.Nullable;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.xtr.keymapper.KeymapConfig;
-import com.xtr.keymapper.databinding.FragmentSettingsDialogBinding;
-import com.xtr.keymapper.dpad.DpadConfig;
+import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.databinding.FragmentSettingsDialogBinding;
+import xtr.keymapper.dpad.DpadConfig;
 
 public class SettingsFragment extends BottomSheetDialogFragment {
     private final DpadConfig dpadConfig;

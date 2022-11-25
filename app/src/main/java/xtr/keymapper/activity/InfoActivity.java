@@ -1,10 +1,10 @@
-package com.xtr.keymapper.activity;
+package xtr.keymapper.activity;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
 
-import com.xtr.keymapper.R;
+import xtr.keymapper.R;
 
 public class InfoActivity extends AppCompatActivity {
 

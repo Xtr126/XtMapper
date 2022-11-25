@@ -1,4 +1,4 @@
-package com.xtr.keymapper.fragment;
+package xtr.keymapper.fragment;
 
 import android.content.Context;
 import android.content.Intent;
@@ -12,7 +12,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.view.LayoutInflater;
@@ -21,15 +20,15 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.xtr.keymapper.KeymapConfig;
-import com.xtr.keymapper.R;
-import com.xtr.keymapper.databinding.FragmentProfilesBinding;
+import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.R;
+import xtr.keymapper.databinding.FragmentProfilesBinding;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class Profiles extends Fragment {
-    public static final String defaultProfile = "com.xtr.keymapper.default";
+    public static final String defaultProfile = "xtr.keymapper.default";
     public String currentProfile;
     private Context context;
     private FragmentProfilesBinding binding;

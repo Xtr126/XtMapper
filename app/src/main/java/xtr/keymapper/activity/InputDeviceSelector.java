@@ -1,4 +1,4 @@
-package com.xtr.keymapper.activity;
+package xtr.keymapper.activity;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -9,9 +9,9 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
-import com.xtr.keymapper.KeymapConfig;
-import com.xtr.keymapper.Server;
-import com.xtr.keymapper.databinding.ActivityConfigureBinding;
+import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.Server;
+import xtr.keymapper.databinding.ActivityConfigureBinding;
 
 import java.io.BufferedReader;
 import java.io.IOException;

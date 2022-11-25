@@ -1,4 +1,4 @@
-package com.xtr.keymapper.dpad;
+package xtr.keymapper.dpad;
 
 import android.content.Context;
 import android.content.SharedPreferences;

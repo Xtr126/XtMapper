@@ -1,11 +1,11 @@
-package com.xtr.keymapper;
+package xtr.keymapper;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
-import com.xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.activity.MainActivity;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;

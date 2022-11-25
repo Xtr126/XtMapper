@@ -1,4 +1,4 @@
-package com.xtr.keymapper.activity;
+package xtr.keymapper.activity;
 
 import android.graphics.PixelFormat;
 import android.os.Bundle;
@@ -14,15 +14,15 @@ import android.widget.ImageView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
-import com.xtr.keymapper.KeymapConfig;
-import com.xtr.keymapper.aim.MouseAimKey;
-import com.xtr.keymapper.databinding.CrosshairBinding;
-import com.xtr.keymapper.databinding.Dpad1Binding;
-import com.xtr.keymapper.databinding.Dpad2Binding;
-import com.xtr.keymapper.databinding.KeymapEditorBinding;
-import com.xtr.keymapper.dpad.Dpad;
-import com.xtr.keymapper.floatingkeys.MovableFloatingActionKey;
-import com.xtr.keymapper.floatingkeys.MovableFrameLayout;
+import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.aim.MouseAimKey;
+import xtr.keymapper.databinding.CrosshairBinding;
+import xtr.keymapper.databinding.Dpad1Binding;
+import xtr.keymapper.databinding.Dpad2Binding;
+import xtr.keymapper.databinding.KeymapEditorBinding;
+import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
+import xtr.keymapper.floatingkeys.MovableFrameLayout;
 
 import java.io.IOException;
 import java.util.ArrayList;

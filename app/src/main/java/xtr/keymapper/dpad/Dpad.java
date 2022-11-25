@@ -1,6 +1,6 @@
-package com.xtr.keymapper.dpad;
+package xtr.keymapper.dpad;
 
-import com.xtr.keymapper.floatingkeys.MovableFrameLayout;
+import xtr.keymapper.floatingkeys.MovableFrameLayout;
 
 public class Dpad {
     String type;

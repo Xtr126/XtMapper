@@ -1,4 +1,4 @@
-package com.xtr.keymapper.floatingkeys;
+package xtr.keymapper.floatingkeys;
 
 import android.content.Context;
 import android.util.AttributeSet;

@@ -238,7 +238,7 @@ void* init(void* context) {
 * Interface to Java side to start, caller is from main()
 */
 JNIEXPORT void JNICALL
-    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring dev, jstring mouse_sensitivity, jint default_port) {
+    Java_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring dev, jstring mouse_sensitivity, jint default_port) {
         setlinebuf(stdout);
 
         device = (*env)->GetStringUTFChars(env, dev, 0);
@@ -267,7 +267,7 @@ JNIEXPORT void JNICALL
 
 
 JNIEXPORT void JNICALL
-    Java_com_xtr_keymapper_Input_setIoctl(JNIEnv *env, jclass clazz, jboolean y) {
+    Java_xtr_keymapper_Input_setIoctl(JNIEnv *env, jclass clazz, jboolean y) {
         if ( fd != 0 ) {
             ioctl(fd, EVIOCGRAB, y);
             printf("ioctl successful\n");

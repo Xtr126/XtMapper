@@ -1,4 +1,4 @@
-package com.xtr.keymapper.floatingkeys;
+package xtr.keymapper.floatingkeys;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -14,7 +14,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.shape.RelativeCornerSize;
 import com.google.android.material.shape.RoundedCornerTreatment;
 import com.google.android.material.shape.ShapeAppearanceModel;
-import com.xtr.keymapper.R;
+import xtr.keymapper.R;
 
 import java.util.Random;
 
