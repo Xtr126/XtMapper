@@ -115,7 +115,7 @@ public class Profiles extends Fragment {
         @Override
         public RecyclerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             // Inflate Layout
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.app_grid, parent, false);
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.app_view, parent, false);
             defaultTint = view.getRootView().getBackgroundTintList();
             return new RecyclerViewHolder(view);
         }

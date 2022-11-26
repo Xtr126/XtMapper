@@ -45,7 +45,7 @@
             android:id="@+id/app_grid"
             android:layout_width="300dp"
             android:layout_height="300dp"
-            tools:listitem="@layout/app_grid"
+            tools:listitem="@layout/app_view"
             android:visibility="gone"
             tools:visibility="visible"
             app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
