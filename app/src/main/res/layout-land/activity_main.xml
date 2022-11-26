@@ -16,129 +16,22 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:translationZ="1dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         tools:layout="@layout/fragment_profiles" />
-
-    <TextView
+    
+    <include layout="@layout/activity_main_cmdview"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
         android:id="@+id/cmdview"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:fontFamily="monospace"
-        android:gravity="bottom"
-        android:textAppearance="@android:style/TextAppearance.Material.Large"
-        android:textSize="16sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toRightOf="@id/cmdview3"
-        app:layout_constraintRight_toLeftOf="@+id/constrained"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintLeft_toRightOf="@id/controls"/>
 
-    <TextView
-        android:id="@+id/cmdview2"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:gravity="bottom"
-        android:fontFamily="monospace"
-        app:layout_constraintBottom_toTopOf="@id/cmdview3"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toLeftOf="@+id/cmdview"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/cmdview3"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:fontFamily="monospace"
-        android:gravity="bottom"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toLeftOf="@+id/cmdview"
-        app:layout_constraintTop_toBottomOf="@id/cmdview2" />
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constrained"
+    <include layout="@layout/activity_main_controls"
         android:layout_width="350dp"
         android:layout_height="wrap_content"
-        android:layout_margin="10dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-
-        <LinearLayout
-            android:id="@+id/L2"
-            android:layout_width="160dp"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            app:layout_constraintLeft_toRightOf="@id/L1"
-            app:layout_constraintRight_toRightOf="parent">
-
-            <Button
-                android:id="@+id/config_button"
-                android:layout_width="match_parent"
-                android:layout_height="80dp"
-                android:layout_marginVertical="10dp"
-                android:text="@string/configure"
-                app:icon="@drawable/ic_baseline_settings_24"
-                app:iconSize="26dp" />
-
-            <Button
-                android:id="@+id/start_pointer"
-                android:layout_width="match_parent"
-                android:layout_height="80dp"
-                android:layout_marginVertical="10dp"
-                android:text="@string/start_touch_pointer"
-                app:icon="@drawable/ic_pointer_arrow"
-                app:iconSize="24dp" />
-
-            <Button
-                android:id="@+id/about_button"
-                android:layout_width="match_parent"
-                android:layout_height="80dp"
-                android:layout_marginVertical="10dp"
-                android:text="@string/about"
-                app:icon="@drawable/about"
-                app:iconSize="24dp" />
-        </LinearLayout>
-
-
-        <LinearLayout
-            android:id="@+id/L1"
-            android:layout_width="160dp"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toLeftOf="@id/L2">
-
-            <Button
-                android:id="@+id/start_editor"
-                android:layout_width="match_parent"
-                android:layout_height="80dp"
-                android:layout_marginVertical="10dp"
-                android:drawablePadding="110dp"
-                android:text="@string/edit_keymap"
-                app:icon="@drawable/ic_create_white_24dp"
-                app:iconSize="24dp" />
-
-            <Button
-                android:id="@+id/start_in_terminal"
-                android:layout_width="match_parent"
-                android:layout_height="80dp"
-                android:layout_marginVertical="10dp"
-                android:text="@string/start_server_manual"
-                app:icon="@drawable/ic_terminal"
-                app:iconSize="30dp" />
-
-            <Button
-                android:id="@+id/start_server"
-                android:layout_width="match_parent"
-                android:layout_height="80dp"
-                android:layout_marginVertical="10dp"
-                android:text="@string/start_server"
-                app:icon="@drawable/ic_start_button"
-                app:iconSize="30dp" />
-
-        </LinearLayout>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        android:id="@+id/controls"
+        app:layout_constraintLeft_toLeftOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -42,13 +42,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
-        binding.startServer.setOnClickListener(v -> startServer(true));
-        binding.startInTerminal.setOnClickListener(v -> startServer(false));
-        binding.startPointer.setOnClickListener(v -> startPointer());
-        binding.startEditor.setOnClickListener(v -> startEditor());
-        binding.configButton.setOnClickListener
+        binding.controls.startServer.setOnClickListener(v -> startServer(true));
+        binding.controls.startInTerminal.setOnClickListener(v -> startServer(false));
+        binding.controls.startPointer.setOnClickListener(v -> startPointer());
+        binding.controls.startEditor.setOnClickListener(v -> startEditor());
+        binding.controls.configButton.setOnClickListener
                 (v -> new SettingsFragment(this).show(getSupportFragmentManager(), "dialog"));
-        binding.aboutButton.setOnClickListener
+        binding.controls.aboutButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
     }
 
@@ -59,8 +59,8 @@ public class MainActivity extends AppCompatActivity {
             bindService(intent, connection, Context.BIND_AUTO_CREATE);
             startForegroundService(intent);
 
-            setButtonActive(binding.startPointer);
-            binding.startPointer.setOnClickListener(v -> stopPointer());
+            setButtonActive(binding.controls.startPointer);
+            binding.controls.startPointer.setOnClickListener(v -> stopPointer());
         }
     }
 
@@ -69,8 +69,8 @@ public class MainActivity extends AppCompatActivity {
         unbindService(connection);
         stopService(intent);
 
-        setButtonInactive(binding.startPointer);
-        binding.startPointer.setOnClickListener(v -> startPointer());
+        setButtonInactive(binding.controls.startPointer);
+        binding.controls.startPointer.setOnClickListener(v -> startPointer());
     }
 
     public void setButtonActive(Button button){
@@ -118,9 +118,9 @@ public class MainActivity extends AppCompatActivity {
         Handler handler = new Handler(Looper.getMainLooper());
         handler.post(new Runnable() {
             public void run() {
-                binding.cmdview.setText(c1);
-                binding.cmdview2.setText(c2);
-                binding.cmdview3.setText(c3);
+                binding.cmdview.view1.setText(c1);
+                binding.cmdview.view2.setText(c2);
+                binding.cmdview.view3.setText(c3);
                 handler.postDelayed(this, REFRESH_INTERVAL);
             }
         });
