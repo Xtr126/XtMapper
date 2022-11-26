@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
     public StringBuilder c1, c2, c3;
 
     public ActivityMainBinding binding;
-    Intent intent;
+    private Intent intent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -124,6 +124,14 @@ public class MainActivity extends AppCompatActivity {
                 handler.postDelayed(this, REFRESH_INTERVAL);
             }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (pointerOverlay != null) {
+            stopPointer();
+        }
+        super.onDestroy();
     }
 
     /** Defines callbacks for service binding, passed to bindService() */
