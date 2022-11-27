@@ -12,7 +12,10 @@
         <!-- Status bar color. -->
         <item name="android:statusBarColor" >?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
-
-
+    </style>
+    <style name="Theme.XtMapper.cmdview" parent="Theme.Material3.DynamicColors.Dark">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/dark_grey</item>
+        <item name="colorOnPrimary">#cbcbcb</item>
     </style>
 </resources>

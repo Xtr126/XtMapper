@@ -3,6 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="20dp"
+    android:theme="@style/Theme.XtMapper.cmdview"
     app:layout_constraintBottom_toBottomOf="parent"
     android:gravity="bottom"
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -11,18 +12,19 @@
 
     <LinearLayout
         android:id="@+id/L2"
-        android:layout_width="160dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         app:layout_constraintLeft_toRightOf="@id/L1"
         app:layout_constraintRight_toRightOf="parent"
+        android:layout_marginLeft="4dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <Button
             android:id="@+id/config_button"
             android:layout_width="match_parent"
             android:layout_height="80dp"
-            android:layout_marginVertical="10dp"
+            android:layout_marginVertical="4dp"
             android:text="@string/configure"
             app:icon="@drawable/ic_baseline_settings_24"
             app:iconSize="26dp" />
@@ -31,7 +33,7 @@
             android:id="@+id/start_pointer"
             android:layout_width="match_parent"
             android:layout_height="80dp"
-            android:layout_marginVertical="10dp"
+            android:layout_marginVertical="4dp"
             android:text="@string/start_touch_pointer"
             app:icon="@drawable/ic_pointer_arrow"
             app:iconSize="24dp" />
@@ -40,7 +42,7 @@
             android:id="@+id/about_button"
             android:layout_width="match_parent"
             android:layout_height="80dp"
-            android:layout_marginVertical="10dp"
+            android:layout_marginVertical="4dp"
             android:text="@string/about"
             app:icon="@drawable/about"
             app:iconSize="24dp" />
@@ -49,8 +51,9 @@
 
     <LinearLayout
         android:id="@+id/L1"
-        android:layout_width="160dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginRight="4dp"
         android:orientation="vertical"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toLeftOf="@id/L2"
@@ -60,7 +63,7 @@
             android:id="@+id/start_editor"
             android:layout_width="match_parent"
             android:layout_height="80dp"
-            android:layout_marginVertical="10dp"
+            android:layout_marginVertical="4dp"
             android:text="@string/edit_keymap"
             app:icon="@drawable/ic_create_white_24dp"
             app:iconSize="24dp"
@@ -70,7 +73,7 @@
             android:id="@+id/start_in_terminal"
             android:layout_width="match_parent"
             android:layout_height="80dp"
-            android:layout_marginVertical="10dp"
+            android:layout_marginVertical="4dp"
             android:text="@string/start_server_manual"
             app:icon="@drawable/ic_terminal"
             app:iconSize="30dp" />
@@ -79,7 +82,7 @@
             android:id="@+id/start_server"
             android:layout_width="match_parent"
             android:layout_height="80dp"
-            android:layout_marginVertical="10dp"
+            android:layout_marginVertical="4dp"
             android:text="@string/start_server"
             app:icon="@drawable/ic_start_button"
             app:iconSize="30dp" />

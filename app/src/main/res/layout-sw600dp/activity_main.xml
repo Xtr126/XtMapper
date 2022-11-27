@@ -5,9 +5,19 @@
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/black"
     tools:context=".activity.MainActivity"
     tools:ignore="ContentDescription,SpUsage">
 
+
+    <androidx.constraintlayout.widget.Barrier
+        android:id="@+id/barrier2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:barrierDirection="left"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:constraint_referenced_ids="controls" />
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/profilesView"
@@ -16,22 +26,37 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:translationZ="1dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/controls"
+        app:layout_constraintBottom_toTopOf="@id/controls"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         tools:layout="@layout/fragment_profiles" />
-    
-    <include layout="@layout/activity_main_cmdview"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:id="@+id/cmdview"
-        app:layout_constraintLeft_toRightOf="@id/controls"
-        app:layout_constraintRight_toRightOf="parent"/>
 
-    <include layout="@layout/activity_main_controls"
-        android:layout_width="350dp"
-        android:layout_height="wrap_content"
+    <include
         android:id="@+id/controls"
-        app:layout_constraintTop_toTopOf="parent"/>
+        layout="@layout/activity_main_controls"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="40dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toLeftOf="@id/barrier2"
+        app:layout_constraintTop_toBottomOf="@id/profilesView" />
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginVertical="20dp"
+        android:layout_marginRight="40dp"
+        app:cardBackgroundColor="@color/dark_grey"
+        app:cardCornerRadius="50dp"
+        app:layout_constraintLeft_toRightOf="@id/barrier2"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:layout_editor_absoluteY="30dp">
+
+        <include
+            android:id="@+id/cmdview"
+            layout="@layout/activity_main_cmdview" />
+    </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
