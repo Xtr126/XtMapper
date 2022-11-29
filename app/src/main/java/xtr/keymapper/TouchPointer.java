@@ -49,7 +49,7 @@ public class TouchPointer extends Service {
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
     private HandlerThread handlerThread;
-    private boolean connected = false;
+    public boolean connected = false;
 
     private final IBinder binder = new TouchPointerBinder();
 
@@ -70,12 +70,12 @@ public class TouchPointer extends Service {
         this.c1 = ((MainActivity)context).c1;
         c3 = new StringBuilder();
 
-        try {
-            loadKeymap();
-        } catch (IOException e) {
-            updateCmdView("warning: keymap not set");
-        }
         if (!connected) {
+            try {
+                loadKeymap();
+            } catch (IOException e) {
+                updateCmdView("warning: keymap not set");
+            }
             handlerThread = new HandlerThread("connect");
             handlerThread.start();
             connectionHandler = new Handler(handlerThread.getLooper());
@@ -87,8 +87,8 @@ public class TouchPointer extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         startNotification();
         if (cursorView != null) mWindowManager.removeView(cursorView);
-        Context context = getApplicationContext();
-        LayoutInflater layoutInflater = (LayoutInflater)context.getSystemService(LAYOUT_INFLATER_SERVICE);
+        LayoutInflater layoutInflater = getSystemService(LayoutInflater.class);
+        mWindowManager = getSystemService(WindowManager.class);
         // Inflate the layout for the cursor
         cursorView = CursorBinding.inflate(layoutInflater).getRoot();
 
@@ -106,8 +106,6 @@ public class TouchPointer extends Service {
                 // through the cursor
                 PixelFormat.TRANSLUCENT);
         mParams.gravity = Gravity.CENTER;
-        mWindowManager = (WindowManager)context.getSystemService(WINDOW_SERVICE);
-
 
         if(cursorView.getWindowToken()==null)
             if (cursorView.getParent() == null) {
@@ -135,15 +133,14 @@ public class TouchPointer extends Service {
     }
 
     public void hideCursor() {
-        if (handlerThread != null) {
-            mWindowManager.removeView(cursorView);
-            handlerThread.quit();
-            cursorView.invalidate();
-            cursorView = null;
-        }
+        mWindowManager.removeView(cursorView);
+        cursorView.invalidate();
+        cursorView = null;
+
         try {
             keyEventHandler.stop();
             mouseEventHandler.stop();
+            handlerThread.quit();
         } catch (IOException e) {
             Log.e("stop", e.toString());
         }

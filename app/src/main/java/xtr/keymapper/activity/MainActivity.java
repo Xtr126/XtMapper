@@ -55,10 +55,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startPointer(){
-        // Attempt to stop service if running
-        /*Intent stop = new Intent("stop_service");
-        LocalBroadcastManager.getInstance(this).sendBroadcast(stop);*/
-
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
             Context context = getApplicationContext();
@@ -140,7 +136,9 @@ public class MainActivity extends AppCompatActivity {
             // We've bound to Service, cast the IBinder and get TouchPointer instance
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
-            pointerOverlay.init(MainActivity.this);
+            if(!pointerOverlay.connected) {
+                pointerOverlay.init(MainActivity.this);
+            }
         }
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
