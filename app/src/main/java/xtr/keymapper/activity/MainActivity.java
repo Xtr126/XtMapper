@@ -14,6 +14,7 @@ import android.view.View;
 import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
@@ -54,9 +55,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startPointer(){
+        // Attempt to stop service if running
+        /*Intent stop = new Intent("stop_service");
+        LocalBroadcastManager.getInstance(this).sendBroadcast(stop);*/
+
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
-            intent = new Intent(this, TouchPointer.class);
+            Context context = getApplicationContext();
+            intent = new Intent(context, TouchPointer.class);
             bindService(intent, connection, Context.BIND_AUTO_CREATE);
             startForegroundService(intent);
 

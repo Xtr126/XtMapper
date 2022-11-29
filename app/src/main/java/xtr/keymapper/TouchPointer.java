@@ -20,17 +20,17 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 
-import xtr.keymapper.activity.InputDeviceSelector;
-import xtr.keymapper.activity.MainActivity;
-import xtr.keymapper.databinding.CursorBinding;
-import xtr.keymapper.dpad.DpadHandler;
-
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+
+import xtr.keymapper.activity.InputDeviceSelector;
+import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.databinding.CursorBinding;
+import xtr.keymapper.dpad.DpadHandler;
 
 public class TouchPointer extends Service {
 
@@ -66,7 +66,6 @@ public class TouchPointer extends Service {
     }
 
     public void init(Context context){
-        hideCursor();
         this.context= context;
         this.c1 = ((MainActivity)context).c1;
         c3 = new StringBuilder();
@@ -76,24 +75,24 @@ public class TouchPointer extends Service {
         } catch (IOException e) {
             updateCmdView("warning: keymap not set");
         }
-
-        handlerThread = new HandlerThread("connect");
-        handlerThread.start();
-        connectionHandler = new Handler(handlerThread.getLooper());
-        startHandlers();
+        if (!connected) {
+            handlerThread = new HandlerThread("connect");
+            handlerThread.start();
+            connectionHandler = new Handler(handlerThread.getLooper());
+            startHandlers();
+        }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Context context = getApplicationContext();
         startNotification();
+        if (cursorView != null) mWindowManager.removeView(cursorView);
+        Context context = getApplicationContext();
         LayoutInflater layoutInflater = (LayoutInflater)context.getSystemService(LAYOUT_INFLATER_SERVICE);
         // Inflate the layout for the cursor
         cursorView = CursorBinding.inflate(layoutInflater).getRoot();
+
         // set the layout parameters of the cursor
-        // Don't let the cursor grab the input focus
-        // Make the underlying application window visible
-        // through the cursor
         WindowManager.LayoutParams mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -108,6 +107,7 @@ public class TouchPointer extends Service {
                 PixelFormat.TRANSLUCENT);
         mParams.gravity = Gravity.CENTER;
         mWindowManager = (WindowManager)context.getSystemService(WINDOW_SERVICE);
+
 
         if(cursorView.getWindowToken()==null)
             if (cursorView.getParent() == null) {
@@ -135,6 +135,12 @@ public class TouchPointer extends Service {
     }
 
     public void hideCursor() {
+        if (handlerThread != null) {
+            mWindowManager.removeView(cursorView);
+            handlerThread.quit();
+            cursorView.invalidate();
+            cursorView = null;
+        }
         try {
             keyEventHandler.stop();
             mouseEventHandler.stop();
@@ -142,11 +148,6 @@ public class TouchPointer extends Service {
             Log.e("stop", e.toString());
         }
         Server.stopServer().start();
-        if (handlerThread != null) {
-            mWindowManager.removeView(cursorView);
-            handlerThread.quit();
-            cursorView.invalidate();
-        }
     }
 
     public void loadKeymap() throws IOException {
@@ -244,6 +245,7 @@ public class TouchPointer extends Service {
                 getevent = new BufferedReader(new InputStreamReader(evSocket.getInputStream()));
                 String event;
                 while ((event = getevent.readLine()) != null) { //read events
+                    if (cursorView == null) break;
                     String[] input_event = event.split("\\s+"); // Keyboard input: /dev/input/event3 EV_KEY KEY_X DOWN
                     if (input_event.length < 3) break; // Avoid ArrayIndexOutOfBoundsException
                     TouchPointer.this.updateCmdView(event);
@@ -260,7 +262,6 @@ public class TouchPointer extends Service {
                         }
                     }
                 }
-                stop();
             } catch (IOException e) {
                 updateCmdView(e.toString());
             }
@@ -334,6 +335,7 @@ public class TouchPointer extends Service {
             in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
+                if (cursorView == null) break;
                 input_event = line.split("\\s+");
                 switch (input_event[0]) {
                     case "REL_X": {
