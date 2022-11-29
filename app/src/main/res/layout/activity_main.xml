@@ -5,6 +5,7 @@
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/black"
     tools:context=".activity.MainActivity"
     tools:ignore="ContentDescription,SpUsage">
 
@@ -15,22 +16,34 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:translationZ="1dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         tools:layout="@layout/fragment_profiles" />
     
-    <include layout="@layout/activity_main_cmdview"
+
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:id="@+id/cmdview"
-        app:layout_constraintBottom_toTopOf="@id/controls"
-        app:layout_constraintTop_toTopOf="parent"/>
+        android:translationZ="-1dp"
+        android:translationY="20dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/dark_grey"
+        app:cardCornerRadius="60dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/controls">
+        <include
+            android:id="@+id/cmdview"
+            android:layout_margin="10dp"
+            android:layout_height="match_parent"
+            android:layout_width="match_parent"
+            layout="@layout/activity_main_cmdview" />
+    </androidx.cardview.widget.CardView>
 
     <include layout="@layout/activity_main_controls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_margin="10dp"
         android:id="@+id/controls"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
