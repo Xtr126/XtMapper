@@ -35,7 +35,7 @@ public class Server {
         FileWriter linesToWrite = new FileWriter(script_name);
         
         linesToWrite.append("#!/system/bin/sh\n");
-        linesToWrite.append("pkill -f ").append(packageName).append(".Input\n");
+        linesToWrite.append("pgrep -f ").append(packageName).append(".Input && echo Waiting for overlay... &&     exit 1\n");
 
         linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
                 .append("\" CLASSPATH=\"").append(apk) 
@@ -48,12 +48,12 @@ public class Server {
         linesToWrite.close();
     }
 
-    public static Thread killServer(){
+    public static Thread stopServer(){
         return new Thread(() -> {
             try {
                 Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
                 PrintWriter pOut = new PrintWriter(socket.getOutputStream());
-                pOut.println("exit");
+                pOut.println("stop");
                 pOut.close(); socket.close();
             } catch (IOException e) {
                 Log.e("I/O error", e.toString());
@@ -102,6 +102,9 @@ public class Server {
             String line;
             while ((line = stdout.readLine()) != null) {
                 updateCmdView2("stdout: " + line);
+                if (line.equals("Waiting for overlay...")) {
+                    ((MainActivity)context).startPointer();
+                }
             }
             sh.waitFor();
         } catch (IOException | InterruptedException e) {

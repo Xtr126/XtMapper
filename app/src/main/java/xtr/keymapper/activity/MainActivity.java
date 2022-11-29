@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
         View view = binding.getRoot();
         setContentView(view);
         server = new Server(this);
+        server.setupServer();
         setupButtons();
         textViewUpdaterTask();
     }
@@ -52,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
     }
 
-    private void startPointer(){
+    public void startPointer(){
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
             intent = new Intent(this, TouchPointer.class);
@@ -93,10 +94,8 @@ public class MainActivity extends AppCompatActivity {
     private void startServer(boolean autorun){
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
-            server.setupServer();
             if (autorun) {
                 new Thread(server::startServer).start();
-                startPointer();
             } else {
                 server.updateCmdView1("run in adb shell:\n sh " + server.script_name);
             }
@@ -124,14 +123,6 @@ public class MainActivity extends AppCompatActivity {
                 handler.postDelayed(this, REFRESH_INTERVAL);
             }
         });
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (pointerOverlay != null) {
-            stopPointer();
-        }
-        super.onDestroy();
     }
 
     /** Defines callbacks for service binding, passed to bindService() */

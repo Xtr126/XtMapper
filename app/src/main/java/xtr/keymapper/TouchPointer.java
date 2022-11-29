@@ -13,6 +13,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
+import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -65,6 +66,7 @@ public class TouchPointer extends Service {
     }
 
     public void init(Context context){
+        hideCursor();
         this.context= context;
         this.c1 = ((MainActivity)context).c1;
         c3 = new StringBuilder();
@@ -133,10 +135,18 @@ public class TouchPointer extends Service {
     }
 
     public void hideCursor() {
-        Server.killServer().start();
-        mWindowManager.removeView(cursorView);
-        handlerThread.quit();
-        cursorView.invalidate();
+        try {
+            keyEventHandler.stop();
+            mouseEventHandler.stop();
+        } catch (IOException e) {
+            Log.e("stop", e.toString());
+        }
+        Server.stopServer().start();
+        if (handlerThread != null) {
+            mWindowManager.removeView(cursorView);
+            handlerThread.quit();
+            cursorView.invalidate();
+        }
     }
 
     public void loadKeymap() throws IOException {
@@ -218,9 +228,12 @@ public class TouchPointer extends Service {
         }
 
         private void stop() throws IOException {
-            pOut.close();
-            xOut.close();
-            getevent.close();
+            if (evSocket != null) {
+                pOut.close();
+                xOut.close();
+                evSocket.close();
+                getevent.close();
+            }
         }
 
         private void start()  {
@@ -287,9 +300,13 @@ public class TouchPointer extends Service {
         }
 
         private void stop() throws IOException {
-            in.close(); out.close();
-            mouseSocket.close(); xOutSocket.close();
-            connected = false;
+            if (mouseSocket != null) {
+                in.close();
+                out.close();
+                mouseSocket.close();
+                xOutSocket.close();
+                connected = false;
+            }
         }
 
         private void getDimensions() {
@@ -341,16 +358,13 @@ public class TouchPointer extends Service {
                         xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + input_event[1] + " 36" + "\n");
                         break;
                     }
-                    case "error": {
+                    case "error":
                         context.startActivity(new Intent(context, InputDeviceSelector.class));
                         break;
-                    }
-                    case "restart": {
-                        stop();
-                        connect();
-                        start();
+
+                    case "restart":
+                        stop(); connect(); start();
                         break;
-                    }
                 }
                 movePointer();
             }
