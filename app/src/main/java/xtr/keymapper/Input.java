@@ -99,25 +99,9 @@ public class Input {
 
     public void start(Socket socket) {
         try {
-            String methodName = "getInstance";
-            Object[] objArr = new Object[0];
-            im = (InputManager) InputManager.class.getDeclaredMethod(methodName)
-                    .invoke(null, objArr);
-
-            //Make MotionEvent.obtain() method accessible
-            methodName = "obtain";
-            MotionEvent.class.getDeclaredMethod(methodName)
-                    .setAccessible(true);
-
-            //Get the reference to injectInputEvent method
-            methodName = "injectInputEvent";
-
-            inputSource = getSource(inputSource);
-            injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
             initPointers();
             String line;
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            System.out.println("Server: new connection at port: " + Server.DEFAULT_PORT);
             while ((line = in.readLine()) != null) {
                 System.out.println(line);
                 String []xy = line.split("\\s+");
@@ -156,10 +140,7 @@ public class Input {
                     }
                 }
             }
-        } catch (NoSuchMethodException |
-                IllegalAccessException |
-                InvocationTargetException |
-                IOException e) {
+        } catch (IOException e) {
             e.printStackTrace(System.out);
         }
     }
@@ -167,7 +148,23 @@ public class Input {
 
     public static native void setIoctl(boolean y);
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        String methodName = "getInstance";
+        Object[] objArr = new Object[0];
+        im = (InputManager) InputManager.class.getDeclaredMethod(methodName)
+                .invoke(null, objArr);
+
+        //Make MotionEvent.obtain() method accessible
+        methodName = "obtain";
+        MotionEvent.class.getDeclaredMethod(methodName)
+                .setAccessible(true);
+
+        //Get the reference to injectInputEvent method
+        methodName = "injectInputEvent";
+
+        inputSource = getSource(inputSource);
+        injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
+
         startMouse(args[0], args[1], Server.DEFAULT_PORT_2); // Call native code
         ServerSocket serverSocket = null;
         final Input input = new Input();
