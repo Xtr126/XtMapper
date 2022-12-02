@@ -24,8 +24,8 @@ import com.genymobile.scrcpy.PointersState;
 
 public class Input {
 
-    static Method injectInputEventMethod;
-    static InputManager im;
+    Method injectInputEventMethod;
+    InputManager im;
     static int inputSource = InputDevice.SOURCE_UNKNOWN;
 
     private final PointersState pointersState = new PointersState();
@@ -33,6 +33,25 @@ public class Input {
     private final MotionEvent.PointerCoords[] pointerCoords = new MotionEvent.PointerCoords[PointersState.MAX_POINTERS];
     private long lastTouchDown;
 
+    public Input() throws Exception {
+        //Get the instance of InputManager class using reflection
+        String methodName = "getInstance";
+        Object[] objArr = new Object[0];
+        im = (InputManager) InputManager.class.getDeclaredMethod(methodName)
+                .invoke(null, objArr);
+
+        //Make MotionEvent.obtain() method accessible
+        methodName = "obtain";
+        MotionEvent.class.getDeclaredMethod(methodName)
+                .setAccessible(true);
+
+        //Get the reference to injectInputEvent method
+        methodName = "injectInputEvent";
+
+        inputSource = getSource(inputSource);
+        injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
+        initPointers();
+    }
 
     private static int getSource(int inputSource) {
         return inputSource == InputDevice.SOURCE_UNKNOWN ?
@@ -53,7 +72,7 @@ public class Input {
         }
     }
 
-    private void injectTouch(int action, long pointerId, float pressure, float x, float y) {
+    public void injectTouch(int action, long pointerId, float pressure, float x, float y) {
         long now = SystemClock.uptimeMillis();
         Point point = new Point(x, y);
 
@@ -93,13 +112,8 @@ public class Input {
         }
     }
 
-    static {
-        System.loadLibrary("mouse_read");
-    }
-
     public void start(Socket socket) {
         try {
-            initPointers();
             String line;
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             while ((line = in.readLine()) != null) {
@@ -144,27 +158,16 @@ public class Input {
             e.printStackTrace(System.out);
         }
     }
+
+    static {
+        System.loadLibrary("mouse_read");
+    }
+    
     public static native void startMouse(String dev, String s, int port);
 
     public static native void setIoctl(boolean y);
 
-    public static void main(String[] args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        String methodName = "getInstance";
-        Object[] objArr = new Object[0];
-        im = (InputManager) InputManager.class.getDeclaredMethod(methodName)
-                .invoke(null, objArr);
-
-        //Make MotionEvent.obtain() method accessible
-        methodName = "obtain";
-        MotionEvent.class.getDeclaredMethod(methodName)
-                .setAccessible(true);
-
-        //Get the reference to injectInputEvent method
-        methodName = "injectInputEvent";
-
-        inputSource = getSource(inputSource);
-        injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
-
+    public static void main(String[] args) throws Exception {
         startMouse(args[0], args[1], Server.DEFAULT_PORT_2); // Call native code
         ServerSocket serverSocket = null;
         final Input input = new Input();
