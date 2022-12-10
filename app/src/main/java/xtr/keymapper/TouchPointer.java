@@ -29,8 +29,12 @@ import java.net.Socket;
 
 import xtr.keymapper.activity.InputDeviceSelector;
 import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.aim.MouseAimHandler;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
+
+import static xtr.keymapper.dpad.DpadHandler.pointerId1;
+import static xtr.keymapper.dpad.DpadHandler.pointerId2;
 
 public class TouchPointer extends Service {
 
@@ -41,14 +45,15 @@ public class TouchPointer extends Service {
     int x1 = 100, y1 = 100;
     private Float[] keysX, keysY;
     public StringBuilder c3, c1;
-    boolean pointer_down = false;
     private int counter = 0;
     private DpadHandler dpad1Handler, dpad2Handler;
+    private MouseAimHandler mouseAimHandler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private Handler connectionHandler;
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
     private HandlerThread handlerThread;
+    boolean pointer_down = false, mouse_aim = false;
     public boolean connected = false;
 
     private final IBinder binder = new TouchPointerBinder();
@@ -155,9 +160,11 @@ public class TouchPointer extends Service {
         keysY = keymapConfig.getY();
 
         if (keymapConfig.dpad1 != null)
-            dpad1Handler = new DpadHandler(context, keymapConfig.dpad1);
+            dpad1Handler = new DpadHandler(context, keymapConfig.dpad1, pointerId1);
         if (keymapConfig.dpad2 != null)
-            dpad2Handler = new DpadHandler(context, keymapConfig.dpad2);
+            dpad2Handler = new DpadHandler(context, keymapConfig.dpad2, pointerId2);
+        if (keymapConfig.mouseAimKey != null)
+            mouseAimHandler = new MouseAimHandler(keymapConfig.mouseAimKey);
     }
 
     public void updateCmdView3(String s){
@@ -254,8 +261,11 @@ public class TouchPointer extends Service {
                             } else if (dpad2Handler != null) { // Dpad with WASD keys
                                 dpad2Handler.handleEvent(input_event[2], input_event[3]);
                             }
-                        } else if (dpad1Handler != null) { // Dpad with arrow keys
-                            dpad1Handler.handleEvent(input_event[2], input_event[3]);
+                        } else {
+                            if (dpad1Handler != null)  // Dpad with arrow keys
+                                dpad1Handler.handleEvent(input_event[2], input_event[3]);
+                            if (input_event[2].equals("KEY_GRAVE")) // If "~" key pressed activate mouse aim lock
+                                mouse_aim = input_event[3].equals("DOWN");
                         }
                     }
                 }
@@ -283,6 +293,8 @@ public class TouchPointer extends Service {
 
             xOutSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
             xOut = new DataOutputStream(xOutSocket.getOutputStream());
+            if (mouseAimHandler != null) mouseAimHandler.setOutputStream(xOut);
+
             connected = true;
         }
 
@@ -315,6 +327,7 @@ public class TouchPointer extends Service {
             height = size.y;
             x2 = width / 80;
             y2 = height / 100;
+            if (mouseAimHandler != null) mouseAimHandler.setDimensions(width, height);
         }
 
         private void pointerGrab() throws IOException {
@@ -333,6 +346,9 @@ public class TouchPointer extends Service {
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
                 if (cursorView == null) break;
+                if (mouseAimHandler != null && mouse_aim)
+                    mouseAimHandler.start(in);
+
                 input_event = line.split("\\s+");
                 switch (input_event[0]) {
                     case "REL_X": {
