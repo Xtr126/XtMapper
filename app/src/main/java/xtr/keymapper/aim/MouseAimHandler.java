@@ -7,7 +7,6 @@ import java.io.IOException;
 public class MouseAimHandler {
 
     private DataOutputStream xOut;
-
     private final MouseAimKey key;
     private int width, height;
     private float x1, y1;
@@ -29,28 +28,29 @@ public class MouseAimHandler {
     }
 
     public void start(BufferedReader in) throws IOException {
+        xOut.writeBytes(x1 + " " + y1 + " DOWN 36\n");
         String line;
         while ((line = in.readLine()) != null) {
             String[] input_event = line.split("\\s+");
             switch (input_event[0]) {
-                case "REL_X": {
+                case "REL_X":
                     x1 += Integer.parseInt(input_event[1]);
-                    if ( x1 < 0 ) x1 = key.getX();
-                    if ( x1 > width ) x1 = key.getX();
+                    if ( x1 > width || x1 < 0 ) {
+                        xOut.writeBytes(x1 + " " + y1 + " UP 36\n"); // Release pointer
+                        x1 = key.getX();
+                        xOut.writeBytes(x1 + " " + y1 + " DOWN 36\n");
+                    }
                     xOut.writeBytes(x1 + " " + y1 + " " + "MOVE" + " 36" + "\n");
                     break;
-                }
-                case "REL_Y": {
+                case "REL_Y":
                     y1 += Integer.parseInt(input_event[1]);
-                    if ( y1 < 0 ) y1 = key.getY();
-                    if ( y1 > height ) y1 = key.getY();
+                    if ( y1 < 0 || y1 > height ) {
+                        xOut.writeBytes(x1 + " " + y1 + " UP 36\n");
+                        y1 = key.getY();
+                        xOut.writeBytes(x1 + " " + y1 + " DOWN 36\n");
+                    }
                     xOut.writeBytes(x1 + " " + y1 + " " + "MOVE" + " 36" + "\n");
                     break;
-                }
-                case "BTN_MOUSE": {
-                    xOut.writeBytes(x1 + " " + y1 + " " + input_event[1] + " 36" + "\n");
-                    break;
-                }
             }
             if (!active) break;
         }

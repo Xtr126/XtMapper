@@ -270,7 +270,6 @@ public class TouchPointer extends Service {
                                     mouse_aim = mouseAimHandler.active;
                                 }
                             }
-
                         }
                     }
                 }
