@@ -11,6 +11,8 @@ public class MouseAimHandler {
     private final MouseAimKey key;
     private int width, height;
     private float x1, y1;
+    public boolean active = false;
+
     public MouseAimHandler(MouseAimKey key){
         x1 = key.getX();
         y1 = key.getY();
@@ -50,6 +52,7 @@ public class MouseAimHandler {
                     break;
                 }
             }
+            if (!active) break;
         }
     }
 }

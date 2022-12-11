@@ -53,7 +53,7 @@ public class TouchPointer extends Service {
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
     private HandlerThread handlerThread;
-    boolean pointer_down = false, mouse_aim = false;
+    boolean pointer_down, mouse_aim;
     public boolean connected = false;
 
     private final IBinder binder = new TouchPointerBinder();
@@ -264,8 +264,13 @@ public class TouchPointer extends Service {
                         } else {
                             if (dpad1Handler != null)  // Dpad with arrow keys
                                 dpad1Handler.handleEvent(input_event[2], input_event[3]);
-                            if (input_event[2].equals("KEY_GRAVE")) // If "~" key pressed activate mouse aim lock
-                                mouse_aim = input_event[3].equals("DOWN");
+                            if (input_event[2].equals("KEY_GRAVE") && input_event[3].equals("DOWN")) {
+                                if (mouseAimHandler != null) { // If "~" key pressed activate mouse aim lock
+                                    mouseAimHandler.active = !mouse_aim;
+                                    mouse_aim = mouseAimHandler.active;
+                                }
+                            }
+
                         }
                     }
                 }
@@ -346,8 +351,7 @@ public class TouchPointer extends Service {
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
                 if (cursorView == null) break;
-                if (mouseAimHandler != null && mouse_aim)
-                    mouseAimHandler.start(in);
+                if (mouse_aim) mouseAimHandler.start(in);
 
                 input_event = line.split("\\s+");
                 switch (input_event[0]) {
