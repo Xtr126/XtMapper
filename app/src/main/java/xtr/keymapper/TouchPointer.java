@@ -298,14 +298,12 @@ public class TouchPointer extends Service {
             xOutSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
             xOut = new DataOutputStream(xOutSocket.getOutputStream());
             if (mouseAimHandler != null) mouseAimHandler.setOutputStream(xOut);
-
             connected = true;
         }
 
         private void start() {
             getDimensions();
             try {
-                pointerGrab();
                 handleEvents();
                 stop();
             } catch (IOException e) {
@@ -332,10 +330,6 @@ public class TouchPointer extends Service {
             x2 = width / 80;
             y2 = height / 100;
             if (mouseAimHandler != null) mouseAimHandler.setDimensions(width, height);
-        }
-
-        private void pointerGrab() throws IOException {
-            xOut.writeBytes( "_ " + true + " ioctl" + " 0\n");
         }
 
         private void movePointer() {

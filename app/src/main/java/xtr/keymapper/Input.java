@@ -130,10 +130,6 @@ public class Input {
                                 parseFloat(xy[0]), parseFloat(xy[1]));
                         break;
                     }
-                    case "ioctl": {
-                        setIoctl(xy[1].equals("true"));
-                        break;
-                    }
                     case "exit": {
                         System.exit(1);
                         break;
@@ -146,7 +142,6 @@ public class Input {
     }
     public static native void startMouse(String dev, String s, int port);
 
-    public static native void setIoctl(boolean y);
 
     public static void main(String[] args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         String methodName = "getInstance";

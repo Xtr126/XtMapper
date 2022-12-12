@@ -204,6 +204,7 @@ void* init(void* context) {
                 perror("opening device");
                 write(mouse_read_fd, "error\n", strlen("error\n"));
             } else {
+                ioctl(mouse_fd, EVIOCGRAB, (void *)1);
                 pthread_create(&threadInfo_, &threadAttr_, send_mouse_events, &s_ctx);
             }
         }
@@ -260,13 +261,4 @@ JNIEXPORT void JNICALL
     }
 
 
-JNIEXPORT void JNICALL
-    Java_xtr_keymapper_Input_setIoctl(JNIEnv *env, jclass clazz, jboolean y) {
-        if (mouse_fd != 0 ) {
-            ioctl(mouse_fd, EVIOCGRAB, y);
-            printf("ioctl successful\n");
-        }
-        else {
-            printf("ioctl failed: fd not initialized\n");
-        }
-    }
+
