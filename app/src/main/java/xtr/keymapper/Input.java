@@ -103,7 +103,6 @@ public class Input {
             String line;
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             while ((line = in.readLine()) != null) {
-                System.out.println(line);
                 String []xy = line.split("\\s+");
                 int pointerId;
                 try {
@@ -140,7 +139,7 @@ public class Input {
             e.printStackTrace(System.out);
         }
     }
-    public static native void startMouse(String dev, String s, int port);
+    public static native void startMouse(int port);
 
 
     public static void main(String[] args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
@@ -160,7 +159,7 @@ public class Input {
         inputSource = getSource(inputSource);
         injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
 
-        startMouse(args[0], args[1], Server.DEFAULT_PORT_2); // Call native code
+        startMouse(Server.DEFAULT_PORT_2); // Call native code
         ServerSocket serverSocket = null;
         final Input input = new Input();
 

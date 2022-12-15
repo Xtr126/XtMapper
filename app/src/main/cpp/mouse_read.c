@@ -20,9 +20,6 @@
 #include <sys/wait.h>
 #include <paths.h>
 
-
-char str[16];
-
 typedef struct socket_context {
     JavaVM  *javaVM;
     int client_fd;
@@ -40,8 +37,9 @@ typedef struct mouse_context {
 mouseContext g_ctx;
 
 int mouse_fd, port;
-const char* device;
 int s;
+
+#define bufsize 24
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -100,7 +98,7 @@ void* send_mouse_events(void* context) {
         }
     }
     struct input_event ie;
-
+    char str[16];
     while (read(mouse_fd, &ie, sizeof(struct input_event))) {
         switch (ie.code) {
             case REL_X :
@@ -167,8 +165,7 @@ void* init(void* context) {
     }
     create_socket(&s_ctx);
     printf("Waiting for overlay...\n");
-    char dev[24] = { 0 };
-    strcpy(dev, device);
+    char dev[bufsize] = { 0 };
     int mouse_read_fd;
     while(true) {
         pthread_mutex_lock(&pctx->lock);
@@ -194,8 +191,8 @@ void* init(void* context) {
             printf("mouse_read: connection failed \n");
         }
 
-        char buffer[24] = { 0 };
-        read(s_ctx.client_fd, buffer, 24);
+        char buffer[bufsize] = { 0 };
+        read(s_ctx.client_fd, buffer, bufsize);
         printf("msg: %s", buffer);
 
         if (strcmp(buffer, "mouse_read\n") == 0) {
@@ -215,12 +212,18 @@ void* init(void* context) {
             close(mouse_fd);
         }
         else if (strcmp(buffer, "change_device\n") == 0) {
-            printf("device change");
-            char new_device[24];
-            read(s_ctx.client_fd, new_device, 24);
-            printf(": %s", new_device);
+            close(mouse_fd);
+            char new_device[bufsize];
+            read(s_ctx.client_fd, new_device, bufsize);
+            printf("evdev: %s\n", new_device);
             strcpy(dev, new_device);
             write(mouse_read_fd, "restart\n", strlen("restart\n"));
+        }
+        else if (strcmp(buffer, "mouse_sensitivity\n") == 0) {
+            char sens[bufsize];
+            read(s_ctx.client_fd, sens, bufsize);
+            printf("sensitivity: %s\n", sens);
+            s = atoi(sens);
         }
         pthread_attr_destroy(&threadAttr_);
     }
@@ -233,15 +236,8 @@ void* init(void* context) {
 * Interface to Java side to start, caller is from main()
 */
 JNIEXPORT void JNICALL
-    Java_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring dev, jstring mouse_sensitivity, jint default_port) {
+    Java_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jint default_port) {
         setlinebuf(stdout);
-
-        device = (*env)->GetStringUTFChars(env, dev, 0);
-        s = atoi((*env)->GetStringUTFChars(env, mouse_sensitivity, 0));
-
-        (*env)->ReleaseStringUTFChars(env, dev ,0);
-        (*env)->ReleaseStringUTFChars(env, mouse_sensitivity ,0);
-
         port = default_port;
         pthread_t threadInfo_;
         pthread_attr_t threadAttr_;

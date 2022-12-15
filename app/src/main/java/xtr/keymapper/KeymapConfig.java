@@ -33,13 +33,6 @@ public class KeymapConfig {
         sharedPrefEditor = sharedPref.edit();
     }
 
-    public static String getSettings(Context context){
-        KeymapConfig keymapConfig = new KeymapConfig(context);
-        String device = keymapConfig.getDevice();
-        float sensitivity = keymapConfig.getMouseSensitivity();
-        return device + " " + sensitivity;
-    }
-
     public String getProfile(){
         return sharedPref.getString("profile", Profiles.defaultProfile);
     }

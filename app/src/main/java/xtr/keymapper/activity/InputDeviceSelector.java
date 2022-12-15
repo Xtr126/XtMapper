@@ -75,7 +75,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         // On selecting a spinner item
         String item = parent.getItemAtPosition(position).toString();
         binding.textView2.setText(item);
-        Server.changeDevice(item).start();
+        new Thread(() -> Server.changeDevice(item)).start();
         keymapConfig.setDevice(item);
         // Showing selected spinner item
         Toast.makeText(parent.getContext(), item, Toast.LENGTH_LONG).show();

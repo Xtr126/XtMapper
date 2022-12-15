@@ -53,6 +53,7 @@ public class TouchPointer extends Service {
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
     private HandlerThread handlerThread;
+    private KeymapConfig keymapConfig;
     boolean pointer_down, mouse_aim;
     public boolean connected = false;
 
@@ -141,7 +142,6 @@ public class TouchPointer extends Service {
         mWindowManager.removeView(cursorView);
         cursorView.invalidate();
         cursorView = null;
-
         try {
             keyEventHandler.stop();
             mouseEventHandler.stop();
@@ -149,11 +149,11 @@ public class TouchPointer extends Service {
         } catch (IOException e) {
             Log.e("stop", e.toString());
         }
-        Server.stopServer().start();
+        new Thread(Server::stopServer).start();
     }
 
     public void loadKeymap() throws IOException {
-        KeymapConfig keymapConfig = new KeymapConfig(context);
+        keymapConfig = new KeymapConfig(context);
         keymapConfig.loadConfig();
 
         keysX = keymapConfig.getX();
@@ -291,6 +291,7 @@ public class TouchPointer extends Service {
         String line; String[] input_event;
 
         private void connect() throws IOException {
+            sendSettingstoServer();
             mouseSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT_2);
             out = new PrintWriter(mouseSocket.getOutputStream());
             out.println("mouse_read"); out.flush();
@@ -299,6 +300,13 @@ public class TouchPointer extends Service {
             xOut = new DataOutputStream(xOutSocket.getOutputStream());
             if (mouseAimHandler != null) mouseAimHandler.setOutputStream(xOut);
             connected = true;
+        }
+
+        private void sendSettingstoServer() throws IOException {
+            String device = keymapConfig.getDevice();
+            float sensitivity = keymapConfig.getMouseSensitivity();
+            Server.changeDevice(device);
+            Server.changeSensitivity(sensitivity);
         }
 
         private void start() {
@@ -333,6 +341,7 @@ public class TouchPointer extends Service {
         }
 
         private void movePointer() {
+            if (cursorView == null) return;
             mHandler.post(() -> {
                 cursorView.setX(x1);
                 cursorView.setY(y1);

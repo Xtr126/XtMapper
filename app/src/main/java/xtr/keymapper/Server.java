@@ -35,45 +35,46 @@ public class Server {
         FileWriter linesToWrite = new FileWriter(script_name);
         
         linesToWrite.append("#!/system/bin/sh\n");
-        linesToWrite.append("pgrep -f ").append(packageName).append(".Input && echo Waiting for overlay... &&     exit 1\n");
+        linesToWrite.append("pgrep -f ").append(packageName).append(".Input && echo Waiting for overlay... && exit 1\n");
 
         linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
                 .append("\" CLASSPATH=\"").append(apk) 
                 .append("\" /system/bin/app_process /system/bin ")
-                .append(packageName).append(".Input ")
-                .append(KeymapConfig.getSettings(context))
-                .append("\n");
+                .append(packageName).append(".Input\n");
 
         linesToWrite.flush();
         linesToWrite.close();
     }
 
-    public static Thread stopServer(){
-        return new Thread(() -> {
-            try {
-                Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
-                PrintWriter pOut = new PrintWriter(socket.getOutputStream());
-                pOut.println("stop");
-                pOut.close(); socket.close();
-            } catch (IOException e) {
-                Log.e("I/O error", e.toString());
-            }
-        });
+    public static void stopServer(){
+        try {
+            Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
+            PrintWriter pOut = new PrintWriter(socket.getOutputStream());
+            pOut.println("stop");
+            pOut.close(); socket.close();
+        } catch (IOException e) {
+            Log.e("I/O error", e.toString());
+        }
     }
 
-    public static Thread changeDevice(String newDevice){
-        return new Thread(() -> {
-            try {
-                Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
-                PrintWriter pOut = new PrintWriter(socket.getOutputStream());
-                pOut.println("change_device");
-                pOut.flush();
-                pOut.print(newDevice);
-                pOut.close(); socket.close();
-            } catch (IOException e) {
-                Log.e("I/O error", e.toString());
-            }
-        });
+    public static void changeDevice(String newDevice){
+        try {
+            Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
+            PrintWriter pOut = new PrintWriter(socket.getOutputStream());
+            pOut.println("change_device"); pOut.flush();
+            pOut.print(newDevice);
+            pOut.close(); socket.close();
+        } catch (IOException e) {
+            Log.e("I/O error", e.toString());
+        }
+    }
+
+    public static void changeSensitivity(float sensitivity) throws IOException {
+        Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
+        PrintWriter pOut = new PrintWriter(socket.getOutputStream());
+        pOut.println("mouse_sensitivity"); pOut.flush();
+        pOut.print(sensitivity);
+        pOut.close(); socket.close();
     }
 
     public void setupServer () {
