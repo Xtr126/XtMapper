@@ -23,3 +23,6 @@ If you want to contribute code, please base your commits on the latest dev branc
 Overview:
 - Touch emulation is handled by TouchPointer.java and Input.java.  
 - Input.java runs separately from the app as an elevated java process using app_process and adb shell/root, check Server.java for more details. 
+
+# License
+This project is licensed under the GPL v3. Do not publish unofficial APKs to the play store. 
