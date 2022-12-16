@@ -1,27 +1,15 @@
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include <linux/input.h>
 #include <fcntl.h>
-
-#include <stdarg.h>
-#include <stdint.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <jni.h>
 #include <pthread.h>
 #include <assert.h>
-#include <inttypes.h>
-
 #include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
 #include <paths.h>
-
-
-char str[16];
 
 typedef struct socket_context {
     JavaVM  *javaVM;
@@ -39,11 +27,10 @@ typedef struct mouse_context {
 } mouseContext;
 mouseContext g_ctx;
 
-int fd;
-int port;
-const char* device;
+int mouse_fd, port;
 int s;
-pid_t child_pid;
+
+#define bufsize 24
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -102,8 +89,8 @@ void* send_mouse_events(void* context) {
         }
     }
     struct input_event ie;
-
-    while (read(fd, &ie, sizeof(struct input_event))) {
+    char str[16];
+    while (read(mouse_fd, &ie, sizeof(struct input_event))) {
         switch (ie.code) {
             case REL_X :
                 sprintf(str, "REL_X %d \n", ie.value * s);
@@ -123,7 +110,7 @@ void* send_mouse_events(void* context) {
                 break;
         }
     }
-    close(fd);
+    close(mouse_fd);
     close(sock->client_fd);
     (*javaVM)->DetachCurrentThread(javaVM);
     return context;
@@ -135,12 +122,10 @@ void* send_getevent(void *context) {
         case -1:    /* Error. */
             exit(EXIT_FAILURE);  /* exit if fork() fails */
         case  0: {    /* In the child process: */
-            child_pid = getpid(); /* save child pid for killing process later */
             dup2(sock->client_fd, STDOUT_FILENO);  /* duplicate socket on stdout */
-            dup2(sock->client_fd, STDERR_FILENO);  /* duplicate socket on stderr too */
             close(sock->client_fd);  /* can close the original after it's duplicated */
             char *argp[] = {"sh", "-c",
-                            "$LD_LIBRARY_PATH/libgetevent.so -ql",NULL};
+                            "exec env LD_PRELOAD=$LD_LIBRARY_PATH/libgetevent.so getevent -ql",NULL};
             execve(_PATH_BSHELL, argp, environ);
             _exit(127);
             /* NOTREACHED */
@@ -169,8 +154,7 @@ void* init(void* context) {
     }
     create_socket(&s_ctx);
     printf("Waiting for overlay...\n");
-    char dev[24] = { 0 };
-    strcpy(dev, device);
+    char dev[bufsize] = { 0 };
     int mouse_read_fd;
     while(true) {
         pthread_mutex_lock(&pctx->lock);
@@ -196,36 +180,39 @@ void* init(void* context) {
             printf("mouse_read: connection failed \n");
         }
 
-        char buffer[24] = { 0 };
-        read(s_ctx.client_fd, buffer, 24);
+        char buffer[bufsize] = { 0 };
+        read(s_ctx.client_fd, buffer, bufsize);
         printf("msg: %s", buffer);
 
         if (strcmp(buffer, "mouse_read\n") == 0) {
-            if ((fd = open(dev, O_RDONLY)) == -1) {
-                mouse_read_fd = s_ctx.client_fd;
+            mouse_read_fd = s_ctx.client_fd;
+            if ((mouse_fd = open(dev, O_RDONLY)) == -1) {
                 perror("opening device");
                 write(mouse_read_fd, "error\n", strlen("error\n"));
             } else {
+                ioctl(mouse_fd, EVIOCGRAB, (void *)1);
                 pthread_create(&threadInfo_, &threadAttr_, send_mouse_events, &s_ctx);
             }
         }
         else if (strcmp(buffer, "getevent\n") == 0) {
             pthread_create(&threadInfo_, &threadAttr_, send_getevent, &s_ctx);
         }
-        else if (strcmp(buffer, "exit\n") == 0) {
-            printf("exit signal recieved\n");
-            close(fd);
-            close(s_ctx.server_fd);
-            kill(child_pid, SIGKILL);
-            exit(EXIT_SUCCESS);
+        else if (strcmp(buffer, "stop\n") == 0) {
+            close(mouse_fd);
         }
         else if (strcmp(buffer, "change_device\n") == 0) {
-            printf("device change");
-            char new_device[24];
-            read(s_ctx.client_fd, new_device, 24);
-            printf(": %s", new_device);
+            close(mouse_fd);
+            char new_device[bufsize];
+            read(s_ctx.client_fd, new_device, bufsize);
+            printf("evdev: %s\n", new_device);
             strcpy(dev, new_device);
             write(mouse_read_fd, "restart\n", strlen("restart\n"));
+        }
+        else if (strcmp(buffer, "mouse_sensitivity\n") == 0) {
+            char sens[bufsize];
+            read(s_ctx.client_fd, sens, bufsize);
+            printf("sensitivity: %s\n", sens);
+            s = atoi(sens);
         }
         pthread_attr_destroy(&threadAttr_);
     }
@@ -238,15 +225,8 @@ void* init(void* context) {
 * Interface to Java side to start, caller is from main()
 */
 JNIEXPORT void JNICALL
-    Java_com_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jstring dev, jstring mouse_sensitivity, jint default_port) {
+    Java_xtr_keymapper_Input_startMouse(JNIEnv *env, jobject instance, jint default_port) {
         setlinebuf(stdout);
-
-        device = (*env)->GetStringUTFChars(env, dev, 0);
-        s = atoi((*env)->GetStringUTFChars(env, mouse_sensitivity, 0));
-
-        (*env)->ReleaseStringUTFChars(env, dev ,0);
-        (*env)->ReleaseStringUTFChars(env, mouse_sensitivity ,0);
-
         port = default_port;
         pthread_t threadInfo_;
         pthread_attr_t threadAttr_;
@@ -266,13 +246,4 @@ JNIEXPORT void JNICALL
     }
 
 
-JNIEXPORT void JNICALL
-    Java_com_xtr_keymapper_Input_setIoctl(JNIEnv *env, jclass clazz, jboolean y) {
-        if ( fd != 0 ) {
-            ioctl(fd, EVIOCGRAB, y);
-            printf("ioctl successful\n");
-        }
-        else {
-            printf("ioctl failed: fd not initialized\n");
-        }
-    }
+
