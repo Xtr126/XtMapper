@@ -1,23 +1,14 @@
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include <linux/input.h>
 #include <fcntl.h>
-
-#include <stdarg.h>
-#include <stdint.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <jni.h>
 #include <pthread.h>
 #include <assert.h>
-#include <inttypes.h>
-
 #include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
 #include <paths.h>
 
 typedef struct socket_context {
@@ -131,12 +122,10 @@ void* send_getevent(void *context) {
         case -1:    /* Error. */
             exit(EXIT_FAILURE);  /* exit if fork() fails */
         case  0: {    /* In the child process: */
-            //child_pid = getpid(); /* save child pid for killing process later */
             dup2(sock->client_fd, STDOUT_FILENO);  /* duplicate socket on stdout */
-            dup2(sock->client_fd, STDERR_FILENO);  /* duplicate socket on stderr too */
             close(sock->client_fd);  /* can close the original after it's duplicated */
             char *argp[] = {"sh", "-c",
-                            "$LD_LIBRARY_PATH/libgetevent.so -ql",NULL};
+                            "exec env LD_PRELOAD=$LD_LIBRARY_PATH/libgetevent.so getevent -ql",NULL};
             execve(_PATH_BSHELL, argp, environ);
             _exit(127);
             /* NOTREACHED */
