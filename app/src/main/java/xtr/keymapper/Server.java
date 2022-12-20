@@ -36,7 +36,7 @@ public class Server {
         
         linesToWrite.append("#!/system/bin/sh\n");
         linesToWrite.append("pgrep -f ").append(packageName).append(".Input && echo Waiting for overlay... && exit 1\n");
-
+        linesToWrite.append("exec env ");
         linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
                 .append("\" CLASSPATH=\"").append(apk) 
                 .append("\" /system/bin/app_process /system/bin ")
