@@ -1,5 +1,8 @@
 package xtr.keymapper.aim;
 
+import android.graphics.Rect;
+import android.graphics.RectF;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -8,13 +11,13 @@ public class MouseAimHandler {
 
     private DataOutputStream xOut;
     private final MouseAimKey key;
-    private int width, height;
-    private float x1, y1;
+    private float currentX, currentY;
+    private final RectF area = new RectF();
     public boolean active = false;
 
     public MouseAimHandler(MouseAimKey key){
-        x1 = key.getX();
-        y1 = key.getY();
+        currentX = key.x;
+        currentY = key.y;
         this.key = key;
     }
 
@@ -23,33 +26,41 @@ public class MouseAimHandler {
     }
 
     public void setDimensions(int width, int height){
-        this.width = width;
-        this.height = height;
+        if (key.width == 0) {
+            area.left = area.top = 0;
+            area.right = width;
+            area.bottom = height;
+        } else {
+            area.left = currentX - key.width;
+            area.right = currentX + key.width;
+            area.top = currentX - key.height;
+            area.bottom = currentX + key.height;
+        }
     }
 
     public void start(BufferedReader in) throws IOException {
-        xOut.writeBytes(x1 + " " + y1 + " DOWN 36\n");
+        xOut.writeBytes(currentX + " " + currentY + " DOWN 36\n");
         String line;
         while ((line = in.readLine()) != null) {
             String[] input_event = line.split("\\s+");
             switch (input_event[0]) {
                 case "REL_X":
-                    x1 += Integer.parseInt(input_event[1]);
-                    if ( x1 > width || x1 < 0 ) {
-                        xOut.writeBytes(x1 + " " + y1 + " UP 36\n"); // Release pointer
-                        x1 = key.getX();
-                        xOut.writeBytes(x1 + " " + y1 + " DOWN 36\n");
+                    currentX += Integer.parseInt(input_event[1]);
+                    if ( currentX > area.right || currentX < area.left ) {
+                        xOut.writeBytes(currentX + " " + currentY + " UP 36\n"); // Release pointer
+                        currentX = key.x;
+                        xOut.writeBytes(currentX + " " + currentY + " DOWN 36\n");
                     }
-                    xOut.writeBytes(x1 + " " + y1 + " " + "MOVE" + " 36" + "\n");
+                    xOut.writeBytes(currentX + " " + currentY + " " + "MOVE" + " 36" + "\n");
                     break;
                 case "REL_Y":
-                    y1 += Integer.parseInt(input_event[1]);
-                    if ( y1 < 0 || y1 > height ) {
-                        xOut.writeBytes(x1 + " " + y1 + " UP 36\n");
-                        y1 = key.getY();
-                        xOut.writeBytes(x1 + " " + y1 + " DOWN 36\n");
+                    currentY += Integer.parseInt(input_event[1]);
+                    if ( currentY > area.right || currentY < area.left ) {
+                        xOut.writeBytes(currentX + " " + currentY + " UP 36\n");
+                        currentY = key.y;
+                        xOut.writeBytes(currentX + " " + currentY + " DOWN 36\n");
                     }
-                    xOut.writeBytes(x1 + " " + y1 + " " + "MOVE" + " 36" + "\n");
+                    xOut.writeBytes(currentX + " " + currentY + " " + "MOVE" + " 36" + "\n");
                     break;
             }
             if (!active) break;

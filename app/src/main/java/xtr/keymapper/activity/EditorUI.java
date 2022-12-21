@@ -1,11 +1,13 @@
 package xtr.keymapper.activity;
 
+import android.annotation.SuppressLint;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -14,19 +16,21 @@ import android.widget.ImageView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import xtr.keymapper.KeymapConfig;
 import xtr.keymapper.aim.MouseAimKey;
 import xtr.keymapper.databinding.CrosshairBinding;
 import xtr.keymapper.databinding.Dpad1Binding;
 import xtr.keymapper.databinding.Dpad2Binding;
 import xtr.keymapper.databinding.KeymapEditorBinding;
+import xtr.keymapper.databinding.ResizableBinding;
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
 
@@ -39,6 +43,7 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
     private final List<MovableFloatingActionKey> Keys = new ArrayList<>();
 
     private MovableFrameLayout dpad1, dpad2, crosshair;
+    private MouseAimKey mouseAimKey;
     private static final Float DEFAULT_X = 200f, DEFAULT_Y = 200f;
     private int i = 0;
     private KeymapEditorBinding binding;
@@ -110,7 +115,7 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
 
         Dpad dpad1 = keymapConfig.dpad1;
         Dpad dpad2 = keymapConfig.dpad2;
-        MouseAimKey mouseAimKey = keymapConfig.mouseAimKey;
+        mouseAimKey = keymapConfig.mouseAimKey;
 
         if (dpad1 != null) {
             addDpad1(dpad1.getX(), dpad1.getY());
@@ -121,7 +126,7 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
         }
 
         if (mouseAimKey != null) {
-            addCrosshair(mouseAimKey.getX(), mouseAimKey.getY());
+            addCrosshair(mouseAimKey.x, mouseAimKey.y);
         }
     }
 
@@ -146,7 +151,7 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
         }
 
         if (crosshair != null) {
-            MouseAimKey mouseAimKey = new MouseAimKey(crosshair, "~");
+            mouseAimKey.setXY(crosshair);
             linesToWrite.append(mouseAimKey.getData());
         }
 
@@ -163,7 +168,10 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
     public void setupButtons() {
         binding.saveButton.setOnClickListener(v -> hideView());
         binding.addButton.setOnClickListener(v -> addKey("A", DEFAULT_X, DEFAULT_Y));
-        binding.crossHair.setOnClickListener(v -> addCrosshair(DEFAULT_X, DEFAULT_Y));
+        binding.crossHair.setOnClickListener(v -> {
+            mouseAimKey = new MouseAimKey();
+            addCrosshair(DEFAULT_X, DEFAULT_Y);
+        });
 
         binding.dPad.setOnClickListener(new View.OnClickListener() {
             int x = 0;
@@ -241,6 +249,7 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
                 mainView.removeView(crosshair);
                 crosshair = null;
             });
+            binding.expandButton.setOnClickListener(v -> new ResizableLayout());
         }
         crosshair.animate().x(x).y(y)
                 .setDuration(500)
@@ -267,5 +276,43 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
     protected void onDestroy() {
         hideView();
         super.onDestroy();
+    }
+
+    class ResizableLayout implements View.OnTouchListener {
+        private final View view;
+
+        @SuppressLint("ClickableViewAccessibility")
+        public ResizableLayout(){
+            ResizableBinding binding1 = ResizableBinding.inflate(layoutInflater, mainView, true);
+            view = binding1.getRoot();
+            binding1.dragHandle.setOnTouchListener(this);
+            binding1.saveButton.setOnClickListener(v -> {
+                mainView.removeView(view);
+                mouseAimKey.width = view.getPivotX();
+                mouseAimKey.height = view.getPivotY();
+            });
+            moveView();
+        }
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            float x = event.getX();
+            float y = event.getY();
+            if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
+                layoutParams.width += x;
+                layoutParams.height += y;
+                moveView();
+            } else {
+                v.performClick();
+            }
+            return true;
+        }
+        private void moveView(){
+            float x = crosshair.getX() - view.getPivotX();
+            float y = crosshair.getY() - view.getPivotY();
+            view.setX(x);
+            view.setY(y);
+            view.requestLayout();
+        }
     }
 }
