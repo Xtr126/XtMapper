@@ -22,9 +22,11 @@
             android:exported="false" />
         <activity
             android:name=".activity.InputDeviceSelector"
+            android:theme="@style/Theme.Material3.Dark.DialogWhenLarge"
             android:exported="false" />
         <activity
             android:name=".activity.EditorUI"
+            android:theme="@style/Theme.Material3.Dark.Dialog.MinWidth"
             android:exported="false" />
         <activity
             android:name=".activity.MainActivity"
