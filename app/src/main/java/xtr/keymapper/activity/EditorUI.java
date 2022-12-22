@@ -23,6 +23,7 @@ import java.util.List;
 
 import xtr.keymapper.KeymapConfig;
 import xtr.keymapper.aim.MouseAimKey;
+import xtr.keymapper.aim.MouseAimSettings;
 import xtr.keymapper.databinding.CrosshairBinding;
 import xtr.keymapper.databinding.Dpad1Binding;
 import xtr.keymapper.databinding.Dpad2Binding;
@@ -250,6 +251,10 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
                 crosshair = null;
             });
             binding.expandButton.setOnClickListener(v -> new ResizableLayout());
+            binding.editButton.setOnClickListener(v -> {
+                MouseAimSettings mouseAimSettings = new MouseAimSettings();
+                mouseAimSettings.show(getSupportFragmentManager(), "dialog");
+            });
         }
         crosshair.animate().x(x).y(y)
                 .setDuration(500)
