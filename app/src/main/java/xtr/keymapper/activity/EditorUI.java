@@ -70,16 +70,16 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
 
     public void open() {
         try {
-            if (mainView.getWindowToken() == null) {
-                if (mainView.getParent() == null) {
-                    loadKeymap();
-                    mWindowManager.addView(mainView, mParams);
-                    mainView.setOnKeyListener(this);
-                    mainView.setFocusable(true);
-                }
-            }
+            loadKeymap();
         } catch (Exception e) {
             Log.d("Error1", e.toString());
+        }
+        if (mainView.getWindowToken() == null) {
+            if (mainView.getParent() == null) {
+                mWindowManager.addView(mainView, mParams);
+                mainView.setOnKeyListener(this);
+                mainView.setFocusable(true);
+            }
         }
     }
 
