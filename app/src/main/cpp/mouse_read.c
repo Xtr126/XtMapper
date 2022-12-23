@@ -108,6 +108,10 @@ void* send_mouse_events(void* context) {
                 sprintf(str, "BTN_MOUSE %d \n", ie.value);
                 send(sock->client_fd, str, strlen(str), 0);
                 break;
+            case BTN_RIGHT :
+                sprintf(str, "BTN_RIGHT %d \n", ie.value);
+                send(sock->client_fd, str, strlen(str), 0);
+                break;
         }
     }
     close(mouse_fd);
@@ -244,6 +248,3 @@ JNIEXPORT void JNICALL
         pthread_attr_destroy(&threadAttr_);
         (void) result;
     }
-
-
-

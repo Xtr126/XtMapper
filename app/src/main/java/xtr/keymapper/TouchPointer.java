@@ -264,12 +264,9 @@ public class TouchPointer extends Service {
                         } else {
                             if (dpad1Handler != null)  // Dpad with arrow keys
                                 dpad1Handler.handleEvent(input_event[2], input_event[3]);
-                            if (input_event[2].equals("KEY_GRAVE") && input_event[3].equals("DOWN")) {
-                                if (mouseAimHandler != null) { // If "~" key pressed activate mouse aim lock
-                                    mouseAimHandler.active = !mouse_aim;
-                                    mouse_aim = mouseAimHandler.active;
-                                }
-                            }
+
+                            if (input_event[2].equals("KEY_GRAVE") && input_event[3].equals("DOWN"))
+                                mouseEventHandler.triggerMouseAim();
                         }
                     }
                 }
@@ -307,6 +304,13 @@ public class TouchPointer extends Service {
             float sensitivity = keymapConfig.getMouseSensitivity();
             Server.changeDevice(device);
             Server.changeSensitivity(sensitivity);
+        }
+
+        private void triggerMouseAim(){
+            if (mouseAimHandler != null) {
+                mouseAimHandler.active = !mouse_aim;
+                mouse_aim = mouseAimHandler.active;
+            }
         }
 
         private void start() {
@@ -377,6 +381,11 @@ public class TouchPointer extends Service {
                     case "BTN_MOUSE": {
                         pointer_down = input_event[1].equals("1");
                         xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + input_event[1] + " 36" + "\n");
+                        break;
+                    }
+                    case "BTN_RIGHT": {
+                        if (input_event[1].equals("1"))
+                            triggerMouseAim();
                         break;
                     }
                     case "error":
