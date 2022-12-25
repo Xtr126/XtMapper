@@ -1,8 +1,8 @@
-package xtr.keymapper.activity;
+package xtr.keymapper;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.graphics.PixelFormat;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -12,8 +12,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageView;
-
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 
@@ -33,12 +31,12 @@ import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 
-public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
+public class EditorUI implements View.OnKeyListener {
 
-    private WindowManager.LayoutParams mParams;
-    private WindowManager mWindowManager;
-    private LayoutInflater layoutInflater;
-    private ExpandableFabLayout mainView;
+    private final WindowManager.LayoutParams mParams;
+    private final WindowManager mWindowManager;
+    private final LayoutInflater layoutInflater;
+    private final ExpandableFabLayout mainView;
 
     private MovableFloatingActionKey KeyInFocus;
     private final List<MovableFloatingActionKey> Keys = new ArrayList<>();
@@ -47,13 +45,13 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
     private MouseAimKey mouseAimKey;
     private static final Float DEFAULT_X = 200f, DEFAULT_Y = 200f;
     private int i = 0;
-    private KeymapEditorBinding binding;
+    private final KeymapEditorBinding binding;
+    private final Context context;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        layoutInflater = getLayoutInflater();
-        mWindowManager = getWindowManager();
+    public EditorUI (Context context) {
+        this.context = context;
+        layoutInflater = context.getSystemService(LayoutInflater.class);
+        mWindowManager = context.getSystemService(WindowManager.class);
         mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -62,10 +60,9 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
                 PixelFormat.TRANSLUCENT);
         mParams.gravity = Gravity.CENTER;
 
-        binding = KeymapEditorBinding.inflate(getLayoutInflater());
+        binding = KeymapEditorBinding.inflate(layoutInflater);
         mainView = binding.getRoot();
         setupButtons();
-        open();
     }
 
     public void open() {
@@ -86,12 +83,10 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
     public void hideView() {
         try {
             saveKeymap();
-            this.finish();
             mWindowManager.removeView(mainView);
             mainView.invalidate();
             // remove all views
             ((ViewGroup) mainView.getParent()).removeAllViews();
-            this.finish();
             // the above steps are necessary when you are adding and removing
             // the view simultaneously, it might give some exceptions
         } catch (Exception e) {
@@ -101,7 +96,7 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
 
     private void loadKeymap() throws IOException {
 
-        KeymapConfig keymapConfig = new KeymapConfig(this);
+        KeymapConfig keymapConfig = new KeymapConfig(context);
         keymapConfig.loadConfig();
 
         String[] keys = keymapConfig.getKeys();
@@ -162,7 +157,7 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
             }
         }
 
-        KeymapConfig keymapConfig = new KeymapConfig(this);
+        KeymapConfig keymapConfig = new KeymapConfig(context);
         keymapConfig.writeConfig(linesToWrite);
     }
 
@@ -225,7 +220,7 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
     }
 
     private void addKey(String key, Float x ,Float y) {
-        Keys.add(i,new MovableFloatingActionKey(this));
+        Keys.add(i,new MovableFloatingActionKey(context));
 
         mainView.addView(Keys.get(i));
 
@@ -251,10 +246,7 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
                 crosshair = null;
             });
             binding.expandButton.setOnClickListener(v -> new ResizableLayout());
-            binding.editButton.setOnClickListener(v -> {
-                MouseAimSettings mouseAimSettings = new MouseAimSettings();
-                mouseAimSettings.show(getSupportFragmentManager(), "dialog");
-            });
+            binding.editButton.setOnClickListener(v -> new MouseAimSettings().getDialog(context).show());
         }
         crosshair.animate().x(x).y(y)
                 .setDuration(500)
@@ -277,11 +269,6 @@ public class EditorUI extends AppCompatActivity implements View.OnKeyListener {
         return false;
     }
 
-    @Override
-    protected void onDestroy() {
-        hideView();
-        super.onDestroy();
-    }
 
     class ResizableLayout implements View.OnTouchListener {
         private final View view;

@@ -9,7 +9,7 @@
     android:layout_gravity="center"
     android:layout_height="match_parent"
     android:theme="@style/Theme.MaterialComponents"
-    tools:context=".activity.EditorUI">
+    tools:context=".EditorUI">
 
     <com.nambimobile.widgets.efab.Overlay
         android:layout_width="match_parent"

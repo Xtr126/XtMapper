@@ -14,8 +14,8 @@ import android.view.View;
 import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import xtr.keymapper.EditorUI;
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
 import xtr.keymapper.TouchPointer;
@@ -87,9 +87,8 @@ public class MainActivity extends AppCompatActivity {
     private void startEditor(){
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
-            Intent intent = new Intent(this, EditorUI.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
-            startActivity(intent);
+            EditorUI editor = new EditorUI(this);
+            editor.open();
         }
     }
 

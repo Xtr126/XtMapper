@@ -2,21 +2,16 @@ package xtr.keymapper.aim;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.os.Bundle;
+import android.content.Context;
 import android.view.WindowManager;
-
-import androidx.annotation.NonNull;
-import androidx.fragment.app.DialogFragment;
 
 import java.util.ArrayList;
 
-public class MouseAimSettings extends DialogFragment {
+public class MouseAimSettings {
 
-    @NonNull
-    @Override
-    public Dialog onCreateDialog(Bundle savedInstanceState) {
+    public Dialog getDialog(Context context) {
         ArrayList<Integer> selectedItems = new ArrayList<>();  // Where we track the selected items
-        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
         CharSequence[] list = {"Mouse right click", "~ key"};
         // Set the dialog title
         builder.setTitle("Activate with")
@@ -31,15 +26,7 @@ public class MouseAimSettings extends DialogFragment {
                                 // Else, if the item is already in the array, remove it
                                 selectedItems.remove(which);
                             }
-                        })
-                // Set the action buttons
-                .setPositiveButton("ok", (dialog, id) -> {
-                    // User clicked OK, so save the selectedItems results somewhere
-                    // or return them to the component that opened the dialog
-                })
-                .setNegativeButton("cancel", (dialog, id) -> {
-                });
-
+                        });
         AlertDialog dialog = builder.create();
         dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         return dialog;
