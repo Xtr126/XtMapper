@@ -62,6 +62,9 @@ public class MouseAimHandler {
                     }
                     xOut.writeBytes(currentX + " " + currentY + " " + "MOVE" + " 36" + "\n");
                     break;
+
+                case "BTN_RIGHT":
+                    if(input_event[1].equals("1")) active = false;
             }
             if (!active) break;
         }

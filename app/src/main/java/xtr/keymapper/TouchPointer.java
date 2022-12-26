@@ -54,7 +54,7 @@ public class TouchPointer extends Service {
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
     private HandlerThread handlerThread;
     private KeymapConfig keymapConfig;
-    boolean pointer_down, mouse_aim;
+    boolean pointer_down;
     public boolean connected = false;
 
     private final IBinder binder = new TouchPointerBinder();
@@ -308,8 +308,7 @@ public class TouchPointer extends Service {
 
         private void triggerMouseAim(){
             if (mouseAimHandler != null) {
-                mouseAimHandler.active = !mouse_aim;
-                mouse_aim = mouseAimHandler.active;
+                mouseAimHandler.active = !mouseAimHandler.active;
             }
         }
 
@@ -357,7 +356,7 @@ public class TouchPointer extends Service {
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
                 if (cursorView == null) break;
-                if (mouse_aim) mouseAimHandler.start(in);
+                if (mouseAimHandler != null && mouseAimHandler.active) mouseAimHandler.start(in);
 
                 input_event = line.split("\\s+");
                 switch (input_event[0]) {
@@ -383,11 +382,10 @@ public class TouchPointer extends Service {
                         xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + input_event[1] + " 36" + "\n");
                         break;
                     }
-                    case "BTN_RIGHT": {
-                        if (input_event[1].equals("1"))
-                            triggerMouseAim();
+                    case "BTN_RIGHT":
+                        if(input_event[1].equals("1")) triggerMouseAim();
                         break;
-                    }
+
                     case "error":
                         context.startActivity(new Intent(context, InputDeviceSelector.class));
                         break;
