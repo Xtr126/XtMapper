@@ -2,6 +2,8 @@ package xtr.keymapper;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.util.Log;
 import android.view.Gravity;
@@ -12,6 +14,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageView;
+
+import androidx.appcompat.content.res.AppCompatResources;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 
@@ -31,7 +35,7 @@ import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 
-public class EditorUI implements View.OnKeyListener {
+public class EditorUI implements View.OnKeyListener, View.OnClickListener {
 
     private final WindowManager.LayoutParams mParams;
     private final WindowManager mWindowManager;
@@ -187,6 +191,7 @@ public class EditorUI implements View.OnKeyListener {
         binding.crossHair.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         binding.saveButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         binding.addButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        binding.crossHair.setImageTintList(AppCompatResources.getColorStateList(context, R.color.black));
     }
 
     private void addDpad1(Float x, Float y) {
@@ -232,8 +237,13 @@ public class EditorUI implements View.OnKeyListener {
                 .setDuration(1000)
                 .start();
 
-        Keys.get(i).setOnClickListener(this::setKeyInFocus);
+        Keys.get(i).setOnClickListener(this);
         i++;
+    }
+
+    @Override
+    public void onClick(View view) {
+        KeyInFocus = ((MovableFloatingActionKey)view);
     }
 
     private void addCrosshair(Float x, Float y) {
@@ -253,10 +263,6 @@ public class EditorUI implements View.OnKeyListener {
                 .start();
     }
 
-    private void setKeyInFocus(View view){
-       KeyInFocus = ((MovableFloatingActionKey)view);
-    }
-
     @Override
     public boolean onKey(View v, int keyCode, KeyEvent event) {
         if (KeyInFocus != null) {
@@ -268,7 +274,6 @@ public class EditorUI implements View.OnKeyListener {
         }
         return false;
     }
-
 
     class ResizableLayout implements View.OnTouchListener {
         private final View view;

@@ -18,18 +18,15 @@
             android:scaleX="0.8"
             android:scaleY="0.8"
             android:id="@+id/background"
-            app:srcCompat="@drawable/key"
+            android:src="@drawable/key"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintLeft_toLeftOf="parent"/>
         <ImageView
             android:layout_width="60dp"
             android:layout_height="60dp"
-            android:scaleX="0.9"
-            android:scaleY="0.9"
+            android:background="@drawable/crosshair"
             app:layout_constraintCircle="@id/background"
-            app:srcCompat="@drawable/crosshair"
-            android:id="@+id/cross"
-            app:tint="@color/white"/>
+            android:id="@+id/cross" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/editButton"
@@ -40,7 +37,7 @@
             app:fabSize="mini"
             app:fabCustomSize="30dp"
             android:layout_marginBottom="-8dp"
-            app:srcCompat="@drawable/ic_baseline_settings_24"
+            android:src="@drawable/ic_baseline_settings_24"
             app:layout_constraintStart_toEndOf="@id/cross"
             app:layout_constraintBottom_toBottomOf="parent"/>
 
@@ -55,20 +52,20 @@
             app:fabSize="mini"
             app:layout_constraintStart_toEndOf="@id/cross"
             app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@android:drawable/ic_delete" />
+            android:src="@android:drawable/ic_delete" />
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/expandButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginRight="-8dp"
             android:theme="@style/Theme.MaterialComponents.DayNight"
+            android:src="@drawable/ic_baseline_zoom_out_map_24"
             app:backgroundTint="#FF0000"
             app:fabCustomSize="30dp"
             app:fabSize="mini"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/closeButton"
-            app:layout_constraintBottom_toTopOf="@id/editButton"
-            app:srcCompat="@drawable/ic_baseline_zoom_out_map_24" />
+            app:layout_constraintBottom_toTopOf="@id/editButton" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </xtr.keymapper.floatingkeys.MovableFrameLayout>

@@ -3,6 +3,7 @@ package xtr.keymapper;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -129,9 +130,14 @@ public class TouchPointer extends Service {
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.createNotificationChannel(channel);
 
+        Intent intent = new Intent(this, EditorService.class);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
         Notification notification = builder.setOngoing(true)
                 .setContentTitle("Keymapper service running")
+                .setContentText("Touch to launch editor")
+                .setContentIntent(pendingIntent)
                 .setSmallIcon(R.mipmap.ic_launcher_foreground)
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .build();
