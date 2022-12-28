@@ -31,16 +31,17 @@ public class Server {
         script_name = context.getExternalFilesDir(null) + "/xtMapper.sh";
     }
 
-    private void writeScript(String packageName, ApplicationInfo ai, String apk) throws IOException, InterruptedException {
+    private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
+        final String className = Input.class.getName();
+
         FileWriter linesToWrite = new FileWriter(script_name);
-        
         linesToWrite.append("#!/system/bin/sh\n");
-        linesToWrite.append("pgrep -f ").append(packageName).append(".Input && echo Waiting for overlay... && exit 1\n");
+        linesToWrite.append("pgrep -f ").append(className).append(" && echo Waiting for overlay... && exit 1\n");
         linesToWrite.append("exec env ");
         linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
-                .append("\" CLASSPATH=\"").append(apk) 
+                .append("\" CLASSPATH=\"").append(ai.publicSourceDir) // Absolute path to apk in /data/app
                 .append("\" /system/bin/app_process /system/bin ")
-                .append(packageName).append(".Input\n");
+                .append(className).append("\n");
 
         linesToWrite.flush();
         linesToWrite.close();
@@ -84,8 +85,7 @@ public class Server {
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
-            String apk = ai.publicSourceDir; // Absolute path to apk in /data/app
-            writeScript(packageName, ai, apk);
+            writeScript(ai);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException e) {
             Log.e("Server", e.toString());
         }
