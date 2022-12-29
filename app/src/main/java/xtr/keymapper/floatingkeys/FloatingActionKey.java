@@ -80,4 +80,10 @@ public class FloatingActionKey extends FloatingActionButton  {
         setImageBitmap(image);
         setScaleType(ScaleType.CENTER);
     }
+
+    @Override
+    public void setImageResource(int resId) {
+        super.setImageResource(resId);
+        setScaleType(ScaleType.CENTER);
+    }
 }

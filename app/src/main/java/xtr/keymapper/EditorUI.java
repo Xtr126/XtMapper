@@ -2,8 +2,6 @@ package xtr.keymapper;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.res.ColorStateList;
-import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.util.Log;
 import android.view.Gravity;
@@ -13,9 +11,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.ImageView;
-
-import androidx.appcompat.content.res.AppCompatResources;
 
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 
@@ -23,17 +18,18 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import xtr.keymapper.KeymapConfig;
-import xtr.keymapper.aim.MouseAimKey;
+import xtr.keymapper.aim.MouseAimConfig;
 import xtr.keymapper.aim.MouseAimSettings;
+import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.dpad.Dpad.DpadType;
+import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
+import xtr.keymapper.floatingkeys.MovableFrameLayout;
+
 import xtr.keymapper.databinding.CrosshairBinding;
 import xtr.keymapper.databinding.Dpad1Binding;
 import xtr.keymapper.databinding.Dpad2Binding;
 import xtr.keymapper.databinding.KeymapEditorBinding;
 import xtr.keymapper.databinding.ResizableBinding;
-import xtr.keymapper.dpad.Dpad;
-import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
-import xtr.keymapper.floatingkeys.MovableFrameLayout;
 
 public class EditorUI implements View.OnKeyListener, View.OnClickListener {
 
@@ -43,10 +39,13 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
     private final ExpandableFabLayout mainView;
 
     private MovableFloatingActionKey KeyInFocus;
+    // Keyboard keys
     private final List<MovableFloatingActionKey> Keys = new ArrayList<>();
+    private MovableFloatingActionKey leftClick;
 
     private MovableFrameLayout dpad1, dpad2, crosshair;
-    private MouseAimKey mouseAimKey;
+    private MouseAimConfig mouseAimConfig;
+    // Default position of new views added
     private static final Float DEFAULT_X = 200f, DEFAULT_Y = 200f;
     private int i = 0;
     private final KeymapEditorBinding binding;
@@ -75,24 +74,20 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
         } catch (Exception e) {
             Log.d("Error1", e.toString());
         }
-        if (mainView.getWindowToken() == null) {
+        if (mainView.getWindowToken() == null)
             if (mainView.getParent() == null) {
                 mWindowManager.addView(mainView, mParams);
                 mainView.setOnKeyListener(this);
                 mainView.setFocusable(true);
             }
-        }
     }
 
     public void hideView() {
         try {
             saveKeymap();
             mWindowManager.removeView(mainView);
-            mainView.invalidate();
-            // remove all views
             ((ViewGroup) mainView.getParent()).removeAllViews();
-            // the above steps are necessary when you are adding and removing
-            // the view simultaneously, it might give some exceptions
+            mainView.invalidate();
         } catch (Exception e) {
             Log.d("Error2", e.toString());
         }
@@ -115,7 +110,7 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
 
         Dpad dpad1 = keymapConfig.dpad1;
         Dpad dpad2 = keymapConfig.dpad2;
-        mouseAimKey = keymapConfig.mouseAimKey;
+        mouseAimConfig = keymapConfig.mouseAimConfig;
 
         if (dpad1 != null) {
             addDpad1(dpad1.getX(), dpad1.getY());
@@ -125,8 +120,8 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
             addDpad2(dpad2.getX(), dpad2.getY());
         }
 
-        if (mouseAimKey != null) {
-            addCrosshair(mouseAimKey.x, mouseAimKey.y);
+        if (mouseAimConfig != null) {
+            addCrosshair(mouseAimConfig.xCenter, mouseAimConfig.yCenter);
         }
     }
 
@@ -134,12 +129,12 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
         StringBuilder linesToWrite = new StringBuilder();
 
         if (dpad1 != null) {
-            Dpad dpad = new Dpad(dpad1, Dpad.TYPE_UDLR);
+            Dpad dpad = new Dpad(dpad1, DpadType.UDLR);
             linesToWrite.append(dpad.getData());
         }
 
         if (dpad2 != null) {
-            Dpad dpad = new Dpad(dpad2, Dpad.TYPE_WASD);
+            Dpad dpad = new Dpad(dpad2, DpadType.WASD);
             linesToWrite.append(dpad.getData());
 
             for (int i = 0; i < Keys.size(); i++) {
@@ -151,16 +146,20 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
         }
 
         if (crosshair != null) {
-            mouseAimKey.setXY(crosshair);
-            linesToWrite.append(mouseAimKey.getData());
+            // get x and y coordinates from view
+            mouseAimConfig.setCenterXY(crosshair);
+            mouseAimConfig.setLeftClickXY(leftClick);
+            linesToWrite.append(mouseAimConfig.getData());
         }
-
+        
+        // Keyboard keys
         for (int i = 0; i < Keys.size(); i++) {
             if(Keys.get(i).key != null) {
                 linesToWrite.append(Keys.get(i).getData());
             }
         }
-
+        
+        // Save Config to file
         KeymapConfig keymapConfig = new KeymapConfig(context);
         keymapConfig.writeConfig(linesToWrite);
     }
@@ -168,8 +167,9 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
     public void setupButtons() {
         binding.saveButton.setOnClickListener(v -> hideView());
         binding.addButton.setOnClickListener(v -> addKey("A", DEFAULT_X, DEFAULT_Y));
+        binding.mouseLeft.setOnClickListener(v -> addleftClick(DEFAULT_X, DEFAULT_Y));
         binding.crossHair.setOnClickListener(v -> {
-            mouseAimKey = new MouseAimKey();
+            mouseAimConfig = new MouseAimConfig();
             addCrosshair(DEFAULT_X, DEFAULT_Y);
         });
 
@@ -186,15 +186,9 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
                 }
             }
         });
-
-        binding.dPad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        binding.crossHair.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        binding.saveButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        binding.addButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        binding.crossHair.setImageTintList(AppCompatResources.getColorStateList(context, R.color.black));
     }
 
-    private void addDpad1(Float x, Float y) {
+    private void addDpad1(float x, float y) {
         if (dpad1 == null) {
             Dpad1Binding binding = Dpad1Binding.inflate(layoutInflater, mainView, true);
             dpad1 = binding.getRoot();
@@ -209,7 +203,7 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
                 .start();
     }
 
-    private void addDpad2(Float x, Float y) {
+    private void addDpad2(float x, float y) {
         if (dpad2 == null) {
             Dpad2Binding binding = Dpad2Binding.inflate(layoutInflater, mainView, true);
             dpad2 = binding.getRoot();
@@ -224,7 +218,7 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
                 .start();
     }
 
-    private void addKey(String key, Float x ,Float y) {
+    private void addKey(String key, float x ,float y) {
         Keys.add(i,new MovableFloatingActionKey(context));
 
         mainView.addView(Keys.get(i));
@@ -246,7 +240,7 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
         KeyInFocus = ((MovableFloatingActionKey)view);
     }
 
-    private void addCrosshair(Float x, Float y) {
+    private void addCrosshair(float x, float y) {
         if (crosshair == null) {
             CrosshairBinding binding = CrosshairBinding.inflate(layoutInflater, mainView, true);
             crosshair = binding.getRoot();
@@ -259,6 +253,20 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
             binding.editButton.setOnClickListener(v -> new MouseAimSettings().getDialog(context).show());
         }
         crosshair.animate().x(x).y(y)
+                .setDuration(500)
+                .start();
+
+        addleftClick(mouseAimConfig.xleftClick,
+                     mouseAimConfig.yleftClick);
+    }
+
+    private void addleftClick(float x, float y) {
+        if (leftClick == null) {
+            leftClick = new MovableFloatingActionKey(context);
+            leftClick.key.setImageResource(R.drawable.ic_baseline_mouse_36);
+            mainView.addView(leftClick);
+        }
+        leftClick.animate().x(x).y(y)
                 .setDuration(500)
                 .start();
     }
@@ -285,8 +293,8 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
             binding1.dragHandle.setOnTouchListener(this);
             binding1.saveButton.setOnClickListener(v -> {
                 mainView.removeView(view);
-                mouseAimKey.width = view.getPivotX();
-                mouseAimKey.height = view.getPivotY();
+                mouseAimConfig.width = view.getPivotX();
+                mouseAimConfig.height = view.getPivotY();
             });
             moveView();
         }

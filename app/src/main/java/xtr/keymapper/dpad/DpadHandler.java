@@ -26,8 +26,6 @@ public class DpadHandler {
     private boolean KEY_RIGHT;
     private DataOutputStream xOut;
 
-    public static final int pointerId1 = 37, pointerId2 = 38;
-
     public DpadHandler(Context context, Dpad dpad, int pointerId){
         DpadConfig dpadConfig = new DpadConfig(context);
         float radius = dpad.radius * dpadConfig.getDpadRadiusMultiplier();

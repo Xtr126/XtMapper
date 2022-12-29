@@ -22,7 +22,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_gravity="top|right"
-            android:background="@drawable/ic_baseline_done_24"
+            android:background="@drawable/ic_baseline_done_36"
             android:backgroundTint="@color/white"/>
 
         <ImageView

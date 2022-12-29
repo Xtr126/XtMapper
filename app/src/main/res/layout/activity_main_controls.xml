@@ -65,7 +65,7 @@
             android:layout_height="80dp"
             android:layout_marginVertical="4dp"
             android:text="@string/edit_keymap"
-            app:icon="@drawable/ic_create_white_24dp"
+            app:icon="@drawable/ic_create_white_36dp"
             app:iconSize="24dp"
             android:drawablePadding="110dp"/>
 

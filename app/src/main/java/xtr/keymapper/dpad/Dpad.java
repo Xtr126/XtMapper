@@ -7,23 +7,27 @@ public class Dpad {
     float viewX, viewY;
     float xOfCenter, yOfCenter;
     float radius;
-    public static final int TYPE_UDLR = 1, TYPE_WASD = 2;
 
-    public Dpad (MovableFrameLayout dpad, int type) {
+    public enum DpadType {
+        // Dpad for up down left right arrow keys
+        UDLR ("UDLR_DPAD"),
+
+        // Dpad for W A S D keys
+        WASD ("WASD_DPAD");
+
+        DpadType(String s) {
+            label = s;
+        }
+        final String label;
+    }
+
+    public Dpad (MovableFrameLayout dpad, DpadType type) {
         viewX = dpad.getX();
         viewY = dpad.getY();
         radius = dpad.getPivotX();
         xOfCenter = viewX + radius;
         yOfCenter = viewY + radius;
-
-        switch (type) {
-            case TYPE_UDLR:
-                this.type = "UDLR_DPAD";
-                break;
-            case TYPE_WASD:
-                this.type = "WASD_DPAD";
-                break;
-        }
+        this.type = type.label;
     }
 
     public Dpad (String[] data){

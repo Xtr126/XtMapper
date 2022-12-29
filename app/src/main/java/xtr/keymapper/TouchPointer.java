@@ -34,8 +34,7 @@ import xtr.keymapper.aim.MouseAimHandler;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
 
-import static xtr.keymapper.dpad.DpadHandler.pointerId1;
-import static xtr.keymapper.dpad.DpadHandler.pointerId2;
+import static xtr.keymapper.TouchPointer.PointerId.*;
 
 public class TouchPointer extends Service {
 
@@ -166,11 +165,11 @@ public class TouchPointer extends Service {
         keysY = keymapConfig.getY();
 
         if (keymapConfig.dpad1 != null)
-            dpad1Handler = new DpadHandler(context, keymapConfig.dpad1, pointerId1);
+            dpad1Handler = new DpadHandler(context, keymapConfig.dpad1, dpad1pid.id);
         if (keymapConfig.dpad2 != null)
-            dpad2Handler = new DpadHandler(context, keymapConfig.dpad2, pointerId2);
-        if (keymapConfig.mouseAimKey != null)
-            mouseAimHandler = new MouseAimHandler(keymapConfig.mouseAimKey);
+            dpad2Handler = new DpadHandler(context, keymapConfig.dpad2, dpad2pid.id);
+        if (keymapConfig.mouseAimConfig != null)
+            mouseAimHandler = new MouseAimHandler(keymapConfig.mouseAimConfig);
     }
 
     public void updateCmdView3(String s){
@@ -221,6 +220,20 @@ public class TouchPointer extends Service {
                 }
             }
         });
+    }
+
+    public enum PointerId {
+        // pointer id 0-35 reserved for keyboard events
+
+        pid1 (36), // pointer id 36 and 37 reserved for mouse events
+        pid2 (37),
+        dpad1pid (38),
+        dpad2pid (39);
+
+        PointerId(int i) {
+            id = i;
+        }
+        public final int id;
     }
 
     private class KeyEventHandler {
@@ -359,6 +372,10 @@ public class TouchPointer extends Service {
 
         private void handleEvents() throws IOException {
             in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
+
+            final String moveEvent = " MOVE " + pid1.id + "\n";
+            final String leftClickEvent = " " + pid1.id + "\n";
+
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
                 if (cursorView == null) break;
@@ -371,7 +388,7 @@ public class TouchPointer extends Service {
                         if ( x1 < 0 ) x1 -= Integer.parseInt(input_event[1]);
                         if ( x1 > width ) x1 -= Integer.parseInt(input_event[1]);
                         if (pointer_down)
-                            xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + "MOVE" + " 36" + "\n");
+                            xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
                         break;
                     }
                     case "REL_Y": {
@@ -379,13 +396,13 @@ public class TouchPointer extends Service {
                         if ( y1 < 0 ) y1 -= Integer.parseInt(input_event[1]);
                         if ( y1 > height ) y1 -= Integer.parseInt(input_event[1]);
                         if (pointer_down) {
-                            xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + "MOVE" + " 36" + "\n");
+                            xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
                         }
                         break;
                     }
                     case "BTN_MOUSE": {
                         pointer_down = input_event[1].equals("1");
-                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + input_event[1] + " 36" + "\n");
+                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + input_event[1] + leftClickEvent);
                         break;
                     }
                     case "BTN_RIGHT":
