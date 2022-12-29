@@ -24,5 +24,22 @@ Overview:
 - Touch emulation is handled by TouchPointer.java and Input.java.  
 - Input.java runs separately from the app as an elevated java process using app_process and adb shell/root, check Server.java for more details. 
 
-# License
-This project is licensed under the GPL v3. Do not publish unofficial APKs to the play store. 
+# Copyright and License
+This project is licensed under the GPL v3.  
+Do not publish unofficial APKs to the play store. 
+```
+XtMapper
+Copyright (C) 2022 Xtr126
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; version 3.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License 
+along with this program. If not, see https://www.gnu.org/licenses/.
+```
