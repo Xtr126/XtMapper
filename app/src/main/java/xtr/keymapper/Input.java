@@ -3,24 +3,21 @@ package xtr.keymapper;
 import static java.lang.Float.parseFloat;
 
 import android.hardware.input.InputManager;
-
 import android.os.SystemClock;
 import android.view.InputDevice;
-import android.view.InputEvent;
 import android.view.MotionEvent;
-
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.reflect.Method;
-import java.lang.reflect.InvocationTargetException;
-import java.net.ServerSocket;
-import java.net.Socket;
 
 import com.genymobile.scrcpy.Point;
 import com.genymobile.scrcpy.Pointer;
 import com.genymobile.scrcpy.PointersState;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class Input {
 
@@ -53,17 +50,79 @@ public class Input {
         }
     }
 
-    private void injectTouch(int action, long pointerId, float pressure, float x, float y) {
-        long now = SystemClock.uptimeMillis();
-        Point point = new Point(x, y);
+    static {
+        System.loadLibrary("mouse_read");
+    }
 
-        int pointerIndex = pointersState.getPointerIndex(pointerId);
+    private static class InputEvent {
+        String action;
+        float x, y;
+        float pressure = 1.0f;
+        int pointerId;
+
+        InputEvent(String line) throws ArrayIndexOutOfBoundsException, NumberFormatException {
+            String[] xy = line.split("\\s+");
+            this.x = parseFloat(xy[0]);
+            this.y = parseFloat(xy[1]);
+            this.action = xy[2];
+            this.pointerId = Integer.parseInt(xy[3]);
+        }
+    }
+
+    public void start(Socket socket) {
+        try {
+            initPointers();
+            String line; InputEvent event;
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            while ((line = in.readLine()) != null) {
+                try {
+                    event = new InputEvent(line);
+                } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
+                    e.printStackTrace(System.out);
+                    continue;
+                }
+                switch (event.action) {
+                    case "UP":
+                    case "0":
+                        event.pressure = 0.0f;
+                        injectTouch(MotionEvent.ACTION_UP, event);
+                        break;
+                    case "DOWN":
+                    case "1": {
+                        injectTouch(MotionEvent.ACTION_DOWN, event);
+                        break;
+                    }
+                    case "MOVE": {
+                        injectTouch(MotionEvent.ACTION_MOVE, event);
+                        break;
+                    }
+                    case "SCROLL": {
+                        injectScroll(event);
+                        break;
+                    }
+                    case "exit": {
+                        System.exit(1);
+                        break;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace(System.out);
+        }
+    }
+
+    private void injectTouch(int action, InputEvent event) {
+        long now = SystemClock.uptimeMillis();
+        Point point = new Point(event.x, event.y);
+
+        int pointerIndex = pointersState.getPointerIndex(event.pointerId);
         if (pointerIndex == -1) {
             System.out.println("Too many pointers for touch event");
         }
         Pointer pointer = pointersState.get(pointerIndex);
         pointer.setPoint(point);
-        pointer.setPressure(pressure);
+        pointer.setPressure(event.pressure);
         pointer.setUp(action == MotionEvent.ACTION_UP);
 
         int pointerCount = pointersState.update(pointerProperties, pointerCoords);
@@ -82,65 +141,41 @@ public class Input {
                         (pointerIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
             }
         }
-        MotionEvent event = MotionEvent.obtain(lastTouchDown, now, action, pointerCount,
-                        pointerProperties, pointerCoords,
-                        0, 0, 1f, 1f,
-                        0, 0, inputSource, 0);
+        MotionEvent motionEvent = MotionEvent.obtain(lastTouchDown, now, action, pointerCount,
+                pointerProperties, pointerCoords,
+                0, 0, 1f, 1f,
+                0, 0, inputSource, 0);
         try {
-            injectInputEventMethod.invoke(im, event, 0);
+            injectInputEventMethod.invoke(im, motionEvent, 0);
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace(System.out);
         }
     }
 
-    static {
-        System.loadLibrary("mouse_read");
-    }
+    private void injectScroll(InputEvent event) {
+        long now = SystemClock.uptimeMillis();
 
-    public void start(Socket socket) {
+        MotionEvent.PointerProperties props = pointerProperties[0];
+        props.id = 0;
+
+        MotionEvent.PointerCoords coords = pointerCoords[0];
+        coords.x = event.x;
+        coords.y = event.y;
+        coords.setAxisValue(MotionEvent.AXIS_VSCROLL, event.pointerId);
+
+        MotionEvent motionEvent = MotionEvent
+                .obtain(lastTouchDown, now, MotionEvent.ACTION_SCROLL, 1,
+                        pointerProperties, pointerCoords,
+                        0, 0, 1f, 1f, 0, 0,
+                        InputDevice.SOURCE_MOUSE, 0);
         try {
-            initPointers();
-            String line;
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            while ((line = in.readLine()) != null) {
-                String []xy = line.split("\\s+");
-                int pointerId;
-                try {
-                    pointerId = Integer.parseInt(xy[3]);
-                } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
-                    e.printStackTrace(System.out);
-                    continue;
-                }
-                switch (xy[2]) {
-                    case "UP":
-                    case "0": {
-                        injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f,
-                                parseFloat(xy[0]), parseFloat(xy[1]));
-                        break;
-                    }
-                    case "DOWN":
-                    case "1": {
-                        injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f,
-                                parseFloat(xy[0]), parseFloat(xy[1]));
-                        break;
-                    }
-                    case "MOVE": {
-                        injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f,
-                                parseFloat(xy[0]), parseFloat(xy[1]));
-                        break;
-                    }
-                    case "exit": {
-                        System.exit(1);
-                        break;
-                    }
-                }
-            }
-        } catch (IOException e) {
+            injectInputEventMethod.invoke(im, motionEvent, 0);
+        } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace(System.out);
         }
     }
-    public static native void startMouse(int port);
 
+    public static native void startMouse(int port);
 
     public static void main(String[] args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         String methodName = "getInstance";
@@ -157,7 +192,7 @@ public class Input {
         methodName = "injectInputEvent";
 
         inputSource = getSource(inputSource);
-        injectInputEventMethod = InputManager.class.getMethod(methodName, InputEvent.class, Integer.TYPE);
+        injectInputEventMethod = InputManager.class.getMethod(methodName, android.view.InputEvent.class, Integer.TYPE);
 
         startMouse(Server.DEFAULT_PORT_2); // Call native code
         ServerSocket serverSocket = null;

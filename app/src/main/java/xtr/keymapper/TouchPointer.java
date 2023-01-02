@@ -303,8 +303,17 @@ public class TouchPointer extends Service {
         private BufferedReader in;
         private PrintWriter out;
         int width; int height;
-        int x2; int  y2;
-        String line; String[] input_event;
+        int x2; int y2;
+
+        private class MouseEvent {
+            String code; int value;
+
+            MouseEvent(String line){
+                String[] data = line.split("\\s+");
+                this.code = data[0];
+                this.value = Integer.parseInt(data[1]);
+            }
+        }
 
         private void connect() throws IOException {
             sendSettingstoServer();
@@ -376,37 +385,39 @@ public class TouchPointer extends Service {
             final String moveEvent = " MOVE " + pid1.id + "\n";
             final String leftClickEvent = " " + pid1.id + "\n";
 
+            String line;
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
                 if (cursorView == null) break;
                 if (mouseAimHandler != null && mouseAimHandler.active) mouseAimHandler.start(in);
 
-                input_event = line.split("\\s+");
-                switch (input_event[0]) {
+                MouseEvent event = new MouseEvent(line);
+                switch (event.code) {
                     case "REL_X": {
-                        x1 += Integer.parseInt(input_event[1]);
-                        if ( x1 < 0 ) x1 -= Integer.parseInt(input_event[1]);
-                        if ( x1 > width ) x1 -= Integer.parseInt(input_event[1]);
+                        x1 += event.value;
+                        if (x1 > width || x1 < 0) x1 -= event.value;
                         if (pointer_down)
                             xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
                         break;
                     }
                     case "REL_Y": {
-                        y1 += Integer.parseInt(input_event[1]);
-                        if ( y1 < 0 ) y1 -= Integer.parseInt(input_event[1]);
-                        if ( y1 > height ) y1 -= Integer.parseInt(input_event[1]);
-                        if (pointer_down) {
+                        y1 += event.value;
+                        if (y1 > height || y1 < 0) y1 -= event.value;
+                        if (pointer_down)
                             xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
-                        }
                         break;
                     }
                     case "BTN_MOUSE": {
-                        pointer_down = input_event[1].equals("1");
-                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + input_event[1] + leftClickEvent);
+                        pointer_down = event.value == 1;
+                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + event.value + leftClickEvent);
                         break;
                     }
                     case "BTN_RIGHT":
-                        if(input_event[1].equals("1")) triggerMouseAim();
+                        if (event.value == 1) triggerMouseAim();
+                        break;
+
+                    case "REL_WHEEL":
+                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " SCROLL " + event.value + "\n");
                         break;
 
                     case "error":
