@@ -308,7 +308,7 @@ public class TouchPointer extends Service {
         private class MouseEvent {
             String code; int value;
 
-            MouseEvent(String line){
+            MouseEvent(String line) throws ArrayIndexOutOfBoundsException {
                 String[] data = line.split("\\s+");
                 this.code = data[0];
                 this.value = Integer.parseInt(data[1]);
@@ -385,15 +385,20 @@ public class TouchPointer extends Service {
             final String moveEvent = " MOVE " + pid1.id + "\n";
             final String leftClickEvent = " " + pid1.id + "\n";
 
-            String line;
+            String line; MouseEvent event;
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
                 if (cursorView == null) break;
                 if (mouseAimHandler != null && mouseAimHandler.active) mouseAimHandler.start(in);
 
-                MouseEvent event = new MouseEvent(line);
+                try {
+                    event = new MouseEvent(line);
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    continue;
+                }
                 switch (event.code) {
                     case "REL_X": {
+                        if (event.value == 0) break;
                         x1 += event.value;
                         if (x1 > width || x1 < 0) x1 -= event.value;
                         if (pointer_down)
@@ -401,6 +406,7 @@ public class TouchPointer extends Service {
                         break;
                     }
                     case "REL_Y": {
+                        if (event.value == 0) break;
                         y1 += event.value;
                         if (y1 > height || y1 < 0) y1 -= event.value;
                         if (pointer_down)

@@ -23,18 +23,12 @@ public class Input {
 
     static Method injectInputEventMethod;
     static InputManager im;
-    static int inputSource = InputDevice.SOURCE_UNKNOWN;
+    static int inputSource = InputDevice.SOURCE_TOUCHSCREEN;
 
     private final PointersState pointersState = new PointersState();
     private final MotionEvent.PointerProperties[] pointerProperties = new MotionEvent.PointerProperties[PointersState.MAX_POINTERS];
     private final MotionEvent.PointerCoords[] pointerCoords = new MotionEvent.PointerCoords[PointersState.MAX_POINTERS];
     private long lastTouchDown;
-
-
-    private static int getSource(int inputSource) {
-        return inputSource == InputDevice.SOURCE_UNKNOWN ?
-                InputDevice.SOURCE_TOUCHSCREEN : inputSource;
-    }
 
     private void initPointers() {
         for (int i = 0; i < PointersState.MAX_POINTERS; ++i) {
@@ -98,7 +92,7 @@ public class Input {
                         break;
                     }
                     case "SCROLL": {
-                        injectScroll(event);
+                        new SmoothScroll(event).start();
                         break;
                     }
                     case "exit": {
@@ -152,7 +146,7 @@ public class Input {
         }
     }
 
-    private void injectScroll(InputEvent event) {
+    private void injectScroll(ScrollEvent event) {
         long now = SystemClock.uptimeMillis();
 
         MotionEvent.PointerProperties props = pointerProperties[0];
@@ -161,7 +155,7 @@ public class Input {
         MotionEvent.PointerCoords coords = pointerCoords[0];
         coords.x = event.x;
         coords.y = event.y;
-        coords.setAxisValue(MotionEvent.AXIS_VSCROLL, event.pointerId);
+        coords.setAxisValue(MotionEvent.AXIS_VSCROLL, event.value);
 
         MotionEvent motionEvent = MotionEvent
                 .obtain(lastTouchDown, now, MotionEvent.ACTION_SCROLL, 1,
@@ -172,6 +166,37 @@ public class Input {
             injectInputEventMethod.invoke(im, motionEvent, 0);
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace(System.out);
+        }
+    }
+
+    private static class ScrollEvent {
+        float x;
+        float y;
+        float value;
+    }
+
+    private class SmoothScroll extends Thread {
+        private final ScrollEvent event = new ScrollEvent();
+        private static final int
+                SCROLL_TIME = 200, SCROLL_SMOOTHNESS = 10,
+                DELAY_MS = SCROLL_TIME / SCROLL_SMOOTHNESS;
+
+        SmoothScroll(InputEvent event) {
+            this.event.x = event.x;
+            this.event.y = event.y;
+            float value = (float) event.pointerId;
+            this.event.value =  value / SCROLL_SMOOTHNESS;
+        }
+
+        public void run() {
+            try {
+                for(int i = 0; i < SCROLL_SMOOTHNESS; i++) {
+                    injectScroll(event);
+                    sleep(DELAY_MS);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace(System.out);
+            }
         }
     }
 
@@ -191,7 +216,6 @@ public class Input {
         //Get the reference to injectInputEvent method
         methodName = "injectInputEvent";
 
-        inputSource = getSource(inputSource);
         injectInputEventMethod = InputManager.class.getMethod(methodName, android.view.InputEvent.class, Integer.TYPE);
 
         startMouse(Server.DEFAULT_PORT_2); // Call native code
@@ -215,5 +239,3 @@ public class Input {
         }
     }
 }
-
-
