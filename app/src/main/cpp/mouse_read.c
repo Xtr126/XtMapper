@@ -192,7 +192,7 @@ void* init(void* context) {
             mouse_read_fd = s_ctx.client_fd;
             if ((mouse_fd = open(dev, O_RDONLY)) == -1) {
                 perror("opening device");
-                write(mouse_read_fd, "error\n", strlen("error\n"));
+                write(mouse_read_fd, "error 1\n", strlen("error 1\n"));
             } else {
                 ioctl(mouse_fd, EVIOCGRAB, (void *)1);
                 pthread_create(&threadInfo_, &threadAttr_, send_mouse_events, &s_ctx);
@@ -210,7 +210,7 @@ void* init(void* context) {
             read(s_ctx.client_fd, new_device, bufsize);
             printf("evdev: %s\n", new_device);
             strcpy(dev, new_device);
-            write(mouse_read_fd, "restart\n", strlen("restart\n"));
+            write(mouse_read_fd, "restart 1\n", strlen("restart 1\n"));
         }
         else if (strcmp(buffer, "mouse_sensitivity\n") == 0) {
             char sens[bufsize];
