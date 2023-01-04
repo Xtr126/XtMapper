@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.util.Log;
 
 import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.server.Input;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -31,49 +32,51 @@ public class Server {
         script_name = context.getExternalFilesDir(null) + "/xtMapper.sh";
     }
 
-    private void writeScript(String packageName, ApplicationInfo ai, String apk) throws IOException, InterruptedException {
-        FileWriter linesToWrite = new FileWriter(script_name);
-        
-        linesToWrite.append("#!/system/bin/sh\n");
-        linesToWrite.append("pgrep -f ").append(packageName).append(".Input && echo Waiting for overlay... &&     exit 1\n");
+    private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
+        final String className = Input.class.getName();
 
+        FileWriter linesToWrite = new FileWriter(script_name);
+        linesToWrite.append("#!/system/bin/sh\n");
+        linesToWrite.append("pgrep -f ").append(className).append(" && echo Waiting for overlay... && exit 1\n");
+        linesToWrite.append("exec env ");
         linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
-                .append("\" CLASSPATH=\"").append(apk) 
+                .append("\" CLASSPATH=\"").append(ai.publicSourceDir) // Absolute path to apk in /data/app
                 .append("\" /system/bin/app_process /system/bin ")
-                .append(packageName).append(".Input ")
-                .append(KeymapConfig.getSettings(context))
-                .append("\n");
+                .append(className).append("\n");
 
         linesToWrite.flush();
         linesToWrite.close();
     }
 
-    public static Thread stopServer(){
-        return new Thread(() -> {
-            try {
-                Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
-                PrintWriter pOut = new PrintWriter(socket.getOutputStream());
-                pOut.println("stop");
-                pOut.close(); socket.close();
-            } catch (IOException e) {
-                Log.e("I/O error", e.toString());
-            }
-        });
+    public static void stopServer(){
+        try {
+            Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
+            PrintWriter pOut = new PrintWriter(socket.getOutputStream());
+            pOut.println("stop");
+            pOut.close(); socket.close();
+        } catch (IOException e) {
+            Log.e("I/O error", e.toString());
+        }
     }
 
-    public static Thread changeDevice(String newDevice){
-        return new Thread(() -> {
-            try {
-                Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
-                PrintWriter pOut = new PrintWriter(socket.getOutputStream());
-                pOut.println("change_device");
-                pOut.flush();
-                pOut.print(newDevice);
-                pOut.close(); socket.close();
-            } catch (IOException e) {
-                Log.e("I/O error", e.toString());
-            }
-        });
+    public static void changeDevice(String newDevice){
+        try {
+            Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
+            PrintWriter pOut = new PrintWriter(socket.getOutputStream());
+            pOut.println("change_device"); pOut.flush();
+            pOut.print(newDevice);
+            pOut.close(); socket.close();
+        } catch (IOException e) {
+            Log.e("I/O error", e.toString());
+        }
+    }
+
+    public static void changeSensitivity(float sensitivity) throws IOException {
+        Socket socket = new Socket("127.0.0.1", DEFAULT_PORT_2);
+        PrintWriter pOut = new PrintWriter(socket.getOutputStream());
+        pOut.println("mouse_sensitivity"); pOut.flush();
+        pOut.print(sensitivity);
+        pOut.close(); socket.close();
     }
 
     public void setupServer () {
@@ -83,8 +86,7 @@ public class Server {
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
-            String apk = ai.publicSourceDir; // Absolute path to apk in /data/app
-            writeScript(packageName, ai, apk);
+            writeScript(ai);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException e) {
             Log.e("Server", e.toString());
         }

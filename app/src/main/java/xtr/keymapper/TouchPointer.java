@@ -3,6 +3,7 @@ package xtr.keymapper;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -29,8 +30,11 @@ import java.net.Socket;
 
 import xtr.keymapper.activity.InputDeviceSelector;
 import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.aim.MouseAimHandler;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
+
+import static xtr.keymapper.TouchPointer.PointerId.*;
 
 public class TouchPointer extends Service {
 
@@ -41,14 +45,16 @@ public class TouchPointer extends Service {
     int x1 = 100, y1 = 100;
     private Float[] keysX, keysY;
     public StringBuilder c3, c1;
-    boolean pointer_down = false;
     private int counter = 0;
     private DpadHandler dpad1Handler, dpad2Handler;
+    private MouseAimHandler mouseAimHandler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private Handler connectionHandler;
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
     private HandlerThread handlerThread;
+    private KeymapConfig keymapConfig;
+    boolean pointer_down;
     public boolean connected = false;
 
     private final IBinder binder = new TouchPointerBinder();
@@ -123,9 +129,14 @@ public class TouchPointer extends Service {
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.createNotificationChannel(channel);
 
+        Intent intent = new Intent(this, EditorService.class);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
         Notification notification = builder.setOngoing(true)
                 .setContentTitle("Keymapper service running")
+                .setContentText("Touch to launch editor")
+                .setContentIntent(pendingIntent)
                 .setSmallIcon(R.mipmap.ic_launcher_foreground)
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .build();
@@ -136,7 +147,6 @@ public class TouchPointer extends Service {
         mWindowManager.removeView(cursorView);
         cursorView.invalidate();
         cursorView = null;
-
         try {
             keyEventHandler.stop();
             mouseEventHandler.stop();
@@ -144,20 +154,22 @@ public class TouchPointer extends Service {
         } catch (IOException e) {
             Log.e("stop", e.toString());
         }
-        Server.stopServer().start();
+        new Thread(Server::stopServer).start();
     }
 
     public void loadKeymap() throws IOException {
-        KeymapConfig keymapConfig = new KeymapConfig(context);
+        keymapConfig = new KeymapConfig(context);
         keymapConfig.loadConfig();
 
         keysX = keymapConfig.getX();
         keysY = keymapConfig.getY();
 
         if (keymapConfig.dpad1 != null)
-            dpad1Handler = new DpadHandler(context, keymapConfig.dpad1);
+            dpad1Handler = new DpadHandler(context, keymapConfig.dpad1, dpad1pid.id);
         if (keymapConfig.dpad2 != null)
-            dpad2Handler = new DpadHandler(context, keymapConfig.dpad2);
+            dpad2Handler = new DpadHandler(context, keymapConfig.dpad2, dpad2pid.id);
+        if (keymapConfig.mouseAimConfig != null)
+            mouseAimHandler = new MouseAimHandler(keymapConfig.mouseAimConfig);
     }
 
     public void updateCmdView3(String s){
@@ -210,6 +222,20 @@ public class TouchPointer extends Service {
         });
     }
 
+    public enum PointerId {
+        // pointer id 0-35 reserved for keyboard events
+
+        pid1 (36), // pointer id 36 and 37 reserved for mouse events
+        pid2 (37),
+        dpad1pid (38),
+        dpad2pid (39);
+
+        PointerId(int i) {
+            id = i;
+        }
+        public final int id;
+    }
+
     private class KeyEventHandler {
         private Socket evSocket;
         private DataOutputStream xOut;
@@ -254,8 +280,12 @@ public class TouchPointer extends Service {
                             } else if (dpad2Handler != null) { // Dpad with WASD keys
                                 dpad2Handler.handleEvent(input_event[2], input_event[3]);
                             }
-                        } else if (dpad1Handler != null) { // Dpad with arrow keys
-                            dpad1Handler.handleEvent(input_event[2], input_event[3]);
+                        } else {
+                            if (dpad1Handler != null)  // Dpad with arrow keys
+                                dpad1Handler.handleEvent(input_event[2], input_event[3]);
+
+                            if (input_event[2].equals("KEY_GRAVE") && input_event[3].equals("DOWN"))
+                                mouseEventHandler.triggerMouseAim();
                         }
                     }
                 }
@@ -273,23 +303,46 @@ public class TouchPointer extends Service {
         private BufferedReader in;
         private PrintWriter out;
         int width; int height;
-        int x2; int  y2;
-        String line; String[] input_event;
+        int x2; int y2;
+
+        private class MouseEvent {
+            String code; int value;
+
+            MouseEvent(String line) {
+                String[] data = line.split("\\s+");
+                this.code = data[0];
+                this.value = Integer.parseInt(data[1]);
+            }
+        }
 
         private void connect() throws IOException {
+            sendSettingstoServer();
             mouseSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT_2);
             out = new PrintWriter(mouseSocket.getOutputStream());
             out.println("mouse_read"); out.flush();
 
             xOutSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
             xOut = new DataOutputStream(xOutSocket.getOutputStream());
+            if (mouseAimHandler != null) mouseAimHandler.setOutputStream(xOut);
             connected = true;
+        }
+
+        private void sendSettingstoServer() throws IOException {
+            String device = keymapConfig.getDevice();
+            float sensitivity = keymapConfig.getMouseSensitivity();
+            Server.changeDevice(device);
+            Server.changeSensitivity(sensitivity);
+        }
+
+        private void triggerMouseAim(){
+            if (mouseAimHandler != null) {
+                mouseAimHandler.active = !mouseAimHandler.active;
+            }
         }
 
         private void start() {
             getDimensions();
             try {
-                pointerGrab();
                 handleEvents();
                 stop();
             } catch (IOException e) {
@@ -315,13 +368,11 @@ public class TouchPointer extends Service {
             height = size.y;
             x2 = width / 80;
             y2 = height / 100;
-        }
-
-        private void pointerGrab() throws IOException {
-            xOut.writeBytes( "_ " + true + " ioctl" + " 0\n");
+            if (mouseAimHandler != null) mouseAimHandler.setDimensions(width, height);
         }
 
         private void movePointer() {
+            if (cursorView == null) return;
             mHandler.post(() -> {
                 cursorView.setX(x1);
                 cursorView.setY(y1);
@@ -330,33 +381,47 @@ public class TouchPointer extends Service {
 
         private void handleEvents() throws IOException {
             in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
+
+            final String moveEvent = " MOVE " + pid1.id + "\n";
+            final String leftClickEvent = " " + pid1.id + "\n";
+
+            String line;
             while ((line = in.readLine()) != null) {
                 updateCmdView3("socket: " + line);
                 if (cursorView == null) break;
-                input_event = line.split("\\s+");
-                switch (input_event[0]) {
+                if (mouseAimHandler != null && mouseAimHandler.active) mouseAimHandler.start(in);
+
+                MouseEvent event = new MouseEvent(line);
+                switch (event.code) {
                     case "REL_X": {
-                        x1 += Integer.parseInt(input_event[1]);
-                        if ( x1 < 0 ) x1 -= Integer.parseInt(input_event[1]);
-                        if ( x1 > width ) x1 -= Integer.parseInt(input_event[1]);
+                        if (event.value == 0) break;
+                        x1 += event.value;
+                        if (x1 > width || x1 < 0) x1 -= event.value;
                         if (pointer_down)
-                            xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + "MOVE" + " 36" + "\n");
+                            xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
                         break;
                     }
                     case "REL_Y": {
-                        y1 += Integer.parseInt(input_event[1]);
-                        if ( y1 < 0 ) y1 -= Integer.parseInt(input_event[1]);
-                        if ( y1 > height ) y1 -= Integer.parseInt(input_event[1]);
-                        if (pointer_down) {
-                            xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + "MOVE" + " 36" + "\n");
-                        }
+                        if (event.value == 0) break;
+                        y1 += event.value;
+                        if (y1 > height || y1 < 0) y1 -= event.value;
+                        if (pointer_down)
+                            xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
                         break;
                     }
                     case "BTN_MOUSE": {
-                        pointer_down = input_event[1].equals("1");
-                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + input_event[1] + " 36" + "\n");
+                        pointer_down = event.value == 1;
+                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + event.value + leftClickEvent);
                         break;
                     }
+                    case "BTN_RIGHT":
+                        if (event.value == 1) triggerMouseAim();
+                        break;
+
+                    case "REL_WHEEL":
+                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " SCROLL " + event.value + "\n");
+                        break;
+
                     case "error":
                         context.startActivity(new Intent(context, InputDeviceSelector.class));
                         break;

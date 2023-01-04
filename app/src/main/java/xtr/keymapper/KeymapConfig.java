@@ -5,7 +5,7 @@ import static android.content.Context.MODE_PRIVATE;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import xtr.keymapper.aim.MouseAimKey;
+import xtr.keymapper.aim.MouseAimConfig;
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.fragment.Profiles;
 
@@ -23,7 +23,7 @@ public class KeymapConfig {
     private final Float[] keyY = new Float[36];
     public Dpad dpad1 = null;
     public Dpad dpad2 = null;
-    public MouseAimKey mouseAimKey = null;
+    public MouseAimConfig mouseAimConfig = null;
     private final SharedPreferences sharedPref;
     private final SharedPreferences.Editor sharedPrefEditor;
 
@@ -31,13 +31,6 @@ public class KeymapConfig {
         this.context = context;
         sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
         sharedPrefEditor = sharedPref.edit();
-    }
-
-    public static String getSettings(Context context){
-        KeymapConfig keymapConfig = new KeymapConfig(context);
-        String device = keymapConfig.getDevice();
-        float sensitivity = keymapConfig.getMouseSensitivity();
-        return device + " " + sensitivity;
     }
 
     public String getProfile(){
@@ -103,7 +96,7 @@ public class KeymapConfig {
                     break;
                 }
                 case "MOUSE_AIM": {
-                    mouseAimKey = new MouseAimKey(data);
+                    mouseAimConfig = new MouseAimConfig().parse(data);
                     break;
                 }
                 default: {

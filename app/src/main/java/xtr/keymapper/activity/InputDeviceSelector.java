@@ -75,7 +75,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         // On selecting a spinner item
         String item = parent.getItemAtPosition(position).toString();
         binding.textView2.setText(item);
-        Server.changeDevice(item).start();
+        new Thread(() -> Server.changeDevice(item)).start();
         keymapConfig.setDevice(item);
         // Showing selected spinner item
         Toast.makeText(parent.getContext(), item, Toast.LENGTH_LONG).show();
@@ -102,17 +102,18 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
             pOut = new PrintWriter(evSocket.getOutputStream());
             pOut.println("getevent"); pOut.flush();
             getevent = new BufferedReader(new InputStreamReader(evSocket.getInputStream()));
-            String input_event;
-            String[] event;
-            while ((input_event = getevent.readLine()) != null) {
-                event = input_event.split("\\s+"); // split a string like "/dev/input/event2 EV_REL REL_X ffffffff"
+            String[] input_event, data;
+            String event, evdev;
+            while ((event = getevent.readLine()) != null) {
+                data = event.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
+                evdev = data[0];
+                input_event = data[1].split("\\s+");
+                if(!input_event[1].equals("EV_SYN"))
+                    updateView(event);
 
-                if(!event[2].equals("SYN_REPORT"))
-                    updateView(input_event);
-
-                if( ! devices.contains(event[0]) && ! binding.textView2.getText().equals(event[0]) )
-                    if (event[1].equals("EV_REL")) {
-                        devices.add(event[0]);
+                if( !devices.contains(evdev) && ! binding.textView2.getText().equals(evdev) )
+                    if (input_event[1].equals("EV_REL")) {
+                        devices.add(evdev);
                         dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, devices);
                         runOnUiThread(() -> binding.spinner.setAdapter(dataAdapter));
                     }
