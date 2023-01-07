@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -37,9 +38,6 @@ public class InputService extends Service {
         this.input = input;
         Log.i("XtMapper", "starting server...");
         Input.startMouse(Server.DEFAULT_PORT_2);
-        /*Class<?> localClass = Class.forName("android.os.ServiceManager");
-        Method addService = localClass.getMethod("addService", String.class, IBinder.class);
-        addService.invoke(localClass, "xtmapper", binder);*/
         ServiceManager.addService("xtmapper", binder);
     }
 
@@ -66,8 +64,8 @@ public class InputService extends Service {
         }
 
         @Override
-        public void sendEvent(String event) {
-
+        public void injectScroll(float x, float y, int value) {
+            input.onScrollEvent(x, y, value);
         }
     };
 

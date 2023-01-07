@@ -1,9 +1,6 @@
 package xtr.keymapper.server;
 
-import static java.lang.Float.parseFloat;
-
 import android.hardware.input.InputManager;
-import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.view.InputDevice;
 import android.view.MotionEvent;
@@ -12,16 +9,8 @@ import com.genymobile.scrcpy.Point;
 import com.genymobile.scrcpy.Pointer;
 import com.genymobile.scrcpy.PointersState;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.ServerSocket;
-import java.net.Socket;
-
-import xtr.keymapper.IRemoteService;
-import xtr.keymapper.Server;
 
 public class Input {
 
@@ -34,31 +23,6 @@ public class Input {
     private final MotionEvent.PointerCoords[] pointerCoords = new MotionEvent.PointerCoords[PointersState.MAX_POINTERS];
     private long lastTouchDown;
 
-
-    public static final int UP = 0, DOWN = 1, MOVE = 2;
-    private final IRemoteService.Stub binder = new IRemoteService.Stub() {
-        @Override
-        public void injectEvent(float x, float y, int type, int pointerId) {
-            System.out.println("receive:" + x + y + pointerId);
-            switch (type) {
-                case UP:
-                    injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
-                    break;
-                case DOWN:
-                    injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
-                    break;
-                case MOVE:
-                    injectTouch(MotionEvent.ACTION_UP, pointerId, 1.0f, x, y);
-                    break;
-            }
-        }
-
-        @Override
-        public void sendEvent(String event) {
-            System.out.print(event);
-            parseEvent(event);
-        }
-    };
 
     private void initPointers() {
         for (int i = 0; i < PointersState.MAX_POINTERS; ++i) {
@@ -74,29 +38,15 @@ public class Input {
         }
     }
 
-    static {
-        System.loadLibrary("mouse_read");
-    }
-
-    private static class InputEvent {
-        String action;
+    static class InjectEvent {
         float x, y;
         float pressure = 1.0f;
         int pointerId;
 
-        InputEvent(String line) throws ArrayIndexOutOfBoundsException, NumberFormatException {
-            String[] xy = line.split("\\s+");
-            this.x = parseFloat(xy[0]);
-            this.y = parseFloat(xy[1]);
-            this.action = xy[2];
-            this.pointerId = Integer.parseInt(xy[3]);
-        }
-
-        InputEvent(int pointerId, float pressure, float x, float y) {
+        InjectEvent(float x, float y, int pointerId) {
             this.x = x;
             this.y = y;
             this.pointerId = pointerId;
-            this.pressure = pressure;
         }
     }
 
@@ -104,53 +54,7 @@ public class Input {
         initPointers();
     }
 
-    public void start(Socket socket) {
-        try {
-            String line;
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            while ((line = in.readLine()) != null) {
-                parseEvent(line);
-            }
-        } catch (IOException e) {
-            e.printStackTrace(System.out);
-        }
-    }
-
-    private void parseEvent(String line){
-        InputEvent event;
-        try {
-            event = new InputEvent(line);
-        } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
-            e.printStackTrace(System.out);
-            return;
-        }
-        switch (event.action) {
-            case "UP":
-            case "0":
-                event.pressure = 0.0f;
-                injectTouch(MotionEvent.ACTION_UP, event);
-                break;
-            case "DOWN":
-            case "1": {
-                injectTouch(MotionEvent.ACTION_DOWN, event);
-                break;
-            }
-            case "MOVE": {
-                injectTouch(MotionEvent.ACTION_MOVE, event);
-                break;
-            }
-            case "SCROLL": {
-                new SmoothScroll(event).start();
-                break;
-            }
-            case "exit": {
-                System.exit(1);
-                break;
-            }
-        }
-    }
-
-    private void injectTouch(int action, InputEvent event) {
+    private void injectTouch(int action, InjectEvent event) {
         long now = SystemClock.uptimeMillis();
         Point point = new Point(event.x, event.y);
 
@@ -190,10 +94,14 @@ public class Input {
         }
     }
 
-
     public void injectTouch(int action, int pointerId, float pressure, float x, float y) {
-        InputEvent event = new InputEvent(pointerId, pressure, x, y);
+        InjectEvent event = new InjectEvent(x, y, pointerId);
+        event.pressure = pressure;
         injectTouch(action, event);
+    }
+
+    public void onScrollEvent(float x, float y, int value){
+        new SmoothScroll(x, y, value).start();
     }
 
     private void injectScroll(ScrollEvent event) {
@@ -231,11 +139,10 @@ public class Input {
                 TIME = 400, SMOOTHNESS = 40, MULTIPLIER = 2,
                 DELAY_MS = TIME / SMOOTHNESS;
 
-        SmoothScroll(InputEvent event) {
-            this.event.x = event.x;
-            this.event.y = event.y;
-            float value = (float) event.pointerId;
-            this.event.value =  value / SMOOTHNESS * MULTIPLIER;
+        SmoothScroll(float x, float y, int value) {
+            this.event.x = x;
+            this.event.y = y;
+            this.event.value =  (float) value / SMOOTHNESS * MULTIPLIER;
         }
 
         public void run() {
@@ -251,42 +158,28 @@ public class Input {
     }
 
     public static native void startMouse(int port);
-
-    public static void main(String[] args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    
+    static {
         String methodName = "getInstance";
         Object[] objArr = new Object[0];
-        im = (InputManager) InputManager.class.getDeclaredMethod(methodName)
-                .invoke(null, objArr);
+         try {
+             im = (InputManager) InputManager.class.getDeclaredMethod(methodName)
+                     .invoke(null, objArr);
+             //Make MotionEvent.obtain() method accessible
+             methodName = "obtain";
+             MotionEvent.class.getDeclaredMethod(methodName)
+                     .setAccessible(true);
 
-        //Make MotionEvent.obtain() method accessible
-        methodName = "obtain";
-        MotionEvent.class.getDeclaredMethod(methodName)
-                .setAccessible(true);
+             //Get the reference to injectInputEvent method
+             methodName = "injectInputEvent";
 
-        //Get the reference to injectInputEvent method
-        methodName = "injectInputEvent";
+             injectInputEventMethod = InputManager.class.getMethod(methodName, android.view.InputEvent.class, Integer.TYPE);
 
-        injectInputEventMethod = InputManager.class.getMethod(methodName, android.view.InputEvent.class, Integer.TYPE);
-
-        startMouse(Server.DEFAULT_PORT_2); // Call native code
-        ServerSocket serverSocket = null;
-        final Input input = new Input();
-        ServiceManager.addService("xtmapper", input.binder);
-
-        try {
-            serverSocket = new ServerSocket(Server.DEFAULT_PORT);
-        } catch (IOException e) {
+         } catch (Exception e) {
             e.printStackTrace(System.out);
-            System.exit(2);
-        }
-
-        while (true) {
-            try {
-                Socket socket = serverSocket.accept();
-                new Thread(() -> input.start(socket)).start();
-            } catch (IOException e) {
-                System.out.println("I/O error: " + e);
-            }
-        }
+         }
+    }
+    static {
+        System.loadLibrary("mouse_read");
     }
 }

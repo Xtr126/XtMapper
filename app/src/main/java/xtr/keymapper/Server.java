@@ -15,6 +15,7 @@ import java.net.Socket;
 
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.server.Input;
+import xtr.keymapper.server.InputService;
 
 public class Server {
 
@@ -33,7 +34,7 @@ public class Server {
     }
 
     private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
-        final String className = Input.class.getName();
+        final String className = InputService.class.getName();
 
         FileWriter linesToWrite = new FileWriter(script_name);
         linesToWrite.append("#!/system/bin/sh\n");
