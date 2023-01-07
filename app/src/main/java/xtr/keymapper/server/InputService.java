@@ -38,7 +38,6 @@ public class InputService extends Service {
     private final IRemoteService.Stub binder = new IRemoteService.Stub() {
         @Override
         public void injectEvent(float x, float y, int type, int pointerId) {
-            System.out.println("receive:" + x + y + pointerId);
             switch (type) {
                 case UP:
                     input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
@@ -47,7 +46,7 @@ public class InputService extends Service {
                     input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
                     break;
                 case MOVE:
-                    input.injectTouch(MotionEvent.ACTION_UP, pointerId, 1.0f, x, y);
+                    input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f, x, y);
                     break;
             }
         }
@@ -56,5 +55,9 @@ public class InputService extends Service {
             input.onScrollEvent(x, y, value);
         }
     };
+
+    public static IRemoteService getInstance(){
+        return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
+    }
 
 }

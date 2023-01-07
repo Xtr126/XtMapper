@@ -22,7 +22,6 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
-import android.os.ServiceManager;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
@@ -42,6 +41,7 @@ import xtr.keymapper.aim.MouseAimHandler;
 import xtr.keymapper.aim.MouseAimHandler.MouseEvent;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
+import xtr.keymapper.server.InputService;
 
 public class TouchPointer extends Service {
 
@@ -213,7 +213,7 @@ public class TouchPointer extends Service {
                     mouseEventHandler.connect();
                 } catch (IOException ignored) {
                 }
-                if (connected) {
+                if (connected && (input = InputService.getInstance()) != null) {
                     new Thread(keyEventHandler::start).start();
                     new Thread(mouseEventHandler::start).start();
                 } else {
@@ -315,7 +315,6 @@ public class TouchPointer extends Service {
     private class MouseEventHandler {
 
         private Socket mouseSocket;
-        private Socket xOutSocket;
         private BufferedReader in;
         private PrintWriter out;
         int width; int height;
@@ -325,10 +324,7 @@ public class TouchPointer extends Service {
             mouseSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT_2);
             out = new PrintWriter(mouseSocket.getOutputStream());
             out.println("mouse_read"); out.flush();
-
-            xOutSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
             connected = true;
-            input = IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
         }
 
         private void sendSettingstoServer() throws IOException {
@@ -359,7 +355,6 @@ public class TouchPointer extends Service {
                 in.close();
                 out.close();
                 mouseSocket.close();
-                xOutSocket.close();
                 connected = false;
             }
         }
