@@ -4,38 +4,27 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 import android.view.MotionEvent;
 
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.Server;
-import xtr.keymapper.TouchPointer;
 
 
 public class InputService extends Service {
-    private final Input input;
+    private static final Input input = new Input();
 
     public static final int UP = 0, DOWN = 1, MOVE = 2;
 
     public static void main(String[] args) {
         Looper.prepare();
-        new InputService(new Input());
+        new InputService();
         Looper.loop();
     }
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        System.out.println("onCreate");
-        Intent intent = new Intent(this, TouchPointer.class);
-        startForegroundService(intent);
-    }
-
-    public InputService(Input input) {
+    public InputService() {
         super();
-        this.input = input;
         Log.i("XtMapper", "starting server...");
         Input.startMouse(Server.DEFAULT_PORT_2);
         ServiceManager.addService("xtmapper", binder);
@@ -62,7 +51,6 @@ public class InputService extends Service {
                     break;
             }
         }
-
         @Override
         public void injectScroll(float x, float y, int value) {
             input.onScrollEvent(x, y, value);
