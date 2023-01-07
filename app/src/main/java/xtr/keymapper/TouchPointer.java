@@ -1,5 +1,9 @@
 package xtr.keymapper;
 
+import static xtr.keymapper.TouchPointer.PointerId.dpad1pid;
+import static xtr.keymapper.TouchPointer.PointerId.dpad2pid;
+import static xtr.keymapper.TouchPointer.PointerId.pid1;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -14,6 +18,8 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
@@ -33,8 +39,6 @@ import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.aim.MouseAimHandler;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
-
-import static xtr.keymapper.TouchPointer.PointerId.*;
 
 public class TouchPointer extends Service {
 
@@ -56,6 +60,7 @@ public class TouchPointer extends Service {
     private KeymapConfig keymapConfig;
     boolean pointer_down;
     public boolean connected = false;
+    private IRemoteService input;
 
     private final IBinder binder = new TouchPointerBinder();
 
@@ -117,7 +122,6 @@ public class TouchPointer extends Service {
             if (cursorView.getParent() == null) {
                 mWindowManager.addView(cursorView, mParams);
             }
-
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -325,6 +329,7 @@ public class TouchPointer extends Service {
             xOut = new DataOutputStream(xOutSocket.getOutputStream());
             if (mouseAimHandler != null) mouseAimHandler.setOutputStream(xOut);
             connected = true;
+            input = IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
         }
 
         private void sendSettingstoServer() throws IOException {
@@ -345,7 +350,7 @@ public class TouchPointer extends Service {
             try {
                 handleEvents();
                 stop();
-            } catch (IOException e) {
+            } catch (IOException | RemoteException e) {
                 updateCmdView(e.toString());
             }
         }
@@ -379,7 +384,7 @@ public class TouchPointer extends Service {
             });
         }
 
-        private void handleEvents() throws IOException {
+        private void handleEvents() throws IOException, RemoteException {
             in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
 
             final String moveEvent = " MOVE " + pid1.id + "\n";
@@ -398,7 +403,8 @@ public class TouchPointer extends Service {
                         x1 += event.value;
                         if (x1 > width || x1 < 0) x1 -= event.value;
                         if (pointer_down)
-                            xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
+                            input.sendEvent(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
+                            //xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
                         break;
                     }
                     case "REL_Y": {
@@ -406,12 +412,14 @@ public class TouchPointer extends Service {
                         y1 += event.value;
                         if (y1 > height || y1 < 0) y1 -= event.value;
                         if (pointer_down)
-                            xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
+                            input.sendEvent(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
+                            //xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + moveEvent);
                         break;
                     }
                     case "BTN_MOUSE": {
                         pointer_down = event.value == 1;
-                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + event.value + leftClickEvent);
+                        //xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + event.value + leftClickEvent);
+                        input.sendEvent(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " " + event.value + leftClickEvent);
                         break;
                     }
                     case "BTN_RIGHT":
@@ -419,7 +427,8 @@ public class TouchPointer extends Service {
                         break;
 
                     case "REL_WHEEL":
-                        xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " SCROLL " + event.value + "\n");
+                        input.sendEvent(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " SCROLL " + event.value + "\n");
+                        //xOut.writeBytes(Integer.sum(x1, x2) + " " + Integer.sum(y1, y2) + " SCROLL " + event.value + "\n");
                         break;
 
                     case "error":

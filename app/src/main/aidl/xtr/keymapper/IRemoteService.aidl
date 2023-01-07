@@ -1,5 +1,6 @@
 package xtr.keymapper;
 
 interface IRemoteService {
-    void sendEvent(float x, float y, int type, int pointerId);
+    void injectEvent(float x, float y, int type, int pointerId);
+    void sendEvent(String event);
 }

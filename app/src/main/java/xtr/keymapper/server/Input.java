@@ -3,6 +3,7 @@ package xtr.keymapper.server;
 import static java.lang.Float.parseFloat;
 
 import android.hardware.input.InputManager;
+import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.view.InputDevice;
 import android.view.MotionEvent;
@@ -19,6 +20,7 @@ import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import xtr.keymapper.IRemoteService;
 import xtr.keymapper.Server;
 
 public class Input {
@@ -31,6 +33,32 @@ public class Input {
     private final MotionEvent.PointerProperties[] pointerProperties = new MotionEvent.PointerProperties[PointersState.MAX_POINTERS];
     private final MotionEvent.PointerCoords[] pointerCoords = new MotionEvent.PointerCoords[PointersState.MAX_POINTERS];
     private long lastTouchDown;
+
+
+    public static final int UP = 0, DOWN = 1, MOVE = 2;
+    private final IRemoteService.Stub binder = new IRemoteService.Stub() {
+        @Override
+        public void injectEvent(float x, float y, int type, int pointerId) {
+            System.out.println("receive:" + x + y + pointerId);
+            switch (type) {
+                case UP:
+                    injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
+                    break;
+                case DOWN:
+                    injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
+                    break;
+                case MOVE:
+                    injectTouch(MotionEvent.ACTION_UP, pointerId, 1.0f, x, y);
+                    break;
+            }
+        }
+
+        @Override
+        public void sendEvent(String event) {
+            System.out.print(event);
+            parseEvent(event);
+        }
+    };
 
     private void initPointers() {
         for (int i = 0; i < PointersState.MAX_POINTERS; ++i) {
@@ -72,46 +100,53 @@ public class Input {
         }
     }
 
+    public Input() {
+        initPointers();
+    }
+
     public void start(Socket socket) {
         try {
-            initPointers();
-            String line; InputEvent event;
-
+            String line;
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             while ((line = in.readLine()) != null) {
-                try {
-                    event = new InputEvent(line);
-                } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
-                    e.printStackTrace(System.out);
-                    continue;
-                }
-                switch (event.action) {
-                    case "UP":
-                    case "0":
-                        event.pressure = 0.0f;
-                        injectTouch(MotionEvent.ACTION_UP, event);
-                        break;
-                    case "DOWN":
-                    case "1": {
-                        injectTouch(MotionEvent.ACTION_DOWN, event);
-                        break;
-                    }
-                    case "MOVE": {
-                        injectTouch(MotionEvent.ACTION_MOVE, event);
-                        break;
-                    }
-                    case "SCROLL": {
-                        new SmoothScroll(event).start();
-                        break;
-                    }
-                    case "exit": {
-                        System.exit(1);
-                        break;
-                    }
-                }
+                parseEvent(line);
             }
         } catch (IOException e) {
             e.printStackTrace(System.out);
+        }
+    }
+
+    private void parseEvent(String line){
+        InputEvent event;
+        try {
+            event = new InputEvent(line);
+        } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
+            e.printStackTrace(System.out);
+            return;
+        }
+        switch (event.action) {
+            case "UP":
+            case "0":
+                event.pressure = 0.0f;
+                injectTouch(MotionEvent.ACTION_UP, event);
+                break;
+            case "DOWN":
+            case "1": {
+                injectTouch(MotionEvent.ACTION_DOWN, event);
+                break;
+            }
+            case "MOVE": {
+                injectTouch(MotionEvent.ACTION_MOVE, event);
+                break;
+            }
+            case "SCROLL": {
+                new SmoothScroll(event).start();
+                break;
+            }
+            case "exit": {
+                System.exit(1);
+                break;
+            }
         }
     }
 
@@ -236,6 +271,7 @@ public class Input {
         startMouse(Server.DEFAULT_PORT_2); // Call native code
         ServerSocket serverSocket = null;
         final Input input = new Input();
+        ServiceManager.addService("xtmapper", input.binder);
 
         try {
             serverSocket = new ServerSocket(Server.DEFAULT_PORT);

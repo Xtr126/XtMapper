@@ -5,9 +5,6 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
-import xtr.keymapper.activity.MainActivity;
-import xtr.keymapper.server.Input;
-
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.FileWriter;
@@ -15,6 +12,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+
+import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.server.Input;
 
 public class Server {
 
