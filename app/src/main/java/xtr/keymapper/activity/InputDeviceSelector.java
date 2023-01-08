@@ -98,7 +98,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
 
     private void getDevices()  {
         try {
-            evSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT_2);
+            evSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
             pOut = new PrintWriter(evSocket.getOutputStream());
             pOut.println("getevent"); pOut.flush();
             getevent = new BufferedReader(new InputStreamReader(evSocket.getInputStream()));

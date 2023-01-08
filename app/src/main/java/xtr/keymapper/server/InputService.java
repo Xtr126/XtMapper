@@ -26,7 +26,7 @@ public class InputService extends Service {
     public InputService() {
         super();
         Log.i("XtMapper", "starting server...");
-        Input.startMouse(Server.DEFAULT_PORT_2);
+        Input.startMouse(Server.DEFAULT_PORT);
         ServiceManager.addService("xtmapper", binder);
     }
 

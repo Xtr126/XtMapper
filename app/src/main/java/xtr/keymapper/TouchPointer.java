@@ -266,7 +266,7 @@ public class TouchPointer extends Service {
         }
 
         private void connect() throws IOException {
-            evSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT_2);
+            evSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
             pOut = new PrintWriter(evSocket.getOutputStream());
             pOut.println("getevent"); pOut.flush();
         }
@@ -321,7 +321,7 @@ public class TouchPointer extends Service {
 
         private void connect() throws IOException {
             sendSettingstoServer();
-            mouseSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT_2);
+            mouseSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
             out = new PrintWriter(mouseSocket.getOutputStream());
             out.println("mouse_read"); out.flush();
             connected = true;
