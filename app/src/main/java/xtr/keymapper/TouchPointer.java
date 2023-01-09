@@ -369,10 +369,11 @@ public class TouchPointer extends Service {
         }
 
         private void movePointer() {
-            if (cursorView == null) return;
             mHandler.post(() -> {
-                cursorView.setX(x1);
-                cursorView.setY(y1);
+                if (cursorView != null) {
+                    cursorView.setX(x1);
+                    cursorView.setY(y1);
+                }
             });
         }
 
