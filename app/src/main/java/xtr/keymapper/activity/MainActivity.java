@@ -77,7 +77,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setButtonActive(Button button){
-        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.purple_700)));
+//        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.purple_700)));
+        button.setActivated(true);
     }
 
     public void setButtonInactive(Button button){

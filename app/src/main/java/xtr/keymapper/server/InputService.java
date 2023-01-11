@@ -4,17 +4,22 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 import android.view.MotionEvent;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+
 import xtr.keymapper.IRemoteService;
-import xtr.keymapper.Server;
+import xtr.keymapper.IRemoteServiceCallback;
+import xtr.keymapper.Utils;
 
 
 public class InputService extends Service {
     private static final Input input = new Input();
-
+    private IRemoteServiceCallback mCallback;
     public static final int UP = 0, DOWN = 1, MOVE = 2;
 
     public static void main(String[] args) {
@@ -26,8 +31,19 @@ public class InputService extends Service {
     public InputService() {
         super();
         Log.i("XtMapper", "starting server...");
-        Input.startMouse(Server.DEFAULT_PORT);
         ServiceManager.addService("xtmapper", binder);
+        System.out.println("Waiting for overlay...");
+        new Thread(() -> {
+            try (BufferedReader in = Utils.geteventStream()) {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    if (mCallback != null)
+                        mCallback.receiveEvent(line);
+                }
+            } catch (IOException | RemoteException e) {
+                e.printStackTrace(System.out);
+            }
+        }).start();
     }
 
     @Override
@@ -35,8 +51,11 @@ public class InputService extends Service {
         return binder;
     }
 
+    public native void startMouse(int sensitivity);
+    public static native int openDevice(String device);
+    public native void stopMouse();
+
     private final IRemoteService.Stub binder = new IRemoteService.Stub() {
-        @Override
         public void injectEvent(float x, float y, int type, int pointerId) {
             switch (type) {
                 case UP:
@@ -50,14 +69,43 @@ public class InputService extends Service {
                     break;
             }
         }
-        @Override
         public void injectScroll(float x, float y, int value) {
             input.onScrollEvent(x, y, value);
         }
+
+        public void startServer(float sensitivity) {
+            startMouse((int) sensitivity);
+        }
+
+        public int tryOpenDevice(String device) {
+             return openDevice(device);
+        }
+
+        public void closeDevice() {
+            stopMouse();
+        }
+
+        public void registerCallback(IRemoteServiceCallback cb) {
+            mCallback = cb;
+        }
+
+        public void unregisterCallback(IRemoteServiceCallback cb) {
+            mCallback = null;
+        }
     };
+
+    /*
+     * Called from native code to send mouse event to client
+     */
+    private void sendMouseEvent(int code, int value) throws RemoteException {
+        if (mCallback != null)
+            mCallback.onMouseEvent(code, value);
+    }
 
     public static IRemoteService getInstance(){
         return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
     }
-
+    static {
+        System.loadLibrary("mouse_read");
+    }
 }

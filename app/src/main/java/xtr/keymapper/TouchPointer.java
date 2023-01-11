@@ -6,6 +6,7 @@ import static xtr.keymapper.TouchPointer.PointerId.pid1;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
+import static xtr.keymapper.InputEventCodes.*;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -18,7 +19,6 @@ import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Binder;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
@@ -29,16 +29,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
 
 import xtr.keymapper.activity.InputDeviceSelector;
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.aim.MouseAimHandler;
-import xtr.keymapper.aim.MouseAimHandler.MouseEvent;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.server.InputService;
@@ -56,14 +51,12 @@ public class TouchPointer extends Service {
     private DpadHandler dpad1Handler, dpad2Handler;
     private MouseAimHandler mouseAimHandler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
-    private Handler connectionHandler;
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
-    private HandlerThread handlerThread;
     private KeymapConfig keymapConfig;
     boolean pointer_down;
+    private IRemoteService mService;
     public boolean connected = false;
-    private IRemoteService input;
 
     private final IBinder binder = new TouchPointerBinder();
 
@@ -84,17 +77,12 @@ public class TouchPointer extends Service {
         this.c1 = ((MainActivity)context).c1;
         c3 = new StringBuilder();
 
-        if (!connected) {
-            try {
-                loadKeymap();
-            } catch (IOException e) {
-                updateCmdView("warning: keymap not set");
-            }
-            handlerThread = new HandlerThread("connect");
-            handlerThread.start();
-            connectionHandler = new Handler(handlerThread.getLooper());
-            startHandlers();
+        try {
+            loadKeymap();
+        } catch (IOException e) {
+            updateCmdView("warning: keymap not set");
         }
+        startHandlers();
     }
 
     @Override
@@ -151,17 +139,16 @@ public class TouchPointer extends Service {
     }
 
     public void hideCursor() {
+        connected = false;
+        try {
+            mService.closeDevice();
+            mService.unregisterCallback(mCallback);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
         mWindowManager.removeView(cursorView);
         cursorView.invalidate();
         cursorView = null;
-        try {
-            keyEventHandler.stop();
-            mouseEventHandler.stop();
-            handlerThread.quit();
-        } catch (IOException e) {
-            Log.e("stop", e.toString());
-        }
-        new Thread(Server::stopServer).start();
     }
 
     public void loadKeymap() throws IOException {
@@ -179,16 +166,6 @@ public class TouchPointer extends Service {
             mouseAimHandler = new MouseAimHandler(keymapConfig.mouseAimConfig);
     }
 
-    public void updateCmdView3(String s){
-        if(counter < Server.MAX_LINES) {
-            c3.append(s).append("\n");
-            counter++;
-        } else {
-            counter = 0;
-            c3 = new StringBuilder();
-        }
-        ((MainActivity)context).c3 = this.c3;
-    }
 
     private void updateCmdView(String s) {
         if(counter < Server.MAX_LINES) {
@@ -203,22 +180,26 @@ public class TouchPointer extends Service {
 
     private void startHandlers() {
         c1.append("\n connecting to server..");
-        connectionHandler.post(new Runnable() {
+        mHandler.post(new Runnable() {
             int counter = 5;
             @Override
             public void run() {
                 c1.append(".");
-                try {
-                    keyEventHandler.connect();
-                    mouseEventHandler.connect();
-                } catch (IOException ignored) {
-                }
-                if (connected && (input = InputService.getInstance()) != null) {
-                    new Thread(keyEventHandler::start).start();
-                    new Thread(mouseEventHandler::start).start();
+                mService = InputService.getInstance();
+
+                if (mService != null) {
+                    try {
+                        sendSettingstoServer();
+                        keyEventHandler.start();
+                        mouseEventHandler.start();
+                        mService.registerCallback(mCallback);
+                        connected = true;
+                    } catch (RemoteException e) {
+                        Log.e("xtmapper", e.toString());
+                    }
                 } else {
                     if (counter > 0) {
-                        connectionHandler.postDelayed(this, 1000);
+                        mHandler.postDelayed(this, 1000);
                         counter--;
                     } else {
                         mHandler.post(() -> ((MainActivity)context).stopPointer());
@@ -227,6 +208,17 @@ public class TouchPointer extends Service {
                 }
             }
         });
+    }
+
+    private void sendSettingstoServer() throws RemoteException {
+        String device = keymapConfig.getDevice();
+        int result = mService.tryOpenDevice(device);
+        if ( result < 0 ) {
+            context.startActivity(new Intent(context, InputDeviceSelector.class));
+        } else {
+            float sensitivity = keymapConfig.getMouseSensitivity();
+            mService.startServer(sensitivity);
+        }
     }
 
     public enum PointerId {
@@ -243,10 +235,24 @@ public class TouchPointer extends Service {
         public final int id;
     }
 
+    private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
+        @Override
+        public void onMouseEvent(int code, int value) throws RemoteException {
+            mouseEventHandler.handleEvent(code, value);
+        }
+
+        @Override
+        public void receiveEvent(String event) throws RemoteException {
+            keyEventHandler.handleEvent(event);
+        }
+    };
+
     private class KeyEventHandler {
-        private Socket evSocket;
-        private BufferedReader getevent;
-        private PrintWriter pOut;
+
+        private void start() {
+            if (dpad1Handler != null) dpad1Handler.setInterface(mService);
+            if (dpad2Handler != null) dpad2Handler.setInterface(mService);
+        }
 
         private class KeyEvent {
             String label;
@@ -265,74 +271,30 @@ public class TouchPointer extends Service {
             }
         }
 
-        private void connect() throws IOException {
-            evSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
-            pOut = new PrintWriter(evSocket.getOutputStream());
-            pOut.println("getevent"); pOut.flush();
-        }
-
-        private void stop() throws IOException {
-            if (evSocket != null) {
-                pOut.close();
-                evSocket.close();
-                getevent.close();
-            }
-        }
-
-        private void start()  {
-            try {
-                if (dpad1Handler != null) dpad1Handler.setInterface(input);
-                if (dpad2Handler != null) dpad2Handler.setInterface(input);
-
-                getevent = new BufferedReader(new InputStreamReader(evSocket.getInputStream()));
-                String line;
-                while ((line = getevent.readLine()) != null) { //read events
-                    // line: /dev/input/event3 EV_KEY KEY_X DOWN
-                    TouchPointer.this.updateCmdView(line);
-                    if (cursorView == null) break;
-                    KeyEvent event = new KeyEvent(line);
-                    int i = Utils.obtainIndex(event.label); // Strips off KEY_ from KEY_X and return the index of X in alphabet
-                    if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
-                        if (keysX != null && keysX[i] != null) { // null if keymap not set
-                            input.injectEvent(keysX[i], keysY[i], event.action, i);
-                        } else if (dpad2Handler != null) { // Dpad with WASD keys
-                            dpad2Handler.handleEvent(event.label, event.action);
-                        }
-                    } else {
-                        if (dpad1Handler != null)  // Dpad with arrow keys
-                            dpad1Handler.handleEvent(event.label, event.action);
-
-                        if (event.label.equals("KEY_GRAVE") && event.action == DOWN)
-                            mouseEventHandler.triggerMouseAim();
-                    }
+        private void handleEvent(String line) throws RemoteException {
+            // line: /dev/input/event3 EV_KEY KEY_X DOWN
+            TouchPointer.this.updateCmdView(line);
+            if (cursorView == null) return;
+            KeyEvent event = new KeyEvent(line);
+            int i = Utils.obtainIndex(event.label); // Strips off KEY_ from KEY_X and return the index of X in alphabet
+            if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
+                if (keysX != null && keysX[i] != null) { // null if keymap not set
+                    mService.injectEvent(keysX[i], keysY[i], event.action, i);
+                } else if (dpad2Handler != null) { // Dpad with WASD keys
+                    dpad2Handler.handleEvent(event.label, event.action);
                 }
-            } catch (IOException | RemoteException e) {
-                updateCmdView(e.toString());
+            } else {
+                if (dpad1Handler != null)  // Dpad with arrow keys
+                    dpad1Handler.handleEvent(event.label, event.action);
+
+                if (event.label.equals("KEY_GRAVE") && event.action == DOWN)
+                    mouseEventHandler.triggerMouseAim();
             }
         }
     }
 
     private class MouseEventHandler {
-
-        private Socket mouseSocket;
-        private BufferedReader in;
-        private PrintWriter out;
         int width; int height;
-
-        private void connect() throws IOException {
-            sendSettingstoServer();
-            mouseSocket = new Socket("127.0.0.1", Server.DEFAULT_PORT);
-            out = new PrintWriter(mouseSocket.getOutputStream());
-            out.println("mouse_read"); out.flush();
-            connected = true;
-        }
-
-        private void sendSettingstoServer() throws IOException {
-            String device = keymapConfig.getDevice();
-            float sensitivity = keymapConfig.getMouseSensitivity();
-            Server.changeDevice(device);
-            Server.changeSensitivity(sensitivity);
-        }
 
         private void triggerMouseAim(){
             if (mouseAimHandler != null) {
@@ -341,22 +303,8 @@ public class TouchPointer extends Service {
         }
 
         private void start() {
+            mouseAimHandler.setInterface(mService);
             getDimensions();
-            try {
-                handleEvents();
-                stop();
-            } catch (IOException | RemoteException e) {
-                updateCmdView(e.toString());
-            }
-        }
-
-        private void stop() throws IOException {
-            if (mouseSocket != null) {
-                in.close();
-                out.close();
-                mouseSocket.close();
-                connected = false;
-            }
         }
 
         private void getDimensions() {
@@ -377,59 +325,46 @@ public class TouchPointer extends Service {
             });
         }
 
-        private void handleEvents() throws IOException, RemoteException {
-            in = new BufferedReader(new InputStreamReader(mouseSocket.getInputStream()));
+        private void handleEvent(int code, int value) throws RemoteException {
             final int pointerId = pid1.id;
 
-            String line;
-            while ((line = in.readLine()) != null) {
-                updateCmdView3("socket: " + line);
-                if (cursorView == null) break;
-                if (mouseAimHandler != null && mouseAimHandler.active) {
-                    mouseAimHandler.setInterface(input);
-                    mouseAimHandler.start(in);
+            if (cursorView == null) return;
+            if (mouseAimHandler != null && mouseAimHandler.active) {
+                mouseAimHandler.handleEvent(code, value);
+                return;
+            }
+
+            switch (code) {
+                case REL_X: {
+                    if (value == 0) break;
+                    x1 += value;
+                    if (x1 > width || x1 < 0) x1 -= value;
+                    if (pointer_down)
+                        mService.injectEvent(x1, y1, MOVE, pointerId);
+                    movePointer();
+                    break;
                 }
-
-                MouseEvent event = new MouseEvent(line);
-                switch (event.code) {
-                    case "REL_X": {
-                        if (event.value == 0) break;
-                        x1 += event.value;
-                        if (x1 > width || x1 < 0) x1 -= event.value;
-                        if (pointer_down)
-                            input.injectEvent(x1, y1, MOVE, pointerId);
-                        break;
-                    }
-                    case "REL_Y": {
-                        if (event.value == 0) break;
-                        y1 += event.value;
-                        if (y1 > height || y1 < 0) y1 -= event.value;
-                        if (pointer_down)
-                            input.injectEvent(x1, y1, MOVE, pointerId);
-                        break;
-                    }
-                    case "BTN_MOUSE":
-                        pointer_down = event.value == 1;
-                        input.injectEvent(x1, y1, event.value, pointerId);
-                        break;
-
-                    case "BTN_RIGHT":
-                        if (event.value == 1) triggerMouseAim();
-                        break;
-
-                    case "REL_WHEEL":
-                        input.injectScroll(x1, y1, event.value);
-                        break;
-
-                    case "error":
-                        context.startActivity(new Intent(context, InputDeviceSelector.class));
-                        break;
-
-                    case "restart":
-                        stop(); connect(); start();
-                        break;
+                case REL_Y: {
+                    if (value == 0) break;
+                    y1 += value;
+                    if (y1 > height || y1 < 0) y1 -= value;
+                    if (pointer_down)
+                        mService.injectEvent(x1, y1, MOVE, pointerId);
+                    movePointer();
+                    break;
                 }
-                movePointer();
+                case BTN_MOUSE:
+                    pointer_down = value == 1;
+                    mService.injectEvent(x1, y1, value, pointerId);
+                    break;
+
+                case BTN_RIGHT:
+                    if (value == 1) triggerMouseAim();
+                    break;
+
+                case REL_WHEEL:
+                    mService.injectScroll(x1, y1, value);
+                    break;
             }
         }
     }

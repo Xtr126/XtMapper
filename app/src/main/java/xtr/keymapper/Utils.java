@@ -15,14 +15,11 @@ public class Utils {
         return alphabet.indexOf(s.substring(4));
     }
 
-    @Deprecated
-    public static BufferedReader geteventStream(Context context) throws IOException {
-        Process sh = getRootAccess();
+    public static BufferedReader geteventStream() throws IOException {
+        Process sh = Runtime.getRuntime().exec("sh");
         DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
 
-        outputStream.writeBytes("pkill libgetevent.so\n");
-        outputStream.writeBytes(context.getApplicationInfo().nativeLibraryDir + "/libgetevent.so -ql" + "\n");
-        outputStream.writeBytes("exit\n");
+        outputStream.writeBytes("exec env LD_PRELOAD=$LD_LIBRARY_PATH/libgetevent.so getevent -ql");
         outputStream.flush();
 
         return new BufferedReader(new InputStreamReader(sh.getInputStream()));

@@ -22,7 +22,6 @@ public class Server {
     public final String script_name;
 
     public static final int MAX_LINES = 16;
-    public static final int DEFAULT_PORT = 6345;
 
     public StringBuilder c1, c2;
     private int counter1 = 0, counter2 = 0;
@@ -46,37 +45,6 @@ public class Server {
 
         linesToWrite.flush();
         linesToWrite.close();
-    }
-
-    public static void stopServer(){
-        try {
-            Socket socket = new Socket("127.0.0.1", DEFAULT_PORT);
-            PrintWriter pOut = new PrintWriter(socket.getOutputStream());
-            pOut.println("stop");
-            pOut.close(); socket.close();
-        } catch (IOException e) {
-            Log.e("I/O error", e.toString());
-        }
-    }
-
-    public static void changeDevice(String newDevice){
-        try {
-            Socket socket = new Socket("127.0.0.1", DEFAULT_PORT);
-            PrintWriter pOut = new PrintWriter(socket.getOutputStream());
-            pOut.println("change_device"); pOut.flush();
-            pOut.print(newDevice);
-            pOut.close(); socket.close();
-        } catch (IOException e) {
-            Log.e("I/O error", e.toString());
-        }
-    }
-
-    public static void changeSensitivity(float sensitivity) throws IOException {
-        Socket socket = new Socket("127.0.0.1", DEFAULT_PORT);
-        PrintWriter pOut = new PrintWriter(socket.getOutputStream());
-        pOut.println("mouse_sensitivity"); pOut.flush();
-        pOut.print(sensitivity);
-        pOut.close(); socket.close();
     }
 
     public void setupServer () {

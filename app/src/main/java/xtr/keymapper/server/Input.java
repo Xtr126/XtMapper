@@ -157,8 +157,6 @@ public class Input {
         }
     }
 
-    public static native void startMouse(int port);
-    
     static {
         String methodName = "getInstance";
         Object[] objArr = new Object[0];
@@ -178,8 +176,5 @@ public class Input {
          } catch (Exception e) {
             e.printStackTrace(System.out);
          }
-    }
-    static {
-        System.loadLibrary("mouse_read");
     }
 }
