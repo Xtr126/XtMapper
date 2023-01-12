@@ -33,10 +33,15 @@ public class InputService extends Service {
         Log.i("XtMapper", "starting server...");
         ServiceManager.addService("xtmapper", binder);
         System.out.println("Waiting for overlay...");
+        start_getevent();
+    }
+
+    private void start_getevent() {
         new Thread(() -> {
-            try (BufferedReader in = Utils.geteventStream()) {
+            try {
+                BufferedReader getevent = Utils.geteventStream();
                 String line;
-                while ((line = in.readLine()) != null) {
+                while ((line = getevent.readLine()) != null) {
                     if (mCallback != null)
                         mCallback.receiveEvent(line);
                 }

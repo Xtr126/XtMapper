@@ -1,7 +1,5 @@
 package xtr.keymapper;
 
-import android.content.Context;
-
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -19,7 +17,7 @@ public class Utils {
         Process sh = Runtime.getRuntime().exec("sh");
         DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
 
-        outputStream.writeBytes("exec env LD_PRELOAD=$LD_LIBRARY_PATH/libgetevent.so getevent -ql");
+        outputStream.writeBytes("exec env LD_PRELOAD=$LD_LIBRARY_PATH/libgetevent.so getevent -ql\n");
         outputStream.flush();
 
         return new BufferedReader(new InputStreamReader(sh.getInputStream()));
