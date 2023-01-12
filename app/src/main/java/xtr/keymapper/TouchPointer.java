@@ -55,7 +55,7 @@ public class TouchPointer extends Service {
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
     private KeymapConfig keymapConfig;
     boolean pointer_down;
-    private IRemoteService mService;
+    public IRemoteService mService;
     public boolean connected = false;
 
     private final IBinder binder = new TouchPointerBinder();
@@ -191,15 +191,10 @@ public class TouchPointer extends Service {
                 mService = InputService.getInstance();
 
                 if (mService != null) {
-                    try {
-                        sendSettingstoServer();
-                        keyEventHandler.start();
-                        mouseEventHandler.start();
-                        mService.registerCallback(mCallback);
-                        connected = true;
-                    } catch (RemoteException e) {
-                        Log.e("xtmapper", e.toString());
-                    }
+                    keyEventHandler.init();
+                    mouseEventHandler.init();
+                    context.startActivity(new Intent(context, InputDeviceSelector.class));
+                    connected = true;
                 } else {
                     if (counter > 0) {
                         mHandler.postDelayed(this, 1000);
@@ -213,14 +208,15 @@ public class TouchPointer extends Service {
         });
     }
 
-    private void sendSettingstoServer() throws RemoteException {
+    public void sendSettingstoServer() throws RemoteException {
         String device = keymapConfig.getDevice();
         int result = mService.tryOpenDevice(device);
         if ( result < 0 ) {
-            context.startActivity(new Intent(context, InputDeviceSelector.class));
+            context.startActivity(new Intent(this, InputDeviceSelector.class));
         } else {
             float sensitivity = keymapConfig.getMouseSensitivity();
             mService.startServer(sensitivity);
+            mService.registerCallback(mCallback);
         }
     }
 
@@ -238,7 +234,7 @@ public class TouchPointer extends Service {
         public final int id;
     }
 
-    private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
+    public final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
         @Override
         public void onMouseEvent(int code, int value) throws RemoteException {
             mouseEventHandler.handleEvent(code, value);
@@ -252,7 +248,7 @@ public class TouchPointer extends Service {
 
     private class KeyEventHandler {
 
-        private void start() {
+        private void init() {
             if (dpad1Handler != null) dpad1Handler.setInterface(mService);
             if (dpad2Handler != null) dpad2Handler.setInterface(mService);
         }
@@ -305,7 +301,7 @@ public class TouchPointer extends Service {
             }
         }
 
-        private void start() {
+        private void init() {
             if (mouseAimHandler != null) mouseAimHandler.setInterface(mService);
             getDimensions();
         }
