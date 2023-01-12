@@ -107,7 +107,6 @@ public class TouchPointer extends Service {
                 // Make the underlying application window visible
                 // through the cursor
                 PixelFormat.TRANSLUCENT);
-        mParams.gravity = Gravity.CENTER;
 
         if(cursorView.getWindowToken()==null)
             if (cursorView.getParent() == null) {
