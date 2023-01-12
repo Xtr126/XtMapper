@@ -330,7 +330,6 @@ public class TouchPointer extends Service {
 
         private void handleEvent(int code, int value) throws RemoteException {
             final int pointerId = pid1.id;
-
             if (cursorView == null) return;
             if (mouseAimHandler != null && mouseAimHandler.active) {
                 mouseAimHandler.handleEvent(code, value);
