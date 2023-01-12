@@ -15,6 +15,8 @@ typedef struct input_service_context {
     JavaVM *javaVM;
     jclass inputServiceClz;
     jobject inputServiceObj;
+    pthread_mutex_t lock;
+    int done;
 } serviceContext;
 serviceContext g_ctx;
 
@@ -39,6 +41,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
         return JNI_ERR; // JNI version not supported.
     }
 
+
+    g_ctx.done = 0;
+    g_ctx.inputServiceObj = NULL;
     return  JNI_VERSION_1_6;
 }
 
@@ -65,6 +70,16 @@ void* send_mouse_events(void* context) {
 
     struct input_event ie;
     while (read(mouse_fd, &ie, sizeof(struct input_event))) {
+        pthread_mutex_lock(&pctx->lock);
+        int done = pctx->done;
+        if (pctx->done) {
+            pctx->done = 0;
+        }
+        pthread_mutex_unlock(&pctx->lock);
+        if (done) {
+            break;
+        }
+
         switch (ie.code) {
             case REL_X :
             case REL_Y :
@@ -119,6 +134,18 @@ Java_xtr_keymapper_server_InputService_openDevice(JNIEnv *env, jclass clazz, jst
  */
 JNIEXPORT void JNICALL
 Java_xtr_keymapper_server_InputService_stopMouse(JNIEnv *env, jobject thiz) {
+    pthread_mutex_lock(&g_ctx.lock);
+    g_ctx.done = 1;
+    pthread_mutex_unlock(&g_ctx.lock);
+
+    // waiting for mouse read thread to flip the done flag
+    struct timespec sleepTime;
+    memset(&sleepTime, 0, sizeof(sleepTime));
+    sleepTime.tv_nsec = 100000000;
+    while (g_ctx.done) {
+        nanosleep(&sleepTime, NULL);
+    }
+
     close(mouse_fd);
 
     // release object we allocated
