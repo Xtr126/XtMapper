@@ -140,9 +140,12 @@ public class TouchPointer extends Service {
 
     public void hideCursor() {
         connected = false;
+
+        if (mService != null)
         try {
             mService.closeDevice();
             mService.unregisterCallback(mCallback);
+            mService = null;
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -303,7 +306,7 @@ public class TouchPointer extends Service {
         }
 
         private void start() {
-            mouseAimHandler.setInterface(mService);
+            if (mouseAimHandler != null) mouseAimHandler.setInterface(mService);
             getDimensions();
         }
 
