@@ -148,9 +148,11 @@ public class TouchPointer extends Service {
                 e.printStackTrace();
             }
         }
-        mWindowManager.removeView(cursorView);
-        cursorView.invalidate();
-        cursorView = null;
+        if (cursorView != null) {
+            mWindowManager.removeView(cursorView);
+            cursorView.invalidate();
+            cursorView = null;
+        }
     }
 
     public void loadKeymap() throws IOException {
