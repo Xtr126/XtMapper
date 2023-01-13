@@ -10,8 +10,6 @@ import java.io.DataOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
 
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.server.InputService;
@@ -23,8 +21,7 @@ public class Server {
 
     public static final int MAX_LINES = 16;
 
-    public StringBuilder c1, c2;
-    private int counter1 = 0, counter2 = 0;
+    private int counter1 = 0;
 
     public Server(Context context){
         this.context = context;
@@ -48,8 +45,6 @@ public class Server {
     }
 
     public void setupServer () {
-        c1 = new StringBuilder();
-        c2 = new StringBuilder();
         try {
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
@@ -71,7 +66,7 @@ public class Server {
             BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
             String line;
             while ((line = stdout.readLine()) != null) {
-                updateCmdView2("stdout: " + line);
+                updateCmdView1("stdout: " + line);
                 if (line.equals("Waiting for overlay...")) {
                     ((MainActivity)context).startPointer();
                 }
@@ -84,22 +79,11 @@ public class Server {
 
     public void updateCmdView1(String s){
         if(counter1 < MAX_LINES) {
-            c1.append(s).append("\n");
+            ((MainActivity)context).c1.append(s).append("\n");
             counter1++;
         } else {
             counter1 = 0;
-            c1 = new StringBuilder();
+            ((MainActivity)context).c1 = new StringBuilder();
         }
-        ((MainActivity)context).c1 = this.c1;
-    }
-    public void updateCmdView2(String s){
-        if(counter2 < MAX_LINES) {
-            c2.append(s).append("\n");
-            counter2++;
-        } else {
-            counter2 = 0;
-            c2 = new StringBuilder();
-        }
-        ((MainActivity)context).c2 = this.c2;
     }
 }

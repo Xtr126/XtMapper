@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity {
     public TouchPointer pointerOverlay;
     public Server server;
     public static final long REFRESH_INTERVAL = 200;
-    public StringBuilder c1, c2, c3;
+    public StringBuilder c1, c2;
 
     public ActivityMainBinding binding;
     private Intent intent;
@@ -112,13 +112,11 @@ public class MainActivity extends AppCompatActivity {
     private void textViewUpdaterTask() {
         c1 = new StringBuilder();
         c2 = new StringBuilder();
-        c3 = new StringBuilder();
         Handler handler = new Handler(Looper.getMainLooper());
         handler.post(new Runnable() {
             public void run() {
                 binding.cmdview.view1.setText(c1);
                 binding.cmdview.view2.setText(c2);
-                binding.cmdview.view3.setText(c3);
                 handler.postDelayed(this, REFRESH_INTERVAL);
             }
         });

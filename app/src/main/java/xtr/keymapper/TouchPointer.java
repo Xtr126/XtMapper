@@ -48,7 +48,6 @@ public class TouchPointer extends Service {
     private WindowManager mWindowManager;
     int x1 = 100, y1 = 100;
     private Float[] keysX, keysY;
-    public StringBuilder c3, c1;
     private int counter = 0;
     private DpadHandler dpad1Handler, dpad2Handler;
     private MouseAimHandler mouseAimHandler;
@@ -76,13 +75,11 @@ public class TouchPointer extends Service {
 
     public void init(Context context){
         this.context= context;
-        this.c1 = ((MainActivity)context).c1;
-        c3 = new StringBuilder();
 
         try {
             loadKeymap();
         } catch (IOException e) {
-            updateCmdView("warning: keymap not set");
+            ((MainActivity)context).server.updateCmdView1("warning: keymap not set");
         }
         startHandlers();
     }
@@ -142,13 +139,14 @@ public class TouchPointer extends Service {
     public void hideCursor() {
         connected = false;
 
-        if (mService != null)
-        try {
-            mService.closeDevice();
-            mService.unregisterCallback(mCallback);
-            mService = null;
-        } catch (RemoteException e) {
-            e.printStackTrace();
+        if (mService != null) {
+            try {
+                mService.closeDevice();
+                mService.unregisterCallback(mCallback);
+                mService = null;
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
         }
         mWindowManager.removeView(cursorView);
         cursorView.invalidate();
@@ -171,18 +169,18 @@ public class TouchPointer extends Service {
     }
 
 
-    private void updateCmdView(String s) {
+    private void updateCmdView2(String s) {
         if(counter < Server.MAX_LINES) {
-            c1.append(s).append("\n");
+            ((MainActivity)context).c2.append(s).append("\n");
             counter++;
         } else {
             counter = 0;
-            c1 = new StringBuilder();
+            ((MainActivity)context).c2 = new StringBuilder();
         }
-        ((MainActivity)context).c1 = this.c1;
     }
 
     private void startHandlers() {
+        StringBuilder c1 = ((MainActivity)context).c1;
         c1.append("\n connecting to server..");
         mHandler.post(new Runnable() {
             int counter = 5;
@@ -273,7 +271,7 @@ public class TouchPointer extends Service {
 
         private void handleEvent(String line) throws RemoteException {
             // line: /dev/input/event3 EV_KEY KEY_X DOWN
-            TouchPointer.this.updateCmdView(line);
+            TouchPointer.this.updateCmdView2(line);
             if (cursorView == null) return;
             KeyEvent event = new KeyEvent(line);
             int i = Utils.obtainIndex(event.label); // Strips off KEY_ from KEY_X and return the index of X in alphabet
