@@ -1,12 +1,16 @@
 package xtr.keymapper;
 
+import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
+import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
+import static xtr.keymapper.InputEventCodes.REL_WHEEL;
+import static xtr.keymapper.InputEventCodes.REL_X;
+import static xtr.keymapper.InputEventCodes.REL_Y;
 import static xtr.keymapper.TouchPointer.PointerId.dpad1pid;
 import static xtr.keymapper.TouchPointer.PointerId.dpad2pid;
 import static xtr.keymapper.TouchPointer.PointerId.pid1;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
-import static xtr.keymapper.InputEventCodes.*;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -22,9 +26,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
-import android.util.Log;
 import android.view.Display;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;

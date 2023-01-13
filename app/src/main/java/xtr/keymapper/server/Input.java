@@ -136,13 +136,13 @@ public class Input {
     private class SmoothScroll extends Thread {
         private final ScrollEvent event = new ScrollEvent();
         private static final int
-                TIME = 400, SMOOTHNESS = 40, MULTIPLIER = 2,
+                TIME = 100, SMOOTHNESS = 20,
                 DELAY_MS = TIME / SMOOTHNESS;
 
         SmoothScroll(float x, float y, int value) {
             this.event.x = x;
             this.event.y = y;
-            this.event.value =  (float) value / SMOOTHNESS * MULTIPLIER;
+            this.event.value =  (float) value / SMOOTHNESS;
         }
 
         public void run() {
