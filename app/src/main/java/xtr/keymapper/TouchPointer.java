@@ -257,25 +257,28 @@ public class TouchPointer extends Service {
         private class KeyEvent {
             String label;
             int action;
-            KeyEvent(String line){
-                String[] input_event = line.split("\\s+");
-                label = input_event[2];
-                switch (input_event[3]) {
-                    case "UP":
-                        action = UP;
-                        break;
-                    case "DOWN":
-                        action = DOWN;
-                        break;
-                }
-            }
         }
 
         private void handleEvent(String line) throws RemoteException {
             // line: /dev/input/event3 EV_KEY KEY_X DOWN
             TouchPointer.this.updateCmdView2(line);
             if (cursorView == null) return;
-            KeyEvent event = new KeyEvent(line);
+
+            KeyEvent event = new KeyEvent();
+            String[] input_event = line.split("\\s+");
+            event.label = input_event[2];
+
+            switch (input_event[3]) {
+                case "UP":
+                    event.action = UP;
+                    break;
+                case "DOWN":
+                    event.action = DOWN;
+                    break;
+                default:
+                    return;
+            }
+
             int i = Utils.obtainIndex(event.label); // Strips off KEY_ from KEY_X and return the index of X in alphabet
             if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
                 if (keysX != null && keysX[i] != null) { // null if keymap not set
