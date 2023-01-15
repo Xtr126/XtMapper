@@ -168,6 +168,8 @@ public class TouchPointer extends Service {
             dpad2Handler = new DpadHandler(context, keymapConfig.dpad2, dpad2pid.id);
         if (keymapConfig.mouseAimConfig != null)
             mouseAimHandler = new MouseAimHandler(keymapConfig.mouseAimConfig);
+
+        mouseEventHandler.sensitivity = keymapConfig.getMouseSensitivity().intValue();
     }
 
 
@@ -215,7 +217,6 @@ public class TouchPointer extends Service {
         if ( result < 0 ) {
             context.startActivity(new Intent(this, InputDeviceSelector.class));
         } else {
-            mouseEventHandler.sensitivity = keymapConfig.getMouseSensitivity().intValue();
             mService.startServer();
             mService.registerCallback(mCallback);
         }
