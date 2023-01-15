@@ -56,7 +56,7 @@ public class InputService extends Service {
         return binder;
     }
 
-    public native void startMouse(int sensitivity);
+    public native void startMouse();
     public static native int openDevice(String device);
     public native void stopMouse();
 
@@ -78,8 +78,8 @@ public class InputService extends Service {
             input.onScrollEvent(x, y, value);
         }
 
-        public void startServer(float sensitivity) {
-            startMouse((int) sensitivity);
+        public void startServer() {
+            startMouse();
         }
 
         public int tryOpenDevice(String device) {

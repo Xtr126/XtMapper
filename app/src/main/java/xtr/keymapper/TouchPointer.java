@@ -215,8 +215,8 @@ public class TouchPointer extends Service {
         if ( result < 0 ) {
             context.startActivity(new Intent(this, InputDeviceSelector.class));
         } else {
-            float sensitivity = keymapConfig.getMouseSensitivity();
-            mService.startServer(sensitivity);
+            mouseEventHandler.sensitivity = keymapConfig.getMouseSensitivity().intValue();
+            mService.startServer();
             mService.registerCallback(mCallback);
         }
     }
@@ -298,6 +298,7 @@ public class TouchPointer extends Service {
 
     private class MouseEventHandler {
         int width; int height;
+        int sensitivity;
 
         private void triggerMouseAim(){
             if (mouseAimHandler != null) {
@@ -339,19 +340,19 @@ public class TouchPointer extends Service {
             switch (code) {
                 case REL_X: {
                     if (value == 0) break;
+                    value *= sensitivity;
                     x1 += value;
                     if (x1 > width || x1 < 0) x1 -= value;
-                    if (pointer_down)
-                        mService.injectEvent(x1, y1, MOVE, pointerId);
+                    if (pointer_down) mService.injectEvent(x1, y1, MOVE, pointerId);
                     movePointer();
                     break;
                 }
                 case REL_Y: {
                     if (value == 0) break;
+                    value *= sensitivity;
                     y1 += value;
                     if (y1 > height || y1 < 0) y1 -= value;
-                    if (pointer_down)
-                        mService.injectEvent(x1, y1, MOVE, pointerId);
+                    if (pointer_down) mService.injectEvent(x1, y1, MOVE, pointerId);
                     movePointer();
                     break;
                 }

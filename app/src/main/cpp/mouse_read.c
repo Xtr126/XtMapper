@@ -21,7 +21,6 @@ typedef struct input_service_context {
 serviceContext g_ctx;
 
 int mouse_fd;
-int s;
 
 /*
  * processing one time initialization:
@@ -40,7 +39,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     if ((*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR; // JNI version not supported.
     }
-
 
     g_ctx.done = 0;
     g_ctx.inputServiceObj = NULL;
@@ -98,8 +96,7 @@ void* send_mouse_events(void* context) {
 * Interface to Java side to start
 */
 JNIEXPORT void JNICALL
-Java_xtr_keymapper_server_InputService_startMouse(JNIEnv *env, jobject thiz, jint sensitivity) {
-    s = sensitivity;
+Java_xtr_keymapper_server_InputService_startMouse(JNIEnv *env, jobject thiz) {
 
     pthread_t threadInfo_;
     pthread_attr_t threadAttr_;
@@ -154,4 +151,3 @@ Java_xtr_keymapper_server_InputService_stopMouse(JNIEnv *env, jobject thiz) {
     g_ctx.inputServiceObj = NULL;
     g_ctx.inputServiceClz = NULL;
 }
-
