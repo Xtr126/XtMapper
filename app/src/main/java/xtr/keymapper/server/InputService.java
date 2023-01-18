@@ -9,6 +9,8 @@ import android.os.ServiceManager;
 import android.util.Log;
 import android.view.MotionEvent;
 
+import androidx.annotation.Nullable;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 
@@ -19,7 +21,7 @@ import xtr.keymapper.Utils;
 
 public class InputService extends Service {
     private static final Input input = new Input();
-    private IRemoteServiceCallback mCallback;
+    @Nullable private IRemoteServiceCallback mCallback;
     public static final int UP = 0, DOWN = 1, MOVE = 2;
 
     public static void main(String[] args) {
@@ -97,6 +99,13 @@ public class InputService extends Service {
         public void unregisterCallback(IRemoteServiceCallback cb) {
             mCallback = null;
         }
+
+        public void reloadKeymap(){
+            if(mCallback != null) try {
+                mCallback.loadKeymap();
+            } catch (RemoteException ignored) {
+            }
+        }
     };
 
     /*
@@ -110,6 +119,18 @@ public class InputService extends Service {
     public static IRemoteService getInstance(){
         return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
     }
+
+    public static void reloadKeymap(){
+        IRemoteService mService = getInstance();
+        if (mService != null) {
+            try {
+                mService.reloadKeymap();
+            } catch (RemoteException e) {
+                Log.i("RemoteService", e.toString());
+            }
+        }
+    }
+
     static {
         System.loadLibrary("mouse_read");
     }

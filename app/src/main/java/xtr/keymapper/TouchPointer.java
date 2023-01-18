@@ -26,10 +26,13 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
+import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
+
+import androidx.annotation.Nullable;
 
 import java.io.IOException;
 
@@ -49,6 +52,7 @@ public class TouchPointer extends Service {
     int x1 = 100, y1 = 100;
     private Float[] keysX, keysY;
     private int counter = 0;
+    @Nullable
     private DpadHandler dpad1Handler, dpad2Handler;
     private MouseAimHandler mouseAimHandler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -245,6 +249,17 @@ public class TouchPointer extends Service {
         @Override
         public void receiveEvent(String event) throws RemoteException {
             keyEventHandler.handleEvent(event);
+        }
+
+        /* calling back from remote service to reload keymap */
+        public void loadKeymap() {
+            try {
+                TouchPointer.this.loadKeymap();
+                keyEventHandler.init();
+                mouseEventHandler.init();
+            } catch (IOException e) {
+                Log.i("editor", e.toString());
+            }
         }
     };
 

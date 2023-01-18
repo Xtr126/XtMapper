@@ -5,7 +5,6 @@ import static com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_
 import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,13 +15,10 @@ import androidx.annotation.Nullable;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
-import java.io.IOException;
-
 import xtr.keymapper.KeymapConfig;
-import xtr.keymapper.TouchPointer;
-import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.FragmentSettingsDialogBinding;
 import xtr.keymapper.dpad.DpadConfig;
+import xtr.keymapper.server.InputService;
 
 public class SettingsFragment extends BottomSheetDialogFragment {
     private final DpadConfig dpadConfig;
@@ -65,14 +61,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         String[] device = binding.inputDevice.getText().toString().split("\\s+"); // split the string to allow only one string without whitespaces
         keymapConfig.setDevice(device[0]);
 
-        TouchPointer pointer = ((MainActivity)getActivity()).pointerOverlay;
-        if (pointer != null) {
-            try {
-                pointer.loadKeymap();
-            } catch (IOException e) {
-                Log.i("I/O error", e.toString());
-            }
-        }
+        InputService.reloadKeymap();
         binding = null;
         super.onDestroyView();
     }

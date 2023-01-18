@@ -30,6 +30,7 @@ import xtr.keymapper.databinding.Dpad1Binding;
 import xtr.keymapper.databinding.Dpad2Binding;
 import xtr.keymapper.databinding.KeymapEditorBinding;
 import xtr.keymapper.databinding.ResizableBinding;
+import xtr.keymapper.server.InputService;
 
 public class EditorUI implements View.OnKeyListener, View.OnClickListener {
 
@@ -47,7 +48,6 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
     private MouseAimConfig mouseAimConfig;
     // Default position of new views added
     private static final Float DEFAULT_X = 200f, DEFAULT_Y = 200f;
-    private int i = 0;
     private final KeymapEditorBinding binding;
     private final Context context;
 
@@ -162,6 +162,9 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
         // Save Config to file
         KeymapConfig keymapConfig = new KeymapConfig(context);
         keymapConfig.writeConfig(linesToWrite);
+
+        // reload keymap if service running
+        InputService.reloadKeymap();
     }
 
     public void setupButtons() {
@@ -219,20 +222,19 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
     }
 
     private void addKey(String key, float x ,float y) {
-        Keys.add(i,new MovableFloatingActionKey(context));
+        MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(context);
 
-        mainView.addView(Keys.get(i));
-
-        Keys.get(i).setText(key);
-
-        Keys.get(i).animate()
+        floatingKey.setText(key);
+        floatingKey.animate()
                 .x(x)
                 .y(y)
                 .setDuration(1000)
                 .start();
+        floatingKey.setOnClickListener(this);
 
-        Keys.get(i).setOnClickListener(this);
-        i++;
+        mainView.addView(floatingKey);
+
+        Keys.add(floatingKey);
     }
 
     @Override

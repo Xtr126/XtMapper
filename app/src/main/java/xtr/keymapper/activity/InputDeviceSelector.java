@@ -89,11 +89,11 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     }
 
     private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
-        public void onMouseEvent(int code, int value) {
-        }
+        public void onMouseEvent(int code, int value) {}
         public void receiveEvent(String event) {
             getDevices(event);
         }
+        public void loadKeymap() {}
     };
 
 

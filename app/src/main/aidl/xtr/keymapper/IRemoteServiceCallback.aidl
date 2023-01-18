@@ -6,4 +6,5 @@ package xtr.keymapper;
 interface IRemoteServiceCallback {
     void onMouseEvent(int code, int value);
     void receiveEvent(String event);
+    void loadKeymap();
 }
