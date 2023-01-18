@@ -316,9 +316,10 @@ public class TouchPointer extends Service {
         int width; int height;
         int sensitivity;
 
-        private void triggerMouseAim(){
+        private void triggerMouseAim() throws RemoteException {
             if (mouseAimHandler != null) {
                 mouseAimHandler.active = !mouseAimHandler.active;
+                if (mouseAimHandler.active) mouseAimHandler.resetPointer();
             }
         }
 

@@ -22,7 +22,6 @@ public class MouseAimHandler {
     private final int pointerId1 = TouchPointer.PointerId.pid1.id;
     private final int pointerId2 = TouchPointer.PointerId.pid2.id;
 
-
     public MouseAimHandler(MouseAimConfig config){
         currentX = config.xCenter;
         currentY = config.yCenter;
@@ -41,12 +40,12 @@ public class MouseAimHandler {
         } else {
             area.left = currentX - config.width;
             area.right = currentX + config.width;
-            area.top = currentX - config.height;
-            area.bottom = currentX + config.height;
+            area.top = currentY - config.height;
+            area.bottom = currentY + config.height;
         }
     }
 
-    private void resetPointer() throws RemoteException {
+    public void resetPointer() throws RemoteException {
         currentY = config.yCenter;
         currentX = config.xCenter;
         input.injectEvent(currentX, currentY, UP, pointerId1);
@@ -55,8 +54,6 @@ public class MouseAimHandler {
 
 
     public void handleEvent(int code, int value) throws RemoteException {
-
-        input.injectEvent(currentX, currentY, DOWN, pointerId1);
         switch (code) {
             case REL_X:
                 currentX += value;
@@ -65,7 +62,7 @@ public class MouseAimHandler {
                 break;
             case REL_Y:
                 currentY += value;
-                if ( currentY > area.right || currentY < area.left ) resetPointer();
+                if ( currentY > area.bottom || currentY < area.top ) resetPointer();
                 input.injectEvent(currentX, currentY, MOVE, pointerId1);
                 break;
 
@@ -74,7 +71,10 @@ public class MouseAimHandler {
                 break;
 
             case BTN_RIGHT:
-                if(value == 1) active = false;
+                if(value == 1) {
+                    active = false;
+                    input.injectEvent(currentX, currentY, UP, pointerId1);
+                }
         }
     }
 }
