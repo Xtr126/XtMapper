@@ -11,8 +11,13 @@
     <string name="dpad_radius">Dpad Radius</string>
     <string name="mouse_input_device">Mouse Input Device</string>
     <string name="about_info">
-        XtMapper: free and open source keymapper for Android.
+        \n XtMapper: free and open source keymapper for Android. \n
 
-        https://github.com/Xtr126/XtMapper
+        \n GitHub: https://github.com/Xtr126/XtMapper \n
+
+        \n License: GNU General Public License v3
+    </string>
+    <string name="mouse_aim_activated">
+        Shooting mode activated Right click or ~ key to exit
     </string>
 </resources>

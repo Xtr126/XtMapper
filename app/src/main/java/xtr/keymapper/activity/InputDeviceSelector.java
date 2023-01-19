@@ -80,7 +80,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         binding.textView2.setText(item);
         keymapConfig.setDevice(item);
         // Showing selected spinner item
-        Toast.makeText(parent.getContext(), item, Toast.LENGTH_LONG).show();
+        Toast.makeText(parent.getContext(), item, Toast.LENGTH_SHORT).show();
     }
 
     @Override

@@ -31,6 +31,7 @@ import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
@@ -319,7 +320,11 @@ public class TouchPointer extends Service {
         private void triggerMouseAim() throws RemoteException {
             if (mouseAimHandler != null) {
                 mouseAimHandler.active = !mouseAimHandler.active;
-                if (mouseAimHandler.active) mouseAimHandler.resetPointer();
+                if (mouseAimHandler.active) {
+                    mouseAimHandler.resetPointer();
+                    // Notifying user that shooting mode was activated
+                    mHandler.post(() -> Toast.makeText(TouchPointer.this, R.string.mouse_aim_activated, Toast.LENGTH_LONG).show());
+                }
             }
         }
 
