@@ -18,7 +18,7 @@ public class MouseAimHandler {
     private float currentX, currentY;
     private final RectF area = new RectF();
     public boolean active = false;
-    private IRemoteService input;
+    private IRemoteService service;
     private final int pointerId1 = TouchPointer.PointerId.pid1.id;
     private final int pointerId2 = TouchPointer.PointerId.pid2.id;
 
@@ -29,7 +29,7 @@ public class MouseAimHandler {
     }
 
     public void setInterface(IRemoteService input) {
-        this.input = input;
+        this.service = input;
     }
 
     public void setDimensions(int width, int height){
@@ -48,8 +48,8 @@ public class MouseAimHandler {
     public void resetPointer() throws RemoteException {
         currentY = config.yCenter;
         currentX = config.xCenter;
-        input.injectEvent(currentX, currentY, UP, pointerId1);
-        input.injectEvent(currentX, currentY, DOWN, pointerId1);
+        service.injectEvent(currentX, currentY, UP, pointerId1);
+        service.injectEvent(currentX, currentY, DOWN, pointerId1);
     }
 
 
@@ -58,22 +58,22 @@ public class MouseAimHandler {
             case REL_X:
                 currentX += value;
                 if ( currentX > area.right || currentX < area.left ) resetPointer();
-                input.injectEvent(currentX, currentY, MOVE, pointerId1);
+                service.injectEvent(currentX, currentY, MOVE, pointerId1);
                 break;
             case REL_Y:
                 currentY += value;
                 if ( currentY > area.bottom || currentY < area.top ) resetPointer();
-                input.injectEvent(currentX, currentY, MOVE, pointerId1);
+                service.injectEvent(currentX, currentY, MOVE, pointerId1);
                 break;
 
             case BTN_MOUSE:
-                input.injectEvent(currentX, currentY, value, pointerId2);
+                service.injectEvent(currentX, currentY, value, pointerId2);
                 break;
 
             case BTN_RIGHT:
                 if(value == 1) {
                     active = false;
-                    input.injectEvent(currentX, currentY, UP, pointerId1);
+                    service.injectEvent(currentX, currentY, UP, pointerId1);
                 }
         }
     }

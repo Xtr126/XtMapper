@@ -5,14 +5,16 @@
 XtMapper is an free and open source keymapper application in development for Bliss OS.  
 It can be used to play certain Android games that require a touchscreen, with keyboard and mouse.
 
-## Currently working:
+## Features:
 
 - Multi-touch emulation
 - Emulate a touch pointer with mouse - Useful for games that only accept touch events and not mouse clicks.
 - Emulate a D-pad with W,A,S,D or arrow keys
 - Keyboard events to touch - And editing config with GUI
-- Aim with mouse in FPS games 
- 
+- Aim with mouse in FPS games (shooting mode) 
+- Pinch-to-zoom gesture simulation using ctrl key + mouse
+- Smooth pixel by pixel scrolling emulation for mouse wheel
+
 APK can be obtained from GitHub actions (latest) or [`releases`](https://github.com/Xtr126/XtMapper/releases).
 
 ## Contributing
@@ -22,13 +24,12 @@ If you want to contribute code, please base your commits on the latest dev branc
 
 Overview:
 - Touch emulation is handled by TouchPointer.java and Input.java.  
-- Input.java runs separately from the app as an elevated java process using app_process and adb shell/root, check Server.java for more details. 
+- InputService.java runs separately from the app as an elevated java process using app_process and adb shell/root. 
 
 ## Useful discord servers 
 AndroidEmu: https://discord.gg/mRpT4Qq  
 BlissLabs: https://discord.com/invite/F9n5gbdNy2  
 SupremeGamers: https://aopc.dev/discord  
-
 
 ## Copyright and License
 This project is licensed under the GPL v3.  

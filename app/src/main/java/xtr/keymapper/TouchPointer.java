@@ -40,6 +40,7 @@ import java.io.IOException;
 import xtr.keymapper.activity.InputDeviceSelector;
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.aim.MouseAimHandler;
+import xtr.keymapper.aim.MousePinchZoom;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.server.InputService;
@@ -265,6 +266,7 @@ public class TouchPointer extends Service {
     };
 
     private class KeyEventHandler {
+        boolean ctrlKeyPressed = false;
 
         private void init() {
             if (dpad1Handler != null) dpad1Handler.setInterface(mService);
@@ -304,11 +306,25 @@ public class TouchPointer extends Service {
                     dpad2Handler.handleEvent(event.label, event.action);
                 }
             } else {
-                if (dpad1Handler != null)  // Dpad with arrow keys
-                    dpad1Handler.handleEvent(event.label, event.action);
-
-                if (event.label.equals("KEY_GRAVE") && event.action == DOWN)
-                    mouseEventHandler.triggerMouseAim();
+                switch (event.label) {
+                    default:
+                        if (dpad1Handler != null)  // Dpad with arrow keys
+                            dpad1Handler.handleEvent(event.label, event.action);
+                    break;
+                    case "KEY_GRAVE":
+                        if(event.action == DOWN) mouseEventHandler.triggerMouseAim();
+                    break;
+                    case "KEY_LEFTCTRL":
+                        if (event.action == DOWN) {
+                            mouseEventHandler.pinchZoom = new MousePinchZoom(mService, x1, y1);
+                            ctrlKeyPressed = true;
+                        } else {
+                            ctrlKeyPressed = false;
+                            mouseEventHandler.pinchZoom.releasePointers();
+                            mouseEventHandler.pinchZoom = null;
+                        }
+                    break;
+                }
             }
         }
     }
@@ -316,6 +332,7 @@ public class TouchPointer extends Service {
     private class MouseEventHandler {
         int width; int height;
         int sensitivity;
+        private MousePinchZoom pinchZoom;
 
         private void triggerMouseAim() throws RemoteException {
             if (mouseAimHandler != null) {
@@ -356,6 +373,10 @@ public class TouchPointer extends Service {
             if (cursorView == null) return;
             if (mouseAimHandler != null && mouseAimHandler.active) {
                 mouseAimHandler.handleEvent(code, value);
+                return;
+            }
+            if (keyEventHandler.ctrlKeyPressed) {
+                pinchZoom.handleEvent(code, value);
                 return;
             }
 
