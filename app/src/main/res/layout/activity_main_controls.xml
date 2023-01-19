@@ -10,7 +10,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
-
     <LinearLayout
         android:id="@+id/L2"
         android:layout_width="0dp"
@@ -44,9 +43,9 @@
             android:layout_width="match_parent"
             android:layout_height="80dp"
             android:layout_marginVertical="4dp"
-            android:text="@string/about"
-            app:icon="@drawable/about"
-            app:iconSize="24dp" />
+            android:text="@string/help"
+            app:icon="@drawable/ic_baseline_help_outline_24"
+            app:iconSize="30dp" />
     </LinearLayout>
 
 
