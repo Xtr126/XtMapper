@@ -81,12 +81,7 @@ public class TouchPointer extends Service {
 
     public void init(Context context){
         this.context= context;
-
-        try {
-            loadKeymap();
-        } catch (IOException e) {
-            ((MainActivity)context).server.updateCmdView1("warning: keymap not set");
-        }
+        loadKeymap();
         startHandlers();
     }
 
@@ -161,9 +156,13 @@ public class TouchPointer extends Service {
         }
     }
 
-    public void loadKeymap() throws IOException {
+    public void loadKeymap() {
         keymapConfig = new KeymapConfig(context);
-        keymapConfig.loadConfig();
+        try {
+            keymapConfig.loadConfig();
+        } catch (IOException e) {
+            Log.e("loadKeymap", e.toString());
+        }
 
         keysX = keymapConfig.getX();
         keysY = keymapConfig.getY();
@@ -255,13 +254,9 @@ public class TouchPointer extends Service {
 
         /* calling back from remote service to reload keymap */
         public void loadKeymap() {
-            try {
-                TouchPointer.this.loadKeymap();
-                keyEventHandler.init();
-                mouseEventHandler.init();
-            } catch (IOException e) {
-                Log.i("editor", e.toString());
-            }
+            TouchPointer.this.loadKeymap();
+            keyEventHandler.init();
+            mouseEventHandler.init();
         }
     };
 
