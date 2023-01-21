@@ -45,6 +45,10 @@ public class KeymapConfig {
         return sharedPref.getFloat("mouse_sensitivity_multiplier", 1);
     }
 
+    public Float getScrollSpeed(){
+        return sharedPref.getFloat("scroll_speed_multiplier", 1);
+    }
+
     public void setProfile(String newProfile){
         sharedPrefEditor.putString("profile", newProfile);
         sharedPrefEditor.apply();
@@ -55,8 +59,13 @@ public class KeymapConfig {
         sharedPrefEditor.apply();
     }
 
-    public void setMouseSensitivity(Float sensitivity){
+    public void setMouseSensitivity(float sensitivity){
         sharedPrefEditor.putFloat("mouse_sensitivity_multiplier", sensitivity);
+        sharedPrefEditor.apply();
+    }
+
+    public void setScrollSpeed(float multiplier){
+        sharedPrefEditor.putFloat("scroll_speed_multiplier", multiplier);
         sharedPrefEditor.apply();
     }
 

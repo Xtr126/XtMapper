@@ -5,6 +5,7 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="vertical"
+    android:theme="@style/Theme.Material3.DynamicColors.Dark"
     android:padding="20dp">
     <TextView
         android:layout_width="wrap_content"
@@ -36,17 +37,36 @@
         android:stepSize="0.1"
         android:valueFrom="0.5"
         android:valueTo="2.0"
+        app:trackHeight="10dp"
+        tools:value="1.0" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/scroll_speed"/>
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/slider_scroll_speed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:stepSize="1"
+        android:valueFrom="1"
+        android:valueTo="5"
         app:haloColor="@color/purple_700"
         app:thumbColor="@color/purple_500"
         app:trackColorActive="@color/teal_200"
         app:trackHeight="10dp"
-        tools:value="1.0" />
+        tools:value="2" />
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/mouse_input_device"/>
+        android:text="@string/mouse_input_device"
+        android:labelFor="@id/input_device"/>
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/input_device"/>
+        android:inputType="textNoSuggestions"
+        android:id="@+id/input_device"
+        android:importantForAutofill="no" />
 </LinearLayout>

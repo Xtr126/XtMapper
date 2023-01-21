@@ -175,6 +175,7 @@ public class TouchPointer extends Service {
             mouseAimHandler = new MouseAimHandler(keymapConfig.mouseAimConfig);
 
         mouseEventHandler.sensitivity = keymapConfig.getMouseSensitivity().intValue();
+        mouseEventHandler.scroll_speed_multiplier = keymapConfig.getScrollSpeed().intValue();
     }
 
 
@@ -327,6 +328,7 @@ public class TouchPointer extends Service {
     private class MouseEventHandler {
         int width; int height;
         int sensitivity;
+        int scroll_speed_multiplier;
         private MousePinchZoom pinchZoom;
 
         private void triggerMouseAim() throws RemoteException {
@@ -404,7 +406,7 @@ public class TouchPointer extends Service {
                     break;
 
                 case REL_WHEEL:
-                    mService.injectScroll(x1, y1, value);
+                    mService.injectScroll(x1, y1, value * scroll_speed_multiplier);
                     break;
             }
         }

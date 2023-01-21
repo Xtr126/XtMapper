@@ -30,7 +30,6 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         keymapConfig = new KeymapConfig(context);
     }
 
-    @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
@@ -43,23 +42,27 @@ public class SettingsFragment extends BottomSheetDialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         binding.sliderDpad.setValue(dpadConfig.getDpadRadiusMultiplier());
         binding.sliderMouse.setValue(keymapConfig.getMouseSensitivity());
-
-        binding.sliderDpad.addOnChangeListener((slider, value, fromUser) -> dpadConfig.setDpadRadiusMultiplier(value));
-        binding.sliderMouse.addOnChangeListener((slider, value, fromUser) -> keymapConfig.setMouseSensitivity(value));
+        binding.sliderScrollSpeed.setValue(keymapConfig.getScrollSpeed());
         binding.inputDevice.setText(keymapConfig.getDevice());
     }
 
     @NonNull @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         BottomSheetDialog dialog = (BottomSheetDialog) super.onCreateDialog(savedInstanceState);
+        // Expanded bottom sheet dialog by default
         dialog.setOnShowListener(d -> ((BottomSheetDialog) d).getBehavior().setState(STATE_EXPANDED));
         return dialog;
     }
 
     @Override
     public void onDestroyView() {
-        String[] device = binding.inputDevice.getText().toString().split("\\s+"); // split the string to allow only one string without whitespaces
+        // Split the string to allow only one string without whitespaces
+        String[] device = binding.inputDevice.getText().toString().split("\\s+");
         keymapConfig.setDevice(device[0]);
+
+        keymapConfig.setMouseSensitivity(binding.sliderMouse.getValue());
+        keymapConfig.setScrollSpeed(binding.sliderScrollSpeed.getValue());
+        dpadConfig.setDpadRadiusMultiplier(binding.sliderDpad.getValue());
 
         InputService.reloadKeymap();
         binding = null;
