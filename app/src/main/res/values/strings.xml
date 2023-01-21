@@ -21,7 +21,7 @@
         There are two types of Dpad, one using WASD keys, another for arrow keys. \n
         Add more dpads to change type. \n\n
         Mouse right click or ~ key to activate shooting mode or aim with mouse for FPS games \n\n
-        Hold ctrl key and move mouse to simulate pinch-to-zoom gesture with two fingers. \n\n
+        Left-click drag mouse while holding ctrl key to simulate pinch-to-zoom gesture with two fingers. \n\n
 
         \n License: GPL v3.0
         \n GitHub: https://github.com/Xtr126/XtMapper \n\n

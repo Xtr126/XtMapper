@@ -308,17 +308,10 @@ public class TouchPointer extends Service {
                             dpad1Handler.handleEvent(event.label, event.action);
                     break;
                     case "KEY_GRAVE":
-                        if(event.action == DOWN) mouseEventHandler.triggerMouseAim();
+                        if (event.action == DOWN) mouseEventHandler.triggerMouseAim();
                     break;
                     case "KEY_LEFTCTRL":
-                        if (event.action == DOWN) {
-                            mouseEventHandler.pinchZoom = new MousePinchZoom(mService, x1, y1);
-                            ctrlKeyPressed = true;
-                        } else {
-                            ctrlKeyPressed = false;
-                            mouseEventHandler.pinchZoom.releasePointers();
-                            mouseEventHandler.pinchZoom = null;
-                        }
+                        ctrlKeyPressed = event.action == DOWN;
                     break;
                 }
             }
@@ -372,8 +365,8 @@ public class TouchPointer extends Service {
                 mouseAimHandler.handleEvent(code, value);
                 return;
             }
-            if (keyEventHandler.ctrlKeyPressed) {
-                pinchZoom.handleEvent(code, value);
+            if (keyEventHandler.ctrlKeyPressed && pointer_down) {
+                pointer_down = pinchZoom.handleEvent(code, value);
                 return;
             }
 
@@ -398,7 +391,10 @@ public class TouchPointer extends Service {
                 }
                 case BTN_MOUSE:
                     pointer_down = value == 1;
-                    mService.injectEvent(x1, y1, value, pointerId);
+                    if (keyEventHandler.ctrlKeyPressed) {
+                        pinchZoom = new MousePinchZoom(mService, x1, y1);
+                        pinchZoom.handleEvent(code, value);
+                    } else mService.injectEvent(x1, y1, value, pointerId);
                     break;
 
                 case BTN_RIGHT:

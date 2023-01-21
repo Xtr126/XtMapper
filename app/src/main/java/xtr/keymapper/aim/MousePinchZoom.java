@@ -16,13 +16,21 @@ public class MousePinchZoom {
     private final IRemoteService service;
     private float currentX1, currentY1;
     private float currentX2, currentY2;
+    private final float centerX, centerY;
     private final int pointerId1 = TouchPointer.PointerId.pid1.id;
     private final int pointerId2 = TouchPointer.PointerId.pid2.id;
 
-    public MousePinchZoom(IRemoteService service, float initX, float initY) throws RemoteException {
+    public MousePinchZoom(IRemoteService service, float initX, float initY) {
         this.service = service;
-        currentX1 = currentX2 = initX;
-        currentY1 = currentY2 = initY;
+        centerX = initX;
+        centerY = initY;
+
+        // Shift initial position of two pointers by 50 pixels
+        currentX1 = initX + 50; currentY1 = initY + 50;
+        currentX2 = initX - 50; currentY2 = initY - 50;
+    }
+
+    private void initPointers() throws RemoteException {
         service.injectEvent(currentX1, currentY1, DOWN, pointerId1);
         service.injectEvent(currentX2, currentY2, DOWN, pointerId2);
     }
@@ -32,17 +40,33 @@ public class MousePinchZoom {
         service.injectEvent(currentX2, currentY2, UP, pointerId2);
     }
 
-    public void handleEvent(int code, int value) throws RemoteException {
+    /*
+     * Move position of pointers away from center
+     * To make space for performing zoom out gesture
+     */
+    private void moveAwayPointers() throws RemoteException {
+        releasePointers();
+        currentX1 += 100; currentX2 -= 100;
+        currentY1 += 100; currentY2 -= 100;
+        initPointers();
+    }
+
+    public boolean handleEvent(int code, int value) throws RemoteException {
         switch (code) {
             case REL_X:
                 currentX1 += value;
                 currentX2 -= value;
+                // If it passed through the center in opposite direction
+                if (centerX > currentX1) moveAwayPointers();
+
                 service.injectEvent(currentX1, currentY1, MOVE, pointerId1);
                 service.injectEvent(currentX2, currentY2, MOVE, pointerId2);
                 break;
             case REL_Y:
                 currentY1 += value;
                 currentY2 -= value;
+                if (centerY > currentY1) moveAwayPointers();
+
                 service.injectEvent(currentX1, currentY1, MOVE, pointerId1);
                 service.injectEvent(currentX2, currentY2, MOVE, pointerId2);
                 break;
@@ -50,7 +74,9 @@ public class MousePinchZoom {
             case BTN_MOUSE:
                 service.injectEvent(currentX1, currentY1, value, pointerId1);
                 service.injectEvent(currentX2, currentY2, value, pointerId2);
+                if (value == UP) return false;
                 break;
         }
+        return true;
     }
 }
