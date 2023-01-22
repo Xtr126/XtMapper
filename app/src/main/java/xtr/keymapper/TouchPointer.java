@@ -176,6 +176,9 @@ public class TouchPointer extends Service {
 
         mouseEventHandler.sensitivity = keymapConfig.getMouseSensitivity().intValue();
         mouseEventHandler.scroll_speed_multiplier = keymapConfig.getScrollSpeed().intValue();
+
+        keyEventHandler.stop_service = keymapConfig.getStopServiceShortcutKey();
+        keyEventHandler.launch_editor = keymapConfig.getLaunchEditorShortcutKey();
     }
 
 
@@ -263,6 +266,7 @@ public class TouchPointer extends Service {
 
     private class KeyEventHandler {
         boolean ctrlKeyPressed = false;
+        int stop_service, launch_editor;
 
         private void init() {
             if (dpad1Handler != null) dpad1Handler.setInterface(mService);
@@ -300,6 +304,11 @@ public class TouchPointer extends Service {
                     mService.injectEvent(keysX[i], keysY[i], event.action, i);
                 } else if (dpad2Handler != null) { // Dpad with WASD keys
                     dpad2Handler.handleEvent(event.label, event.action);
+                }
+                // Keyboard shortcuts
+                if (event.action == DOWN) {
+                    if (i == stop_service) ((MainActivity) context).stopPointer();
+                    if (i == launch_editor) startService(new Intent(context, EditorService.class));
                 }
             } else {
                 switch (event.label) {

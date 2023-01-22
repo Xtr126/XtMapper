@@ -48,6 +48,13 @@ public class KeymapConfig {
     public Float getScrollSpeed(){
         return sharedPref.getFloat("scroll_speed_multiplier", 1);
     }
+    
+    public int getStopServiceShortcutKey(){
+        return sharedPref.getInt("stop_service_shortcut", -1);
+    }
+    public int getLaunchEditorShortcutKey(){
+        return sharedPref.getInt("launch_editor_shortcut", -1);
+    }
 
     public void setProfile(String newProfile){
         sharedPrefEditor.putString("profile", newProfile);
@@ -66,6 +73,15 @@ public class KeymapConfig {
 
     public void setScrollSpeed(float multiplier){
         sharedPrefEditor.putFloat("scroll_speed_multiplier", multiplier);
+        sharedPrefEditor.apply();
+    }
+
+    public void setStopServiceShortcutKey(int key){
+        sharedPrefEditor.putInt("stop_service_shortcut", key);
+        sharedPrefEditor.apply();
+    }
+    public void setLaunchEditorShortcutKey(int key){
+        sharedPrefEditor.putInt("launch_editor_shortcut", key);
         sharedPrefEditor.apply();
     }
 

@@ -30,4 +30,7 @@
         Shooting mode activated Right click or ~ key to exit
     </string>
     <string name="scroll_speed">Scroll Speed</string>
+    <string name="keyboard_shortcuts">Keyboard Shortcuts:</string>
+    <string name="launch_editor">Launch editor</string>
+    <string name="stop_service">Stop Service</string>
 </resources>

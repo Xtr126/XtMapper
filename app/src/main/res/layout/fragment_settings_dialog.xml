@@ -69,4 +69,45 @@
         android:inputType="textNoSuggestions"
         android:id="@+id/input_device"
         android:importantForAutofill="no" />
+
+    <TextView
+        android:layout_marginTop="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/keyboard_shortcuts" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/launch_editor" />
+
+        <EditText
+            android:id="@+id/launch_editor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ems="2"
+            android:inputType="text"
+            android:textAlignment="center"
+            android:importantForAutofill="no" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/stop_service"
+            android:layout_marginLeft="10dp" />
+
+        <EditText
+            android:id="@+id/stop_service"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ems="2"
+            android:inputType="text"
+            android:textAlignment="center"
+            android:importantForAutofill="no" />
+    </LinearLayout>
 </LinearLayout>
