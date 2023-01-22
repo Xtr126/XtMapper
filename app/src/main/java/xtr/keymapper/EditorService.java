@@ -13,9 +13,8 @@ public class EditorService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if(editor != null) editor.hideView();
-
         Context context = new ContextThemeWrapper(this, R.style.Theme_MaterialComponents);
-        editor = new EditorUI(context);
+        editor = new EditorUI(context, this::stopSelf);
         editor.open();
         return super.onStartCommand(intent, flags, startId);
     }

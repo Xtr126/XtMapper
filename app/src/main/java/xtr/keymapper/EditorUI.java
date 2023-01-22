@@ -50,9 +50,12 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
     private static final Float DEFAULT_X = 200f, DEFAULT_Y = 200f;
     private final KeymapEditorBinding binding;
     private final Context context;
+    private final OnHideListener onHideListener;
 
-    public EditorUI (Context context) {
+    public EditorUI (Context context, OnHideListener l) {
         this.context = context;
+        this.onHideListener = l;
+
         layoutInflater = context.getSystemService(LayoutInflater.class);
         mWindowManager = context.getSystemService(WindowManager.class);
         mParams = new WindowManager.LayoutParams(
@@ -82,12 +85,17 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
             }
     }
 
+    public interface OnHideListener {
+        void onHideView();
+    }
+
     public void hideView() {
         try {
             saveKeymap();
             mWindowManager.removeView(mainView);
             ((ViewGroup) mainView.getParent()).removeAllViews();
             mainView.invalidate();
+            onHideListener.onHideView();
         } catch (Exception e) {
             Log.d("Error2", e.toString());
         }
