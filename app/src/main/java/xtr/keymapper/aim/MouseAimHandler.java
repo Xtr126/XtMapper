@@ -67,7 +67,7 @@ public class MouseAimHandler {
                 break;
 
             case BTN_MOUSE:
-                service.injectEvent(currentX, currentY, value, pointerId2);
+                service.injectEvent(config.xleftClick, config.yleftClick, value, pointerId2);
                 break;
 
             case BTN_RIGHT:
