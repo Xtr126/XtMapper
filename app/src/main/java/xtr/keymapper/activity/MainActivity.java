@@ -6,9 +6,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
@@ -24,9 +22,7 @@ import xtr.keymapper.fragment.SettingsFragment;
 
 public class MainActivity extends AppCompatActivity {
     public TouchPointer pointerOverlay;
-    public Server server;
-    public static final long REFRESH_INTERVAL = 200;
-    public StringBuilder c1, c2;
+    private final Server server = new Server();
 
     public ActivityMainBinding binding;
     private Intent intent;
@@ -34,13 +30,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         binding = ActivityMainBinding.inflate(getLayoutInflater());
-        View view = binding.getRoot();
-        setContentView(view);
-        server = new Server(this);
-        server.setupServer();
+        setContentView(binding.getRoot());
+
+        server.mCallback = this.mCallback;
+        server.setupServer(this);
+
         setupButtons();
-        textViewUpdaterTask();
     }
 
     private void setupButtons() {
@@ -93,11 +90,8 @@ public class MainActivity extends AppCompatActivity {
     private void startServer(boolean autorun){
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
-            if (autorun) {
-                new Thread(server::startServer).start();
-            } else {
-                server.updateCmdView1("run in adb shell:\n sh " + server.script_name);
-            }
+            if (autorun) new Thread(server::startServer).start();
+            else mCallback.updateCmdView1("run in adb shell:\n sh " + server.script_name);
         }
     }
 
@@ -109,18 +103,46 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void textViewUpdaterTask() {
-        c1 = new StringBuilder();
-        c2 = new StringBuilder();
-        Handler handler = new Handler(Looper.getMainLooper());
-        handler.post(new Runnable() {
-            public void run() {
-                binding.cmdview.view1.setText(c1);
-                binding.cmdview.view2.setText(c2);
-                handler.postDelayed(this, REFRESH_INTERVAL);
-            }
-        });
+    public interface Callback {
+        void updateCmdView1(String line);
+        void updateCmdView2(String line);
+        void stopPointer();
+        void startPointer();
     }
+
+    private final Callback mCallback = new Callback() {
+        public static final int MAX_LINES = 16;
+        private int counter1 = 0;
+        private int counter2 = 0;
+        private final StringBuilder c1 = new StringBuilder();
+        private final StringBuilder c2 = new StringBuilder();
+
+        public void updateCmdView1(String line) {
+            c1.append(line);
+
+            if (counter1 < MAX_LINES) counter1++;
+            else c1.delete(0, c1.indexOf("\n") + 1);
+
+            runOnUiThread(() -> binding.cmdview.view1.setText(c1));
+        }
+
+        public void updateCmdView2(String line) {
+            c2.append(line);
+
+            if (counter2 < MAX_LINES) counter2++;
+            else c2.delete(0, c2.indexOf("\n") + 1);
+
+            runOnUiThread(() -> binding.cmdview.view2.setText(c2));
+        }
+
+        public void stopPointer() {
+            MainActivity.this.stopPointer();
+        }
+
+        public void startPointer() {
+            MainActivity.this.startPointer();
+        }
+    };
 
     /** Defines callbacks for service binding, passed to bindService() */
     private final ServiceConnection connection = new ServiceConnection() {
@@ -132,11 +154,13 @@ public class MainActivity extends AppCompatActivity {
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
             if(!pointerOverlay.connected) {
-                pointerOverlay.init(MainActivity.this);
+                pointerOverlay.activityCallback = mCallback;
+                pointerOverlay.init();
             }
         }
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
+            pointerOverlay.activityCallback = null;
         }
     };
 }

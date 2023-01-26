@@ -16,17 +16,8 @@ import xtr.keymapper.server.InputService;
 
 public class Server {
 
-    private final Context context;
-    public final String script_name;
-
-    public static final int MAX_LINES = 16;
-
-    private int counter1 = 0;
-
-    public Server(Context context){
-        this.context = context;
-        script_name = context.getExternalFilesDir(null) + "/xtMapper.sh";
-    }
+    public String script_name;
+    public MainActivity.Callback mCallback;
 
     private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
         final String className = InputService.class.getName();
@@ -44,8 +35,9 @@ public class Server {
         linesToWrite.close();
     }
 
-    public void setupServer () {
+    public void setupServer (Context context) {
         try {
+            script_name = context.getExternalFilesDir(null) + "/xtMapper.sh";
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
@@ -56,7 +48,7 @@ public class Server {
     }
 
     public void startServer() {
-        updateCmdView1("exec sh " + script_name);
+        mCallback.updateCmdView1("exec sh " + script_name + "\n");
         try {
             Process sh = Utils.getRootAccess();
             DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
@@ -66,10 +58,9 @@ public class Server {
             BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
             String line;
             while ((line = stdout.readLine()) != null) {
-                updateCmdView1("stdout: " + line);
-                if (line.equals("Waiting for overlay...")) {
-                    ((MainActivity)context).startPointer();
-                }
+                mCallback.updateCmdView1("stdout: " + line + "\n");
+                if (line.equals("Waiting for overlay..."))
+                    mCallback.startPointer();
             }
             sh.waitFor();
         } catch (IOException | InterruptedException e) {
@@ -77,13 +68,4 @@ public class Server {
         }
     }
 
-    public void updateCmdView1(String s){
-        if(counter1 < MAX_LINES) {
-            ((MainActivity)context).c1.append(s).append("\n");
-            counter1++;
-        } else {
-            counter1 = 0;
-            ((MainActivity)context).c1 = new StringBuilder();
-        }
-    }
 }

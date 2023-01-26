@@ -19,6 +19,7 @@ import java.util.List;
 
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.R;
 import xtr.keymapper.TouchPointer;
 import xtr.keymapper.databinding.ActivityConfigureBinding;
 
@@ -36,9 +37,10 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (isInMultiWindowMode()) setTheme(R.style.Theme_Material3_DynamicColors_Dark);
+
         binding = ActivityConfigureBinding.inflate(getLayoutInflater());
-        View view = binding.getRoot();
-        setContentView(view);
+        setContentView(binding.getRoot());
 
         // Spinner click listener
         binding.spinner.setOnItemSelectedListener(this);

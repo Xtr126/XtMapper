@@ -1,13 +1,7 @@
 package xtr.keymapper;
 
-import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
-import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
-import static xtr.keymapper.InputEventCodes.REL_WHEEL;
-import static xtr.keymapper.InputEventCodes.REL_X;
-import static xtr.keymapper.InputEventCodes.REL_Y;
-import static xtr.keymapper.TouchPointer.PointerId.dpad1pid;
-import static xtr.keymapper.TouchPointer.PointerId.dpad2pid;
-import static xtr.keymapper.TouchPointer.PointerId.pid1;
+import static xtr.keymapper.InputEventCodes.*;
+import static xtr.keymapper.TouchPointer.PointerId.*;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
@@ -17,7 +11,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
@@ -33,8 +26,6 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
-
 import java.io.IOException;
 
 import xtr.keymapper.activity.InputDeviceSelector;
@@ -47,14 +38,10 @@ import xtr.keymapper.server.InputService;
 
 public class TouchPointer extends Service {
 
-    // declaring required variables
-    private Context context;
     private View cursorView;
     private WindowManager mWindowManager;
     int x1 = 100, y1 = 100;
     private Float[] keysX, keysY;
-    private int counter = 0;
-    @Nullable
     private DpadHandler dpad1Handler, dpad2Handler;
     private MouseAimHandler mouseAimHandler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -64,6 +51,7 @@ public class TouchPointer extends Service {
     boolean pointer_down;
     public IRemoteService mService;
     public boolean connected = false;
+    public MainActivity.Callback activityCallback;
 
     private final IBinder binder = new TouchPointerBinder();
 
@@ -79,10 +67,34 @@ public class TouchPointer extends Service {
         return binder;
     }
 
-    public void init(Context context){
-        this.context= context;
+    public void init(){
         loadKeymap();
-        startHandlers();
+
+        activityCallback.updateCmdView1("\n connecting to server..");
+        
+        mHandler.post(new Runnable() {
+            int counter = 5;
+            @Override
+            public void run() {
+                activityCallback.updateCmdView1(".");
+                mService = InputService.getInstance();
+
+                if (mService != null) {
+                    keyEventHandler.init();
+                    mouseEventHandler.init();
+                    startInputDeviceSelector();
+                    connected = true;
+                } else {
+                    if (counter > 0) {
+                        mHandler.postDelayed(this, 1000);
+                        counter--;
+                    } else {
+                        mHandler.post(() -> stopPointer());
+                        activityCallback.updateCmdView1("\n connection timeout\n Please retry activation \n");
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -109,10 +121,18 @@ public class TouchPointer extends Service {
                 PixelFormat.TRANSLUCENT);
 
         if(cursorView.getWindowToken()==null)
-            if (cursorView.getParent() == null) {
+            if (cursorView.getParent() == null)
                 mWindowManager.addView(cursorView, mParams);
-            }
         return super.onStartCommand(intent, flags, startId);
+    }
+
+    public void stopPointer() {
+        if (activityCallback != null) {
+            activityCallback.stopPointer();
+        } else {
+            hideCursor();
+            stopSelf();
+        }
     }
 
     private void startNotification() {
@@ -157,7 +177,7 @@ public class TouchPointer extends Service {
     }
 
     public void loadKeymap() {
-        keymapConfig = new KeymapConfig(context);
+        keymapConfig = new KeymapConfig(this);
         try {
             keymapConfig.loadConfig();
         } catch (IOException e) {
@@ -168,9 +188,9 @@ public class TouchPointer extends Service {
         keysY = keymapConfig.getY();
 
         if (keymapConfig.dpad1 != null)
-            dpad1Handler = new DpadHandler(context, keymapConfig.dpad1, dpad1pid.id);
+            dpad1Handler = new DpadHandler(this, keymapConfig.dpad1, dpad1pid.id);
         if (keymapConfig.dpad2 != null)
-            dpad2Handler = new DpadHandler(context, keymapConfig.dpad2, dpad2pid.id);
+            dpad2Handler = new DpadHandler(this, keymapConfig.dpad2, dpad2pid.id);
         if (keymapConfig.mouseAimConfig != null)
             mouseAimHandler = new MouseAimHandler(keymapConfig.mouseAimConfig);
 
@@ -181,54 +201,21 @@ public class TouchPointer extends Service {
         keyEventHandler.launch_editor = keymapConfig.getLaunchEditorShortcutKey();
     }
 
-
-    private void updateCmdView2(String s) {
-        if(counter < Server.MAX_LINES) {
-            ((MainActivity)context).c2.append(s).append("\n");
-            counter++;
-        } else {
-            counter = 0;
-            ((MainActivity)context).c2 = new StringBuilder();
-        }
-    }
-
-    private void startHandlers() {
-        StringBuilder c1 = ((MainActivity)context).c1;
-        c1.append("\n connecting to server..");
-        mHandler.post(new Runnable() {
-            int counter = 5;
-            @Override
-            public void run() {
-                c1.append(".");
-                mService = InputService.getInstance();
-
-                if (mService != null) {
-                    keyEventHandler.init();
-                    mouseEventHandler.init();
-                    context.startActivity(new Intent(context, InputDeviceSelector.class));
-                    connected = true;
-                } else {
-                    if (counter > 0) {
-                        mHandler.postDelayed(this, 1000);
-                        counter--;
-                    } else {
-                        mHandler.post(() -> ((MainActivity)context).stopPointer());
-                        c1.append("\n connection timeout\n Please retry activation \n");
-                    }
-                }
-            }
-        });
-    }
-
     public void sendSettingstoServer() throws RemoteException {
         String device = keymapConfig.getDevice();
         int result = mService.tryOpenDevice(device);
         if ( result < 0 ) {
-            context.startActivity(new Intent(this, InputDeviceSelector.class));
+            startInputDeviceSelector();
         } else {
             mService.startServer();
             mService.registerCallback(mCallback);
         }
+    }
+
+    private void startInputDeviceSelector() {
+        Intent intent = new Intent(TouchPointer.this, InputDeviceSelector.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+        startActivity(intent);
     }
 
     public enum PointerId {
@@ -280,11 +267,14 @@ public class TouchPointer extends Service {
 
         private void handleEvent(String line) throws RemoteException {
             // line: /dev/input/event3 EV_KEY KEY_X DOWN
-            TouchPointer.this.updateCmdView2(line);
+            String[] input_event = line.split("\\s+");
+            if(!input_event[1].equals("EV_KEY")) return;
+
+            if (activityCallback != null) activityCallback.updateCmdView2(line + "\n");
+
             if (cursorView == null) return;
 
             KeyEvent event = new KeyEvent();
-            String[] input_event = line.split("\\s+");
             event.label = input_event[2];
 
             switch (input_event[3]) {
@@ -307,8 +297,8 @@ public class TouchPointer extends Service {
                 }
                 // Keyboard shortcuts
                 if (event.action == DOWN) {
-                    if (i == stop_service) ((MainActivity) context).stopPointer();
-                    if (i == launch_editor) startService(new Intent(context, EditorService.class));
+                    if (i == stop_service) stopPointer();
+                    if (i == launch_editor) startService(new Intent(TouchPointer.this, EditorService.class));
                 }
             } else {
                 switch (event.label) {
