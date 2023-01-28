@@ -404,6 +404,9 @@ public class TouchPointer extends Service {
                     mService.injectScroll(x1, y1, value * scroll_speed_multiplier);
                     break;
             }
+            if (Binder.getCallingUid() != 0)
+                if (code == REL_X || code == REL_Y)
+                    movePointer();
         }
     }
 }
