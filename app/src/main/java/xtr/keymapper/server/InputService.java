@@ -23,6 +23,7 @@ public class InputService extends Service {
     private static final Input input = new Input();
     @Nullable private IRemoteServiceCallback mCallback;
     public static final int UP = 0, DOWN = 1, MOVE = 2;
+    private final int supportsUinput;
 
     public static void main(String[] args) {
         Looper.prepare();
@@ -33,7 +34,7 @@ public class InputService extends Service {
     public InputService() {
         super();
         Log.i("XtMapper", "starting server...");
-        initMouseCursor(1365, 767);
+        supportsUinput = initMouseCursor(1365, 767);
         ServiceManager.addService("xtmapper", binder);
         System.out.println("Waiting for overlay...");
         start_getevent();
@@ -90,6 +91,10 @@ public class InputService extends Service {
 
         public void moveCursorY(int y) {
             cursorSetY(y);
+        }
+
+        public boolean isRoot() {
+            return supportsUinput > 0;
         }
 
         public void startServer() {

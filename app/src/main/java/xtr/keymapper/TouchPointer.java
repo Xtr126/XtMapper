@@ -210,6 +210,15 @@ public class TouchPointer extends Service {
             mService.startServer();
             mService.registerCallback(mCallback);
         }
+        checkRootAccess();
+    }
+
+    private void checkRootAccess() throws RemoteException {
+        if (mService.isRoot()) mHandler.post(() -> {
+            mWindowManager.removeView(cursorView);
+            cursorView.invalidate();
+            cursorView = null;
+        });
     }
 
     private void startInputDeviceSelector() {
@@ -271,8 +280,6 @@ public class TouchPointer extends Service {
             if(!input_event[1].equals("EV_KEY")) return;
 
             if (activityCallback != null) activityCallback.updateCmdView2(line + "\n");
-
-            if (cursorView == null) return;
 
             KeyEvent event = new KeyEvent();
             event.label = input_event[2];
@@ -349,17 +356,14 @@ public class TouchPointer extends Service {
         }
 
         private void movePointer() {
-            mHandler.post(() -> {
-                if (cursorView != null) {
-                    cursorView.setX(x1);
-                    cursorView.setY(y1);
-                }
+            if (cursorView != null) mHandler.post(() -> {
+                cursorView.setX(x1);
+                cursorView.setY(y1);
             });
         }
 
         private void handleEvent(int code, int value) throws RemoteException {
             final int pointerId = pid1.id;
-            if (cursorView == null) return;
             if (mouseAimHandler != null && mouseAimHandler.active) {
                 mouseAimHandler.handleEvent(code, value);
                 return;
@@ -404,9 +408,7 @@ public class TouchPointer extends Service {
                     mService.injectScroll(x1, y1, value * scroll_speed_multiplier);
                     break;
             }
-            if (Binder.getCallingUid() != 0)
-                if (code == REL_X || code == REL_Y)
-                    movePointer();
+            if (code == REL_X || code == REL_Y) movePointer();
         }
     }
 }

@@ -7,6 +7,7 @@ interface IRemoteService {
     void injectScroll(float x, float y, int value);
     void moveCursorX(int x);
     void moveCursorY(int y);
+    boolean isRoot();
     void startServer();
     int tryOpenDevice(String device);
     void reloadKeymap();

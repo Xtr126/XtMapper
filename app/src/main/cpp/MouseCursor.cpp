@@ -13,30 +13,30 @@ struct input_event ie {};
 
 
 extern "C" JNIEXPORT jint JNICALL
-Java_xtr_keymapper_server_InputService_initMouseCursor(JNIEnv *env, jobject thiz, jint width,
-													   jint height) {
+Java_xtr_keymapper_server_InputService_initMouseCursor(JNIEnv *env, jobject thiz,
+													   jint width, jint height)
+{
+	uinput_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+	struct uinput_user_dev uinputUserDev {};
 
-  	uinput_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
-    struct uinput_user_dev uinputUserDev {};
+	if (uinput_fd <= 0) return uinput_fd;
 
-    if(uinput_fd <= 0) {
-		return uinput_fd;
-	}
-    
 	memset(&uinputUserDev, 0x00, sizeof(uinputUserDev));
+
 	strncpy(uinputUserDev.name, "x-virtual-tablet", strlen("x-virtual-tablet"));
-    uinputUserDev.id.version = 1;
-    uinputUserDev.id.bustype = BUS_VIRTUAL;
 
-    uinputUserDev.absmin[ABS_X] = 0;
-    uinputUserDev.absmax[ABS_X] = width;
-    uinputUserDev.absfuzz[ABS_X] = 0;
-    uinputUserDev.absflat[ABS_X] = 0;
+	uinputUserDev.id.version = 1;
+	uinputUserDev.id.bustype = BUS_VIRTUAL;
 
-    uinputUserDev.absmin[ABS_Y] = 0;
-    uinputUserDev.absmax[ABS_Y] = height;
-    uinputUserDev.absfuzz[ABS_Y] = 0;
-    uinputUserDev.absflat[ABS_Y] = 0;
+	uinputUserDev.absmin[ABS_X] = 0;
+	uinputUserDev.absmax[ABS_X] = width;
+	uinputUserDev.absfuzz[ABS_X] = 0;
+	uinputUserDev.absflat[ABS_X] = 0;
+
+	uinputUserDev.absmin[ABS_Y] = 0;
+	uinputUserDev.absmax[ABS_Y] = height;
+	uinputUserDev.absfuzz[ABS_Y] = 0;
+	uinputUserDev.absflat[ABS_Y] = 0;
 
 	ioctl(uinput_fd, UI_SET_EVBIT, EV_ABS);
 	ioctl(uinput_fd, UI_SET_EVBIT, EV_KEY);
