@@ -18,7 +18,6 @@ import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.Utils;
 
-
 public class InputService extends Service {
     private static final Input input = new Input();
     @Nullable private IRemoteServiceCallback mCallback;
@@ -34,7 +33,7 @@ public class InputService extends Service {
     public InputService() {
         super();
         Log.i("XtMapper", "starting server...");
-        supportsUinput = initMouseCursor(1365, 767);
+        supportsUinput = initMouseCursor(1280, 720);
         ServiceManager.addService("xtmapper", binder);
         System.out.println("Waiting for overlay...");
         start_getevent();
@@ -63,7 +62,10 @@ public class InputService extends Service {
     public native void startMouse();
     public static native int openDevice(String device);
     public native void stopMouse();
+
+    // mouse cursor created with uinput in MouseCursor.cpp
     private native int initMouseCursor(int width, int height);
+    private native void destroyUinputDev();
     private native void cursorSetX(int x);
     private native void cursorSetY(int y);
 
@@ -107,6 +109,11 @@ public class InputService extends Service {
 
         public void closeDevice() {
             stopMouse();
+        }
+
+        public void setScreenSize(int width, int height){
+            destroyUinputDev();
+            initMouseCursor(width, height);
         }
 
         public void registerCallback(IRemoteServiceCallback cb) {

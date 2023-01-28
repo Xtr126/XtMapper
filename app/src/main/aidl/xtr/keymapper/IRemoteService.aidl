@@ -12,6 +12,7 @@ interface IRemoteService {
     int tryOpenDevice(String device);
     void reloadKeymap();
     void closeDevice();
+    void setScreenSize(int width, int height);
     void registerCallback(IRemoteServiceCallback cb);
     void unregisterCallback(IRemoteServiceCallback cb);
 }

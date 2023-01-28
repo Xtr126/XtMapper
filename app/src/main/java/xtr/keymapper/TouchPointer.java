@@ -52,6 +52,7 @@ public class TouchPointer extends Service {
     public IRemoteService mService;
     public boolean connected = false;
     public MainActivity.Callback activityCallback;
+    int width; int height;
 
     private final IBinder binder = new TouchPointerBinder();
 
@@ -69,6 +70,7 @@ public class TouchPointer extends Service {
 
     public void init(){
         loadKeymap();
+        getDisplayMetrics();
 
         activityCallback.updateCmdView1("\n connecting to server..");
         
@@ -202,15 +204,16 @@ public class TouchPointer extends Service {
     }
 
     public void sendSettingstoServer() throws RemoteException {
+        checkRootAccess();
         String device = keymapConfig.getDevice();
         int result = mService.tryOpenDevice(device);
         if ( result < 0 ) {
             startInputDeviceSelector();
         } else {
+            mService.setScreenSize(width, height);
             mService.startServer();
             mService.registerCallback(mCallback);
         }
-        checkRootAccess();
     }
 
     private void checkRootAccess() throws RemoteException {
@@ -259,6 +262,14 @@ public class TouchPointer extends Service {
             mouseEventHandler.init();
         }
     };
+
+    private void getDisplayMetrics() {
+        Display display = mWindowManager.getDefaultDisplay();
+        Point size = new Point();
+        display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
+        width = size.x;
+        height = size.y;
+    }
 
     private class KeyEventHandler {
         boolean ctrlKeyPressed = false;
@@ -325,7 +336,6 @@ public class TouchPointer extends Service {
     }
 
     private class MouseEventHandler {
-        int width; int height;
         int sensitivity = 1;
         int scroll_speed_multiplier = 1;
         private MousePinchZoom pinchZoom;
@@ -342,17 +352,10 @@ public class TouchPointer extends Service {
         }
 
         private void init() {
-            if (mouseAimHandler != null) mouseAimHandler.setInterface(mService);
-            getDimensions();
-        }
-
-        private void getDimensions() {
-            Display display = mWindowManager.getDefaultDisplay();
-            Point size = new Point();
-            display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
-            width = size.x;
-            height = size.y;
-            if (mouseAimHandler != null) mouseAimHandler.setDimensions(width, height);
+            if (mouseAimHandler != null) {
+                mouseAimHandler.setInterface(mService);
+                mouseAimHandler.setDimensions(width, height);
+            }
         }
 
         private void movePointer() {
