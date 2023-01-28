@@ -56,7 +56,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         // Drop down layout style - list view with radio button
         dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        binding.endButton.setOnClickListener(v -> this.finish());
+        binding.endButton.setOnClickListener(v -> finish());
 
         bindService(new Intent(this, TouchPointer.class), connection, BIND_AUTO_CREATE);
     }
@@ -66,12 +66,18 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    @Override
     protected void onDestroy() {
         try {
             pointerOverlay.sendSettingstoServer();
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+        unbindService(connection);
         super.onDestroy();
     }
 
@@ -91,11 +97,15 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     }
 
     private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
-        public void onMouseEvent(int code, int value) {}
+        public void onMouseEvent(int code, int value) throws RemoteException {
+            pointerOverlay.mCallback.onMouseEvent(code, value);
+        }
         public void receiveEvent(String event) {
             getDevices(event);
         }
-        public void loadKeymap() {}
+        public void loadKeymap() throws RemoteException {
+            pointerOverlay.mCallback.loadKeymap();
+        }
     };
 
 

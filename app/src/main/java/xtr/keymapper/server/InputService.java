@@ -33,6 +33,7 @@ public class InputService extends Service {
     public InputService() {
         super();
         Log.i("XtMapper", "starting server...");
+        initMouseCursor(1365, 767);
         ServiceManager.addService("xtmapper", binder);
         System.out.println("Waiting for overlay...");
         start_getevent();
@@ -61,6 +62,9 @@ public class InputService extends Service {
     public native void startMouse();
     public static native int openDevice(String device);
     public native void stopMouse();
+    private native int initMouseCursor(int width, int height);
+    private native void cursorSetX(int x);
+    private native void cursorSetY(int y);
 
     private final IRemoteService.Stub binder = new IRemoteService.Stub() {
         public void injectEvent(float x, float y, int type, int pointerId) {
@@ -78,6 +82,14 @@ public class InputService extends Service {
         }
         public void injectScroll(float x, float y, int value) {
             input.onScrollEvent(x, y, value);
+        }
+
+        public void moveCursorX(int x) {
+            cursorSetX(x);
+        }
+
+        public void moveCursorY(int y) {
+            cursorSetY(y);
         }
 
         public void startServer() {
@@ -133,5 +145,6 @@ public class InputService extends Service {
 
     static {
         System.loadLibrary("mouse_read");
+        System.loadLibrary("mouse_cursor");
     }
 }

@@ -319,8 +319,8 @@ public class TouchPointer extends Service {
 
     private class MouseEventHandler {
         int width; int height;
-        int sensitivity;
-        int scroll_speed_multiplier;
+        int sensitivity = 1;
+        int scroll_speed_multiplier = 1;
         private MousePinchZoom pinchZoom;
 
         private void triggerMouseAim() throws RemoteException {
@@ -376,7 +376,7 @@ public class TouchPointer extends Service {
                     x1 += value;
                     if (x1 > width || x1 < 0) x1 -= value;
                     if (pointer_down) mService.injectEvent(x1, y1, MOVE, pointerId);
-                    movePointer();
+                    else mService.moveCursorX(x1);
                     break;
                 }
                 case REL_Y: {
@@ -385,7 +385,7 @@ public class TouchPointer extends Service {
                     y1 += value;
                     if (y1 > height || y1 < 0) y1 -= value;
                     if (pointer_down) mService.injectEvent(x1, y1, MOVE, pointerId);
-                    movePointer();
+                    else mService.moveCursorY(y1);
                     break;
                 }
                 case BTN_MOUSE:
