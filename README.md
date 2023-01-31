@@ -1,9 +1,25 @@
-# XtMapper
+<p align="center">
+<a href="#" target="_blank"><img src="/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" width="100px" height="100px"/></a>
+</p>
+
+<h1 align="center">
+  XtMapper
+</h1>
+<p align="center">
+  XtMapper, a free and open source keymapper. <br>
+  Play your Android games with keyboard and mouse on Android x86 9.0 +.
+</p>
 
 [![Build debug APK](https://github.com/Xtr126/XtMapper/actions/workflows/android.yml/badge.svg)](https://github.com/Xtr126/XtMapper/actions/workflows/android.yml)
 
-XtMapper is an free and open source keymapper application in development for Bliss OS.  
-It can be used to play certain Android games that require a touchscreen, with keyboard and mouse.
+<p align="center">
+  <a href="https://github.com/Xtr126/XtMapper/releases">
+     <img src="https://img.shields.io/github/downloads/Xtr126/XtMapper/total.svg?style=for-the-badge&logo=android" height="40px"/>
+  </a>
+  <a href="https://github.com/Xtr126/XtMapper/actions/workflows/android.yml">
+      <img src="https://github.com/Xtr126/XtMapper/actions/workflows/android.yml/badge.svg" height="40px" />
+  </a>
+ </p>
 
 ## Features:
 
@@ -27,7 +43,6 @@ Overview:
 - InputService.java runs separately from the app as an elevated java process using app_process and adb shell/root. 
 
 ## Useful discord servers 
-AndroidEmu: https://discord.gg/mRpT4Qq  
 BlissLabs: https://discord.com/invite/F9n5gbdNy2  
 SupremeGamers: https://aopc.dev/discord  
 
