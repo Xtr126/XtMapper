@@ -19,6 +19,7 @@ public class MousePinchZoom {
     private final float centerX, centerY;
     private final int pointerId1 = TouchPointer.PointerId.pid1.id;
     private final int pointerId2 = TouchPointer.PointerId.pid2.id;
+    private static final int pixels = 50;
 
     public MousePinchZoom(IRemoteService service, float initX, float initY) {
         this.service = service;
@@ -26,8 +27,8 @@ public class MousePinchZoom {
         centerY = initY;
 
         // Shift initial position of two pointers by 50 pixels
-        currentX1 = initX + 50; currentY1 = initY + 50;
-        currentX2 = initX - 50; currentY2 = initY - 50;
+        currentX1 = initX + pixels; currentY1 = initY + pixels;
+        currentX2 = initX - pixels; currentY2 = initY - pixels;
     }
 
     private void initPointers() throws RemoteException {

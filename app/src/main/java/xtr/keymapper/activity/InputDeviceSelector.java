@@ -51,7 +51,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         // attaching data adapter to spinner
         binding.spinner.setAdapter(dataAdapter);
 
-        keymapConfig = new KeymapConfig(this);
+        keymapConfig = new KeymapConfig(this).loadSharedPrefs();
 
         // Drop down layout style - list view with radio button
         dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -86,7 +86,8 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         // On selecting a spinner item
         String item = parent.getItemAtPosition(position).toString();
         binding.textView2.setText(item);
-        keymapConfig.setDevice(item);
+        keymapConfig.device = item;
+        keymapConfig.applySharedPrefs();
         // Showing selected spinner item
         Toast.makeText(parent.getContext(), item, Toast.LENGTH_SHORT).show();
     }

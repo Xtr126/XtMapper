@@ -106,8 +106,8 @@ public class Profiles extends Fragment {
                         ri.loadLabel(pm),
                         ri.activityInfo.loadIcon(pm)));
 
-            keymapConfig = new KeymapConfig(context);
-            currentProfile = keymapConfig.getProfile();
+            keymapConfig = new KeymapConfig(context).loadSharedPrefs();
+            currentProfile = keymapConfig.profile;
             binding.currentProfile.setText(currentProfile);
         }
 
@@ -160,7 +160,8 @@ public class Profiles extends Fragment {
                 currentProfile = appsDataArrayList.get(i).packageName;
                 binding.currentProfile.setText(currentProfile);
 
-                keymapConfig.setProfile(currentProfile);
+                keymapConfig.profile = currentProfile;
+                keymapConfig.applySharedPrefs();
 
                 selectedView.setBackgroundTintList(defaultTint);
                 view.setBackgroundTintList(selectedTint);

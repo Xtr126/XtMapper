@@ -17,7 +17,6 @@ import androidx.annotation.Nullable;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
-import xtr.keymapper.EditorUI;
 import xtr.keymapper.KeymapConfig;
 import xtr.keymapper.Utils;
 import xtr.keymapper.databinding.FragmentSettingsDialogBinding;
@@ -31,7 +30,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
     public SettingsFragment(Context context) {
         dpadConfig = new DpadConfig(context);
-        keymapConfig = new KeymapConfig(context);
+        keymapConfig = new KeymapConfig(context).loadSharedPrefs();
     }
 
     @Override
@@ -45,18 +44,21 @@ public class SettingsFragment extends BottomSheetDialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         binding.sliderDpad.setValue(dpadConfig.getDpadRadiusMultiplier());
-        binding.sliderMouse.setValue(keymapConfig.getMouseSensitivity());
-        binding.sliderScrollSpeed.setValue(keymapConfig.getScrollSpeed());
-        binding.inputDevice.setText(keymapConfig.getDevice());
+        binding.sliderMouse.setValue(keymapConfig.mouseSensitivity);
+        binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
+        binding.inputDevice.setText(keymapConfig.device);
 
         loadKeyboardShortcuts();
         binding.launchEditor.setOnKeyListener(this::onKey);
         binding.stopService.setOnKeyListener(this::onKey);
+
+        binding.mouseDragToggle.setChecked(keymapConfig.ctrlDragMouseGesture);
+        binding.mouseWheelToggle.setChecked(keymapConfig.ctrlMouseWheelZoom);
     }
 
     private void loadKeyboardShortcuts(){
-        int stop_service = keymapConfig.getStopServiceShortcutKey();
-        int launch_editor = keymapConfig.getLaunchEditorShortcutKey();
+        int stop_service = keymapConfig.stopServiceShortcutKey;
+        int launch_editor = keymapConfig.launchEditorShortcutKey;
 
         if (stop_service > -1) {
             String stopServiceShortcutKey = String.valueOf(Utils.alphabet.charAt(stop_service));
@@ -90,21 +92,25 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
         int launch_editor_shortcut = Utils.alphabet.indexOf(binding.launchEditor.getText().charAt(0));
         int stop_service_shortcut = Utils.alphabet.indexOf(binding.stopService.getText().charAt(0));
-        keymapConfig.setLaunchEditorShortcutKey(launch_editor_shortcut);
-        keymapConfig.setStopServiceShortcutKey(stop_service_shortcut);
+        keymapConfig.launchEditorShortcutKey = launch_editor_shortcut;
+        keymapConfig.stopServiceShortcutKey = stop_service_shortcut;
     }
 
     @Override
     public void onDestroyView() {
+        saveKeyboardShortcuts();
         // Split the string to allow only one string without whitespaces
         String[] device = binding.inputDevice.getText().toString().split("\\s+");
-        keymapConfig.setDevice(device[0]);
+        keymapConfig.device = device[0];
 
-        keymapConfig.setMouseSensitivity(binding.sliderMouse.getValue());
-        keymapConfig.setScrollSpeed(binding.sliderScrollSpeed.getValue());
+        keymapConfig.mouseSensitivity = binding.sliderMouse.getValue();
+        keymapConfig.scrollSpeed = binding.sliderScrollSpeed.getValue();
+        keymapConfig.ctrlMouseWheelZoom = binding.mouseWheelToggle.isChecked();
+        keymapConfig.ctrlDragMouseGesture = binding.mouseDragToggle.isChecked();
+
         dpadConfig.setDpadRadiusMultiplier(binding.sliderDpad.getValue());
-        saveKeyboardShortcuts();
 
+        keymapConfig.applySharedPrefs();
         InputService.reloadKeymap();
         binding = null;
         super.onDestroyView();

@@ -109,5 +109,39 @@
             android:inputType="text"
             android:textAlignment="center"
             android:importantForAutofill="no" />
+
     </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:layout_gravity="center"
+            android:text="@string/pinch_to_zoom_gesture_info" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
+            <com.google.android.material.button.MaterialButton
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/mouse_wheel_toggle"
+                android:text="@string/mouse_wheel"/>
+            <com.google.android.material.button.MaterialButton
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/mouse_drag_toggle"
+                android:text="@string/drag_mouse"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+    </LinearLayout>
+
+
 </LinearLayout>

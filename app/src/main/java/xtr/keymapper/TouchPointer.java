@@ -32,6 +32,7 @@ import xtr.keymapper.activity.InputDeviceSelector;
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.aim.MouseAimHandler;
 import xtr.keymapper.aim.MousePinchZoom;
+import xtr.keymapper.aim.MouseWheelZoom;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.server.InputService;
@@ -179,7 +180,7 @@ public class TouchPointer extends Service {
     }
 
     public void loadKeymap() {
-        keymapConfig = new KeymapConfig(this);
+        keymapConfig = new KeymapConfig(this).loadSharedPrefs();
         try {
             keymapConfig.loadConfig();
         } catch (IOException e) {
@@ -196,17 +197,17 @@ public class TouchPointer extends Service {
         if (keymapConfig.mouseAimConfig != null)
             mouseAimHandler = new MouseAimHandler(keymapConfig.mouseAimConfig);
 
-        mouseEventHandler.sensitivity = keymapConfig.getMouseSensitivity().intValue();
-        mouseEventHandler.scroll_speed_multiplier = keymapConfig.getScrollSpeed().intValue();
+        mouseEventHandler.sensitivity = keymapConfig.mouseSensitivity.intValue();
+        mouseEventHandler.scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
+        mouseEventHandler.ctrl_mouse_wheel_zoom = keymapConfig.ctrlMouseWheelZoom;
 
-        keyEventHandler.stop_service = keymapConfig.getStopServiceShortcutKey();
-        keyEventHandler.launch_editor = keymapConfig.getLaunchEditorShortcutKey();
+        keyEventHandler.stop_service = keymapConfig.stopServiceShortcutKey;
+        keyEventHandler.launch_editor = keymapConfig.launchEditorShortcutKey;
     }
 
     public void sendSettingstoServer() throws RemoteException {
         checkRootAccess();
-        String device = keymapConfig.getDevice();
-        int result = mService.tryOpenDevice(device);
+        int result = mService.tryOpenDevice(keymapConfig.device);
         if ( result < 0 ) {
             startInputDeviceSelector();
         } else {
@@ -338,7 +339,9 @@ public class TouchPointer extends Service {
     private class MouseEventHandler {
         int sensitivity = 1;
         int scroll_speed_multiplier = 1;
+        boolean ctrl_mouse_wheel_zoom = false;
         private MousePinchZoom pinchZoom;
+        private final MouseWheelZoom scrollZoomHandler = new MouseWheelZoom();
 
         private void triggerMouseAim() throws RemoteException {
             if (mouseAimHandler != null) {

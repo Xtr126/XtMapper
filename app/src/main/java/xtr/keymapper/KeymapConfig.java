@@ -27,62 +27,39 @@ public class KeymapConfig {
     private final SharedPreferences sharedPref;
     private final SharedPreferences.Editor sharedPrefEditor;
 
+    public String profile, device;
+    public Float mouseSensitivity, scrollSpeed;
+    public int stopServiceShortcutKey, launchEditorShortcutKey;
+    public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture;
+
     public KeymapConfig(Context context) {
         this.context = context;
         sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
         sharedPrefEditor = sharedPref.edit();
     }
 
-    public String getProfile(){
-        return sharedPref.getString("profile", Profiles.defaultProfile);
+    public KeymapConfig loadSharedPrefs() {
+        profile = sharedPref.getString("profile", Profiles.defaultProfile);
+        device = sharedPref.getString("device", "null");
+        mouseSensitivity = sharedPref.getFloat("mouse_sensitivity_multiplier", 1);
+        scrollSpeed = sharedPref.getFloat("scroll_speed_multiplier", 1);
+        stopServiceShortcutKey = sharedPref.getInt("stop_service_shortcut", -1);
+        launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", -1);
+        ctrlMouseWheelZoom = sharedPref.getBoolean("ctrl_mouse_wheel_zoom", false);
+        ctrlDragMouseGesture = sharedPref.getBoolean("ctrl_drag_mouse_gesture", true);
+        return this;
     }
 
-    public String getDevice(){
-        return sharedPref.getString("device", "null");
-    }
-
-    public Float getMouseSensitivity(){
-        return sharedPref.getFloat("mouse_sensitivity_multiplier", 1);
-    }
-
-    public Float getScrollSpeed(){
-        return sharedPref.getFloat("scroll_speed_multiplier", 1);
-    }
-    
-    public int getStopServiceShortcutKey(){
-        return sharedPref.getInt("stop_service_shortcut", -1);
-    }
-    public int getLaunchEditorShortcutKey(){
-        return sharedPref.getInt("launch_editor_shortcut", -1);
-    }
-
-    public void setProfile(String newProfile){
-        sharedPrefEditor.putString("profile", newProfile);
-        sharedPrefEditor.apply();
-    }
-
-    public void setDevice(String newDevice){
-        sharedPrefEditor.putString("device", newDevice);
-        sharedPrefEditor.apply();
-    }
-
-    public void setMouseSensitivity(float sensitivity){
-        sharedPrefEditor.putFloat("mouse_sensitivity_multiplier", sensitivity);
-        sharedPrefEditor.apply();
-    }
-
-    public void setScrollSpeed(float multiplier){
-        sharedPrefEditor.putFloat("scroll_speed_multiplier", multiplier);
-        sharedPrefEditor.apply();
-    }
-
-    public void setStopServiceShortcutKey(int key){
-        sharedPrefEditor.putInt("stop_service_shortcut", key);
-        sharedPrefEditor.apply();
-    }
-    public void setLaunchEditorShortcutKey(int key){
-        sharedPrefEditor.putInt("launch_editor_shortcut", key);
-        sharedPrefEditor.apply();
+    public void applySharedPrefs() {
+        sharedPrefEditor.putString("profile", profile)
+            .putString("device", device)
+            .putFloat("mouse_sensitivity_multiplier", mouseSensitivity)
+            .putFloat("scroll_speed_multiplier", scrollSpeed)
+            .putInt("stop_service_shortcut", stopServiceShortcutKey)
+            .putInt("launch_editor_shortcut", launchEditorShortcutKey)
+            .putBoolean("ctrl_mouse_wheel_zoom", ctrlMouseWheelZoom)
+            .putBoolean("ctrl_drag_mouse_gesture", ctrlDragMouseGesture)
+            .apply();
     }
 
     public String[] getKeys() {
@@ -98,7 +75,7 @@ public class KeymapConfig {
     }
 
     public String getConfigPath(){
-        return context.getFilesDir() + config_name + getProfile();
+        return context.getFilesDir() + config_name + profile;
     }
 
     public void writeConfig(StringBuilder linesToWrite) throws IOException {
