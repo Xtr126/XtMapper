@@ -1,5 +1,5 @@
 <p align="center">
-<a href="#" target="_blank"><img src="/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" width="100px" height="100px"/></a>
+<a href="#" target="_blank"><img src="https://cdn.discordapp.com/attachments/915513100730523668/1070200201761005588/ic_launcher_background.png" width="120px" height="120px"/></a>
 </p>
 
 <h1 align="center">
@@ -7,7 +7,7 @@
 </h1>
 <p align="center">
   XtMapper, a free and open source keymapper. <br>
-  Play your Android games with keyboard and mouse on Android x86 9.0 +.
+  Play your Android games with keyboard and mouse on Android x86 9.0 +
 </p>
 
 <p align="center">
@@ -31,18 +31,20 @@
 
 APK can be obtained from GitHub actions (latest) or [`releases`](https://github.com/Xtr126/XtMapper/releases).
 
-## Contributing
+## Development
 
-Pull requests for a bug fix or even a new feature are welcome.  
+### Build
+- Run `./gradlew assembleFreeDebug` at the base directory of the project 
+
 If you want to contribute code, please base your commits on the latest dev branch.  
 
-Overview:
 - Touch emulation is handled by TouchPointer.java and Input.java.  
 - InputService.java runs separately from the app as an elevated java process using app_process and adb shell/root. 
 
 ## Useful discord servers 
 BlissLabs: https://discord.com/invite/F9n5gbdNy2  
 SupremeGamers: https://aopc.dev/discord  
+AndroidEmu: https://discord.gg/mRpT4Qq
 
 ## Copyright and License
 This project is licensed under the GPL v3.  
