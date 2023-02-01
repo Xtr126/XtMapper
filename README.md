@@ -26,7 +26,7 @@
 - Emulate a D-pad with W,A,S,D or arrow keys
 - Keyboard events to touch - And editing config with GUI
 - Aim with mouse in FPS games (shooting mode) 
-- Pinch-to-zoom gesture simulation using ctrl key + mouse
+- Pinch-to-zoom gesture using ctrl key + move mouse or ctrl + scroll wheel 
 - Smooth pixel by pixel scrolling emulation for mouse wheel
 
 APK can be obtained from GitHub actions (latest) or [`releases`](https://github.com/Xtr126/XtMapper/releases).
@@ -34,7 +34,7 @@ APK can be obtained from GitHub actions (latest) or [`releases`](https://github.
 ## Development
 
 ### Build
-- Run `./gradlew assembleFreeDebug` at the base directory of the project 
+- Run `./gradlew assembleDebug` at the base directory of the project 
 
 If you want to contribute code, please base your commits on the latest dev branch.  
 
