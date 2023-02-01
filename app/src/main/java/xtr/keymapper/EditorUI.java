@@ -18,8 +18,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import xtr.keymapper.aim.MouseAimConfig;
-import xtr.keymapper.aim.MouseAimSettings;
+import xtr.keymapper.mouse.MouseAimConfig;
+import xtr.keymapper.mouse.MouseAimSettings;
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.dpad.Dpad.DpadType;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;

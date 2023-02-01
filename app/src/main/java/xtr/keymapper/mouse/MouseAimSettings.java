@@ -1,4 +1,4 @@
-package xtr.keymapper.aim;
+package xtr.keymapper.mouse;
 
 import android.app.AlertDialog;
 import android.app.Dialog;

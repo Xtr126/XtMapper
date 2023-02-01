@@ -5,7 +5,7 @@ import static android.content.Context.MODE_PRIVATE;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import xtr.keymapper.aim.MouseAimConfig;
+import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.fragment.Profiles;
 

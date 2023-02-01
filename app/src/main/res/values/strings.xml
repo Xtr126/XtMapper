@@ -33,7 +33,7 @@
     <string name="keyboard_shortcuts">Keyboard Shortcuts:</string>
     <string name="launch_editor">Launch editor</string>
     <string name="stop_service">Stop Service</string>
-    <string name="drag_mouse">Drag Mouse</string>
-    <string name="mouse_wheel">Mouse Wheel</string>
-    <string name="pinch_to_zoom_gesture_info">Perform two finger gesture with:</string>
+    <string name="drag_mouse">Ctrl + Drag Mouse</string>
+    <string name="mouse_wheel">Ctrl + Mouse Wheel</string>
+    <string name="pinch_to_zoom_gesture_info">Two finger gesture with:</string>
 </resources>

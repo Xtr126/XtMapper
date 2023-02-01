@@ -1,4 +1,4 @@
-package xtr.keymapper.aim;
+package xtr.keymapper.mouse;
 
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;

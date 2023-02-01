@@ -1,4 +1,4 @@
-package xtr.keymapper.aim;
+package xtr.keymapper.mouse;
 
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;

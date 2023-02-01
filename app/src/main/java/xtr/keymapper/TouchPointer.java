@@ -30,9 +30,9 @@ import java.io.IOException;
 
 import xtr.keymapper.activity.InputDeviceSelector;
 import xtr.keymapper.activity.MainActivity;
-import xtr.keymapper.aim.MouseAimHandler;
-import xtr.keymapper.aim.MousePinchZoom;
-import xtr.keymapper.aim.MouseWheelZoom;
+import xtr.keymapper.mouse.MouseAimHandler;
+import xtr.keymapper.mouse.MousePinchZoom;
+import xtr.keymapper.mouse.MouseWheelZoom;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.server.InputService;
@@ -200,6 +200,7 @@ public class TouchPointer extends Service {
         mouseEventHandler.sensitivity = keymapConfig.mouseSensitivity.intValue();
         mouseEventHandler.scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
         mouseEventHandler.ctrl_mouse_wheel_zoom = keymapConfig.ctrlMouseWheelZoom;
+        mouseEventHandler.ctrl_mouse_drag_gesture = keymapConfig.ctrlDragMouseGesture;
 
         keyEventHandler.stop_service = keymapConfig.stopServiceShortcutKey;
         keyEventHandler.launch_editor = keymapConfig.launchEditorShortcutKey;
@@ -339,9 +340,10 @@ public class TouchPointer extends Service {
     private class MouseEventHandler {
         int sensitivity = 1;
         int scroll_speed_multiplier = 1;
-        boolean ctrl_mouse_wheel_zoom = false;
+        boolean ctrl_mouse_wheel_zoom, ctrl_mouse_drag_gesture;
         private MousePinchZoom pinchZoom;
-        private final MouseWheelZoom scrollZoomHandler = new MouseWheelZoom();
+        private MouseWheelZoom scrollZoomHandler;
+        private final int pointerId = pid1.id;
 
         private void triggerMouseAim() throws RemoteException {
             if (mouseAimHandler != null) {
@@ -359,22 +361,22 @@ public class TouchPointer extends Service {
                 mouseAimHandler.setInterface(mService);
                 mouseAimHandler.setDimensions(width, height);
             }
+            if (ctrl_mouse_wheel_zoom) scrollZoomHandler = new MouseWheelZoom(mService);
         }
 
-        private void movePointer() {
-            if (cursorView != null) mHandler.post(() -> {
+        private void movePointer() { mHandler.post(() -> {
+            if (cursorView != null) {
                 cursorView.setX(x1);
                 cursorView.setY(y1);
-            });
-        }
+            }
+        });}
 
         private void handleEvent(int code, int value) throws RemoteException {
-            final int pointerId = pid1.id;
             if (mouseAimHandler != null && mouseAimHandler.active) {
                 mouseAimHandler.handleEvent(code, value);
                 return;
             }
-            if (keyEventHandler.ctrlKeyPressed && pointer_down) {
+            if (keyEventHandler.ctrlKeyPressed && pointer_down && ctrl_mouse_drag_gesture) {
                 pointer_down = pinchZoom.handleEvent(code, value);
                 return;
             }
@@ -400,7 +402,7 @@ public class TouchPointer extends Service {
                 }
                 case BTN_MOUSE:
                     pointer_down = value == 1;
-                    if (keyEventHandler.ctrlKeyPressed) {
+                    if (keyEventHandler.ctrlKeyPressed && ctrl_mouse_drag_gesture) {
                         pinchZoom = new MousePinchZoom(mService, x1, y1);
                         pinchZoom.handleEvent(code, value);
                     } else mService.injectEvent(x1, y1, value, pointerId);
@@ -411,7 +413,10 @@ public class TouchPointer extends Service {
                     break;
 
                 case REL_WHEEL:
-                    mService.injectScroll(x1, y1, value * scroll_speed_multiplier);
+                    if (keyEventHandler.ctrlKeyPressed && ctrl_mouse_wheel_zoom)
+                        scrollZoomHandler.onScrollEvent(value, x1, y1);
+                    else
+                        mService.injectScroll(x1, y1, value * scroll_speed_multiplier);
                     break;
             }
             if (code == REL_X || code == REL_Y) movePointer();

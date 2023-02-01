@@ -1,4 +1,4 @@
-package xtr.keymapper.aim;
+package xtr.keymapper.mouse;
 
 import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
 import static xtr.keymapper.InputEventCodes.REL_X;
@@ -17,8 +17,8 @@ public class MousePinchZoom {
     private float currentX1, currentY1;
     private float currentX2, currentY2;
     private final float centerX, centerY;
-    private final int pointerId1 = TouchPointer.PointerId.pid1.id;
-    private final int pointerId2 = TouchPointer.PointerId.pid2.id;
+    static final int pointerId1 = TouchPointer.PointerId.pid1.id;
+    static final int pointerId2 = TouchPointer.PointerId.pid2.id;
     private static final int pixels = 50;
 
     public MousePinchZoom(IRemoteService service, float initX, float initY) {
