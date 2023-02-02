@@ -13,14 +13,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 
 public class KeymapConfig {
     private final Context context;
     public static final String config_name = "/config.";
-    private final String[] keys = new String[36]; // element 0 to 35 for A-Z 0-9
-    private final Float[] keyX = new Float[36];
-    private final Float[] keyY = new Float[36];
     public Dpad dpad1 = null;
     public Dpad dpad2 = null;
     public MouseAimConfig mouseAimConfig = null;
@@ -31,6 +29,8 @@ public class KeymapConfig {
     public Float mouseSensitivity, scrollSpeed;
     public int stopServiceShortcutKey, launchEditorShortcutKey;
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture;
+
+    private List<Key> keys;
 
     public KeymapConfig(Context context) {
         this.context = context;
@@ -62,19 +62,13 @@ public class KeymapConfig {
             .apply();
     }
 
-    public String[] getKeys() {
-        return keys;
+    static final class Key {
+        String code;
+        float x;
+        float y;
     }
 
-    public Float[] getX() {
-        return keyX;
-    }
-
-    public Float[] getY() {
-        return keyY;
-    }
-
-    public String getConfigPath(){
+    public String getConfigPath() {
         return context.getFilesDir() + config_name + profile;
     }
 
@@ -84,7 +78,13 @@ public class KeymapConfig {
         fileWriter.close();
     }
 
+    public List<Key> getKeys() {
+        return keys;
+    }
+
     public void loadConfig() throws IOException {
+        keys = new ArrayList<>();
+
         List<String> stream = Files.readAllLines(Paths.get(getConfigPath()));
         stream.forEach(s -> {
             String[] data = s.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
@@ -102,12 +102,11 @@ public class KeymapConfig {
                     break;
                 }
                 default: {
-                    int i = Utils.obtainIndex(data[0]);
-                    if ( i > -1 ) {
-                        keys[i] = data[0].substring(4);
-                        keyX[i] = Float.valueOf(data[1]);
-                        keyY[i] = Float.valueOf(data[2]);
-                    }
+                    final Key key = new Key();
+                    key.code = data[0].substring(4);
+                    key.x = Float.parseFloat(data[1]);
+                    key.y = Float.parseFloat(data[2]);
+                    keys.add(key);
                     break;
                 }
             }

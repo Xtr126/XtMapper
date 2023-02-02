@@ -132,34 +132,25 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     private void loadKeymap() throws IOException {
 
-        KeymapConfig keymapConfig = new KeymapConfig(context);
+        KeymapConfig keymapConfig = new KeymapConfig(context).loadSharedPrefs();
         keymapConfig.loadConfig();
 
-        String[] keys = keymapConfig.getKeys();
-        Float[] keysX = keymapConfig.getX();
-        Float[] keysY = keymapConfig.getY();
 
-        for (int n = 0; n < keys.length; n++) {
-            if (keys[n] != null) {
-                addKey(keys[n], keysX[n], keysY[n]);
-            }
+        for (int n = 0; n < keymapConfig.getKeys().size(); n++) {
+            KeymapConfig.Key key = keymapConfig.getKeys().get(n);
+            addKey(key);
         }
 
         Dpad dpad1 = keymapConfig.dpad1;
         Dpad dpad2 = keymapConfig.dpad2;
         mouseAimConfig = keymapConfig.mouseAimConfig;
 
-        if (dpad1 != null) {
-            addDpad1(dpad1.getX(), dpad1.getY());
-        }
+        if (dpad1 != null) addDpad1(dpad1.getX(), dpad1.getY());
 
-        if (dpad2 != null) {
-            addDpad2(dpad2.getX(), dpad2.getY());
-        }
+        if (dpad2 != null) addDpad2(dpad2.getX(), dpad2.getY());
 
-        if (mouseAimConfig != null) {
+        if (mouseAimConfig != null)
             addCrosshair(mouseAimConfig.xCenter, mouseAimConfig.yCenter);
-        }
     }
 
     private void saveKeymap() throws IOException {
@@ -206,7 +197,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     public void setupButtons() {
         binding.saveButton.setOnClickListener(v -> hideView());
-        binding.addButton.setOnClickListener(v -> addKey("A", DEFAULT_X, DEFAULT_Y));
+        binding.addButton.setOnClickListener(v -> addKey());
         binding.mouseLeft.setOnClickListener(v -> addleftClick(DEFAULT_X, DEFAULT_Y));
         binding.crossHair.setOnClickListener(v -> {
             mouseAimConfig = new MouseAimConfig();
@@ -258,13 +249,13 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .start();
     }
 
-    private void addKey(String key, float x ,float y) {
+    private void addKey(KeymapConfig.Key key) {
         MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(context);
 
-        floatingKey.setText(key);
+        floatingKey.setText(key.code);
         floatingKey.animate()
-                .x(x)
-                .y(y)
+                .x(key.x)
+                .y(key.y)
                 .setDuration(1000)
                 .start();
         floatingKey.setOnClickListener(this::onClick);
@@ -272,6 +263,14 @@ public class EditorUI extends OnKeyEventListener.Stub {
         mainView.addView(floatingKey);
 
         Keys.add(floatingKey);
+    }
+
+    private void addKey() {
+        final KeymapConfig.Key key = new KeymapConfig.Key();
+        key.code = "X";
+        key.x = DEFAULT_X;
+        key.y = DEFAULT_Y;
+        addKey(key);
     }
 
     public void onClick(View view) {
@@ -308,8 +307,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .setDuration(500)
                 .start();
     }
-
     class ResizableLayout implements View.OnTouchListener {
+
         private final View view;
 
         @SuppressLint("ClickableViewAccessibility")

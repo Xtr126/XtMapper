@@ -9,8 +9,12 @@ import java.io.InputStreamReader;
 public class Utils {
     public static final String alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    public static int obtainIndex(String s) {
-        return alphabet.indexOf(s.substring(4));
+    /**
+     * @param key input key code KEY_X
+     * @return the index of X in alphabet
+     */
+    public static int obtainIndex(String key) {
+        return alphabet.indexOf(key.substring(4));
     }
 
     public static BufferedReader geteventStream() throws IOException {

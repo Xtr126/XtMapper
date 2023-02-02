@@ -27,6 +27,8 @@ import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import xtr.keymapper.activity.InputDeviceSelector;
 import xtr.keymapper.activity.MainActivity;
@@ -42,7 +44,6 @@ public class TouchPointer extends Service {
     private View cursorView;
     private WindowManager mWindowManager;
     int x1 = 100, y1 = 100;
-    private Float[] keysX, keysY;
     private DpadHandler dpad1Handler, dpad2Handler;
     private MouseAimHandler mouseAimHandler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -54,6 +55,8 @@ public class TouchPointer extends Service {
     public boolean connected = false;
     public MainActivity.Callback activityCallback;
     int width; int height;
+
+    private List<KeymapConfig.Key> keys = new ArrayList<>();
 
     private final IBinder binder = new TouchPointerBinder();
 
@@ -187,8 +190,7 @@ public class TouchPointer extends Service {
             Log.e("loadKeymap", e.toString());
         }
 
-        keysX = keymapConfig.getX();
-        keysY = keymapConfig.getY();
+        keys = keymapConfig.getKeys();
 
         if (keymapConfig.dpad1 != null)
             dpad1Handler = new DpadHandler(this, keymapConfig.dpad1, dpad1pid.id);
@@ -289,19 +291,20 @@ public class TouchPointer extends Service {
         }
 
         private class KeyEvent {
-            String label;
+            String code;
             int action;
         }
 
         private void handleEvent(String line) throws RemoteException {
             // line: /dev/input/event3 EV_KEY KEY_X DOWN
             String[] input_event = line.split("\\s+");
-            if(!input_event[1].equals("EV_KEY")) return;
-
-            if (activityCallback != null) activityCallback.updateCmdView2(line + "\n");
+            if (!input_event[1].equals("EV_KEY")) return;
 
             KeyEvent event = new KeyEvent();
-            event.label = input_event[2];
+            event.code = input_event[2];
+            if (!event.code.contains("KEY_")) return;
+
+            if (activityCallback != null) activityCallback.updateCmdView2(line + "\n");
 
             switch (input_event[3]) {
                 case "UP":
@@ -314,32 +317,31 @@ public class TouchPointer extends Service {
                     return;
             }
 
-            int i = Utils.obtainIndex(event.label); // Strips off KEY_ from KEY_X and return the index of X in alphabet
-            if (i >= 0 && i <= 35) { // A-Z and 0-9 only in this range
-                if (keysX != null && keysX[i] != null) { // null if keymap not set
-                    mService.injectEvent(keysX[i], keysY[i], event.action, i);
-                } else if (dpad2Handler != null) { // Dpad with WASD keys
-                    dpad2Handler.handleEvent(event.label, event.action);
-                }
-                // Keyboard shortcuts
-                if (event.action == DOWN) {
-                    if (i == stop_service) stopPointer();
-                    if (i == launch_editor) startService(new Intent(TouchPointer.this, EditorService.class));
-                }
-            } else {
-                switch (event.label) {
-                    default:
-                        if (dpad1Handler != null)  // Dpad with arrow keys
-                            dpad1Handler.handleEvent(event.label, event.action);
-                    break;
-                    case "KEY_GRAVE":
-                        if (event.action == DOWN) mouseEventHandler.triggerMouseAim();
-                    break;
-                    case "KEY_LEFTCTRL":
-                        ctrlKeyPressed = event.action == DOWN;
-                    break;
-                }
+            // Keyboard shortcuts
+            int i = Utils.obtainIndex(event.code);
+            if (event.action == DOWN ) if (i > 0) {
+                if (i == stop_service) stopPointer();
+                if (i == launch_editor)
+                    startService(new Intent(TouchPointer.this, EditorService.class));
             }
+
+            if ("KEY_GRAVE".equals(event.code)) {
+                if (event.action == DOWN) mouseEventHandler.triggerMouseAim();
+            }
+
+            if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
+
+            for (i = 0; i < keys.size(); i++) {
+                KeymapConfig.Key key = keys.get(i);
+                if (event.code.equals(key.code))
+                    mService.injectEvent(key.x, key.y, event.action, i);
+            }
+
+            if (dpad1Handler != null)  // Dpad with arrow keys
+                dpad1Handler.handleEvent(event.code, event.action);
+
+            if (dpad2Handler != null) // Dpad with WASD keys
+                dpad2Handler.handleEvent(event.code, event.action);
         }
     }
 
