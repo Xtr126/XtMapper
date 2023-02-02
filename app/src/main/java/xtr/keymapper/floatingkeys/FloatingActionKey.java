@@ -62,11 +62,11 @@ public class FloatingActionKey extends FloatingActionButton  {
         setImageTintList(textColorInactive);
     }
 
-    public void setText(String text) {
+    public void setText(String text, int size) {
         this.key = text;
         setButtonActive();
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setTextSize(30);
+        paint.setTextSize(size);
         paint.setFakeBoldText(true);
         paint.setColor(Color.BLACK);
         paint.setTextAlign(Paint.Align.LEFT);

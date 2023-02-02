@@ -3,6 +3,7 @@ package xtr.keymapper;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.PixelFormat;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -18,28 +19,27 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import xtr.keymapper.mouse.MouseAimConfig;
-import xtr.keymapper.mouse.MouseAimSettings;
-import xtr.keymapper.dpad.Dpad;
-import xtr.keymapper.dpad.Dpad.DpadType;
-import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
-import xtr.keymapper.floatingkeys.MovableFrameLayout;
-
 import xtr.keymapper.databinding.CrosshairBinding;
 import xtr.keymapper.databinding.Dpad1Binding;
 import xtr.keymapper.databinding.Dpad2Binding;
 import xtr.keymapper.databinding.KeymapEditorBinding;
 import xtr.keymapper.databinding.ResizableBinding;
+import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.dpad.Dpad.DpadType;
+import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
+import xtr.keymapper.floatingkeys.MovableFrameLayout;
+import xtr.keymapper.mouse.MouseAimConfig;
+import xtr.keymapper.mouse.MouseAimSettings;
 import xtr.keymapper.server.InputService;
 
-public class EditorUI implements View.OnKeyListener, View.OnClickListener {
+public class EditorUI extends OnKeyEventListener.Stub {
 
     private final WindowManager.LayoutParams mParams;
     private final WindowManager mWindowManager;
     private final LayoutInflater layoutInflater;
     private final ExpandableFabLayout mainView;
 
-    private MovableFloatingActionKey KeyInFocus;
+    private MovableFloatingActionKey keyInFocus;
     // Keyboard keys
     private final List<MovableFloatingActionKey> Keys = new ArrayList<>();
     private MovableFloatingActionKey leftClick;
@@ -78,15 +78,44 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
             Log.d("Error1", e.toString());
         }
         if (mainView.getWindowToken() == null)
-            if (mainView.getParent() == null) {
+            if (mainView.getParent() == null)
                 mWindowManager.addView(mainView, mParams);
-                mainView.setOnKeyListener(this);
-                mainView.setFocusable(true);
-            }
+
+        if (!onHideListener.getEvent()) {
+            mainView.setOnKeyListener(this::onKey);
+            mainView.setFocusable(true);
+        }
     }
+
+    public boolean onKey(View v, int keyCode, KeyEvent event) {
+        if (keyInFocus != null) {
+            String key = String.valueOf(event.getDisplayLabel());
+            if ( key.matches("[a-zA-Z0-9]+" )) {
+                keyInFocus.setText(key);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void onKeyEvent(String event) {
+        // line: /dev/input/event3 EV_KEY KEY_X DOWN
+        String[] input_event = event.split("\\s+");
+        String code = input_event[2];
+        if(!input_event[1].equals("EV_KEY") || !code.contains("KEY_") || keyInFocus == null) return;
+        keyInFocus.setText(input_event[2].substring(4));
+    }
+
+    @Override
+    public IBinder asBinder() {
+        return this;
+    }
+
 
     public interface OnHideListener {
         void onHideView();
+        boolean getEvent();
     }
 
     public void hideView() {
@@ -238,16 +267,15 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
                 .y(y)
                 .setDuration(1000)
                 .start();
-        floatingKey.setOnClickListener(this);
+        floatingKey.setOnClickListener(this::onClick);
 
         mainView.addView(floatingKey);
 
         Keys.add(floatingKey);
     }
 
-    @Override
     public void onClick(View view) {
-        KeyInFocus = ((MovableFloatingActionKey)view);
+        keyInFocus = ((MovableFloatingActionKey)view);
     }
 
     private void addCrosshair(float x, float y) {
@@ -279,18 +307,6 @@ public class EditorUI implements View.OnKeyListener, View.OnClickListener {
         leftClick.animate().x(x).y(y)
                 .setDuration(500)
                 .start();
-    }
-
-    @Override
-    public boolean onKey(View v, int keyCode, KeyEvent event) {
-        if (KeyInFocus != null) {
-            String key = String.valueOf(event.getDisplayLabel());
-            if ( key.matches("[a-zA-Z0-9]+" )) {
-                KeyInFocus.setText(key);
-                return true;
-            }
-        }
-        return false;
     }
 
     class ResizableLayout implements View.OnTouchListener {
