@@ -260,7 +260,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private void addKey(KeymapConfig.Key key) {
         MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(context);
 
-        floatingKey.setText(key.code);
+        floatingKey.setText(key.code.substring(4));
         floatingKey.animate()
                 .x(key.x)
                 .y(key.y)

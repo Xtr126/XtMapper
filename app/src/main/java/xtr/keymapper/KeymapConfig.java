@@ -103,7 +103,7 @@ public class KeymapConfig {
                 }
                 default: {
                     final Key key = new Key();
-                    key.code = data[0].substring(4);
+                    key.code = data[0];
                     key.x = Float.parseFloat(data[1]);
                     key.y = Float.parseFloat(data[2]);
                     keys.add(key);

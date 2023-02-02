@@ -296,15 +296,13 @@ public class TouchPointer extends Service {
         }
 
         private void handleEvent(String line) throws RemoteException {
-            // line: /dev/input/event3 EV_KEY KEY_X DOWN
+            // line: /dev/input/event3: EV_KEY KEY_X DOWN
             String[] input_event = line.split("\\s+");
             if (!input_event[1].equals("EV_KEY")) return;
 
             KeyEvent event = new KeyEvent();
             event.code = input_event[2];
             if (!event.code.contains("KEY_")) return;
-
-            if (activityCallback != null) activityCallback.updateCmdView2(line + "\n");
 
             switch (input_event[3]) {
                 case "UP":
@@ -316,25 +314,26 @@ public class TouchPointer extends Service {
                 default:
                     return;
             }
+            if (activityCallback != null) activityCallback.updateCmdView2(line + "\n");
 
-            // Keyboard shortcuts
+
+            // Handle keyboard shortcuts
             int i = Utils.obtainIndex(event.code);
-            if (event.action == DOWN ) if (i > 0) {
+            if (event.action == DOWN && i > 0) {
                 if (i == stop_service) stopPointer();
                 if (i == launch_editor)
                     startService(new Intent(TouchPointer.this, EditorService.class));
             }
 
-            if ("KEY_GRAVE".equals(event.code)) {
-                if (event.action == DOWN) mouseEventHandler.triggerMouseAim();
-            }
+            if (event.code.equals("KEY_GRAVE") && event.action == DOWN)
+                mouseEventHandler.triggerMouseAim();
 
             if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
 
-            for (i = 0; i < keys.size(); i++) {
-                KeymapConfig.Key key = keys.get(i);
+            for (int n = 0; n < keys.size(); n++) {
+                KeymapConfig.Key key = keys.get(n);
                 if (event.code.equals(key.code))
-                    mService.injectEvent(key.x, key.y, event.action, i);
+                    mService.injectEvent(key.x, key.y, event.action, n);
             }
 
             if (dpad1Handler != null)  // Dpad with arrow keys
