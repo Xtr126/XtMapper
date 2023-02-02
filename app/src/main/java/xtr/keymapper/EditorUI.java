@@ -54,10 +54,12 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final Context context;
     private final OnHideListener onHideListener;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
+    private final KeymapConfig keymapConfig;
 
     public EditorUI (Context context, OnHideListener l) {
         this.context = context;
         this.onHideListener = l;
+        keymapConfig = new KeymapConfig(context);
 
         layoutInflater = context.getSystemService(LayoutInflater.class);
         mWindowManager = context.getSystemService(WindowManager.class);
@@ -77,8 +79,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
     public void open() {
         try {
             loadKeymap();
-        } catch (Exception e) {
-            Log.d("Error1", e.toString());
+        } catch (IOException e) {
+            Log.d("EditorUI", e.toString());
         }
         if (mainView.getWindowToken() == null)
             if (mainView.getParent() == null)
@@ -141,10 +143,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void loadKeymap() throws IOException {
-
-        KeymapConfig keymapConfig = new KeymapConfig(context).loadSharedPrefs();
         keymapConfig.loadConfig();
-
 
         for (int n = 0; n < keymapConfig.getKeys().size(); n++) {
             KeymapConfig.Key key = keymapConfig.getKeys().get(n);
@@ -198,7 +197,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
         }
         
         // Save Config to file
-        KeymapConfig keymapConfig = new KeymapConfig(context);
         keymapConfig.writeConfig(linesToWrite);
 
         // reload keymap if service running

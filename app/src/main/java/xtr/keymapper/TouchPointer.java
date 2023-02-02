@@ -183,7 +183,7 @@ public class TouchPointer extends Service {
     }
 
     public void loadKeymap() {
-        keymapConfig = new KeymapConfig(this).loadSharedPrefs();
+        keymapConfig = new KeymapConfig(this);
         try {
             keymapConfig.loadConfig();
         } catch (IOException e) {

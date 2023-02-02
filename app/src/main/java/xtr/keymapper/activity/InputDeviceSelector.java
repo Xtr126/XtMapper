@@ -51,7 +51,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         // attaching data adapter to spinner
         binding.spinner.setAdapter(dataAdapter);
 
-        keymapConfig = new KeymapConfig(this).loadSharedPrefs();
+        keymapConfig = new KeymapConfig(this);
 
         // Drop down layout style - list view
         dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);

@@ -30,7 +30,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
     public SettingsFragment(Context context) {
         dpadConfig = new DpadConfig(context);
-        keymapConfig = new KeymapConfig(context).loadSharedPrefs();
+        keymapConfig = new KeymapConfig(context);
     }
 
     @Override

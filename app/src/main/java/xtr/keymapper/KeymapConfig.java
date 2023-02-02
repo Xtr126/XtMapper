@@ -36,9 +36,10 @@ public class KeymapConfig {
         this.context = context;
         sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
         sharedPrefEditor = sharedPref.edit();
+        loadSharedPrefs();
     }
 
-    public KeymapConfig loadSharedPrefs() {
+    private void loadSharedPrefs() {
         profile = sharedPref.getString("profile", Profiles.defaultProfile);
         device = sharedPref.getString("device", "null");
         mouseSensitivity = sharedPref.getFloat("mouse_sensitivity_multiplier", 1);
@@ -47,7 +48,6 @@ public class KeymapConfig {
         launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", -1);
         ctrlMouseWheelZoom = sharedPref.getBoolean("ctrl_mouse_wheel_zoom", false);
         ctrlDragMouseGesture = sharedPref.getBoolean("ctrl_drag_mouse_gesture", true);
-        return this;
     }
 
     public void applySharedPrefs() {

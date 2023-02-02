@@ -106,7 +106,7 @@ public class Profiles extends Fragment {
                         ri.loadLabel(pm),
                         ri.activityInfo.loadIcon(pm)));
 
-            keymapConfig = new KeymapConfig(context).loadSharedPrefs();
+            keymapConfig = new KeymapConfig(context);
             currentProfile = keymapConfig.profile;
             binding.currentProfile.setText(currentProfile);
         }
