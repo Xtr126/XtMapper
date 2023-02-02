@@ -62,8 +62,13 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
     }
 
     public void setText(String s) {
-        if (s.length() > 1) key.setText(s, 15);
-        else key.setText(s, 30);
+        float scale = 1 + s.length() / 10f;
+        setScaleX(scale);
+        setScaleY(scale);
+
+        if (s.length() > 3) {
+            key.setText(s, 20 - s.length());
+        } else key.setText(s, 30);
     }
 
     public String getText(){

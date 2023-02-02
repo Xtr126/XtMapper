@@ -3,7 +3,9 @@ package xtr.keymapper;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.PixelFormat;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -51,6 +53,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final KeymapEditorBinding binding;
     private final Context context;
     private final OnHideListener onHideListener;
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     public EditorUI (Context context, OnHideListener l) {
         this.context = context;
@@ -103,8 +106,15 @@ public class EditorUI extends OnKeyEventListener.Stub {
         // line: /dev/input/event3 EV_KEY KEY_X DOWN
         String[] input_event = event.split("\\s+");
         String code = input_event[2];
-        if(!input_event[1].equals("EV_KEY") || !code.contains("KEY_") || keyInFocus == null) return;
-        keyInFocus.setText(input_event[2].substring(4));
+
+        // Ignore non key events
+        if(!input_event[1].equals("EV_KEY") || !code.contains("KEY_")) return;
+
+        // Incoming calls are not guaranteed to be executed on the main thread
+        mHandler.post(() -> {
+            if (keyInFocus != null)
+                keyInFocus.setText(input_event[2].substring(4));
+        });
     }
 
     @Override
