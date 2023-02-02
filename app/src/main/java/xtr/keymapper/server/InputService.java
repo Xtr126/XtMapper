@@ -4,25 +4,29 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 import android.view.MotionEvent;
-
-import androidx.annotation.Nullable;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
+import xtr.keymapper.OnKeyEventListener;
+import xtr.keymapper.OnMouseEventListener;
 import xtr.keymapper.Utils;
 
 public class InputService extends Service {
     private static final Input input = new Input();
-    @Nullable private IRemoteServiceCallback mCallback;
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final int supportsUinput;
+
+    final RemoteCallbackList<OnKeyEventListener> mOnKeyEventListeners = new RemoteCallbackList<>();
+    private IRemoteServiceCallback mCallback;
+    private OnMouseEventListener mOnMouseEventListener;
 
     public static void main(String[] args) {
         Looper.prepare();
@@ -45,10 +49,18 @@ public class InputService extends Service {
                 BufferedReader getevent = Utils.geteventStream();
                 String line;
                 while ((line = getevent.readLine()) != null) {
-                    if (mCallback != null)
-                        mCallback.receiveEvent(line);
+                    final int N = mOnKeyEventListeners.beginBroadcast();
+                    for (int i=0; i<N; i++) {
+                        try {
+                            mOnKeyEventListeners.getBroadcastItem(i).onKeyEvent(line);
+                        } catch (RemoteException e) {
+                            // The RemoteCallbackList will take care of removing
+                            // the dead object for us.
+                        }
+                    }
+                    mOnKeyEventListeners.finishBroadcast();
                 }
-            } catch (IOException | RemoteException e) {
+            } catch (IOException e) {
                 e.printStackTrace(System.out);
             }
         }).start();
@@ -107,8 +119,35 @@ public class InputService extends Service {
              return openDevice(device);
         }
 
-        public void closeDevice() {
+        @Override
+        public void setCallback(IRemoteServiceCallback cb) {
+            mCallback = cb;
+        }
+
+        @Override
+        public void removeCallback(IRemoteServiceCallback cb) {
+            mCallback = null;
+        }
+
+        @Override
+        public void registerOnKeyEventListener(OnKeyEventListener l)  {
+            mOnKeyEventListeners.register(l);
+        }
+
+        @Override
+        public void unregisterOnKeyEventListener(OnKeyEventListener l)  {
+            mOnKeyEventListeners.unregister(l);
+        }
+
+        @Override
+        public void setOnMouseEventListener(OnMouseEventListener l)  {
+            mOnMouseEventListener = l;
+        }
+
+        @Override
+        public void removeOnMouseEventListener(OnMouseEventListener l)  {
             stopMouse();
+            mOnMouseEventListener = null;
         }
 
         public void setScreenSize(int width, int height){
@@ -116,28 +155,23 @@ public class InputService extends Service {
             initMouseCursor(width, height);
         }
 
-        public void registerCallback(IRemoteServiceCallback cb) {
-            mCallback = cb;
-        }
 
-        public void unregisterCallback(IRemoteServiceCallback cb) {
-            mCallback = null;
-        }
-
-        public void reloadKeymap(){
-            if(mCallback != null) try {
-                mCallback.loadKeymap();
-            } catch (RemoteException ignored) {
-            }
+        public void reloadKeymap() throws RemoteException {
+            if (mCallback != null) mCallback.loadKeymap();
         }
     };
 
     /*
      * Called from native code to send mouse event to client
      */
-    private void sendMouseEvent(int code, int value) throws RemoteException {
-        if (mCallback != null)
-            mCallback.onMouseEvent(code, value);
+    private void sendMouseEvent(int code, int value) {
+        try {
+            if (mOnMouseEventListener != null)
+                mOnMouseEventListener.onMouseEvent(code, value);
+            else stopMouse();
+        } catch (RemoteException ex) {
+            stopMouse();
+        }
     }
 
     public static IRemoteService getInstance(){

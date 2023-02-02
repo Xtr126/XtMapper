@@ -6,7 +6,6 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -17,8 +16,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.util.ArrayList;
 import java.util.List;
 
-import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.R;
 import xtr.keymapper.TouchPointer;
 import xtr.keymapper.databinding.ActivityConfigureBinding;
@@ -37,6 +36,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         if (isInMultiWindowMode()) setTheme(R.style.Theme_Material3_DynamicColors_Dark);
 
         binding = ActivityConfigureBinding.inflate(getLayoutInflater());
@@ -53,10 +53,17 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
 
         keymapConfig = new KeymapConfig(this).loadSharedPrefs();
 
-        // Drop down layout style - list view with radio button
+        // Drop down layout style - list view
         dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        binding.endButton.setOnClickListener(v -> finish());
+        binding.endButton.setOnClickListener(v -> {
+            try {
+                pointerOverlay.sendSettingstoServer();
+                pointerOverlay.mService.unregisterOnKeyEventListener(mOnKeyEventListener);
+            } catch (RemoteException ignored) {
+            }
+            finish();
+        });
 
         bindService(new Intent(this, TouchPointer.class), connection, BIND_AUTO_CREATE);
     }
@@ -73,11 +80,9 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     @Override
     protected void onDestroy() {
         try {
-            pointerOverlay.sendSettingstoServer();
-        } catch (RemoteException e) {
-            e.printStackTrace();
+            pointerOverlay.mService.unregisterOnKeyEventListener(mOnKeyEventListener);
+        } catch (RemoteException ignored) {
         }
-        unbindService(connection);
         super.onDestroy();
     }
 
@@ -97,15 +102,10 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
         // TODO Auto-generated method stub
     }
 
-    private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
-        public void onMouseEvent(int code, int value) throws RemoteException {
-            pointerOverlay.mCallback.onMouseEvent(code, value);
-        }
-        public void receiveEvent(String event) {
+    private final OnKeyEventListener mOnKeyEventListener = new OnKeyEventListener.Stub() {
+        @Override
+        public void onKeyEvent(String event) {
             getDevices(event);
-        }
-        public void loadKeymap() throws RemoteException {
-            pointerOverlay.mCallback.loadKeymap();
         }
     };
 
@@ -135,13 +135,12 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
             try {
-                pointerOverlay.mService.registerCallback(mCallback);
+                pointerOverlay.mService.registerOnKeyEventListener(mOnKeyEventListener);
             } catch (RemoteException e) {
-                Log.e("serviceConnection", e.toString());
+                InputDeviceSelector.this.finish();
             }
         }
         public void onServiceDisconnected(ComponentName arg0) {
-
         }
     };
 }

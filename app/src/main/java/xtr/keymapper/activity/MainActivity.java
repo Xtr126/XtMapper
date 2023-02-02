@@ -8,7 +8,6 @@ import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
-import android.view.View;
 import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -103,6 +102,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        if (pointerOverlay != null)
+            pointerOverlay.activityCallback = null;
+        super.onDestroy();
+    }
+
     public interface Callback {
         void updateCmdView1(String line);
         void updateCmdView2(String line);
@@ -153,14 +159,11 @@ public class MainActivity extends AppCompatActivity {
             // We've bound to Service, cast the IBinder and get TouchPointer instance
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
-            if(!pointerOverlay.connected) {
-                pointerOverlay.activityCallback = mCallback;
-                pointerOverlay.init();
-            }
+            pointerOverlay.activityCallback = mCallback;
+            if(!pointerOverlay.connected) pointerOverlay.init();
         }
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
-            pointerOverlay.activityCallback = null;
         }
     };
 }

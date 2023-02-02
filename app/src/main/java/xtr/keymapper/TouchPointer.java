@@ -165,11 +165,11 @@ public class TouchPointer extends Service {
 
         if (mService != null) {
             try {
-                mService.closeDevice();
-                mService.unregisterCallback(mCallback);
+                mService.removeCallback(mCallback);
+                mService.removeOnMouseEventListener(mOnMouseEventListener);
+                mService.unregisterOnKeyEventListener(mOnKeyEventListener);
                 mService = null;
-            } catch (RemoteException e) {
-                e.printStackTrace();
+            } catch (RemoteException ignored) {
             }
         }
         if (cursorView != null) {
@@ -214,7 +214,9 @@ public class TouchPointer extends Service {
         } else {
             mService.setScreenSize(width, height);
             mService.startServer();
-            mService.registerCallback(mCallback);
+            mService.setCallback(mCallback);
+            mService.setOnMouseEventListener(mOnMouseEventListener);
+            mService.registerOnKeyEventListener(mOnKeyEventListener);
         }
     }
 
@@ -246,22 +248,26 @@ public class TouchPointer extends Service {
         public final int id;
     }
 
-    public final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
-        @Override
-        public void onMouseEvent(int code, int value) throws RemoteException {
-            mouseEventHandler.handleEvent(code, value);
-        }
-
-        @Override
-        public void receiveEvent(String event) throws RemoteException {
-            keyEventHandler.handleEvent(event);
-        }
-
+    private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
         /* calling back from remote service to reload keymap */
         public void loadKeymap() {
             TouchPointer.this.loadKeymap();
             keyEventHandler.init();
             mouseEventHandler.init();
+        }
+    };
+
+    private final OnKeyEventListener mOnKeyEventListener = new OnKeyEventListener.Stub() {
+        @Override
+        public void onKeyEvent(String event) throws RemoteException {
+            keyEventHandler.handleEvent(event);
+        }
+    };
+
+    private final OnMouseEventListener mOnMouseEventListener = new OnMouseEventListener.Stub() {
+        @Override
+        public void onMouseEvent(int code, int value) throws RemoteException {
+            mouseEventHandler.handleEvent(code, value);
         }
     };
 
