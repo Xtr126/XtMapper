@@ -1,6 +1,8 @@
 package xtr.keymapper.server;
 
 import android.hardware.input.InputManager;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.SystemClock;
 import android.view.InputDevice;
 import android.view.MotionEvent;
@@ -22,7 +24,8 @@ public class Input {
     private final MotionEvent.PointerProperties[] pointerProperties = new MotionEvent.PointerProperties[PointersState.MAX_POINTERS];
     private final MotionEvent.PointerCoords[] pointerCoords = new MotionEvent.PointerCoords[PointersState.MAX_POINTERS];
     private long lastTouchDown;
-
+    private final SmoothScroll scrollHandler = new SmoothScroll();
+    private Handler mHandler;
 
     private void initPointers() {
         for (int i = 0; i < PointersState.MAX_POINTERS; ++i) {
@@ -101,10 +104,10 @@ public class Input {
     }
 
     public void onScrollEvent(float x, float y, int value){
-        new SmoothScroll(x, y, value).start();
+        scrollHandler.onScrollEvent(x, y, value);
     }
 
-    private void injectScroll(ScrollEvent event) {
+    private void injectScroll(ScrollEvent event, float value) {
         long now = SystemClock.uptimeMillis();
 
         MotionEvent.PointerProperties props = pointerProperties[0];
@@ -113,7 +116,7 @@ public class Input {
         MotionEvent.PointerCoords coords = pointerCoords[0];
         coords.x = event.x;
         coords.y = event.y;
-        coords.setAxisValue(MotionEvent.AXIS_VSCROLL, event.value);
+        coords.setAxisValue(MotionEvent.AXIS_VSCROLL, value);
 
         MotionEvent motionEvent = MotionEvent
                 .obtain(lastTouchDown, now, MotionEvent.ACTION_SCROLL, 1,
@@ -133,24 +136,61 @@ public class Input {
         float value;
     }
 
-    private class SmoothScroll extends Thread {
+    private class SmoothScroll extends HandlerThread {
         private final ScrollEvent event = new ScrollEvent();
-        private static final int
-                TIME = 100, SMOOTHNESS = 20,
-                DELAY_MS = TIME / SMOOTHNESS;
+        boolean active = false;
+        float value = 0;
+        int DELAY_MS = 50;
 
-        SmoothScroll(float x, float y, int value) {
-            this.event.x = x;
-            this.event.y = y;
-            this.event.value =  (float) value / SMOOTHNESS;
+        public SmoothScroll() {
+            super("scroll");
+            start();
         }
 
-        public void run() {
-            try {
-                for(int i = 0; i < SMOOTHNESS; i++) {
-                    injectScroll(event);
-                    sleep(DELAY_MS);
+        public void onScrollEvent(float x, float y, int value) {
+            if (mHandler == null) mHandler = new Handler(scrollHandler.getLooper());
+            event.x = x;
+            event.y = y;
+            this.value += value;
+            if (!active) mHandler.post(this::scroll);
+        }
+
+        public void scroll() {
+            active = true;
+            if (value > 0) {
+                event.value = 0.02f;
+                while (value > 0)  {
+                    value -= event.value;
+                    next();
                 }
+            } else
+            if (value < 0) {
+                event.value = -0.02f;
+                while (value < 0) {
+                    value -= event.value;
+                    next();
+                }
+            }
+            active = false;
+            DELAY_MS = 50;
+        }
+
+        private void next() {
+            try {
+                sleep(DELAY_MS);
+                float ivalue = event.value;
+
+                float avalue = Math.abs(value);
+                if (avalue > 2.5) {
+                    DELAY_MS = 1;
+                    if (event.value > 0) ivalue += 0.01f;
+                    else ivalue -= 0.01f;
+                } else if (avalue > 2) DELAY_MS = 1;
+                else if (avalue > 1.5) DELAY_MS = 2;
+                else if (avalue > 1.2) DELAY_MS = 4;
+                else if (avalue > 0.5) DELAY_MS = 8;
+
+                injectScroll(event , ivalue);
             } catch (InterruptedException e) {
                 e.printStackTrace(System.out);
             }
