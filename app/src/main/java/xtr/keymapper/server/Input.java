@@ -104,6 +104,7 @@ public class Input {
     }
 
     public void onScrollEvent(float x, float y, int value){
+        if (mHandler == null) mHandler = new Handler(scrollHandler.getLooper());
         scrollHandler.onScrollEvent(x, y, value);
     }
 
@@ -148,7 +149,6 @@ public class Input {
         }
 
         public void onScrollEvent(float x, float y, int value) {
-            if (mHandler == null) mHandler = new Handler(scrollHandler.getLooper());
             event.x = x;
             event.y = y;
             this.value += value;
@@ -181,16 +181,21 @@ public class Input {
                 float ivalue = event.value;
 
                 float avalue = Math.abs(value);
+
+                if (avalue > 4) {
+                    DELAY_MS = 1;
+                    ivalue *= avalue - 1;
+                } else
                 if (avalue > 2.5) {
                     DELAY_MS = 1;
-                    if (event.value > 0) ivalue += 0.01f;
-                    else ivalue -= 0.01f;
-                } else if (avalue > 2) DELAY_MS = 1;
-                else if (avalue > 1.5) DELAY_MS = 2;
-                else if (avalue > 1.2) DELAY_MS = 4;
-                else if (avalue > 0.5) DELAY_MS = 8;
+                    ivalue *= 2;
+                } else
+                if (avalue > 1.5) DELAY_MS = 1;
+                else if (avalue > 0.9) DELAY_MS = 3;
+                else if (avalue > 0.4) DELAY_MS = 6;
+                else if (avalue > 0.1) DELAY_MS = 10;
 
-                injectScroll(event , ivalue);
+                injectScroll(event, ivalue);
             } catch (InterruptedException e) {
                 e.printStackTrace(System.out);
             }
