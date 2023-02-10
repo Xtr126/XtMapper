@@ -24,7 +24,7 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
 
         if (editor != null) editor.hideView();
 
-        Context context = new ContextThemeWrapper(this, R.style.Theme_MaterialComponents);
+        Context context = new ContextThemeWrapper(this, R.style.Theme_AppCompat_Dialog_Alert);
         editor = new EditorUI(context, this);
         editor.open();
 

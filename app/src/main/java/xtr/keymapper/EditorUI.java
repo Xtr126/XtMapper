@@ -43,7 +43,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     private MovableFloatingActionKey keyInFocus;
     // Keyboard keys
-    private final List<MovableFloatingActionKey> Keys = new ArrayList<>();
+    private final List<MovableFloatingActionKey> keyList = new ArrayList<>();
     private MovableFloatingActionKey leftClick;
 
     private MovableFrameLayout dpad1, dpad2, crosshair;
@@ -143,63 +143,54 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void loadKeymap() throws IOException {
-        keymapConfig.loadConfig();
+        KeymapProfiles.Profile profile = new KeymapProfiles(context).getProfile(keymapConfig.profile);
+        // Add Keyboard keys as Views
+        profile.keys.forEach(this::addKey);
 
-        for (int n = 0; n < keymapConfig.getKeys().size(); n++) {
-            KeymapConfig.Key key = keymapConfig.getKeys().get(n);
-            addKey(key);
-        }
+        if (profile.dpad1 != null) addDpad1(profile.dpad1.getX(), profile.dpad1.getY());
 
-        Dpad dpad1 = keymapConfig.dpad1;
-        Dpad dpad2 = keymapConfig.dpad2;
-        mouseAimConfig = keymapConfig.mouseAimConfig;
+        if (profile.dpad2 != null) addDpad2(profile.dpad2.getX(), profile.dpad2.getY());
 
-        if (dpad1 != null) addDpad1(dpad1.getX(), dpad1.getY());
-
-        if (dpad2 != null) addDpad2(dpad2.getX(), dpad2.getY());
-
-        if (mouseAimConfig != null)
-            addCrosshair(mouseAimConfig.xCenter, mouseAimConfig.yCenter);
+        mouseAimConfig = profile.mouseAimConfig;
+        if (mouseAimConfig != null) addCrosshair(mouseAimConfig.xCenter, mouseAimConfig.yCenter);
     }
 
-    private void saveKeymap() throws IOException {
-        StringBuilder linesToWrite = new StringBuilder();
+    private void saveKeymap() {
+        ArrayList<String> linesToWrite = new ArrayList<>();
 
         if (dpad1 != null) {
             Dpad dpad = new Dpad(dpad1, DpadType.UDLR);
-            linesToWrite.append(dpad.getData());
+            linesToWrite.add(dpad.getData());
         }
 
         if (dpad2 != null) {
             Dpad dpad = new Dpad(dpad2, DpadType.WASD);
-            linesToWrite.append(dpad.getData());
+            linesToWrite.add(dpad.getData());
 
-            for (int i = 0; i < Keys.size(); i++) {
-                String key = Keys.get(i).getText();
-                if(key.matches("[WASD]")) {
-                    Keys.get(i).key = null; // If WASD keys already added, remove them
-                }
-            }
+            // If WASD keys already added, remove them
+            for (int i = 0; i < keyList.size(); i++)
+                if (keyList.get(i).getText().matches("[WASD]"))
+                    keyList.get(i).key = null;
         }
 
         if (crosshair != null) {
-            // get x and y coordinates from view
+            // Get x and y coordinates from view
             mouseAimConfig.setCenterXY(crosshair);
             mouseAimConfig.setLeftClickXY(leftClick);
-            linesToWrite.append(mouseAimConfig.getData());
+            linesToWrite.add(mouseAimConfig.getData());
         }
         
         // Keyboard keys
-        for (int i = 0; i < Keys.size(); i++) {
-            if(Keys.get(i).key != null) {
-                linesToWrite.append(Keys.get(i).getData());
-            }
-        }
-        
-        // Save Config to file
-        keymapConfig.writeConfig(linesToWrite);
+        keyList.forEach(movableFloatingActionKey -> {
+            if(movableFloatingActionKey != null)
+                linesToWrite.add(movableFloatingActionKey.getData());
+        });
 
-        // reload keymap if service running
+        // Save Config
+        KeymapProfiles profiles = new KeymapProfiles(context);
+        profiles.saveProfile(keymapConfig.profile, linesToWrite, context.getPackageName());
+
+        // Reload keymap if service running
         InputService.reloadKeymap();
     }
 
@@ -257,7 +248,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .start();
     }
 
-    private void addKey(KeymapConfig.Key key) {
+    private void addKey(KeymapProfiles.Key key) {
         MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(context);
 
         floatingKey.setText(key.code.substring(4));
@@ -270,12 +261,12 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         mainView.addView(floatingKey);
 
-        Keys.add(floatingKey);
+        keyList.add(floatingKey);
     }
 
     private void addKey() {
-        final KeymapConfig.Key key = new KeymapConfig.Key();
-        key.code = "X";
+        final KeymapProfiles.Key key = new KeymapProfiles.Key();
+        key.code = "KEY_X";
         key.x = DEFAULT_X;
         key.y = DEFAULT_Y;
         addKey(key);

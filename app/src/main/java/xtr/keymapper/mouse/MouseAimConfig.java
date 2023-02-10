@@ -28,7 +28,7 @@ public class MouseAimConfig {
         return "MOUSE_AIM " + xCenter + " " + yCenter + " "
                 + triggerKey + " "
                 + width + " " + height + " "
-                + xleftClick + " " + yleftClick + "\n";
+                + xleftClick + " " + yleftClick;
     }
 
     public void setCenterXY(MovableFrameLayout crosshair){

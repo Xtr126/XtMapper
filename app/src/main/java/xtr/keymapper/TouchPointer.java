@@ -1,7 +1,13 @@
 package xtr.keymapper;
 
-import static xtr.keymapper.InputEventCodes.*;
-import static xtr.keymapper.TouchPointer.PointerId.*;
+import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
+import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
+import static xtr.keymapper.InputEventCodes.REL_WHEEL;
+import static xtr.keymapper.InputEventCodes.REL_X;
+import static xtr.keymapper.InputEventCodes.REL_Y;
+import static xtr.keymapper.TouchPointer.PointerId.dpad1pid;
+import static xtr.keymapper.TouchPointer.PointerId.dpad2pid;
+import static xtr.keymapper.TouchPointer.PointerId.pid1;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
@@ -19,24 +25,21 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
-import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 
 import xtr.keymapper.activity.InputDeviceSelector;
 import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.databinding.CursorBinding;
+import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.mouse.MouseAimHandler;
 import xtr.keymapper.mouse.MousePinchZoom;
 import xtr.keymapper.mouse.MouseWheelZoom;
-import xtr.keymapper.databinding.CursorBinding;
-import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.server.InputService;
 
 public class TouchPointer extends Service {
@@ -56,7 +59,7 @@ public class TouchPointer extends Service {
     public MainActivity.Callback activityCallback;
     int width; int height;
 
-    private List<KeymapConfig.Key> keys = new ArrayList<>();
+    private ArrayList<KeymapProfiles.Key> keyList = new ArrayList<>();
 
     private final IBinder binder = new TouchPointerBinder();
 
@@ -184,20 +187,18 @@ public class TouchPointer extends Service {
 
     public void loadKeymap() {
         keymapConfig = new KeymapConfig(this);
-        try {
-            keymapConfig.loadConfig();
-        } catch (IOException e) {
-            Log.e("loadKeymap", e.toString());
-        }
 
-        keys = keymapConfig.getKeys();
+        KeymapProfiles.Profile profile = new KeymapProfiles(this).getProfile(keymapConfig.profile);
 
-        if (keymapConfig.dpad1 != null)
-            dpad1Handler = new DpadHandler(this, keymapConfig.dpad1, dpad1pid.id);
-        if (keymapConfig.dpad2 != null)
-            dpad2Handler = new DpadHandler(this, keymapConfig.dpad2, dpad2pid.id);
-        if (keymapConfig.mouseAimConfig != null)
-            mouseAimHandler = new MouseAimHandler(keymapConfig.mouseAimConfig);
+        // Keyboard keys
+        keyList = profile.keys;
+
+        if (profile.dpad1 != null)
+            dpad1Handler = new DpadHandler(this, profile.dpad1, dpad1pid.id);
+        if (profile.dpad2 != null)
+            dpad2Handler = new DpadHandler(this, profile.dpad2, dpad2pid.id);
+        if (profile.mouseAimConfig != null)
+            mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
 
         mouseEventHandler.sensitivity = keymapConfig.mouseSensitivity.intValue();
         mouseEventHandler.scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
@@ -330,8 +331,8 @@ public class TouchPointer extends Service {
 
             if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
 
-            for (int n = 0; n < keys.size(); n++) {
-                KeymapConfig.Key key = keys.get(n);
+            for (int n = 0; n < keyList.size(); n++) {
+                KeymapProfiles.Key key = keyList.get(n);
                 if (event.code.equals(key.code))
                     mService.injectEvent(key.x, key.y, event.action, n);
             }

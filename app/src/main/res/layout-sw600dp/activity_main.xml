@@ -21,7 +21,7 @@
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/profilesView"
-        android:name="xtr.keymapper.fragment.Profiles"
+        android:name="xtr.keymapper.fragment.ProfilesView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -29,7 +29,7 @@
         app:layout_constraintBottom_toTopOf="@id/controls"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:layout="@layout/fragment_profiles" />
+        tools:layout="@layout/fragment_profiles_view" />
 
     <include
         android:id="@+id/controls"

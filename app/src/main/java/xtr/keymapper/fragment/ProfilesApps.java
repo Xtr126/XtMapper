@@ -22,22 +22,22 @@ import android.widget.TextView;
 
 import xtr.keymapper.KeymapConfig;
 import xtr.keymapper.R;
-import xtr.keymapper.databinding.FragmentProfilesBinding;
+import xtr.keymapper.databinding.FragmentProfilesAppsBinding;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class Profiles extends Fragment {
+public class ProfilesApps extends Fragment {
     public static final String defaultProfile = "xtr.keymapper.default";
     public String currentProfile;
     private Context context;
-    private FragmentProfilesBinding binding;
+    private FragmentProfilesAppsBinding binding;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        binding = FragmentProfilesBinding.inflate(inflater, container, false);
+        binding = FragmentProfilesAppsBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
 
@@ -46,16 +46,16 @@ public class Profiles extends Fragment {
         this.context = getContext();
         super.onViewCreated(view, savedInstanceState);
         AppsGridAdapter adapter = new AppsGridAdapter();
-        binding.appGrid.setAdapter(adapter);
+        binding.appsGrid.setAdapter(adapter);
 
         Drawable profilesShow = AppCompatResources.getDrawable(context, R.drawable.ic_profiles_1);
         Drawable profilesHide = AppCompatResources.getDrawable(context, R.drawable.ic_profiles_2);
         binding.profilesButton.setOnClickListener(v -> {
-            switch (binding.appGrid.getVisibility()) {
-                case View.VISIBLE:{
+            switch (binding.appsGrid.getVisibility()) {
+                case View.VISIBLE: {
                     binding.header.setVisibility(View.GONE);
                     binding.currentProfile.setVisibility(View.GONE);
-                    binding.appGrid.setVisibility(View.GONE);
+                    binding.appsGrid.setVisibility(View.GONE);
                     binding.profilesButton.setForeground(profilesShow);
                     break;
                 }
@@ -63,7 +63,7 @@ public class Profiles extends Fragment {
                 case View.INVISIBLE: {
                     binding.header.setVisibility(View.VISIBLE);
                     binding.currentProfile.setVisibility(View.VISIBLE);
-                    binding.appGrid.setVisibility(View.VISIBLE);
+                    binding.appsGrid.setVisibility(View.VISIBLE);
                     binding.profilesButton.setForeground(profilesHide);
                     break;
                 }

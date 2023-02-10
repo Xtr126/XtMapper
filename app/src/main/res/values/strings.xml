@@ -40,5 +40,7 @@
         Service is not running. \n
         You might not be able to map all key events. \n
         Run Activation and try again.</string>
-    <string name="dialog_alert_editor_title" >Not Activated</string>
+    <string name="dialog_alert_editor_title">Not Activated</string>
+    <string name="dialog_alert_add_profile">Enter new profile name:</string>
+
 </resources>

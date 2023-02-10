@@ -3,10 +3,10 @@ package xtr.keymapper.dpad;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 
 public class Dpad {
-    String type;
-    float viewX, viewY;
-    float xOfCenter, yOfCenter;
-    float radius;
+    final String type;
+    private final float viewX, viewY;
+    final float xOfCenter, yOfCenter;
+    final float radius;
 
     public enum DpadType {
         // Dpad for up down left right arrow keys
@@ -39,15 +39,13 @@ public class Dpad {
         yOfCenter = Float.parseFloat(data[5]); // absolute y position of pivot (center)
     }
 
-    public StringBuilder getData(){
-        StringBuilder data = new StringBuilder();
-        data.append(type).append(" ")
-            .append(viewX).append(" ")
-            .append(viewY).append(" ")
-            .append(radius).append(" ")
-            .append(xOfCenter).append(" ")
-            .append(yOfCenter).append("\n");
-        return data;
+    public String getData(){
+        return type + " " +
+                viewX + " " +
+                viewY + " " +
+                radius + " " +
+                xOfCenter + " " +
+                yOfCenter;
     }
 
     public float getX() {

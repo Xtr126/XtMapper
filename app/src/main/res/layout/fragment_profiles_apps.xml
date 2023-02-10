@@ -22,16 +22,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/current_profile"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            android:visibility="visible" />
 
         <TextView
             android:id="@+id/current_profile"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAlignment="center"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            android:visibility="visible" />
     </LinearLayout>
 
     <LinearLayout
@@ -42,12 +40,11 @@
         android:orientation="horizontal">
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/app_grid"
+            android:id="@+id/apps_grid"
             android:layout_width="300dp"
             android:layout_height="300dp"
             tools:listitem="@layout/app_view"
-            android:visibility="gone"
-            tools:visibility="visible"
+            android:visibility="visible"
             app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
             app:spanCount="3" />
 

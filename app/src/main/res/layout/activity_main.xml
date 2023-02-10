@@ -12,13 +12,13 @@
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/profilesView"
-        android:name="xtr.keymapper.fragment.Profiles"
+        android:name="xtr.keymapper.fragment.ProfilesView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        tools:layout="@layout/fragment_profiles" />
+        tools:layout="@layout/fragment_profiles_apps" />
     
 
     <androidx.cardview.widget.CardView
