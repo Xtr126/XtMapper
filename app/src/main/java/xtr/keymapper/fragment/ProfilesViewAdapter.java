@@ -8,6 +8,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -26,7 +27,7 @@ import xtr.keymapper.databinding.ProfileRowItemBinding;
 /**
  * Provide views to RecyclerView.
  */
-public class ProfilesAdapter extends RecyclerView.Adapter<ProfilesAdapter.ViewHolder> {
+public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapter.ViewHolder> {
 
     private final ArrayList<RecyclerData> recyclerDataArrayList = new ArrayList<>();
     private final OnItemRemovedListener callback;
@@ -39,11 +40,13 @@ public class ProfilesAdapter extends RecyclerView.Adapter<ProfilesAdapter.ViewHo
         private final TextView textView;
         private final ImageView appIcon;
         private final MaterialButton deleteButton, editButton;
+        private final MaterialButton appIconButton;
 
         public ViewHolder(View v) {
             super(v);
             textView = itemBinding.textView;
             appIcon = itemBinding.appIcon;
+            appIconButton = itemBinding.appIconButton;
             deleteButton = itemBinding.deleteButton;
             editButton = itemBinding.editButton;
         }
@@ -56,7 +59,7 @@ public class ProfilesAdapter extends RecyclerView.Adapter<ProfilesAdapter.ViewHo
     /**
      * Initialize the dataset of the Adapter.
      */
-    public ProfilesAdapter(Context context, OnItemRemovedListener l) {
+    public ProfilesViewAdapter(Context context, OnItemRemovedListener l) {
         this.callback = l;
         new KeymapProfiles(context).getAllProfiles().forEach((profileName, profile) -> {
             try {
@@ -89,24 +92,44 @@ public class ProfilesAdapter extends RecyclerView.Adapter<ProfilesAdapter.ViewHo
         viewHolder.textView.setText(recyclerData.name);
         viewHolder.appIcon.setBackground(recyclerData.icon);
 
+        final String profileName = recyclerData.name.toString();
+
+        Context context = viewHolder.itemView.getContext();
+        KeymapProfiles keymapProfiles = new KeymapProfiles(context);
+
         viewHolder.deleteButton.setOnClickListener(v -> {
-            new KeymapProfiles(v.getContext()).deleteProfile(recyclerData.name.toString());;
+            keymapProfiles.deleteProfile(profileName);
             callback.resetAdapter();
         });
 
-        viewHolder.editButton.setOnClickListener(view -> {
-            AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(view.getContext(), R.style.Theme_AppCompat_Dialog_Alert));
-            EditText editText = new EditText(view.getContext());
-            editText.setText(recyclerData.name.toString());
 
+        viewHolder.editButton.setOnClickListener(view -> {
+            EditText editText = new EditText(view.getContext());
+            editText.setText(profileName);
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog_Alert));
             builder.setMessage(R.string.dialog_alert_add_profile)
                     .setPositiveButton("ok", (dialog, which) -> {
-                        KeymapProfiles keymapProfiles = new KeymapProfiles(view.getContext());
-                        keymapProfiles.renameProfile(recyclerData.name.toString(), editText.getText().toString());
+                        keymapProfiles.renameProfile(profileName, editText.getText().toString());
                         callback.resetAdapter();
                     })
                     .setNegativeButton("cancel", (dialog, which) -> {})
                     .setView(editText);
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        });
+
+        viewHolder.appIconButton.setOnClickListener(view -> {
+            ProfilesApps appsView = new ProfilesApps(view.getContext(), profileName);
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog_Alert));
+            builder.setPositiveButton("ok", (dialog, which) -> {
+                        keymapProfiles.setProfilePackageName(recyclerData.name.toString(), appsView.packageName);
+                        appsView.onDestroyView();
+                        callback.resetAdapter();
+                    })
+                    .setNegativeButton("cancel", (dialog, which) -> {})
+                    .setView(appsView.view);
             AlertDialog dialog = builder.create();
             dialog.show();
         });

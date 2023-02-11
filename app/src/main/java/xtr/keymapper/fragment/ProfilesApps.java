@@ -6,75 +6,51 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
-import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.content.res.AppCompatResources;
-import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import xtr.keymapper.KeymapConfig;
-import xtr.keymapper.R;
-import xtr.keymapper.databinding.FragmentProfilesAppsBinding;
+import androidx.annotation.NonNull;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class ProfilesApps extends Fragment {
-    public static final String defaultProfile = "xtr.keymapper.default";
-    public String currentProfile;
-    private Context context;
-    private FragmentProfilesAppsBinding binding;
+import xtr.keymapper.KeymapProfiles;
+import xtr.keymapper.R;
+import xtr.keymapper.databinding.FragmentProfilesAppsBinding;
 
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+public class ProfilesApps {
+    public static final String defaultProfile = "xtr.keymapper.default";
+    public String packageName;
+    public FragmentProfilesAppsBinding binding;
+    public final View view;
+
+    public ProfilesApps(Context context, String profileName){
+        this.packageName  = new KeymapProfiles(context).getProfile(profileName).packageName;
+
+        view = createView(LayoutInflater.from(context));
+        onViewCreated(view);
+    }
+
+    public View createView(@NonNull LayoutInflater inflater) {
         // Inflate the layout for this fragment
-        binding = FragmentProfilesAppsBinding.inflate(inflater, container, false);
+        binding = FragmentProfilesAppsBinding.inflate(inflater);
         return binding.getRoot();
     }
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        this.context = getContext();
-        super.onViewCreated(view, savedInstanceState);
-        AppsGridAdapter adapter = new AppsGridAdapter();
-        binding.appsGrid.setAdapter(adapter);
+    public void onViewCreated(@NonNull View view) {
+        Context context = view.getContext();
 
-        Drawable profilesShow = AppCompatResources.getDrawable(context, R.drawable.ic_profiles_1);
-        Drawable profilesHide = AppCompatResources.getDrawable(context, R.drawable.ic_profiles_2);
-        binding.profilesButton.setOnClickListener(v -> {
-            switch (binding.appsGrid.getVisibility()) {
-                case View.VISIBLE: {
-                    binding.header.setVisibility(View.GONE);
-                    binding.currentProfile.setVisibility(View.GONE);
-                    binding.appsGrid.setVisibility(View.GONE);
-                    binding.profilesButton.setForeground(profilesShow);
-                    break;
-                }
-                case View.GONE:
-                case View.INVISIBLE: {
-                    binding.header.setVisibility(View.VISIBLE);
-                    binding.currentProfile.setVisibility(View.VISIBLE);
-                    binding.appsGrid.setVisibility(View.VISIBLE);
-                    binding.profilesButton.setForeground(profilesHide);
-                    break;
-                }
-            }
-        });
+        AppsGridAdapter adapter = new AppsGridAdapter(context);
+        binding.appsGrid.setAdapter(adapter);
     }
 
-    @Override
     public void onDestroyView() {
         binding = null;
-        super.onDestroyView();
     }
 
     public class AppsGridAdapter extends RecyclerView.Adapter<AppsGridAdapter.RecyclerViewHolder> {
@@ -82,13 +58,12 @@ public class ProfilesApps extends Fragment {
         private final ArrayList<RecyclerData> appsDataArrayList = new ArrayList<>();
         private ColorStateList defaultTint;
 
-        private final ColorStateList selectedTint =
-                ColorStateList.valueOf(context.getColor(R.color.purple_700));
+        private final ColorStateList selectedTint;
 
         private View selectedView;
-        private final KeymapConfig keymapConfig;
 
-        public AppsGridAdapter() {
+        public AppsGridAdapter(Context context) {
+            selectedTint = ColorStateList.valueOf(context.getColor(R.color.purple_700));
             PackageManager pm = context.getPackageManager();
             Intent i = new Intent(Intent.ACTION_MAIN, null);
             i.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -106,9 +81,7 @@ public class ProfilesApps extends Fragment {
                         ri.loadLabel(pm),
                         ri.activityInfo.loadIcon(pm)));
 
-            keymapConfig = new KeymapConfig(context);
-            currentProfile = keymapConfig.profile;
-            binding.currentProfile.setText(currentProfile);
+            binding.currentProfile.setText(packageName);
         }
 
         @NonNull
@@ -128,7 +101,7 @@ public class ProfilesApps extends Fragment {
             holder.appIcon.setImageDrawable(recyclerData.icon);
 
 
-            if (recyclerData.packageName.equals(currentProfile) && selectedView == null) {
+            if (recyclerData.packageName.equals(packageName ) && selectedView == null) {
                 selectedView = holder.appName.getRootView();
                 selectedView.setBackgroundTintList(selectedTint);
             }
@@ -157,13 +130,10 @@ public class ProfilesApps extends Fragment {
             @Override
             public void onClick (View view) {
                 int i = getAdapterPosition();
-                currentProfile = appsDataArrayList.get(i).packageName;
-                binding.currentProfile.setText(currentProfile);
+                ProfilesApps.this.packageName = appsDataArrayList.get(i).packageName;
+                binding.currentProfile.setText(packageName);
 
-                keymapConfig.profile = currentProfile;
-                keymapConfig.applySharedPrefs();
-
-                selectedView.setBackgroundTintList(defaultTint);
+                if (selectedView != null) selectedView.setBackgroundTintList(defaultTint);
                 view.setBackgroundTintList(selectedTint);
                 selectedView = view;
             }

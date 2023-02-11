@@ -80,7 +80,7 @@ public class ProfilesView extends Fragment {
     }
 
     private void setAdapter() {
-        binding.profiles.setAdapter(new ProfilesAdapter(getContext(), this::setAdapter));
+        binding.profiles.setAdapter(new ProfilesViewAdapter(getContext(), this::setAdapter));
     }
 
     @Override

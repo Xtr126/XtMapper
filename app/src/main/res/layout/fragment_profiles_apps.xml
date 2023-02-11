@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:orientation="vertical"
     android:translationZ="1dp"
     app:layout_constraintStart_toStartOf="parent"
@@ -12,7 +12,7 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:animateLayoutChanges="true"
         android:gravity="center"
         android:orientation="horizontal">
@@ -32,30 +32,14 @@
             android:visibility="visible" />
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/profiles_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:animateLayoutChanges="true"
-        android:orientation="horizontal">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/apps_grid"
-            android:layout_width="300dp"
-            android:layout_height="300dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             tools:listitem="@layout/app_view"
             android:visibility="visible"
-            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-            app:spanCount="3" />
+            app:spanCount="3"
+            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager" />
 
-        <ImageButton
-            android:id="@+id/profiles_button"
-            android:layout_width="20dp"
-            android:layout_height="160dp"
-            android:layout_gravity="center"
-            android:background="#00FFFFFF"
-            android:foreground="@drawable/ic_profiles_1"
-            android:foregroundTint="@color/white"
-            android:translationZ="0dp" />
-    </LinearLayout>
 </LinearLayout>

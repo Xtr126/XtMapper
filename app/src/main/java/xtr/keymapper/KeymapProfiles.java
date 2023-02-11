@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.mouse.MouseAimConfig;
@@ -36,6 +37,11 @@ public class KeymapProfiles {
                 .apply();
     }
 
+    public void setProfilePackageName(String profileName, String packageName) {
+        Set<String> stringSet = sharedPref.getStringSet(profileName, null);
+        saveProfile(profileName, new ArrayList<>(stringSet), packageName);
+    }
+
     static final class Key {
 
         String code;
@@ -51,6 +57,7 @@ public class KeymapProfiles {
          ArrayList<Key> keys = new ArrayList<>();
      }
     public void saveProfile(String profile, ArrayList<String> lines, String packageName) {
+        lines.removeIf(line -> line.contains("APPLICATION"));
         lines.add("APPLICATION " + packageName);
         Set<String> stringSet = new HashSet<>(lines);
         sharedPref.edit()
