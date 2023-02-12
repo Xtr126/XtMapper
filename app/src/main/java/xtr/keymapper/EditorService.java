@@ -24,7 +24,7 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
 
         if (editor != null) editor.hideView();
 
-        Context context = new ContextThemeWrapper(this, R.style.Theme_AppCompat_Dialog_Alert);
+        Context context = new ContextThemeWrapper(this, R.style.Theme_MaterialComponents);
         editor = new EditorUI(context, this);
         editor.open();
 
@@ -34,7 +34,7 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
             } catch (RemoteException ignored) {
             }
         else {
-            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(this, R.style.Theme_Material3_DayNight_Dialog_Alert));
 
             builder.setMessage(R.string.dialog_alert_editor)
                     .setPositiveButton("Ok", (dialog, which) -> {})

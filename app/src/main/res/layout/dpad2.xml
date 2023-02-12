@@ -87,5 +87,5 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:translationZ="1dp"
-        app:srcCompat="@drawable/key" />
+        android:src="@drawable/key" />
 </xtr.keymapper.floatingkeys.MovableFrameLayout>
