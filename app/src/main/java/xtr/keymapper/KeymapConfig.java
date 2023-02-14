@@ -5,7 +5,7 @@ import static android.content.Context.MODE_PRIVATE;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import xtr.keymapper.fragment.ProfilesApps;
+import xtr.keymapper.profiles.ProfilesApps;
 
 public class KeymapConfig {
     private final SharedPreferences sharedPref;

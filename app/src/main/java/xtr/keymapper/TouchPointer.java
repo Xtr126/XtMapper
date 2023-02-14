@@ -40,6 +40,8 @@ import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.mouse.MouseAimHandler;
 import xtr.keymapper.mouse.MousePinchZoom;
 import xtr.keymapper.mouse.MouseWheelZoom;
+import xtr.keymapper.profiles.KeymapProfiles;
+import xtr.keymapper.profiles.ProfileSelector;
 import xtr.keymapper.server.InputService;
 
 public class TouchPointer extends Service {
@@ -58,6 +60,8 @@ public class TouchPointer extends Service {
     public boolean connected = false;
     public MainActivity.Callback activityCallback;
     int width; int height;
+    int counter = 5;
+    private String profileName;
 
     private ArrayList<KeymapProfiles.Key> keyList = new ArrayList<>();
 
@@ -76,34 +80,35 @@ public class TouchPointer extends Service {
     }
 
     public void init(){
-        loadKeymap();
-        getDisplayMetrics();
+        new ProfileSelector(this, profile -> {
+            profileName = profile;
+            loadKeymap();
+            getDisplayMetrics();
 
-        activityCallback.updateCmdView1("\n connecting to server..");
-        
-        mHandler.post(new Runnable() {
-            int counter = 5;
-            @Override
-            public void run() {
-                activityCallback.updateCmdView1(".");
-                mService = InputService.getInstance();
-
-                if (mService != null) {
-                    keyEventHandler.init();
-                    mouseEventHandler.init();
-                    startInputDeviceSelector();
-                    connected = true;
-                } else {
-                    if (counter > 0) {
-                        mHandler.postDelayed(this, 1000);
-                        counter--;
-                    } else {
-                        mHandler.post(() -> stopPointer());
-                        activityCallback.updateCmdView1("\n connection timeout\n Please retry activation \n");
-                    }
-                }
-            }
+            counter = 5;
+            mHandler.post(this::tryBindRemoteService);
         });
+    }
+
+    private void tryBindRemoteService(){
+        activityCallback.updateCmdView1("\n connecting to server..");
+        activityCallback.updateCmdView1(".");
+        mService = InputService.getInstance();
+
+        if (mService != null) {
+            keyEventHandler.init();
+            mouseEventHandler.init();
+            startInputDeviceSelector();
+            connected = true;
+        } else {
+            if (counter > 0) {
+                mHandler.postDelayed(this::tryBindRemoteService, 1000);
+                counter--;
+            } else {
+                mHandler.post(this::stopPointer);
+                activityCallback.updateCmdView1("\n connection timeout\n Please retry activation \n");
+            }
+        }
     }
 
     @Override
@@ -186,9 +191,7 @@ public class TouchPointer extends Service {
     }
 
     public void loadKeymap() {
-        keymapConfig = new KeymapConfig(this);
-
-        KeymapProfiles.Profile profile = new KeymapProfiles(this).getProfile(keymapConfig.profile);
+        KeymapProfiles.Profile profile = new KeymapProfiles(this).getProfile(profileName);
 
         // Keyboard keys
         keyList = profile.keys;
@@ -200,6 +203,7 @@ public class TouchPointer extends Service {
         if (profile.mouseAimConfig != null)
             mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
 
+        keymapConfig = new KeymapConfig(this);
         mouseEventHandler.sensitivity = keymapConfig.mouseSensitivity.intValue();
         mouseEventHandler.scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
         mouseEventHandler.ctrl_mouse_wheel_zoom = keymapConfig.ctrlMouseWheelZoom;

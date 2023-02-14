@@ -1,4 +1,4 @@
-package xtr.keymapper;
+package xtr.keymapper.profiles;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -11,7 +11,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.function.Predicate;
 
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.mouse.MouseAimConfig;
@@ -42,19 +41,17 @@ public class KeymapProfiles {
         saveProfile(profileName, new ArrayList<>(stringSet), packageName);
     }
 
-    static final class Key {
-
-        String code;
-        float x;
-        float y;
+    public static final class Key {
+        public String code;
+        public float x;
+        public float y;
     }
      public static final class Profile {
-
          public String packageName = "xtr.keymapper";
-         Dpad dpad1 = null;
-         Dpad dpad2 = null;
-         MouseAimConfig mouseAimConfig = null;
-         ArrayList<Key> keys = new ArrayList<>();
+         public Dpad dpad1 = null;
+         public Dpad dpad2 = null;
+         public MouseAimConfig mouseAimConfig = null;
+         public ArrayList<Key> keys = new ArrayList<>();
      }
     public void saveProfile(String profile, ArrayList<String> lines, String packageName) {
         lines.removeIf(line -> line.contains("APPLICATION"));

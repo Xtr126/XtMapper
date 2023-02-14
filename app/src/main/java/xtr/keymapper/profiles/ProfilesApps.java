@@ -1,4 +1,4 @@
-package xtr.keymapper.fragment;
+package xtr.keymapper.profiles;
 
 import android.content.Context;
 import android.content.Intent;
@@ -19,7 +19,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-import xtr.keymapper.KeymapProfiles;
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.FragmentProfilesAppsBinding;
 

@@ -9,7 +9,6 @@
     tools:context=".activity.MainActivity"
     tools:ignore="ContentDescription,SpUsage">
 
-
     <androidx.constraintlayout.widget.Barrier
         android:id="@+id/barrier2"
         android:layout_width="wrap_content"
@@ -21,7 +20,7 @@
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/profilesView"
-        android:name="xtr.keymapper.fragment.ProfilesView"
+        android:name="xtr.keymapper.profiles.ProfilesViewFragment"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"

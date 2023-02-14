@@ -1,4 +1,4 @@
-package xtr.keymapper.fragment;
+package xtr.keymapper.profiles;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -8,7 +8,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -20,7 +19,6 @@ import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
 
-import xtr.keymapper.KeymapProfiles;
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.ProfileRowItemBinding;
 
@@ -61,14 +59,16 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
      */
     public ProfilesViewAdapter(Context context, OnItemRemovedListener l) {
         this.callback = l;
+        KeymapProfiles keymapProfiles = new KeymapProfiles(context);
         new KeymapProfiles(context).getAllProfiles().forEach((profileName, profile) -> {
-            try {
+            if(profileName != null) try {
                 recyclerDataArrayList.add(
                         new RecyclerData(profile.packageName,
                                 context.getPackageManager().getApplicationIcon(profile.packageName),
                                 profileName));
             } catch (PackageManager.NameNotFoundException ignored) {
             }
+            else keymapProfiles.deleteProfile(profileName);
         });
     }
 

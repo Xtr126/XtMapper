@@ -1,4 +1,4 @@
-package xtr.keymapper.fragment;
+package xtr.keymapper.profiles;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -17,11 +17,10 @@ import androidx.fragment.app.Fragment;
 
 import java.util.ArrayList;
 
-import xtr.keymapper.KeymapProfiles;
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.FragmentProfilesViewBinding;
 
-public class ProfilesView extends Fragment {
+public class ProfilesViewFragment extends Fragment {
     private FragmentProfilesViewBinding binding;
 
     @Override
@@ -43,7 +42,7 @@ public class ProfilesView extends Fragment {
         setAdapter();
 
         binding.addButton.setOnClickListener(v -> {
-            AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog_Alert));
+            AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(context, R.style.Theme_Material3_DayNight_Dialog_Alert));
             EditText editText = new EditText(context);
             builder.setMessage(R.string.dialog_alert_add_profile)
                     .setPositiveButton("ok", (dialog, which) -> {

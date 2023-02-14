@@ -15,6 +15,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 
+import androidx.appcompat.view.ContextThemeWrapper;
+
 import com.nambimobile.widgets.efab.ExpandableFabLayout;
 
 import java.io.IOException;
@@ -32,6 +34,7 @@ import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.mouse.MouseAimSettings;
+import xtr.keymapper.profiles.KeymapProfiles;
 import xtr.keymapper.server.InputService;
 
 public class EditorUI extends OnKeyEventListener.Stub {
@@ -54,12 +57,12 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final Context context;
     private final OnHideListener onHideListener;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
-    private final KeymapConfig keymapConfig;
+    private final String profileName;
 
-    public EditorUI (Context context, OnHideListener l) {
-        this.context = context;
-        this.onHideListener = l;
-        keymapConfig = new KeymapConfig(context);
+    public EditorUI (Context context, String profileName) {
+        this.context = new ContextThemeWrapper(context, R.style.Theme_MaterialComponents);
+        this.onHideListener = ((OnHideListener) context);
+        this.profileName = profileName;
 
         layoutInflater = context.getSystemService(LayoutInflater.class);
         mWindowManager = context.getSystemService(WindowManager.class);
@@ -143,7 +146,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void loadKeymap() throws IOException {
-        KeymapProfiles.Profile profile = new KeymapProfiles(context).getProfile(keymapConfig.profile);
+        KeymapProfiles.Profile profile = new KeymapProfiles(context).getProfile(profileName);
         // Add Keyboard keys as Views
         profile.keys.forEach(this::addKey);
 
@@ -188,7 +191,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         // Save Config
         KeymapProfiles profiles = new KeymapProfiles(context);
-        profiles.saveProfile(keymapConfig.profile, linesToWrite, context.getPackageName());
+        profiles.saveProfile(profileName, linesToWrite, context.getPackageName());
 
         // Reload keymap if service running
         InputService.reloadKeymap();

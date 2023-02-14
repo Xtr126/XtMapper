@@ -12,7 +12,7 @@
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/profilesView"
-        android:name="xtr.keymapper.fragment.ProfilesView"
+        android:name="xtr.keymapper.profiles.ProfilesViewFragment"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
