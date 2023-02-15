@@ -61,7 +61,6 @@ public class TouchPointer extends Service {
     public MainActivity.Callback activityCallback;
     int width; int height;
     int counter = 5;
-    private String profileName;
 
     private ArrayList<KeymapProfiles.Key> keyList = new ArrayList<>();
 
@@ -81,8 +80,7 @@ public class TouchPointer extends Service {
 
     public void init(){
         new ProfileSelector(this, profile -> {
-            profileName = profile;
-            loadKeymap();
+            loadKeymap(profile);
             getDisplayMetrics();
 
             counter = 5;
@@ -190,7 +188,7 @@ public class TouchPointer extends Service {
         }
     }
 
-    public void loadKeymap() {
+    public void loadKeymap(String profileName) {
         KeymapProfiles.Profile profile = new KeymapProfiles(this).getProfile(profileName);
 
         // Keyboard keys
@@ -258,9 +256,11 @@ public class TouchPointer extends Service {
     private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
         /* calling back from remote service to reload keymap */
         public void loadKeymap() {
-            TouchPointer.this.loadKeymap();
-            keyEventHandler.init();
-            mouseEventHandler.init();
+            new ProfileSelector(TouchPointer.this, profile -> {
+                TouchPointer.this.loadKeymap(profile);
+                keyEventHandler.init();
+                mouseEventHandler.init();
+            });
         }
     };
 
