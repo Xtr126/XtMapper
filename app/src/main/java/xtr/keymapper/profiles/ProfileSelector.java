@@ -3,7 +3,6 @@ package xtr.keymapper.profiles;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.view.WindowManager;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -12,7 +11,6 @@ import androidx.appcompat.view.ContextThemeWrapper;
 import java.util.ArrayList;
 
 import xtr.keymapper.R;
-import xtr.keymapper.TouchPointer;
 
 public class ProfileSelector {
     private String selectedProfile;
@@ -23,15 +21,15 @@ public class ProfileSelector {
 
     public ProfileSelector(Context context, OnProfileSelectedListener listener){
         ArrayList<String> allProfiles = new ArrayList<>(new KeymapProfiles(context).getAllProfiles().keySet());
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(context, android.R.layout.select_dialog_singlechoice, allProfiles);
+        CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
 
         AlertDialog dialog;
-        AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(context, R.style.Theme_Material3_DayNight_Dialog_Alert));
+        AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(context.getApplicationContext(), R.style.Theme_Material3_DayNight_Dialog_Alert));
 
         // Show dialog to select profile
-        if (!adapter.isEmpty())
+        if (!allProfiles.isEmpty())
             builder.setTitle(R.string.dialog_alert_select_profile)
-                    .setSingleChoiceItems(adapter, -1,
+                    .setSingleChoiceItems(items, -1,
                             (d, which) -> selectedProfile = allProfiles.get(which))
                     .setPositiveButton("ok", (d, which) -> {
                         if (selectedProfile != null)
