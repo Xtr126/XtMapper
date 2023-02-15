@@ -237,7 +237,7 @@ public class TouchPointer extends Service {
 
     private void startInputDeviceSelector() {
         Intent intent = new Intent(TouchPointer.this, InputDeviceSelector.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
     }
 
