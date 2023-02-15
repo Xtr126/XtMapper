@@ -4,7 +4,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.view.WindowManager;
 import android.widget.EditText;
-import android.widget.Toast;
 
 import androidx.appcompat.view.ContextThemeWrapper;
 
@@ -21,6 +20,10 @@ public class ProfileSelector {
 
     public ProfileSelector(Context context, OnProfileSelectedListener listener){
         ArrayList<String> allProfiles = new ArrayList<>(new KeymapProfiles(context).getAllProfiles().keySet());
+        if (allProfiles.size() == 1) {
+            listener.onProfileSelected(allProfiles.get(0));
+            return;
+        }
         CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
 
         AlertDialog dialog;
@@ -29,12 +32,9 @@ public class ProfileSelector {
         // Show dialog to select profile
         if (!allProfiles.isEmpty())
             builder.setTitle(R.string.dialog_alert_select_profile)
-                    .setSingleChoiceItems(items, -1,
-                            (d, which) -> selectedProfile = allProfiles.get(which))
-                    .setPositiveButton("ok", (d, which) -> {
-                        if (selectedProfile != null)
-                            listener.onProfileSelected(selectedProfile);
-                        else Toast.makeText(context, R.string.no_profile, Toast.LENGTH_SHORT).show();
+                    .setItems(items, (d, which) -> {
+                        selectedProfile = allProfiles.get(which);
+                        listener.onProfileSelected(selectedProfile);
                     });
         else { // Create profile if no profile found
             EditText editText = new EditText(context);

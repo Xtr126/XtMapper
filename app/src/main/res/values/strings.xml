@@ -43,6 +43,5 @@
     <string name="dialog_alert_editor_title">Not Activated</string>
     <string name="dialog_alert_add_profile">Enter new profile name:</string>
     <string name="dialog_alert_select_profile">Select Profile</string>
-    <string name="no_profile">No profile selected</string>
 
 </resources>
