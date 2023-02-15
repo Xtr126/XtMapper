@@ -86,12 +86,12 @@ public class TouchPointer extends Service {
             getDisplayMetrics();
 
             counter = 5;
+            activityCallback.updateCmdView1("\n connecting to server..");
             mHandler.post(this::tryBindRemoteService);
         });
     }
 
     private void tryBindRemoteService(){
-        activityCallback.updateCmdView1("\n connecting to server..");
         activityCallback.updateCmdView1(".");
         mService = InputService.getInstance();
 
@@ -324,15 +324,21 @@ public class TouchPointer extends Service {
 
             // Handle keyboard shortcuts
             int i = Utils.obtainIndex(event.code);
-            if (event.action == DOWN && i > 0) {
-                if (i == stop_service) stopPointer();
-                if (i == launch_editor)
-                    startService(new Intent(TouchPointer.this, EditorService.class));
+            if (i > 0) { // A-Z and 0-9 keys
+                if (event.action == DOWN) {
+                    if (i == stop_service) stopPointer();
+                    if (i == launch_editor)
+                        startService(new Intent(TouchPointer.this, EditorService.class));
+                }
+                if (dpad2Handler != null) // Dpad with WASD keys
+                    dpad2Handler.handleEvent(event.code, event.action);
+            } else { // CTRL, ALT, Arrow keys
+                if (dpad1Handler != null)  // Dpad with arrow keys
+                    dpad1Handler.handleEvent(event.code, event.action);
+
+                if (event.code.equals("KEY_GRAVE") && event.action == DOWN)
+                    mouseEventHandler.triggerMouseAim();
             }
-
-            if (event.code.equals("KEY_GRAVE") && event.action == DOWN)
-                mouseEventHandler.triggerMouseAim();
-
             if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
 
             for (int n = 0; n < keyList.size(); n++) {
@@ -340,12 +346,6 @@ public class TouchPointer extends Service {
                 if (event.code.equals(key.code))
                     mService.injectEvent(key.x, key.y, event.action, n);
             }
-
-            if (dpad1Handler != null)  // Dpad with arrow keys
-                dpad1Handler.handleEvent(event.code, event.action);
-
-            if (dpad2Handler != null) // Dpad with WASD keys
-                dpad2Handler.handleEvent(event.code, event.action);
         }
     }
 
