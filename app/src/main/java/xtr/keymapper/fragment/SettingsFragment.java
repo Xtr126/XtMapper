@@ -16,6 +16,7 @@ import androidx.annotation.Nullable;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import xtr.keymapper.KeymapConfig;
 import xtr.keymapper.Utils;
@@ -48,17 +49,20 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
         binding.inputDevice.setText(keymapConfig.device);
 
-        loadKeyboardShortcuts();
-        binding.launchEditor.setOnKeyListener(this::onKey);
-        binding.stopService.setOnKeyListener(this::onKey);
 
         binding.mouseDragToggle.setChecked(keymapConfig.ctrlDragMouseGesture);
         binding.mouseWheelToggle.setChecked(keymapConfig.ctrlMouseWheelZoom);
+
+        loadKeyboardShortcuts();
+        binding.launchEditor.setOnKeyListener(this::onKey);
+        binding.stopService.setOnKeyListener(this::onKey);
+        binding.switchProfile.setOnKeyListener(this::onKey);
     }
 
     private void loadKeyboardShortcuts(){
         int stop_service = keymapConfig.stopServiceShortcutKey;
         int launch_editor = keymapConfig.launchEditorShortcutKey;
+        int switch_profile = keymapConfig.switchProfileShortcutKey;
 
         if (stop_service > -1) {
             String stopServiceShortcutKey = String.valueOf(Utils.alphabet.charAt(stop_service));
@@ -69,6 +73,24 @@ public class SettingsFragment extends BottomSheetDialogFragment {
             String launchEditorShortcutKey = String.valueOf(Utils.alphabet.charAt(launch_editor));
             binding.launchEditor.setText(launchEditorShortcutKey);
         }
+
+        if (switch_profile > -1) {
+            String switchProfileShortcutKey = String.valueOf(Utils.alphabet.charAt(launch_editor));
+            binding.switchProfile.setText(switchProfileShortcutKey);
+        }
+
+        loadModifierKeys();
+    }
+
+    private void loadModifierKeys() {
+        binding.launchEditorModifier.setText(keymapConfig.launchEditorShortcutKeyModifier);
+        binding.stopServiceModifier.setText(keymapConfig.stopServiceShortcutKeyModifier);
+        binding.switchProfileModifier.setText(keymapConfig.switchProfileShortcutKeyModifier);
+
+        final String[] modifierKeys = {KeymapConfig.KEY_CTRL, KeymapConfig.KEY_ALT};
+        ((MaterialAutoCompleteTextView)binding.launchEditorModifier).setSimpleItems(modifierKeys);
+        ((MaterialAutoCompleteTextView)binding.stopServiceModifier).setSimpleItems(modifierKeys);
+        ((MaterialAutoCompleteTextView)binding.switchProfileModifier).setSimpleItems(modifierKeys);
     }
 
     public boolean onKey(View view, int keyCode, KeyEvent event) {
@@ -89,11 +111,19 @@ public class SettingsFragment extends BottomSheetDialogFragment {
     private void saveKeyboardShortcuts() {
         if(binding.launchEditor.getText().toString().isEmpty()) binding.launchEditor.setText(" ");
         if(binding.stopService.getText().toString().isEmpty()) binding.stopService.setText(" ");
+        if(binding.switchProfile.getText().toString().isEmpty()) binding.switchProfile.setText(" ");
 
         int launch_editor_shortcut = Utils.alphabet.indexOf(binding.launchEditor.getText().charAt(0));
         int stop_service_shortcut = Utils.alphabet.indexOf(binding.stopService.getText().charAt(0));
+        int switch_profile_shortcut = Utils.alphabet.indexOf(binding.switchProfile.getText().charAt(0));
+
         keymapConfig.launchEditorShortcutKey = launch_editor_shortcut;
         keymapConfig.stopServiceShortcutKey = stop_service_shortcut;
+        keymapConfig.switchProfileShortcutKey = switch_profile_shortcut;
+
+        keymapConfig.launchEditorShortcutKeyModifier = binding.launchEditorModifier.getText().toString();
+        keymapConfig.stopServiceShortcutKeyModifier = binding.stopServiceModifier.getText().toString();
+        keymapConfig.switchProfileShortcutKeyModifier = binding.switchProfileModifier.getText().toString();
     }
 
     @Override

@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
             setButtonActive(binding.controls.startPointer);
             binding.controls.startPointer.setOnClickListener(v -> stopPointer());
         }
-    }
+        }
 
     public void stopPointer(){
         pointerOverlay.hideCursor();
