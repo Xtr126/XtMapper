@@ -38,9 +38,13 @@ public class InputService extends Service {
         super();
         Log.i("XtMapper", "starting server...");
         supportsUinput = initMouseCursor(1280, 720);
-        ServiceManager.addService("xtmapper", binder);
-        System.out.println("Waiting for overlay...");
-        start_getevent();
+        try {
+            ServiceManager.addService("xtmapper", binder);
+            System.out.println("Waiting for overlay...");
+            start_getevent();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void start_getevent() {

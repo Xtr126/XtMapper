@@ -18,7 +18,7 @@ public class ServiceManager {
      * @param name the name of the new service
      * @param service the service object
      */
-    public static void addService(String name, IBinder service) {
+    public static void addService(String name, IBinder service) throws Exception {
         throw new RuntimeException("STUB");
     }
 }
