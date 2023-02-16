@@ -1,6 +1,7 @@
 package xtr.keymapper;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.os.Handler;
@@ -206,18 +207,16 @@ public class EditorUI extends OnKeyEventListener.Stub {
             addCrosshair(DEFAULT_X, DEFAULT_Y);
         });
 
-        binding.dPad.setOnClickListener(new View.OnClickListener() {
-            int x = 0;
-            @Override
-            public void onClick(View v) {
-                if (x == 0) {
-                    addDpad1(DEFAULT_X, DEFAULT_Y);
-                    x = 1;
-                } else {
-                    addDpad2(DEFAULT_X, DEFAULT_Y);
-                    x = 0;
-                }
-            }
+        binding.dPad.setOnClickListener(v -> {
+            final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
+                if (i == 0) addDpad1(DEFAULT_X, DEFAULT_Y);
+                else addDpad2(DEFAULT_X, DEFAULT_Y);
+            });
+            AlertDialog dialog = builder.create();
+            dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+            dialog.show();
         });
     }
 
