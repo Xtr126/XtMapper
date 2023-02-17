@@ -5,12 +5,15 @@ import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
 import static xtr.keymapper.InputEventCodes.REL_WHEEL;
 import static xtr.keymapper.InputEventCodes.REL_X;
 import static xtr.keymapper.InputEventCodes.REL_Y;
+import static xtr.keymapper.KeymapConfig.KEY_ALT;
+import static xtr.keymapper.KeymapConfig.KEY_CTRL;
 import static xtr.keymapper.TouchPointer.PointerId.dpad1pid;
 import static xtr.keymapper.TouchPointer.PointerId.dpad2pid;
 import static xtr.keymapper.TouchPointer.PointerId.pid1;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
+import static xtr.keymapper.server.InputService.reloadKeymap;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -204,11 +207,6 @@ public class TouchPointer extends Service {
         keymapConfig = new KeymapConfig(this);
         mouseEventHandler.sensitivity = keymapConfig.mouseSensitivity.intValue();
         mouseEventHandler.scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
-        mouseEventHandler.ctrl_mouse_wheel_zoom = keymapConfig.ctrlMouseWheelZoom;
-        mouseEventHandler.ctrl_mouse_drag_gesture = keymapConfig.ctrlDragMouseGesture;
-
-        keyEventHandler.stop_service = keymapConfig.stopServiceShortcutKey;
-        keyEventHandler.launch_editor = keymapConfig.launchEditorShortcutKey;
     }
 
     public void sendSettingstoServer() throws RemoteException {
@@ -288,7 +286,7 @@ public class TouchPointer extends Service {
 
     private class KeyEventHandler {
         boolean ctrlKeyPressed = false;
-        int stop_service, launch_editor;
+        boolean altKeyPressed = false;
 
         private void init() {
             if (dpad1Handler != null) dpad1Handler.setInterface(mService);
@@ -321,17 +319,13 @@ public class TouchPointer extends Service {
             }
             if (activityCallback != null) activityCallback.updateCmdView2(line + "\n");
 
-
-            // Handle keyboard shortcuts
             int i = Utils.obtainIndex(event.code);
             if (i > 0) { // A-Z and 0-9 keys
-                if (event.action == DOWN) {
-                    if (i == stop_service) stopPointer();
-                    if (i == launch_editor)
-                        startService(new Intent(TouchPointer.this, EditorService.class));
-                }
+                if (event.action == DOWN) handleKeyboardShortcuts(i);
+
                 if (dpad2Handler != null) // Dpad with WASD keys
                     dpad2Handler.handleEvent(event.code, event.action);
+
             } else { // CTRL, ALT, Arrow keys
                 if (dpad1Handler != null)  // Dpad with arrow keys
                     dpad1Handler.handleEvent(event.code, event.action);
@@ -340,6 +334,7 @@ public class TouchPointer extends Service {
                     mouseEventHandler.triggerMouseAim();
             }
             if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
+            if (event.code.contains("ALT")) altKeyPressed = event.action == DOWN;
 
             for (int n = 0; n < keyList.size(); n++) {
                 KeymapProfiles.Key key = keyList.get(n);
@@ -347,12 +342,27 @@ public class TouchPointer extends Service {
                     mService.injectEvent(key.x, key.y, event.action, n);
             }
         }
+
+        private void handleKeyboardShortcuts(int keycode) {
+            final String modifier = ctrlKeyPressed ? KEY_CTRL : KEY_ALT;
+
+            if (keymapConfig.launchEditorShortcutKeyModifier.equals(modifier))
+                if (keycode == keymapConfig.launchEditorShortcutKey)
+                    startService(new Intent(TouchPointer.this, EditorService.class));
+
+            if (keymapConfig.stopServiceShortcutKeyModifier.equals(modifier))
+                if (keycode == keymapConfig.stopServiceShortcutKey)
+                    stopPointer();
+
+            if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
+                if (keycode == keymapConfig.switchProfileShortcutKey)
+                    reloadKeymap();
+        }
     }
 
     private class MouseEventHandler {
         int sensitivity = 1;
         int scroll_speed_multiplier = 1;
-        boolean ctrl_mouse_wheel_zoom, ctrl_mouse_drag_gesture;
         private MousePinchZoom pinchZoom;
         private MouseWheelZoom scrollZoomHandler;
         private final int pointerId = pid1.id;
@@ -373,7 +383,8 @@ public class TouchPointer extends Service {
                 mouseAimHandler.setInterface(mService);
                 mouseAimHandler.setDimensions(width, height);
             }
-            if (ctrl_mouse_wheel_zoom) scrollZoomHandler = new MouseWheelZoom(mService);
+            if (keymapConfig.ctrlMouseWheelZoom)
+                scrollZoomHandler = new MouseWheelZoom(mService);
         }
 
         private void movePointer() { mHandler.post(() -> {
@@ -388,11 +399,11 @@ public class TouchPointer extends Service {
                 mouseAimHandler.handleEvent(code, value);
                 return;
             }
-            if (keyEventHandler.ctrlKeyPressed && pointer_down && ctrl_mouse_drag_gesture) {
-                pointer_down = pinchZoom.handleEvent(code, value);
-                return;
-            }
-
+            if (keyEventHandler.ctrlKeyPressed && pointer_down)
+                if (keymapConfig.ctrlDragMouseGesture) {
+                    pointer_down = pinchZoom.handleEvent(code, value);
+                    return;
+                }
             switch (code) {
                 case REL_X: {
                     if (value == 0) break;
@@ -414,7 +425,7 @@ public class TouchPointer extends Service {
                 }
                 case BTN_MOUSE:
                     pointer_down = value == 1;
-                    if (keyEventHandler.ctrlKeyPressed && ctrl_mouse_drag_gesture) {
+                    if (keyEventHandler.ctrlKeyPressed && keymapConfig.ctrlDragMouseGesture) {
                         pinchZoom = new MousePinchZoom(mService, x1, y1);
                         pinchZoom.handleEvent(code, value);
                     } else mService.injectEvent(x1, y1, value, pointerId);
@@ -425,7 +436,7 @@ public class TouchPointer extends Service {
                     break;
 
                 case REL_WHEEL:
-                    if (keyEventHandler.ctrlKeyPressed && ctrl_mouse_wheel_zoom)
+                    if (keyEventHandler.ctrlKeyPressed && keymapConfig.ctrlMouseWheelZoom)
                         scrollZoomHandler.onScrollEvent(value, x1, y1);
                     else
                         mService.injectScroll(x1, y1, value * scroll_speed_multiplier);
