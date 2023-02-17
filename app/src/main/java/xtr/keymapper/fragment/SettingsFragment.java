@@ -75,7 +75,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         }
 
         if (switch_profile > -1) {
-            String switchProfileShortcutKey = String.valueOf(Utils.alphabet.charAt(launch_editor));
+            String switchProfileShortcutKey = String.valueOf(Utils.alphabet.charAt(switch_profile));
             binding.switchProfile.setText(switchProfileShortcutKey);
         }
 
