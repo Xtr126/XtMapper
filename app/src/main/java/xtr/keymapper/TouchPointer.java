@@ -13,7 +13,6 @@ import static xtr.keymapper.TouchPointer.PointerId.pid1;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
-import static xtr.keymapper.server.InputService.reloadKeymap;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -356,7 +355,7 @@ public class TouchPointer extends Service {
 
             if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
                 if (keycode == keymapConfig.switchProfileShortcutKey)
-                    reloadKeymap();
+                    mHandler.post(InputService::reloadKeymap);
         }
     }
 
