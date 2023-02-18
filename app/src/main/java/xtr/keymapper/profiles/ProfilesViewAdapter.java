@@ -1,6 +1,5 @@
 package xtr.keymapper.profiles;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
@@ -16,6 +15,7 @@ import androidx.appcompat.view.ContextThemeWrapper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
 
@@ -68,7 +68,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
                                 profileName));
             } catch (PackageManager.NameNotFoundException ignored) {
             }
-            else keymapProfiles.deleteProfile(profileName);
+            else keymapProfiles.deleteProfile(null);
         });
     }
 
@@ -107,31 +107,29 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
             EditText editText = new EditText(view.getContext());
             editText.setText(profileName);
 
-            AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog_Alert));
-            builder.setMessage(R.string.dialog_alert_add_profile)
-                    .setPositiveButton("ok", (dialog, which) -> {
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark));
+            builder.setTitle(R.string.dialog_alert_add_profile)
+                    .setPositiveButton("Ok", (dialog, which) -> {
                         keymapProfiles.renameProfile(profileName, editText.getText().toString());
                         callback.resetAdapter();
                     })
-                    .setNegativeButton("cancel", (dialog, which) -> {})
-                    .setView(editText);
-            AlertDialog dialog = builder.create();
-            dialog.show();
+                    .setNegativeButton("Cancel", (dialog, which) -> {})
+                    .setView(editText)
+                    .show();
         });
 
         viewHolder.appIconButton.setOnClickListener(view -> {
             ProfilesApps appsView = new ProfilesApps(view.getContext(), profileName);
 
-            AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog_Alert));
-            builder.setPositiveButton("ok", (dialog, which) -> {
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark));
+            builder.setPositiveButton("Ok", (dialog, which) -> {
                         keymapProfiles.setProfilePackageName(recyclerData.name.toString(), appsView.packageName);
                         appsView.onDestroyView();
                         callback.resetAdapter();
                     })
-                    .setNegativeButton("cancel", (dialog, which) -> {})
-                    .setView(appsView.view);
-            AlertDialog dialog = builder.create();
-            dialog.show();
+                    .setNegativeButton("Cancel", (dialog, which) -> {})
+                    .setView(appsView.view)
+                    .show();
         });
     }
 

@@ -1,6 +1,5 @@
 package xtr.keymapper.profiles;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -14,6 +13,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.appcompat.view.ContextThemeWrapper;
 import androidx.fragment.app.Fragment;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
 
@@ -42,17 +43,16 @@ public class ProfilesViewFragment extends Fragment {
         setAdapter();
 
         binding.addButton.setOnClickListener(v -> {
-            AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(context, R.style.Theme_Material3_DayNight_Dialog_Alert));
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark));
             EditText editText = new EditText(context);
-            builder.setMessage(R.string.dialog_alert_add_profile)
-                    .setPositiveButton("ok", (dialog, which) -> {
+            builder.setTitle(R.string.dialog_alert_add_profile)
+                    .setPositiveButton("Ok", (dialog, which) -> {
                         new KeymapProfiles(context).saveProfile(editText.getText().toString(), new ArrayList<>(), context.getPackageName());
                         setAdapter();
                     })
-                    .setNegativeButton("cancel", (dialog, which) -> {})
-                    .setView(editText);
-            AlertDialog dialog = builder.create();
-            dialog.show();
+                    .setNegativeButton("Cancel", (dialog, which) -> {})
+                    .setView(editText)
+                    .show();
         });
 
         binding.profilesButton.setOnClickListener(v -> {

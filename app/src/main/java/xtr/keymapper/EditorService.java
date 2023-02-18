@@ -1,18 +1,16 @@
 package xtr.keymapper;
 
-import android.app.AlertDialog;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.view.WindowManager;
-import android.widget.ArrayAdapter;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.view.ContextThemeWrapper;
 
-import java.util.ArrayList;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import xtr.keymapper.profiles.KeymapProfiles;
 import xtr.keymapper.profiles.ProfileSelector;
 import xtr.keymapper.server.InputService;
 
@@ -36,10 +34,10 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
                 } catch (RemoteException ignored) {
                 }
             else {
-                AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(this, R.style.Theme_Material3_DayNight_Dialog_Alert));
+                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(this, R.style.Theme_Material3_Dark));
 
                 builder.setMessage(R.string.dialog_alert_editor)
-                        .setPositiveButton("ok", (dialog, which) -> {})
+                        .setPositiveButton("Ok", (dialog, which) -> {})
                         .setTitle(R.string.dialog_alert_editor_title);
                 AlertDialog dialog = builder.create();
                 dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);

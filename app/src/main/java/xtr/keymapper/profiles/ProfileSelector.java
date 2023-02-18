@@ -1,11 +1,13 @@
 package xtr.keymapper.profiles;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.view.WindowManager;
 import android.widget.EditText;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.view.ContextThemeWrapper;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
 
@@ -26,8 +28,8 @@ public class ProfileSelector {
         }
         CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
 
-        AlertDialog dialog;
-        AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(context.getApplicationContext(), R.style.Theme_Material3_DayNight_Dialog_Alert));
+        AlertDialog  dialog;
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context.getApplicationContext(), R.style.Theme_Material3_Dark));
 
         // Show dialog to select profile
         if (!allProfiles.isEmpty())
@@ -38,14 +40,14 @@ public class ProfileSelector {
                     });
         else { // Create profile if no profile found
             EditText editText = new EditText(context);
-            builder.setMessage(R.string.dialog_alert_add_profile)
-                    .setPositiveButton("ok", (d, which) -> {
+            builder.setTitle(R.string.dialog_alert_add_profile)
+                    .setPositiveButton("Ok", (d, which) -> {
                         selectedProfile = editText.getText().toString();
                         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
                         keymapProfiles.saveProfile(selectedProfile, new ArrayList<>(), context.getPackageName());
                         listener.onProfileSelected(selectedProfile);
                     })
-                    .setNegativeButton("cancel", (d, which) -> {})
+                    .setNegativeButton("Cancel", (d, which) -> {})
                     .setView(editText);
         }
         dialog = builder.create();
