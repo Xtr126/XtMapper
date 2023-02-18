@@ -7,6 +7,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -16,9 +17,11 @@ import androidx.annotation.Nullable;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.R;
 import xtr.keymapper.Utils;
 import xtr.keymapper.databinding.FragmentSettingsDialogBinding;
 import xtr.keymapper.dpad.DpadConfig;
@@ -57,6 +60,33 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.launchEditor.setOnKeyListener(this::onKey);
         binding.stopService.setOnKeyListener(this::onKey);
         binding.switchProfile.setOnKeyListener(this::onKey);
+
+        binding.bottomNavigation.setOnItemSelectedListener(item -> {
+            setDefaultVisibilty();
+
+            switch (item.getItemId()) {
+                case R.id.sliders:
+                    binding.sliders.setVisibility(View.VISIBLE);
+                    return true;
+
+                case R.id.shortcuts:
+                    binding.shortcuts.setVisibility(View.VISIBLE);
+                    return true;
+
+                case R.id.misc:
+                    binding.misc.setVisibility(View.VISIBLE);
+                    return true;
+            }
+            return false;
+        });
+        setDefaultVisibilty();
+        binding.sliders.setVisibility(View.VISIBLE);
+    }
+
+    private void setDefaultVisibilty() {
+        binding.sliders.setVisibility(View.GONE);
+        binding.misc.setVisibility(View.GONE);
+        binding.shortcuts.setVisibility(View.GONE);
     }
 
     private void loadKeyboardShortcuts(){

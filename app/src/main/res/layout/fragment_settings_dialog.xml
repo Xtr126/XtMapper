@@ -6,215 +6,253 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:theme="@style/Theme.Material3.DynamicColors.Dark"
-    android:padding="20dp">
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/mouse_sensitivity"/>
-
-    <com.google.android.material.slider.Slider
-        android:id="@+id/slider_mouse"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:stepSize="1"
-        android:valueFrom="1"
-        android:valueTo="5"
-        app:haloColor="@color/purple_700"
-        app:thumbColor="@color/purple_500"
-        app:trackColorActive="@color/teal_200"
-        app:trackHeight="10dp"
-        tools:value="2" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/dpad_radius"/>
-
-    <com.google.android.material.slider.Slider
-        android:id="@+id/slider_dpad"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:stepSize="0.1"
-        android:valueFrom="0.5"
-        android:valueTo="2.0"
-        app:trackHeight="10dp"
-        tools:value="1.0" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/scroll_speed"/>
-
-    <com.google.android.material.slider.Slider
-        android:id="@+id/slider_scroll_speed"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:stepSize="1"
-        android:valueFrom="1"
-        android:valueTo="5"
-        app:haloColor="@color/purple_700"
-        app:thumbColor="@color/purple_500"
-        app:trackColorActive="@color/teal_200"
-        app:trackHeight="10dp"
-        tools:value="2" />
-
-    <TextView
-        android:layout_marginTop="10dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/keyboard_shortcuts" />
+    android:padding="20dp"
+    android:animateLayoutChanges="true">
 
     <LinearLayout
+        android:id="@+id/sliders"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_marginBottom="20dp"
+        android:orientation="vertical">
 
         <TextView
-            android:layout_width="90dp"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="10dp"
-            android:text="@string/launch_editor"
-            android:labelFor="@id/launch_editor_modifier"/>
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-
-            <AutoCompleteTextView
-                android:id="@+id/launch_editor_modifier"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="none" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="80dp"
             android:layout_height="wrap_content"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-            android:hint="@string/key">
-            <com.google.android.material.textfield.TextInputEditText
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/launch_editor"
-                android:inputType="none" />
+            android:text="@string/mouse_sensitivity" />
 
-        </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slider_mouse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:stepSize="1"
+            android:valueFrom="1"
+            android:valueTo="5"
+            app:haloColor="@color/purple_700"
+            app:thumbColor="@color/purple_500"
+            app:trackColorActive="@color/teal_200"
+            app:trackHeight="10dp"
+            tools:value="2" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/scroll_speed" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slider_scroll_speed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:stepSize="1"
+            android:valueFrom="1"
+            android:valueTo="5"
+            app:haloColor="@color/purple_700"
+            app:thumbColor="@color/purple_500"
+            app:trackColorActive="@color/teal_200"
+            app:trackHeight="10dp"
+            tools:value="2" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dpad_radius" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slider_dpad"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:stepSize="0.1"
+            android:valueFrom="0.5"
+            android:valueTo="2.0"
+            app:trackHeight="10dp"
+            tools:value="1.0" />
 
     </LinearLayout>
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/shortcuts"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_gravity="center"
+        android:layout_marginBottom="20dp"
+        android:orientation="vertical">
 
         <TextView
-            android:layout_width="90dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/stop_service"
-            android:layout_marginRight="10dp"
-            android:labelFor="@id/stop_service_modifier"/>
+            android:text="@string/keyboard_shortcuts" />
 
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-
-            <AutoCompleteTextView
-                android:id="@+id/stop_service_modifier"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="none" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="80dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-            android:hint="@string/key">
-            <com.google.android.material.textfield.TextInputEditText
-                android:layout_width="match_parent"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="90dp"
                 android:layout_height="wrap_content"
-                android:id="@+id/stop_service"
-                android:inputType="none" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginRight="10dp"
+                android:labelFor="@id/launch_editor_modifier"
+                android:text="@string/launch_editor" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <AutoCompleteTextView
+                    android:id="@+id/launch_editor_modifier"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:hint="@string/key">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/launch_editor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="90dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="10dp"
+                android:labelFor="@id/stop_service_modifier"
+                android:text="@string/stop_service" />
+
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <AutoCompleteTextView
+                    android:id="@+id/stop_service_modifier"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:hint="@string/key">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/stop_service"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="90dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="10dp"
+                android:text="@string/switch_profile" />
+
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <AutoCompleteTextView
+                    android:id="@+id/switch_profile_modifier"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:hint="@string/key">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/switch_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/misc"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_marginBottom="20dp"
+        android:orientation="vertical">
 
         <TextView
-            android:layout_width="90dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/switch_profile"
-            android:layout_marginRight="10dp"/>
+            android:text="@string/pinch_to_zoom_gesture_info" />
 
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+        <com.google.android.material.button.MaterialButtonToggleGroup
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
 
-            <AutoCompleteTextView
-                android:id="@+id/switch_profile_modifier"
-                android:layout_width="match_parent"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/mouse_wheel_toggle"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:inputType="none" />
+                android:text="@string/mouse_wheel" />
 
-        </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/mouse_drag_toggle"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/drag_mouse" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="80dp"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-            android:hint="@string/key">
-            <com.google.android.material.textfield.TextInputEditText
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/switch_profile"
-                android:inputType="none" />
-        </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginTop="20dp"
+            android:labelFor="@id/input_device"
+            android:text="@string/mouse_input_device" />
+
+        <EditText
+            android:id="@+id/input_device"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:importantForAutofill="no"
+            android:inputType="textNoSuggestions" />
     </LinearLayout>
 
-    <com.google.android.material.textview.MaterialTextView
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="@string/pinch_to_zoom_gesture_info" />
+        app:menu="@menu/bottom_navigation_menu" />
 
-    <com.google.android.material.button.MaterialButtonToggleGroup
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
-        <com.google.android.material.button.MaterialButton
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/mouse_wheel_toggle"
-            android:text="@string/mouse_wheel"/>
-        <com.google.android.material.button.MaterialButton
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/mouse_drag_toggle"
-            android:text="@string/drag_mouse"/>
-    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/mouse_input_device"
-        android:labelFor="@id/input_device"
-        android:layout_marginTop="20dp"/>
-
-    <EditText
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="textNoSuggestions"
-        android:id="@+id/input_device"
-        android:importantForAutofill="no" />
 </LinearLayout>

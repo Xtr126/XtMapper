@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/sliders"
+        android:enabled="true"
+        android:icon="@drawable/ic_baseline_speed_24"
+        android:title="@string/tuning"/>
+    <item
+        android:id="@+id/shortcuts"
+        android:enabled="true"
+        android:icon="@drawable/dpad"
+        android:title="@string/shortcuts" />
+    <item
+        android:id="@+id/misc"
+        android:enabled="true"
+        android:icon="@drawable/ic_baseline_mouse_36"
+        android:title="@string/gestures" />
+</menu>
