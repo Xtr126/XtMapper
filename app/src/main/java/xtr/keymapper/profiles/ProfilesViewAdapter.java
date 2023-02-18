@@ -4,17 +4,13 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.view.ContextThemeWrapper;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
@@ -29,24 +25,17 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
 
     private final ArrayList<RecyclerData> recyclerDataArrayList = new ArrayList<>();
     private final OnItemRemovedListener callback;
-    private ProfileRowItemBinding itemBinding;
 
     /**
      * Provide a reference to the type of views that you are using (custom ViewHolder)
      */
-    public class ViewHolder extends RecyclerView.ViewHolder {
-        private final TextView textView;
-        private final ImageView appIcon;
-        private final MaterialButton deleteButton, editButton;
-        private final MaterialButton appIconButton;
+    public static class ViewHolder extends RecyclerView.ViewHolder {
 
-        public ViewHolder(View v) {
-            super(v);
-            textView = itemBinding.textView;
-            appIcon = itemBinding.appIcon;
-            appIconButton = itemBinding.appIconButton;
-            deleteButton = itemBinding.deleteButton;
-            editButton = itemBinding.editButton;
+        private final ProfileRowItemBinding binding;
+
+        public ViewHolder(ProfileRowItemBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
         }
     }
 
@@ -77,10 +66,8 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int viewType) {
         // Create a new view
-        itemBinding = ProfileRowItemBinding.inflate(LayoutInflater.from(viewGroup.getContext()), viewGroup, false);
-        View v = itemBinding.getRoot();
-
-        return new ViewHolder(v);
+        ProfileRowItemBinding itemBinding = ProfileRowItemBinding.inflate(LayoutInflater.from(viewGroup.getContext()), viewGroup, false);
+        return new ViewHolder(itemBinding);
     }
 
     // Replace the contents of a view (invoked by the layout manager)
@@ -89,21 +76,21 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         // Get element from your dataset at this position and replace the contents of the view
         // with that element
         RecyclerData recyclerData = recyclerDataArrayList.get(position);
-        viewHolder.textView.setText(recyclerData.name);
-        viewHolder.appIcon.setBackground(recyclerData.icon);
+        viewHolder.binding.textView.setText(recyclerData.name);
+        viewHolder.binding.appIcon.setImageDrawable(recyclerData.icon);
 
         final String profileName = recyclerData.name.toString();
 
         Context context = viewHolder.itemView.getContext();
         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
 
-        viewHolder.deleteButton.setOnClickListener(v -> {
+        viewHolder.binding.deleteButton.setOnClickListener(v -> {
             keymapProfiles.deleteProfile(profileName);
             callback.resetAdapter();
         });
 
 
-        viewHolder.editButton.setOnClickListener(view -> {
+        viewHolder.binding.editButton.setOnClickListener(view -> {
             EditText editText = new EditText(view.getContext());
             editText.setText(profileName);
 
@@ -118,7 +105,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
                     .show();
         });
 
-        viewHolder.appIconButton.setOnClickListener(view -> {
+        viewHolder.binding.appIconButton.setOnClickListener(view -> {
             ProfilesApps appsView = new ProfilesApps(view.getContext(), profileName);
 
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark));

@@ -4,22 +4,22 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.content.res.AppCompatResources;
+import androidx.appcompat.view.ContextThemeWrapper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import xtr.keymapper.R;
+import xtr.keymapper.databinding.AppViewBinding;
 import xtr.keymapper.databinding.FragmentProfilesAppsBinding;
 
 public class ProfilesApps {
@@ -31,7 +31,7 @@ public class ProfilesApps {
     public ProfilesApps(Context context, String profileName){
         this.packageName  = new KeymapProfiles(context).getProfile(profileName).packageName;
 
-        view = createView(LayoutInflater.from(context));
+        view = createView(LayoutInflater.from(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark)));
         onViewCreated(view);
     }
 
@@ -55,14 +55,14 @@ public class ProfilesApps {
     public class AppsGridAdapter extends RecyclerView.Adapter<AppsGridAdapter.RecyclerViewHolder> {
 
         private final ArrayList<RecyclerData> appsDataArrayList = new ArrayList<>();
-        private ColorStateList defaultTint;
+        private int defaultColor;
 
-        private final ColorStateList selectedTint;
+        private final int selectedColor;
 
         private View selectedView;
 
         public AppsGridAdapter(Context context) {
-            selectedTint = ColorStateList.valueOf(context.getColor(R.color.purple_700));
+            selectedColor = context.getColor(R.color.material_on_surface_stroke);
             PackageManager pm = context.getPackageManager();
             Intent i = new Intent(Intent.ACTION_MAIN, null);
             i.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -87,22 +87,22 @@ public class ProfilesApps {
         @Override
         public RecyclerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             // Inflate Layout
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.app_view, parent, false);
-            defaultTint = view.getRootView().getBackgroundTintList();
-            return new RecyclerViewHolder(view);
+            AppViewBinding itemBinding = AppViewBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+            defaultColor = Color.TRANSPARENT;
+            return new RecyclerViewHolder(itemBinding);
         }
 
         @Override
         public void onBindViewHolder(@NonNull RecyclerViewHolder holder, int position) {
             // Set the data to textview and imageview.
             RecyclerData recyclerData = appsDataArrayList.get(position);
-            holder.appName.setText(recyclerData.title);
-            holder.appIcon.setImageDrawable(recyclerData.icon);
+            holder.binding.appName.setText(recyclerData.title);
+            holder.binding.appIcon.setImageDrawable(recyclerData.icon);
 
 
             if (recyclerData.packageName.equals(packageName ) && selectedView == null) {
-                selectedView = holder.appName.getRootView();
-                selectedView.setBackgroundTintList(selectedTint);
+                selectedView = holder.binding.getRoot();
+                selectedView.setBackgroundColor(selectedColor);
             }
         }
 
@@ -115,25 +115,22 @@ public class ProfilesApps {
         // View Holder Class to handle Recycler View.
         private class RecyclerViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
-            private final TextView appName;
-            private final ImageView appIcon;
+            private final AppViewBinding binding;
 
-            public RecyclerViewHolder(@NonNull View itemView) {
-                super(itemView);
-                appName = itemView.findViewById(R.id.app_name);
-                appIcon = itemView.findViewById(R.id.app_icon);
-
-                itemView.setOnClickListener(this);
+            public RecyclerViewHolder(@NonNull AppViewBinding binding) {
+                super(binding.getRoot());
+                binding.getRoot().setOnClickListener(this);
+                this.binding = binding;
             }
 
             @Override
             public void onClick (View view) {
                 int i = getAdapterPosition();
                 ProfilesApps.this.packageName = appsDataArrayList.get(i).packageName;
-                binding.currentProfile.setText(packageName);
+                ProfilesApps.this.binding.currentProfile.setText(packageName);
 
-                if (selectedView != null) selectedView.setBackgroundTintList(defaultTint);
-                view.setBackgroundTintList(selectedTint);
+                if (selectedView != null) selectedView.setBackgroundColor(defaultColor);
+                view.setBackgroundColor(selectedColor);
                 selectedView = view;
             }
         }
