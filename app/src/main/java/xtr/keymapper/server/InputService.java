@@ -144,12 +144,14 @@ public class InputService extends Service {
         }
 
         @Override
-        public void setOnMouseEventListener(OnMouseEventListener l)  {
+        public void setOnMouseEventListener(OnMouseEventListener l) throws RemoteException {
+            l.asBinder().linkToDeath(mDeathRecipient, 0);
             mOnMouseEventListener = l;
         }
 
         @Override
         public void removeOnMouseEventListener(OnMouseEventListener l)  {
+            l.asBinder().unlinkToDeath(mDeathRecipient, 0);
             stopMouse();
             mOnMouseEventListener = null;
         }
@@ -164,6 +166,8 @@ public class InputService extends Service {
             if (mCallback != null) mCallback.loadKeymap();
         }
     };
+
+    private final IBinder.DeathRecipient mDeathRecipient = this::stopMouse;
 
     /*
      * Called from native code to send mouse event to client
