@@ -25,8 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import xtr.keymapper.databinding.CrosshairBinding;
-import xtr.keymapper.databinding.Dpad1Binding;
-import xtr.keymapper.databinding.Dpad2Binding;
+import xtr.keymapper.databinding.DpadArrowsBinding;
+import xtr.keymapper.databinding.DpadWasdBinding;
 import xtr.keymapper.databinding.KeymapEditorBinding;
 import xtr.keymapper.databinding.ResizableBinding;
 import xtr.keymapper.dpad.Dpad;
@@ -151,9 +151,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
         // Add Keyboard keys as Views
         profile.keys.forEach(this::addKey);
 
-        if (profile.dpad1 != null) addDpad1(profile.dpad1.getX(), profile.dpad1.getY());
+        if (profile.dpad1 != null) addArrowKeysDpad(profile.dpad1.getX(), profile.dpad1.getY());
 
-        if (profile.dpad2 != null) addDpad2(profile.dpad2.getX(), profile.dpad2.getY());
+        if (profile.dpad2 != null) addWasdDpad(profile.dpad2.getX(), profile.dpad2.getY());
 
         mouseAimConfig = profile.mouseAimConfig;
         if (mouseAimConfig != null) addCrosshair(mouseAimConfig.xCenter, mouseAimConfig.yCenter);
@@ -211,8 +211,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
             final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
             builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
-                if (i == 0) addDpad1(DEFAULT_X, DEFAULT_Y);
-                else addDpad2(DEFAULT_X, DEFAULT_Y);
+                if (i == 0) addArrowKeysDpad(DEFAULT_X, DEFAULT_Y);
+                else addWasdDpad(DEFAULT_X, DEFAULT_Y);
             });
             AlertDialog dialog = builder.create();
             dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
@@ -220,30 +220,32 @@ public class EditorUI extends OnKeyEventListener.Stub {
         });
     }
 
-    private void addDpad1(float x, float y) {
+    private void addWasdDpad(float x, float y) {
         if (dpad1 == null) {
-            Dpad1Binding binding = Dpad1Binding.inflate(layoutInflater, mainView, true);
+            DpadWasdBinding binding = DpadWasdBinding.inflate(layoutInflater, mainView, true);
             dpad1 = binding.getRoot();
 
             binding.closeButton.setOnClickListener(v -> {
                 mainView.removeView(dpad1);
                 dpad1 = null;
             });
+            binding.resizeHandle.setOnTouchListener(new ResizeableView(dpad1, x, y));
         }
         dpad1.animate().x(x).y(y)
                 .setDuration(500)
                 .start();
     }
 
-    private void addDpad2(float x, float y) {
+    private void addArrowKeysDpad(float x, float y) {
         if (dpad2 == null) {
-            Dpad2Binding binding = Dpad2Binding.inflate(layoutInflater, mainView, true);
+            DpadArrowsBinding binding = DpadArrowsBinding.inflate(layoutInflater, mainView, true);
             dpad2 = binding.getRoot();
 
             binding.closeButton.setOnClickListener(v -> {
                 mainView.removeView(dpad2);
                 dpad2 = null;
             });
+            binding.resizeHandle.setOnTouchListener(new ResizeableView(dpad2, x, y));
         }
         dpad2.animate().x(x).y(y)
                 .setDuration(500)
@@ -308,39 +310,47 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .setDuration(500)
                 .start();
     }
-    class ResizableLayout implements View.OnTouchListener {
-
-        private final View view;
-
+    class ResizableLayout {
         @SuppressLint("ClickableViewAccessibility")
         public ResizableLayout(){
             ResizableBinding binding1 = ResizableBinding.inflate(layoutInflater, mainView, true);
-            view = binding1.getRoot();
-            binding1.dragHandle.setOnTouchListener(this);
+            View view = binding1.getRoot();
+            binding1.dragHandle.setOnTouchListener(new ResizeableView(view, crosshair.getX(), crosshair.getY()));
             binding1.saveButton.setOnClickListener(v -> {
                 mainView.removeView(view);
                 mouseAimConfig.width = view.getPivotX();
                 mouseAimConfig.height = view.getPivotY();
             });
-            moveView();
         }
+
+    }
+    static class ResizeableView implements View.OnTouchListener {
+        final View rootView;
+        final float initX, initY;
+
+        public ResizeableView(View rootView, float initX, float initY) {
+            this.rootView = rootView;
+            this.initX = initX;
+            this.initY = initY;
+        }
+
         @Override
         public boolean onTouch(View v, MotionEvent event) {
             float x = event.getX();
             float y = event.getY();
             if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
+                ViewGroup.LayoutParams layoutParams = rootView.getLayoutParams();
                 layoutParams.width += x;
                 layoutParams.height += y;
-                moveView();
+                moveView(rootView);
             } else {
                 v.performClick();
             }
             return true;
         }
-        private void moveView(){
-            float x = crosshair.getX() - view.getPivotX();
-            float y = crosshair.getY() - view.getPivotY();
+        private void moveView(View view){
+            float x = initX - view.getPivotX();
+            float y = initY - view.getPivotY();
             view.setX(x);
             view.setY(y);
             view.requestLayout();
