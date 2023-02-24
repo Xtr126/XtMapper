@@ -201,7 +201,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     public void setupButtons() {
         binding.saveButton.setOnClickListener(v -> hideView());
         binding.addButton.setOnClickListener(v -> addKey());
-        binding.mouseLeft.setOnClickListener(v -> addleftClick(DEFAULT_X, DEFAULT_Y));
+        binding.mouseLeft.setOnClickListener(v -> addLeftClick(DEFAULT_X, DEFAULT_Y));
         binding.crossHair.setOnClickListener(v -> {
             mouseAimConfig = new MouseAimConfig();
             addCrosshair(DEFAULT_X, DEFAULT_Y);
@@ -229,7 +229,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 mainView.removeView(dpad1);
                 dpad1 = null;
             });
-            binding.resizeHandle.setOnTouchListener(new ResizeableView(dpad1, x, y));
+            binding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpad1));
         }
         dpad1.animate().x(x).y(y)
                 .setDuration(500)
@@ -245,7 +245,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 mainView.removeView(dpad2);
                 dpad2 = null;
             });
-            binding.resizeHandle.setOnTouchListener(new ResizeableView(dpad2, x, y));
+            binding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpad2));
         }
         dpad2.animate().x(x).y(y)
                 .setDuration(500)
@@ -289,18 +289,18 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 mainView.removeView(crosshair);
                 crosshair = null;
             });
-            binding.expandButton.setOnClickListener(v -> new ResizableLayout());
+            binding.expandButton.setOnClickListener(v -> new ResizableArea());
             binding.editButton.setOnClickListener(v -> new MouseAimSettings().getDialog(context).show());
         }
         crosshair.animate().x(x).y(y)
                 .setDuration(500)
                 .start();
 
-        addleftClick(mouseAimConfig.xleftClick,
+        addLeftClick(mouseAimConfig.xleftClick,
                      mouseAimConfig.yleftClick);
     }
 
-    private void addleftClick(float x, float y) {
+    private void addLeftClick(float x, float y) {
         if (leftClick == null) {
             leftClick = new MovableFloatingActionKey(context);
             leftClick.key.setImageResource(R.drawable.ic_baseline_mouse_36);
@@ -310,50 +310,66 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .setDuration(500)
                 .start();
     }
-    class ResizableLayout {
-        @SuppressLint("ClickableViewAccessibility")
-        public ResizableLayout(){
-            ResizableBinding binding1 = ResizableBinding.inflate(layoutInflater, mainView, true);
-            View view = binding1.getRoot();
-            binding1.dragHandle.setOnTouchListener(new ResizeableView(view, crosshair.getX(), crosshair.getY()));
-            binding1.saveButton.setOnClickListener(v -> {
-                mainView.removeView(view);
-                mouseAimConfig.width = view.getPivotX();
-                mouseAimConfig.height = view.getPivotY();
-            });
-        }
 
+    private void resizeView(View view, float x, float y) {
+        ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
+        layoutParams.width += x;
+        layoutParams.height += y;
+        view.requestLayout();
     }
-    static class ResizeableView implements View.OnTouchListener {
-        final View rootView;
-        final float initX, initY;
 
-        public ResizeableView(View rootView, float initX, float initY) {
-            this.rootView = rootView;
-            this.initX = initX;
-            this.initY = initY;
+    class ResizableArea implements View.OnTouchListener, View.OnClickListener {
+        private final View view;
+
+        @SuppressLint("ClickableViewAccessibility")
+        public ResizableArea(){
+            ResizableBinding binding1 = ResizableBinding.inflate(layoutInflater, mainView, true);
+            view = binding1.getRoot();
+            binding1.dragHandle.setOnTouchListener(this);
+            binding1.saveButton.setOnClickListener(this);
+            moveView();
         }
-
         @Override
         public boolean onTouch(View v, MotionEvent event) {
-            float x = event.getX();
-            float y = event.getY();
-            if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                ViewGroup.LayoutParams layoutParams = rootView.getLayoutParams();
-                layoutParams.width += x;
-                layoutParams.height += y;
-                moveView(rootView);
-            } else {
+            if (event.getAction() == MotionEvent.ACTION_MOVE)
+                resizeView(view, event.getX(), event.getY());
+            else
                 v.performClick();
-            }
             return true;
         }
-        private void moveView(View view){
-            float x = initX - view.getPivotX();
-            float y = initY - view.getPivotY();
+        @Override
+        public void onClick(View v) {
+            float x = view.getX() + view.getPivotX();
+            float y = view.getY() + view.getPivotY();
+            crosshair.setX(x);
+            crosshair.setY(y);
+            mouseAimConfig.width = view.getPivotX();
+            mouseAimConfig.height = view.getPivotY();
+
+            mainView.removeView(view);
+            view.invalidate();
+        }
+        private void moveView(){
+            float x = crosshair.getX() - crosshair.getWidth();
+            float y = crosshair.getY() - crosshair.getHeight();
             view.setX(x);
             view.setY(y);
-            view.requestLayout();
+        }
+    }
+
+    class ResizeableDpadView implements View.OnTouchListener {
+        final View rootView;
+
+        public ResizeableDpadView(View rootView) {
+            this.rootView = rootView;
+        }
+
+        @SuppressLint("ClickableViewAccessibility")
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            if (event.getAction() == MotionEvent.ACTION_MOVE)
+                resizeView(rootView, event.getX(), event.getY());
+            return v.onTouchEvent(event);
         }
     }
 }

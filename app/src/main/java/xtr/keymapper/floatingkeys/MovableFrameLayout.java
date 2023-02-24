@@ -64,7 +64,7 @@ public class MovableFrameLayout extends FrameLayout implements View.OnTouchListe
                 return true; // Consumed
             }
             default:
-                return super.onTouchEvent(motionEvent);
+                return view.onTouchEvent(motionEvent);
         }
     }
 }
