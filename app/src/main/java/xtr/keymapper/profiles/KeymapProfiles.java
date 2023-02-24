@@ -48,8 +48,8 @@ public class KeymapProfiles {
     }
      public static final class Profile {
          public String packageName = "xtr.keymapper";
-         public Dpad dpad1 = null;
-         public Dpad dpad2 = null;
+         public Dpad dpadUdlr = null;
+         public Dpad dpadWasd = null;
          public MouseAimConfig mouseAimConfig = null;
          public ArrayList<Key> keys = new ArrayList<>();
      }
@@ -75,11 +75,11 @@ public class KeymapProfiles {
             String[] data = s.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
             switch (data[0]){
                 case "UDLR_DPAD":
-                    profile.dpad1 = new Dpad(data);
+                    if (data.length >= 8) profile.dpadUdlr = new Dpad(data);
                     break;
 
                 case "WASD_DPAD":
-                    profile.dpad2 = new Dpad(data);
+                    if (data.length >= 8) profile.dpadWasd = new Dpad(data);
                     break;
 
                 case "MOUSE_AIM":

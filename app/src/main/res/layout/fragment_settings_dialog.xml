@@ -6,8 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:theme="@style/Theme.Material3.DynamicColors.Dark"
-    android:padding="20dp"
-    android:animateLayoutChanges="true">
+    android:padding="20dp">
 
     <LinearLayout
         android:id="@+id/sliders"

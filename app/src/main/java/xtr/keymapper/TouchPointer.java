@@ -196,10 +196,10 @@ public class TouchPointer extends Service {
         // Keyboard keys
         keyList = profile.keys;
 
-        if (profile.dpad1 != null)
-            dpad1Handler = new DpadHandler(this, profile.dpad1, dpad1pid.id);
-        if (profile.dpad2 != null)
-            dpad2Handler = new DpadHandler(this, profile.dpad2, dpad2pid.id);
+        if (profile.dpadUdlr != null)
+            dpad1Handler = new DpadHandler(this, profile.dpadUdlr, dpad1pid.id);
+        if (profile.dpadWasd != null)
+            dpad2Handler = new DpadHandler(this, profile.dpadWasd, dpad2pid.id);
         if (profile.mouseAimConfig != null)
             mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
 

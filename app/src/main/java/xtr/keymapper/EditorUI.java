@@ -50,8 +50,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final List<MovableFloatingActionKey> keyList = new ArrayList<>();
     private MovableFloatingActionKey leftClick;
 
-    private MovableFrameLayout dpad1, dpad2, crosshair;
-    private MouseAimConfig mouseAimConfig;
+    private MovableFrameLayout dpadWasd, dpadUdlr, crosshair;
     // Default position of new views added
     private static final Float DEFAULT_X = 200f, DEFAULT_Y = 200f;
     private final KeymapEditorBinding binding;
@@ -59,6 +58,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final OnHideListener onHideListener;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final String profileName;
+    private KeymapProfiles.Profile profile;
 
     public EditorUI (Context context, String profileName) {
         this.context = new ContextThemeWrapper(context, R.style.Theme_MaterialComponents);
@@ -147,28 +147,27 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void loadKeymap() throws IOException {
-        KeymapProfiles.Profile profile = new KeymapProfiles(context).getProfile(profileName);
+        profile = new KeymapProfiles(context).getProfile(profileName);
         // Add Keyboard keys as Views
         profile.keys.forEach(this::addKey);
 
-        if (profile.dpad1 != null) addArrowKeysDpad(profile.dpad1.getX(), profile.dpad1.getY());
+        if (profile.dpadUdlr != null) addArrowKeysDpad(profile.dpadUdlr.getX(), profile.dpadUdlr.getY());
 
-        if (profile.dpad2 != null) addWasdDpad(profile.dpad2.getX(), profile.dpad2.getY());
+        if (profile.dpadWasd != null) addWasdDpad(profile.dpadWasd.getX(), profile.dpadWasd.getY());
 
-        mouseAimConfig = profile.mouseAimConfig;
-        if (mouseAimConfig != null) addCrosshair(mouseAimConfig.xCenter, mouseAimConfig.yCenter);
+        if (profile.mouseAimConfig != null) addCrosshair(profile.mouseAimConfig.xCenter, profile.mouseAimConfig.yCenter);
     }
 
     private void saveKeymap() {
         ArrayList<String> linesToWrite = new ArrayList<>();
 
-        if (dpad1 != null) {
-            Dpad dpad = new Dpad(dpad1, DpadType.UDLR);
+        if (dpadWasd != null) {
+            Dpad dpad = new Dpad(dpadWasd, DpadType.WASD);
             linesToWrite.add(dpad.getData());
         }
 
-        if (dpad2 != null) {
-            Dpad dpad = new Dpad(dpad2, DpadType.WASD);
+        if (dpadUdlr != null) {
+            Dpad dpad = new Dpad(dpadUdlr, DpadType.UDLR);
             linesToWrite.add(dpad.getData());
 
             // If WASD keys already added, remove them
@@ -179,9 +178,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         if (crosshair != null) {
             // Get x and y coordinates from view
-            mouseAimConfig.setCenterXY(crosshair);
-            mouseAimConfig.setLeftClickXY(leftClick);
-            linesToWrite.add(mouseAimConfig.getData());
+            profile.mouseAimConfig.setCenterXY(crosshair);
+            profile.mouseAimConfig.setLeftClickXY(leftClick);
+            linesToWrite.add(profile.mouseAimConfig.getData());
         }
         
         // Keyboard keys
@@ -203,7 +202,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         binding.addButton.setOnClickListener(v -> addKey());
         binding.mouseLeft.setOnClickListener(v -> addLeftClick(DEFAULT_X, DEFAULT_Y));
         binding.crossHair.setOnClickListener(v -> {
-            mouseAimConfig = new MouseAimConfig();
+            profile.mouseAimConfig = new MouseAimConfig();
             addCrosshair(DEFAULT_X, DEFAULT_Y);
         });
 
@@ -221,35 +220,43 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void addWasdDpad(float x, float y) {
-        if (dpad1 == null) {
+        if (dpadWasd == null) {
             DpadWasdBinding binding = DpadWasdBinding.inflate(layoutInflater, mainView, true);
-            dpad1 = binding.getRoot();
+            dpadWasd = binding.getRoot();
 
             binding.closeButton.setOnClickListener(v -> {
-                mainView.removeView(dpad1);
-                dpad1 = null;
+                mainView.removeView(dpadWasd);
+                dpadWasd = null;
             });
-            binding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpad1));
+            binding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpadWasd));
         }
-        dpad1.animate().x(x).y(y)
-                .setDuration(500)
-                .start();
+        moveResizeDpad(dpadWasd, profile.dpadWasd, x, y);
     }
 
     private void addArrowKeysDpad(float x, float y) {
-        if (dpad2 == null) {
+        if (dpadUdlr == null) {
             DpadArrowsBinding binding = DpadArrowsBinding.inflate(layoutInflater, mainView, true);
-            dpad2 = binding.getRoot();
+            dpadUdlr = binding.getRoot();
 
             binding.closeButton.setOnClickListener(v -> {
-                mainView.removeView(dpad2);
-                dpad2 = null;
+                mainView.removeView(dpadUdlr);
+                dpadUdlr = null;
             });
-            binding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpad2));
+            binding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpadUdlr));
         }
-        dpad2.animate().x(x).y(y)
+        moveResizeDpad(dpadUdlr, profile.dpadUdlr, x, y);
+    }
+
+    private void moveResizeDpad(ViewGroup dpadLayout, Dpad dpad, float x, float y) {
+        dpadLayout.animate().x(x).y(y)
                 .setDuration(500)
                 .start();
+
+        if (dpad != null) {
+            float x1 = dpad.getWidth() - dpadLayout.getLayoutParams().width;
+            float y1 = dpad.getHeight() - dpadLayout.getLayoutParams().height;
+            resizeView(dpadLayout, x1, y1);
+        }
     }
 
     private void addKey(KeymapProfiles.Key key) {
@@ -296,8 +303,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .setDuration(500)
                 .start();
 
-        addLeftClick(mouseAimConfig.xleftClick,
-                     mouseAimConfig.yleftClick);
+        addLeftClick(profile.mouseAimConfig.xleftClick,
+                     profile.mouseAimConfig.yleftClick);
     }
 
     private void addLeftClick(float x, float y) {
@@ -319,12 +326,12 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     class ResizableArea implements View.OnTouchListener, View.OnClickListener {
-        private final View view;
+        private final ViewGroup rootView;
 
         @SuppressLint("ClickableViewAccessibility")
         public ResizableArea(){
             ResizableBinding binding1 = ResizableBinding.inflate(layoutInflater, mainView, true);
-            view = binding1.getRoot();
+            rootView = binding1.getRoot();
             binding1.dragHandle.setOnTouchListener(this);
             binding1.saveButton.setOnClickListener(this);
             moveView();
@@ -332,28 +339,28 @@ public class EditorUI extends OnKeyEventListener.Stub {
         @Override
         public boolean onTouch(View v, MotionEvent event) {
             if (event.getAction() == MotionEvent.ACTION_MOVE)
-                resizeView(view, event.getX(), event.getY());
+                resizeView(rootView, event.getX(), event.getY());
             else
                 v.performClick();
             return true;
         }
         @Override
         public void onClick(View v) {
-            float x = view.getX() + view.getPivotX();
-            float y = view.getY() + view.getPivotY();
+            float x = rootView.getX() + rootView.getPivotX();
+            float y = rootView.getY() + rootView.getPivotY();
             crosshair.setX(x);
             crosshair.setY(y);
-            mouseAimConfig.width = view.getPivotX();
-            mouseAimConfig.height = view.getPivotY();
+            profile.mouseAimConfig.width = rootView.getPivotX();
+            profile.mouseAimConfig.height = rootView.getPivotY();
 
-            mainView.removeView(view);
-            view.invalidate();
+            mainView.removeView(rootView);
+            rootView.invalidate();
         }
         private void moveView(){
             float x = crosshair.getX() - crosshair.getWidth();
             float y = crosshair.getY() - crosshair.getHeight();
-            view.setX(x);
-            view.setY(y);
+            rootView.setX(x);
+            rootView.setY(y);
         }
     }
 
