@@ -15,10 +15,11 @@
         android:name="xtr.keymapper.profiles.ProfilesViewFragment"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:translationZ="1dp"
         android:orientation="vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        tools:layout="@layout/fragment_profiles_apps" />
+        tools:layout="@layout/fragment_profiles_view" />
     
 
     <androidx.cardview.widget.CardView

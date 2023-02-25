@@ -58,8 +58,6 @@ public class ProfilesViewFragment extends Fragment {
         binding.profilesButton.setOnClickListener(v -> {
             switch (binding.profiles.getVisibility()) {
                 case View.VISIBLE:{
-                    binding.header.setVisibility(View.GONE);
-                    binding.currentProfile.setVisibility(View.GONE);
                     binding.profiles.setVisibility(View.GONE);
                     binding.addButton.setVisibility(View.GONE);
                     binding.profilesButton.setForeground(profilesShow);
@@ -67,8 +65,6 @@ public class ProfilesViewFragment extends Fragment {
                 }
                 case View.GONE:
                 case View.INVISIBLE: {
-                    binding.header.setVisibility(View.VISIBLE);
-                    binding.currentProfile.setVisibility(View.VISIBLE);
                     binding.profiles.setVisibility(View.VISIBLE);
                     binding.addButton.setVisibility(View.VISIBLE);
                     binding.profilesButton.setForeground(profilesHide);

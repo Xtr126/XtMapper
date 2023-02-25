@@ -18,8 +18,6 @@
         3. When service running, drag down notification panel and click on notification to launch editor \n\n
         4. Setup keymap according to touch controls in your game and save \n\n
         Touchpads are not supported, only mouse and keyboard. \n\n
-        There are two types of Dpad, one using WASD keys, another for arrow keys. \n
-        Add more dpads to change type. \n\n
         Mouse right click or ~ key to activate shooting mode or aim with mouse for FPS games \n\n
         Left-click drag mouse while holding ctrl key to simulate pinch-to-zoom gesture with two fingers. \n\n
 
