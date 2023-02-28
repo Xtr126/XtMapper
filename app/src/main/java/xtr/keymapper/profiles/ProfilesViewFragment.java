@@ -47,8 +47,8 @@ public class ProfilesViewFragment extends Fragment {
             EditText editText = new EditText(context);
             builder.setTitle(R.string.dialog_alert_add_profile)
                     .setPositiveButton("Ok", (dialog, which) -> {
-                        new KeymapProfiles(context).saveProfile(editText.getText().toString(), new ArrayList<>(), context.getPackageName());
-                        setAdapter();
+                        String selectedProfile = editText.getText().toString();
+                        ProfileSelector.showsAppSelectionDialog(context, p -> setAdapter(), selectedProfile);
                     })
                     .setNegativeButton("Cancel", (dialog, which) -> {})
                     .setView(editText)

@@ -59,9 +59,10 @@ public class MainActivity extends AppCompatActivity {
             startForegroundService(intent);
 
             setButtonActive(binding.controls.startPointer);
+            binding.controls.startPointer.setText(R.string.stop);
             binding.controls.startPointer.setOnClickListener(v -> stopPointer());
         }
-        }
+    }
 
     public void stopPointer(){
         pointerOverlay.hideCursor();
@@ -69,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
         stopService(intent);
 
         setButtonInactive(binding.controls.startPointer);
+        binding.controls.startPointer.setText(R.string.start);
         binding.controls.startPointer.setOnClickListener(v -> startPointer());
     }
 
