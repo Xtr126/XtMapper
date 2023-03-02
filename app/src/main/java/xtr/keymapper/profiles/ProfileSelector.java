@@ -19,7 +19,7 @@ public class ProfileSelector {
         void onProfileSelected(String profile);
     }
 
-    public ProfileSelector(Context context, OnProfileSelectedListener listener){
+    public static void select(Context context, OnProfileSelectedListener listener){
         ArrayList<String> allProfiles = new ArrayList<>(new KeymapProfiles(context).getAllProfiles().keySet());
         if (allProfiles.size() == 1) {
             listener.onProfileSelected(allProfiles.get(0));
@@ -27,8 +27,7 @@ public class ProfileSelector {
         }
         CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
 
-        AlertDialog  dialog;
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context.getApplicationContext(), R.style.Theme_Material3_Dark));
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark));
 
         // Show dialog to select profile
         if (!allProfiles.isEmpty())
@@ -47,9 +46,7 @@ public class ProfileSelector {
                     .setNegativeButton("Cancel", (d, which) -> {})
                     .setView(editText);
         }
-        dialog = builder.create();
-        dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
-        dialog.show();
+        showDialog(builder);
     }
 
     public static void showsAppSelectionDialog(Context context, OnProfileSelectedListener listener, String profile) {
@@ -63,7 +60,13 @@ public class ProfileSelector {
                     listener.onProfileSelected(profile);
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {})
-                .setView(appsView.view)
-                .show();
+                .setView(appsView.view);
+        showDialog(builder);
+    }
+
+    private static void showDialog(MaterialAlertDialogBuilder builder) {
+        AlertDialog dialog = builder.create();
+        dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        dialog.show();
     }
 }

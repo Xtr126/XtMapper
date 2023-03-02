@@ -24,7 +24,7 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
 
         if (editor != null) editor.hideView();
 
-        new ProfileSelector(this, profile -> {
+        ProfileSelector.select(this, profile -> {
             editor = new EditorUI(this, profile);
             editor.open();
 

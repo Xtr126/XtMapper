@@ -81,7 +81,7 @@ public class TouchPointer extends Service {
     }
 
     public void init(){
-        new ProfileSelector(this, profile -> {
+        ProfileSelector.select(this, profile -> {
             loadKeymap(profile);
             getDisplayMetrics();
 
@@ -210,6 +210,7 @@ public class TouchPointer extends Service {
 
     public void sendSettingstoServer() throws RemoteException {
         checkRootAccess();
+        keymapConfig = new KeymapConfig(this);
         int result = mService.tryOpenDevice(keymapConfig.device);
         if ( result < 0 ) {
             startInputDeviceSelector();
@@ -224,8 +225,10 @@ public class TouchPointer extends Service {
 
     private void checkRootAccess() throws RemoteException {
         if (mService.isRoot()) mHandler.post(() -> {
-            mWindowManager.removeView(cursorView);
-            cursorView.invalidate();
+            if (cursorView != null) {
+                mWindowManager.removeView(cursorView);
+                cursorView.invalidate();
+            }
             cursorView = null;
         });
     }
@@ -253,11 +256,11 @@ public class TouchPointer extends Service {
     private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
         /* calling back from remote service to reload keymap */
         public void loadKeymap() {
-            new ProfileSelector(TouchPointer.this, profile -> {
-                TouchPointer.this.loadKeymap(profile);
-                keyEventHandler.init();
-                mouseEventHandler.init();
-            });
+        ProfileSelector.select(TouchPointer.this, profile -> {
+            TouchPointer.this.loadKeymap(profile);
+            keyEventHandler.init();
+            mouseEventHandler.init();
+        });
         }
     };
 
