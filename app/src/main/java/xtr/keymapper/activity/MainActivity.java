@@ -18,6 +18,7 @@ import xtr.keymapper.Server;
 import xtr.keymapper.TouchPointer;
 import xtr.keymapper.databinding.ActivityMainBinding;
 import xtr.keymapper.fragment.SettingsFragment;
+import xtr.keymapper.server.InputService;
 
 public class MainActivity extends AppCompatActivity {
     public TouchPointer pointerOverlay;
@@ -48,6 +49,10 @@ public class MainActivity extends AppCompatActivity {
                 (v -> new SettingsFragment(this).show(getSupportFragmentManager(), "dialog"));
         binding.controls.aboutButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
+        if (InputService.getInstance() != null) {
+            binding.cmdview.view1.setText(R.string.activated_start);
+            binding.controls.startServer.setEnabled(false);
+        }
     }
 
     public void startPointer(){
