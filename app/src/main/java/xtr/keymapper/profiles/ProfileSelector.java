@@ -8,10 +8,9 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.view.ContextThemeWrapper;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.R;
 
 import java.util.ArrayList;
-
-import xtr.keymapper.R;
 
 public class ProfileSelector {
 
@@ -31,14 +30,14 @@ public class ProfileSelector {
 
         // Show dialog to select profile
         if (!allProfiles.isEmpty())
-            builder.setTitle(R.string.dialog_alert_select_profile)
+            builder.setTitle(xtr.keymapper.R.string.dialog_alert_select_profile)
                     .setItems(items, (d, which) -> {
                         String selectedProfile = allProfiles.get(which);
                         listener.onProfileSelected(selectedProfile);
                     });
         else { // Create profile if no profile found
             EditText editText = new EditText(context);
-            builder.setTitle(R.string.dialog_alert_add_profile)
+            builder.setTitle(xtr.keymapper.R.string.dialog_alert_add_profile)
                     .setPositiveButton("Ok", (d, which) -> {
                         String selectedProfile = editText.getText().toString();
                         showsAppSelectionDialog(context, listener, selectedProfile);

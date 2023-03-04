@@ -94,7 +94,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
             EditText editText = new EditText(view.getContext());
             editText.setText(profileName);
 
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark));
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_XtMapper));
             builder.setTitle(R.string.dialog_alert_add_profile)
                     .setPositiveButton("Ok", (dialog, which) -> {
                         keymapProfiles.renameProfile(profileName, editText.getText().toString());
@@ -108,7 +108,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         viewHolder.binding.appIconButton.setOnClickListener(view -> {
             ProfilesApps appsView = new ProfilesApps(view.getContext(), profileName);
 
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark));
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_XtMapper));
             builder.setPositiveButton("Ok", (dialog, which) -> {
                         keymapProfiles.setProfilePackageName(recyclerData.name.toString(), appsView.packageName);
                         appsView.onDestroyView();

@@ -8,7 +8,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -17,8 +16,6 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 
 import androidx.appcompat.view.ContextThemeWrapper;
-
-import com.nambimobile.widgets.efab.ExpandableFabLayout;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,7 +40,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final WindowManager.LayoutParams mParams;
     private final WindowManager mWindowManager;
     private final LayoutInflater layoutInflater;
-    private final ExpandableFabLayout mainView;
+    private final ViewGroup mainView;
 
     private MovableFloatingActionKey keyInFocus;
     // Keyboard keys
@@ -61,7 +58,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private KeymapProfiles.Profile profile;
 
     public EditorUI (Context context, String profileName) {
-        this.context = new ContextThemeWrapper(context, R.style.Theme_MaterialComponents);
+        this.context = new ContextThemeWrapper(context, R.style.Theme_XtMapper_EditorUI);
         this.onHideListener = ((OnHideListener) context);
         this.profileName = profileName;
 
@@ -73,10 +70,11 @@ public class EditorUI extends OnKeyEventListener.Stub {
                         WindowManager.LayoutParams.FLAG_FULLSCREEN |
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
-        mParams.gravity = Gravity.CENTER;
 
         binding = KeymapEditorBinding.inflate(layoutInflater);
         mainView = binding.getRoot();
+        binding.speedDial.inflate(R.menu.keymap_editor_menu);
+        binding.speedDial.open();
         setupButtons();
     }
 
@@ -86,14 +84,17 @@ public class EditorUI extends OnKeyEventListener.Stub {
         } catch (IOException e) {
             Log.d("EditorUI", e.toString());
         }
-        if (mainView.getWindowToken() == null)
-            if (mainView.getParent() == null)
-                mWindowManager.addView(mainView, mParams);
+        addView(mainView);
 
         if (!onHideListener.getEvent()) {
             mainView.setOnKeyListener(this::onKey);
             mainView.setFocusable(true);
         }
+    }
+
+    private void addView(View view) {
+        if (view.getWindowToken() == null && view.getParent() == null)
+            mWindowManager.addView(view, mParams);
     }
 
     public boolean onKey(View v, int keyCode, KeyEvent event) {
@@ -137,13 +138,18 @@ public class EditorUI extends OnKeyEventListener.Stub {
     public void hideView() {
         try {
             saveKeymap();
-            mWindowManager.removeView(mainView);
-            ((ViewGroup) mainView.getParent()).removeAllViews();
-            mainView.invalidate();
+            removeView(binding.getRoot());
+            removeView(mainView);
             onHideListener.onHideView();
         } catch (Exception e) {
             Log.d("Error2", e.toString());
         }
+    }
+
+    private void removeView(ViewGroup view) {
+        mWindowManager.removeView(view);
+        view.removeAllViews();
+        view.invalidate();
     }
 
     private void loadKeymap() throws IOException {
@@ -198,24 +204,38 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     public void setupButtons() {
-        binding.saveButton.setOnClickListener(v -> hideView());
-        binding.addButton.setOnClickListener(v -> addKey());
-        binding.mouseLeft.setOnClickListener(v -> addLeftClick(DEFAULT_X, DEFAULT_Y));
-        binding.crossHair.setOnClickListener(v -> {
-            profile.mouseAimConfig = new MouseAimConfig();
-            addCrosshair(DEFAULT_X, DEFAULT_Y);
-        });
+        binding.speedDial.setOnActionSelectedListener(actionItem -> {
+            switch (actionItem.getId()) {
+                case R.id.add:
+                    addKey();
+                    break;
+                case R.id.dpad:
+                    final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
+                    AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                    builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
+                        if (i == 0) addArrowKeysDpad(DEFAULT_X, DEFAULT_Y);
+                        else addWasdDpad(DEFAULT_X, DEFAULT_Y);
+                    });
+                    AlertDialog dialog = builder.create();
+                    dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                    dialog.show();
+                    break;
 
-        binding.dPad.setOnClickListener(v -> {
-            final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
-            AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
-                if (i == 0) addArrowKeysDpad(DEFAULT_X, DEFAULT_Y);
-                else addWasdDpad(DEFAULT_X, DEFAULT_Y);
-            });
-            AlertDialog dialog = builder.create();
-            dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
-            dialog.show();
+                case R.id.save:
+                    hideView();
+                    break;
+
+                case R.id.mouse_left:
+                    addLeftClick(DEFAULT_X, DEFAULT_Y);
+                    break;
+
+                case R.id.crosshair:
+                    profile.mouseAimConfig = new MouseAimConfig();
+                    addCrosshair(DEFAULT_X, DEFAULT_Y);
+                    break;
+
+            }
+            return true;
         });
     }
 

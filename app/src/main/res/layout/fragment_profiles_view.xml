@@ -47,6 +47,6 @@
         app:layout_constraintBottom_toBottomOf="@id/profiles_view"
         app:layout_constraintEnd_toEndOf="parent"
         app:shapeAppearance="@style/Widget.Material3.Button.IconButton.Outlined"
-        app:srcCompat="@drawable/ic_plus_white_24dp" />
+        app:srcCompat="@drawable/ic_baseline_add_24" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

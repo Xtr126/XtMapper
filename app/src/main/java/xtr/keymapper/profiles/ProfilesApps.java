@@ -31,7 +31,7 @@ public class ProfilesApps {
     public ProfilesApps(Context context, String profileName){
         this.packageName  = new KeymapProfiles(context).getProfile(profileName).packageName;
 
-        view = createView(LayoutInflater.from(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark)));
+        view = createView(LayoutInflater.from(new ContextThemeWrapper(context, R.style.Theme_XtMapper)));
         onViewCreated(view);
     }
 
@@ -62,7 +62,7 @@ public class ProfilesApps {
         private View selectedView;
 
         public AppsGridAdapter(Context context) {
-            selectedColor = context.getColor(R.color.material_on_surface_stroke);
+            selectedColor = context.getColor(com.google.android.material.R.color.material_on_surface_stroke);
             PackageManager pm = context.getPackageManager();
             Intent i = new Intent(Intent.ACTION_MAIN, null);
             i.addCategory(Intent.CATEGORY_LAUNCHER);

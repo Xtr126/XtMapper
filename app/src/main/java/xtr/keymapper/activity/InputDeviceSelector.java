@@ -37,7 +37,7 @@ public class InputDeviceSelector extends AppCompatActivity implements AdapterVie
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (isInMultiWindowMode()) setTheme(R.style.Theme_Material3_DynamicColors_Dark);
+        if (isInMultiWindowMode()) setTheme(R.style.Theme_XtMapper);
 
         binding = ActivityConfigureBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());

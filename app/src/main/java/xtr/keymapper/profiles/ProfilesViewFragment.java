@@ -43,7 +43,7 @@ public class ProfilesViewFragment extends Fragment {
         setAdapter();
 
         binding.addButton.setOnClickListener(v -> {
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark));
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_XtMapper));
             EditText editText = new EditText(context);
             builder.setTitle(R.string.dialog_alert_add_profile)
                     .setPositiveButton("Ok", (dialog, which) -> {

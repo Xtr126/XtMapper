@@ -1,21 +1,6 @@
 <resources>
     <!-- Base application theme. -->
-    <style name="Theme.XtMapper" parent="Theme.Material3.DynamicColors.Dark">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/grey</item>
-        <item name="colorPrimaryVariant">@color/purple_500</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor" >?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
-    </style>
-    <style name="Theme.XtMapper.cmdview" parent="Theme.Material3.DynamicColors.Dark">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/dark_grey</item>
-        <item name="colorOnPrimary">#cbcbcb</item>
-    </style>
+    <style name="Theme.XtMapper" parent="Theme.Material3.Dark"> </style>
+
+    <style name="Theme.XtMapper.EditorUI" parent="Theme.MaterialComponents"> </style>
 </resources>

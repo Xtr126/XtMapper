@@ -34,7 +34,7 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
                 } catch (RemoteException ignored) {
                 }
             else {
-                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(this, R.style.Theme_Material3_Dark));
+                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(this, R.style.Theme_XtMapper));
 
                 builder.setMessage(R.string.dialog_alert_editor)
                         .setPositiveButton("Ok", (dialog, which) -> {})

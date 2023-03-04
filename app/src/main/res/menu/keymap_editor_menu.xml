@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/dpad"
+        android:icon="@drawable/dpad"
+        android:title="D-Pad" />
+    <item
+        android:id="@+id/crosshair"
+        android:icon="@drawable/crosshair"
+        android:title="CrossHair" />
+    <item
+        android:id="@+id/mouse_left"
+        android:icon="@drawable/ic_baseline_mouse_36"
+        android:title="Left Click" />
+    <item
+        android:id="@+id/add"
+        android:icon="@drawable/newkey"
+        android:title="Add Key" />
+
+    <item
+        android:id="@+id/save"
+        android:icon="@drawable/ic_baseline_done_36"
+        android:title="Save" />
+</menu>
