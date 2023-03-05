@@ -52,14 +52,17 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
         binding.inputDevice.setText(keymapConfig.device);
 
-
         binding.mouseDragToggle.setChecked(keymapConfig.ctrlDragMouseGesture);
         binding.mouseWheelToggle.setChecked(keymapConfig.ctrlMouseWheelZoom);
+
+        binding.mouseAimKeyGrave.setChecked(keymapConfig.keyGraveMouseAim);
+        binding.mouseAimRightClick.setChecked(keymapConfig.rightClickMouseAim);
 
         loadKeyboardShortcuts();
         binding.launchEditor.setOnKeyListener(this::onKey);
         binding.stopService.setOnKeyListener(this::onKey);
         binding.switchProfile.setOnKeyListener(this::onKey);
+        binding.mouseAimKey.setOnKeyListener(this::onKey);
 
         binding.bottomNavigation.setOnItemSelectedListener(item -> {
             setDefaultVisibilty();
@@ -93,6 +96,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         int stop_service = keymapConfig.stopServiceShortcutKey;
         int launch_editor = keymapConfig.launchEditorShortcutKey;
         int switch_profile = keymapConfig.switchProfileShortcutKey;
+        int mouse_aim = keymapConfig.mouseAimShortcutKey;
 
         if (stop_service > -1) {
             String stopServiceShortcutKey = String.valueOf(Utils.alphabet.charAt(stop_service));
@@ -109,6 +113,11 @@ public class SettingsFragment extends BottomSheetDialogFragment {
             binding.switchProfile.setText(switchProfileShortcutKey);
         }
 
+        if (mouse_aim > -1) {
+            String mouseAimShortcutKey = String.valueOf(Utils.alphabet.charAt(switch_profile));
+            binding.switchProfile.setText(mouseAimShortcutKey);
+        }
+
         loadModifierKeys();
     }
 
@@ -116,11 +125,13 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.launchEditorModifier.setText(keymapConfig.launchEditorShortcutKeyModifier);
         binding.stopServiceModifier.setText(keymapConfig.stopServiceShortcutKeyModifier);
         binding.switchProfileModifier.setText(keymapConfig.switchProfileShortcutKeyModifier);
+        binding.mouseAimModifier.setText(keymapConfig.mouseAimShortcutKeyModifier);
 
         final String[] modifierKeys = {KeymapConfig.KEY_CTRL, KeymapConfig.KEY_ALT};
         ((MaterialAutoCompleteTextView)binding.launchEditorModifier).setSimpleItems(modifierKeys);
         ((MaterialAutoCompleteTextView)binding.stopServiceModifier).setSimpleItems(modifierKeys);
         ((MaterialAutoCompleteTextView)binding.switchProfileModifier).setSimpleItems(modifierKeys);
+        ((MaterialAutoCompleteTextView)binding.mouseAimModifier).setSimpleItems(modifierKeys);
     }
 
     public boolean onKey(View view, int keyCode, KeyEvent event) {
@@ -142,18 +153,22 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         if(binding.launchEditor.getText().toString().isEmpty()) binding.launchEditor.setText(" ");
         if(binding.stopService.getText().toString().isEmpty()) binding.stopService.setText(" ");
         if(binding.switchProfile.getText().toString().isEmpty()) binding.switchProfile.setText(" ");
+        if(binding.mouseAimKey.getText().toString().isEmpty()) binding.mouseAimKey.setText(" ");
 
         int launch_editor_shortcut = Utils.alphabet.indexOf(binding.launchEditor.getText().charAt(0));
         int stop_service_shortcut = Utils.alphabet.indexOf(binding.stopService.getText().charAt(0));
         int switch_profile_shortcut = Utils.alphabet.indexOf(binding.switchProfile.getText().charAt(0));
+        int mouse_aim_shortcut = Utils.alphabet.indexOf(binding.mouseAimKey.getText().charAt(0));
 
         keymapConfig.launchEditorShortcutKey = launch_editor_shortcut;
         keymapConfig.stopServiceShortcutKey = stop_service_shortcut;
         keymapConfig.switchProfileShortcutKey = switch_profile_shortcut;
+        keymapConfig.mouseAimShortcutKey = mouse_aim_shortcut;
 
         keymapConfig.launchEditorShortcutKeyModifier = binding.launchEditorModifier.getText().toString();
         keymapConfig.stopServiceShortcutKeyModifier = binding.stopServiceModifier.getText().toString();
         keymapConfig.switchProfileShortcutKeyModifier = binding.switchProfileModifier.getText().toString();
+        keymapConfig.mouseAimShortcutKeyModifier = binding.mouseAimModifier.getText().toString();
     }
 
     @Override
@@ -165,12 +180,17 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
         keymapConfig.mouseSensitivity = binding.sliderMouse.getValue();
         keymapConfig.scrollSpeed = binding.sliderScrollSpeed.getValue();
+
         keymapConfig.ctrlMouseWheelZoom = binding.mouseWheelToggle.isChecked();
         keymapConfig.ctrlDragMouseGesture = binding.mouseDragToggle.isChecked();
+
+        keymapConfig.rightClickMouseAim = binding.mouseAimRightClick.isChecked();
+        keymapConfig.keyGraveMouseAim = binding.mouseAimKeyGrave.isChecked();
 
         dpadConfig.setDpadRadiusMultiplier(binding.sliderDpad.getValue());
 
         keymapConfig.applySharedPrefs();
+        // Reload keymap if remote service running
         InputService.reloadKeymap();
         binding = null;
         super.onDestroyView();

@@ -12,14 +12,14 @@
     <string name="dpad_radius">Dpad Radius</string>
     <string name="mouse_input_device">Mouse Input Device</string>
     <string name="about_info">
-        \n XtMapper: Free and open source keymapper for Android. \n\n
+        \n XtMapper: Free and open source keymapper. \n\n
 
         1. Activation \n\n
-        2. Use overlay button to start/stop service \n\n
+        2. Tap on button to start/stop service \n\n
         3. When service running, drag down notification panel and click on notification to launch editor \n\n
         4. Setup keymap according to touch controls in your game and save \n\n
         Touchpads are not supported, only mouse and keyboard. \n\n
-        Mouse right click or ~ key to activate shooting mode or aim with mouse for FPS games \n\n
+        Mouse right click or ~ key to aim with mouse for FPS games \n\n
         Left-click drag mouse while holding ctrl key to simulate pinch-to-zoom gesture with two fingers. \n\n
 
         \n License: GPL v3.0
@@ -30,9 +30,6 @@
     </string>
     <string name="scroll_speed">Scroll Speed</string>
     <string name="keyboard_shortcuts">Keyboard Shortcuts:</string>
-    <string name="drag_mouse">Ctrl + Drag Mouse</string>
-    <string name="mouse_wheel">Ctrl + Mouse Wheel</string>
-    <string name="pinch_to_zoom_gesture_info">Perform two finger gesture with:</string>
     <string name="dialog_alert_editor">
         Service is not running. \n
         You might not be able to map all key events. \n
@@ -44,7 +41,6 @@
 
     <string name="key">Key</string>
 
-
     <string name="switch_profile">Switch Profile</string>
     <string name="launch_editor">Launch Editor</string>
     <string name="stop_service">Stop Service</string>
@@ -54,5 +50,14 @@
     <string name="gestures">Gestures</string>
     <string name="shortcuts">Shortcuts</string>
     <string name="activated_start">Activated \n Tap on start button</string>
+
+    <string name="trigger_mouse_aim_with">Trigger mouse aim with:</string>
+    <string name="right_click">Right click</string>
+    <string name="key_grave">~ Key</string>
+
+    <string name="pinch_to_zoom_gesture_info">Perform two finger gesture with:</string>
+    <string name="drag_mouse">Ctrl + Drag Mouse</string>
+    <string name="mouse_wheel">Ctrl + Mouse Wheel</string>
+    <string name="mouse_aim">Mouse Aim</string>
 
 </resources>

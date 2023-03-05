@@ -337,7 +337,8 @@ public class TouchPointer extends Service {
                     dpad1Handler.handleEvent(event.code, event.action);
 
                 if (event.code.equals("KEY_GRAVE") && event.action == DOWN)
-                    mouseEventHandler.triggerMouseAim();
+                    if (keymapConfig.keyGraveMouseAim)
+                        mouseEventHandler.triggerMouseAim();
             }
             if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
             if (event.code.contains("ALT")) altKeyPressed = event.action == DOWN;
@@ -349,7 +350,7 @@ public class TouchPointer extends Service {
             }
         }
 
-        private void handleKeyboardShortcuts(int keycode) {
+        private void handleKeyboardShortcuts(int keycode) throws RemoteException {
             final String modifier = ctrlKeyPressed ? KEY_CTRL : KEY_ALT;
 
             if (keymapConfig.launchEditorShortcutKeyModifier.equals(modifier))
@@ -363,6 +364,11 @@ public class TouchPointer extends Service {
             if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
                 if (keycode == keymapConfig.switchProfileShortcutKey)
                     mHandler.post(InputService::reloadKeymap);
+
+            if (keymapConfig.mouseAimShortcutKeyModifier.equals(modifier))
+                if (keycode == keymapConfig.mouseAimShortcutKey)
+                    mouseEventHandler.triggerMouseAim();
+
         }
     }
 
@@ -438,7 +444,7 @@ public class TouchPointer extends Service {
                     break;
 
                 case BTN_RIGHT:
-                    if (value == 1) triggerMouseAim();
+                    if (value == 1 && keymapConfig.rightClickMouseAim) triggerMouseAim();
                     break;
 
                 case REL_WHEEL:

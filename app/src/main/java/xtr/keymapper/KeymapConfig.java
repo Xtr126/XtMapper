@@ -11,12 +11,14 @@ public class KeymapConfig {
     private final SharedPreferences sharedPref;
     public String profile, device;
     public Float mouseSensitivity, scrollSpeed;
-    public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture;
+    public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
 
     public int stopServiceShortcutKey, launchEditorShortcutKey, switchProfileShortcutKey;
     public String stopServiceShortcutKeyModifier, launchEditorShortcutKeyModifier, switchProfileShortcutKeyModifier;
 
     public static final String KEY_CTRL = "Ctrl", KEY_ALT = "Alt";
+    public int mouseAimShortcutKey;
+    public String mouseAimShortcutKeyModifier;
 
     public KeymapConfig(Context context) {
         sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
@@ -34,10 +36,15 @@ public class KeymapConfig {
         launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", -1);
         stopServiceShortcutKey = sharedPref.getInt("stop_service_shortcut", -1);
         switchProfileShortcutKey = sharedPref.getInt("switch_profile_shortcut", -1);
+        mouseAimShortcutKey = sharedPref.getInt("mouse_aim_shortcut", -1);
 
         launchEditorShortcutKeyModifier = sharedPref.getString("launch_editor_shortcut_modifier", KEY_CTRL);
         stopServiceShortcutKeyModifier = sharedPref.getString("stop_service_shortcut_modifier", KEY_CTRL);
         switchProfileShortcutKeyModifier = sharedPref.getString("switch_profile_shortcut_modifier", KEY_CTRL);
+        mouseAimShortcutKeyModifier = sharedPref.getString("mouse_aim_shortcut_modifier", KEY_CTRL);
+
+        keyGraveMouseAim = sharedPref.getBoolean("key_grave_mouse_aim", true);
+        rightClickMouseAim = sharedPref.getBoolean("right_click_mouse_aim", true);
     }
 
     public void applySharedPrefs() {
@@ -47,12 +54,16 @@ public class KeymapConfig {
             .putFloat("scroll_speed_multiplier", scrollSpeed)
             .putBoolean("ctrl_mouse_wheel_zoom", ctrlMouseWheelZoom)
             .putBoolean("ctrl_drag_mouse_gesture", ctrlDragMouseGesture)
+            .putBoolean("key_grave_mouse_aim", keyGraveMouseAim)
+            .putBoolean("right_click_mouse_aim", rightClickMouseAim)
             .putInt("stop_service_shortcut", stopServiceShortcutKey)
             .putInt("launch_editor_shortcut", launchEditorShortcutKey)
             .putInt("switch_profile_shortcut", switchProfileShortcutKey)
+            .putInt("mouse_aim_shortcut", mouseAimShortcutKey)
             .putString("stop_service_shortcut_modifier", stopServiceShortcutKeyModifier)
             .putString("launch_editor_shortcut_modifier", launchEditorShortcutKeyModifier)
             .putString("switch_profile_shortcut_modifier", switchProfileShortcutKeyModifier)
+            .putString("mouse_aim_shortcut_modifier", mouseAimShortcutKeyModifier)
             .apply();
     }
 }

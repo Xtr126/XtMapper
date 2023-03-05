@@ -16,8 +16,6 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.util.ArrayList;
-
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.FragmentProfilesViewBinding;
 
