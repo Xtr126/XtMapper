@@ -37,7 +37,8 @@ public class Server {
 
     public void setupServer (Context context) {
         try {
-            script_name = context.getExternalFilesDir(null) + "/xtMapper.sh";
+            final String defaultPath = "/sdcard/Android/data/" + context.getPackageName() + "/files";
+            script_name = context.getExternalFilesDir(defaultPath) + "/xtMapper.sh";
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
