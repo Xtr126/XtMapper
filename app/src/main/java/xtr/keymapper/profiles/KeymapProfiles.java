@@ -74,11 +74,11 @@ public class KeymapProfiles {
 
             String[] data = s.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
             switch (data[0]){
-                case "UDLR_DPAD":
+                case Dpad.UDLR:
                     if (data.length >= 8) profile.dpadUdlr = new Dpad(data);
                     break;
 
-                case "WASD_DPAD":
+                case Dpad.WASD:
                     if (data.length >= 8) profile.dpadWasd = new Dpad(data);
                     break;
 

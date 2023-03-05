@@ -67,6 +67,7 @@ public class TouchPointer extends Service {
     private ArrayList<KeymapProfiles.Key> keyList = new ArrayList<>();
 
     private final IBinder binder = new TouchPointerBinder();
+    private Intent launchIntent;
 
     public class TouchPointerBinder extends Binder {
         public TouchPointer getService() {
@@ -192,6 +193,7 @@ public class TouchPointer extends Service {
 
     public void loadKeymap(String profileName) {
         KeymapProfiles.Profile profile = new KeymapProfiles(this).getProfile(profileName);
+        launchIntent = getPackageManager().getLaunchIntentForPackage(profile.packageName);
 
         // Keyboard keys
         keyList = profile.keys;
@@ -206,6 +208,7 @@ public class TouchPointer extends Service {
         keymapConfig = new KeymapConfig(this);
         mouseEventHandler.sensitivity = keymapConfig.mouseSensitivity.intValue();
         mouseEventHandler.scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
+
     }
 
     public void sendSettingstoServer() throws RemoteException {
@@ -220,6 +223,7 @@ public class TouchPointer extends Service {
             mService.setCallback(mCallback);
             mService.setOnMouseEventListener(mOnMouseEventListener);
             mService.registerOnKeyEventListener(mOnKeyEventListener);
+            if (launchIntent != null) startActivity(launchIntent);
         }
     }
 
