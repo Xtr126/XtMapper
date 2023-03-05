@@ -16,7 +16,7 @@ import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.mouse.MouseAimConfig;
 
 public class KeymapProfiles {
-    private final SharedPreferences sharedPref;
+    final SharedPreferences sharedPref;
 
     public KeymapProfiles(Context context) {
         sharedPref = context.getSharedPreferences("profiles", MODE_PRIVATE);

@@ -1,6 +1,7 @@
 package xtr.keymapper.profiles;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
@@ -21,7 +22,7 @@ import xtr.keymapper.databinding.ProfileRowItemBinding;
 /**
  * Provide views to RecyclerView.
  */
-public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapter.ViewHolder> {
+public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapter.ViewHolder> implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     private final ArrayList<RecyclerData> recyclerDataArrayList = new ArrayList<>();
     private final OnItemRemovedListener callback;
@@ -49,6 +50,8 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
     public ProfilesViewAdapter(Context context, OnItemRemovedListener l) {
         this.callback = l;
         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
+        keymapProfiles.sharedPref.registerOnSharedPreferenceChangeListener(this);
+
         new KeymapProfiles(context).getAllProfiles().forEach((profileName, profile) -> {
             if(profileName != null) try {
                 recyclerDataArrayList.add(
@@ -59,6 +62,12 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
             }
             else keymapProfiles.deleteProfile(null);
         });
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPref, String key) {
+        sharedPref.unregisterOnSharedPreferenceChangeListener(this);
+        callback.resetAdapter();
     }
 
     // Create new views (invoked by the layout manager)
@@ -84,10 +93,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         Context context = viewHolder.itemView.getContext();
         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
 
-        viewHolder.binding.deleteButton.setOnClickListener(v -> {
-            keymapProfiles.deleteProfile(profileName);
-            callback.resetAdapter();
-        });
+        viewHolder.binding.deleteButton.setOnClickListener(v -> keymapProfiles.deleteProfile(profileName));
 
 
         viewHolder.binding.editButton.setOnClickListener(view -> {
@@ -96,10 +102,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
 
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_XtMapper));
             builder.setTitle(R.string.dialog_alert_add_profile)
-                    .setPositiveButton("Ok", (dialog, which) -> {
-                        keymapProfiles.renameProfile(profileName, editText.getText().toString());
-                        callback.resetAdapter();
-                    })
+                    .setPositiveButton("Ok", (dialog, which) -> keymapProfiles.renameProfile(profileName, editText.getText().toString()))
                     .setNegativeButton("Cancel", (dialog, which) -> {})
                     .setView(editText)
                     .show();
@@ -112,7 +115,6 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
             builder.setPositiveButton("Ok", (dialog, which) -> {
                         keymapProfiles.setProfilePackageName(recyclerData.name.toString(), appsView.packageName);
                         appsView.onDestroyView();
-                        callback.resetAdapter();
                     })
                     .setNegativeButton("Cancel", (dialog, which) -> {})
                     .setView(appsView.view)
