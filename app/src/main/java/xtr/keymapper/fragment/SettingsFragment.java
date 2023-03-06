@@ -114,8 +114,8 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         }
 
         if (mouse_aim > -1) {
-            String mouseAimShortcutKey = String.valueOf(Utils.alphabet.charAt(switch_profile));
-            binding.switchProfile.setText(mouseAimShortcutKey);
+            String mouseAimShortcutKey = String.valueOf(Utils.alphabet.charAt(mouse_aim));
+            binding.mouseAimKey.setText(mouseAimShortcutKey);
         }
 
         loadModifierKeys();
