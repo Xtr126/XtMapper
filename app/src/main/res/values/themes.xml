@@ -1,6 +1,6 @@
 <resources>
     <!-- Base application theme. -->
-    <style name="Theme.XtMapper" parent="Theme.Material3.Dark"> </style>
+    <style name="Theme.XtMapper" parent="Theme.Material3.DynamicColors.DayNight"> </style>
 
     <style name="Theme.XtMapper.EditorUI" parent="Theme.MaterialComponents"> </style>
 </resources>

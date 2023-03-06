@@ -14,12 +14,12 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
 
-    <androidx.cardview.widget.CardView
+    <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.Material3.CardView.Elevated"
         android:id="@+id/cardview1"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_margin="5dp"
-        app:cardBackgroundColor="@color/grey"
         app:cardCornerRadius="30dp"
         app:cardUseCompatPadding="true"
         app:layout_constraintBottom_toTopOf="@id/barrier3"
@@ -35,15 +35,15 @@
             android:gravity="bottom"
             android:textAppearance="@android:style/TextAppearance.Material.Large"
             android:textSize="16sp" />
-    </androidx.cardview.widget.CardView>
+    </com.google.android.material.card.MaterialCardView>
 
 
-    <androidx.cardview.widget.CardView
+    <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.Material3.CardView.Elevated"
         android:id="@+id/cardview2"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_margin="5dp"
-        app:cardBackgroundColor="@color/grey"
         app:cardCornerRadius="30dp"
         app:cardUseCompatPadding="true"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -58,6 +58,6 @@
             android:layout_margin="20dp"
             android:fontFamily="monospace"
             android:gravity="bottom" />
-    </androidx.cardview.widget.CardView>
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

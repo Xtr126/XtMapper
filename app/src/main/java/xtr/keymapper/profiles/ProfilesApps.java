@@ -12,7 +12,6 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.content.res.AppCompatResources;
-import androidx.appcompat.view.ContextThemeWrapper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
@@ -31,7 +30,7 @@ public class ProfilesApps {
     public ProfilesApps(Context context, String profileName){
         this.packageName  = new KeymapProfiles(context).getProfile(profileName).packageName;
 
-        view = createView(LayoutInflater.from(new ContextThemeWrapper(context, R.style.Theme_XtMapper)));
+        view = createView(LayoutInflater.from(context));
         onViewCreated(view);
     }
 

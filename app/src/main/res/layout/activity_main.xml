@@ -5,10 +5,8 @@
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black"
     tools:context=".activity.MainActivity"
     tools:ignore="ContentDescription,SpUsage">
-
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/profilesView"
@@ -23,12 +21,12 @@
     
 
     <androidx.cardview.widget.CardView
+        style="@style/Widget.Material3.CardView.Elevated"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:translationZ="-1dp"
         android:translationY="20dp"
         app:cardElevation="0dp"
-        app:cardBackgroundColor="@color/dark_grey"
         app:cardCornerRadius="60dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/controls">

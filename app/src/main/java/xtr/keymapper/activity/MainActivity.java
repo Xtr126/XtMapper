@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
 
     public ActivityMainBinding binding;
     private Intent intent;
+    private ColorStateList defaultTint;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
+        defaultTint = binding.controls.startServer.getBackgroundTintList();
         binding.controls.startServer.setOnClickListener(v -> startServer(true));
         binding.controls.startInTerminal.setOnClickListener(v -> startServer(false));
         binding.controls.startPointer.setOnClickListener(v -> startPointer());
@@ -84,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setButtonInactive(Button button){
-        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.grey)));
+        button.setBackgroundTintList(defaultTint);
     }
 
     private void startEditor(){

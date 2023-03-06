@@ -9,7 +9,7 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.view.ContextThemeWrapper;
+import androidx.appcompat.content.res.AppCompatResources;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -53,13 +53,8 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         keymapProfiles.sharedPref.registerOnSharedPreferenceChangeListener(this);
 
         new KeymapProfiles(context).getAllProfiles().forEach((profileName, profile) -> {
-            if(profileName != null) try {
-                recyclerDataArrayList.add(
-                        new RecyclerData(profile.packageName,
-                                context.getPackageManager().getApplicationIcon(profile.packageName),
-                                profileName));
-            } catch (PackageManager.NameNotFoundException ignored) {
-            }
+            if(profileName != null)
+                recyclerDataArrayList.add(new RecyclerData(profile.packageName, context, profileName));
             else keymapProfiles.deleteProfile(null);
         });
     }
@@ -100,10 +95,10 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
             EditText editText = new EditText(view.getContext());
             editText.setText(profileName);
 
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_XtMapper));
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
             builder.setTitle(R.string.dialog_alert_add_profile)
-                    .setPositiveButton("Ok", (dialog, which) -> keymapProfiles.renameProfile(profileName, editText.getText().toString()))
-                    .setNegativeButton("Cancel", (dialog, which) -> {})
+                    .setPositiveButton(R.string.ok, (dialog, which) -> keymapProfiles.renameProfile(profileName, editText.getText().toString()))
+                    .setNegativeButton(R.string.cancel, (dialog, which) -> {})
                     .setView(editText)
                     .show();
         });
@@ -111,12 +106,12 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         viewHolder.binding.appIconButton.setOnClickListener(view -> {
             ProfilesApps appsView = new ProfilesApps(view.getContext(), profileName);
 
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_XtMapper));
-            builder.setPositiveButton("Ok", (dialog, which) -> {
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+            builder.setPositiveButton(R.string.ok, (dialog, which) -> {
                         keymapProfiles.setProfilePackageName(recyclerData.name.toString(), appsView.packageName);
                         appsView.onDestroyView();
                     })
-                    .setNegativeButton("Cancel", (dialog, which) -> {})
+                    .setNegativeButton(R.string.cancel, (dialog, which) -> {})
                     .setView(appsView.view)
                     .show();
         });
@@ -129,10 +124,14 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
     }
 
     private static class RecyclerData {
-        public RecyclerData(String packageName, Drawable icon, CharSequence name) {
+        public RecyclerData(String packageName, Context context, CharSequence name) {
             this.packageName = packageName;
             this.name = name;
-            this.icon = icon;
+            try {
+                this.icon = context.getPackageManager().getApplicationIcon(packageName);
+            } catch (PackageManager.NameNotFoundException e) {
+                this.icon = AppCompatResources.getDrawable(context, R.mipmap.ic_launcher_foreground);
+            }
         }
 
         String packageName;

@@ -2,15 +2,15 @@ package xtr.keymapper.profiles;
 
 import android.content.Context;
 import android.view.WindowManager;
-import android.widget.EditText;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.view.ContextThemeWrapper;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.R;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import java.util.ArrayList;
+
+import xtr.keymapper.R;
 
 public class ProfileSelector {
 
@@ -26,7 +26,8 @@ public class ProfileSelector {
         }
         CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark));
+        context.setTheme(R.style.Theme_XtMapper);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
 
         // Show dialog to select profile
         if (!allProfiles.isEmpty())
@@ -36,13 +37,13 @@ public class ProfileSelector {
                         listener.onProfileSelected(selectedProfile);
                     });
         else { // Create profile if no profile found
-            EditText editText = new EditText(context);
+            MaterialAutoCompleteTextView editText = new MaterialAutoCompleteTextView(context);
             builder.setTitle(xtr.keymapper.R.string.dialog_alert_add_profile)
-                    .setPositiveButton("Ok", (d, which) -> {
+                    .setPositiveButton(R.string.ok, (d, which) -> {
                         String selectedProfile = editText.getText().toString();
                         showsAppSelectionDialog(context, listener, selectedProfile);
                     })
-                    .setNegativeButton("Cancel", (d, which) -> {})
+                    .setNegativeButton(R.string.cancel, (d, which) -> {})
                     .setView(editText);
         }
         showDialog(builder);
@@ -51,14 +52,14 @@ public class ProfileSelector {
     public static void showsAppSelectionDialog(Context context, OnProfileSelectedListener listener, String profile) {
         ProfilesApps appsView = new ProfilesApps(context, profile);
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_Material3_Dark));
-        builder.setPositiveButton("Ok", (dialog, which) -> {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        builder.setPositiveButton(R.string.ok, (dialog, which) -> {
                     KeymapProfiles keymapProfiles = new KeymapProfiles(context);
                     keymapProfiles.saveProfile(profile, new ArrayList<>(), appsView.packageName);
                     appsView.onDestroyView();
                     listener.onProfileSelected(profile);
                 })
-                .setNegativeButton("Cancel", (dialog, which) -> {})
+                .setNegativeButton(R.string.cancel, (dialog, which) -> {})
                 .setView(appsView.view);
         showDialog(builder);
     }

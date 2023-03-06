@@ -11,7 +11,6 @@ import android.widget.EditText;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.content.res.AppCompatResources;
-import androidx.appcompat.view.ContextThemeWrapper;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -21,6 +20,7 @@ import xtr.keymapper.databinding.FragmentProfilesViewBinding;
 
 public class ProfilesViewFragment extends Fragment {
     private FragmentProfilesViewBinding binding;
+    private ProfilesViewAdapter profilesViewAdapter;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
@@ -41,14 +41,14 @@ public class ProfilesViewFragment extends Fragment {
         setAdapter();
 
         binding.addButton.setOnClickListener(v -> {
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(context, R.style.Theme_XtMapper));
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
             EditText editText = new EditText(context);
             builder.setTitle(R.string.dialog_alert_add_profile)
-                    .setPositiveButton("Ok", (dialog, which) -> {
+                    .setPositiveButton(R.string.ok, (dialog, which) -> {
                         String selectedProfile = editText.getText().toString();
                         ProfileSelector.showsAppSelectionDialog(context, p -> setAdapter(), selectedProfile);
                     })
-                    .setNegativeButton("Cancel", (dialog, which) -> {})
+                    .setNegativeButton(R.string.cancel, (dialog, which) -> {})
                     .setView(editText)
                     .show();
         });
@@ -73,11 +73,13 @@ public class ProfilesViewFragment extends Fragment {
     }
 
     private void setAdapter() {
-        binding.profiles.setAdapter(new ProfilesViewAdapter(getContext(), this::setAdapter));
+        profilesViewAdapter = new ProfilesViewAdapter(getContext(), this::setAdapter);
+        binding.profiles.setAdapter(profilesViewAdapter);
     }
 
     @Override
     public void onDestroyView() {
+        profilesViewAdapter = null;
         binding = null;
         super.onDestroyView();
     }

@@ -27,8 +27,7 @@
         <service
             android:name=".EditorService"
             android:enabled="true"
-            android:exported="false"
-            android:theme="@style/Theme.Material3.Dark"/>
+            android:exported="false" />
 
         <activity
             android:name=".activity.InfoActivity"
