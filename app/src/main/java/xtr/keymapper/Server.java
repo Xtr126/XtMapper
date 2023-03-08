@@ -7,6 +7,7 @@ import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,13 +17,13 @@ import xtr.keymapper.server.InputService;
 
 public class Server {
 
-    public String script_name;
+    public File script;
     public MainActivity.Callback mCallback;
 
     private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
         final String className = InputService.class.getName();
 
-        FileWriter linesToWrite = new FileWriter(script_name);
+        FileWriter linesToWrite = new FileWriter(script, false);
         linesToWrite.append("#!/system/bin/sh\n");
         linesToWrite.append("pgrep -f ").append(className).append(" && echo Waiting for overlay... && exit 1\n");
         linesToWrite.append("exec env ");
@@ -37,23 +38,24 @@ public class Server {
 
     public void setupServer (Context context) {
         try {
-            final String defaultPath = "/sdcard/Android/data/" + context.getPackageName() + "/files";
-            script_name = context.getExternalFilesDir(defaultPath) + "/xtMapper.sh";
+            script = new File(context.getExternalFilesDir(null), "xtMapper.sh");
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
             writeScript(ai);
-        } catch (IOException | InterruptedException | PackageManager.NameNotFoundException e) {
-            Log.e("Server", e.toString());
+        } catch (IOException | InterruptedException | PackageManager.NameNotFoundException ex) {
+            Log.e("Server", ex.toString());
+            mCallback.updateCmdView1("failed to write script: " + ex + "\n");
         }
+        if (!script.exists()) mCallback.updateCmdView1("failed to write script: permission denied\n");
     }
 
     public void startServer() {
-        mCallback.updateCmdView1("exec sh " + script_name + "\n");
+        mCallback.updateCmdView1("exec sh " + script.getPath() + "\n");
         try {
             Process sh = Utils.getRootAccess();
             DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-            outputStream.writeBytes("/system/bin/sh " + script_name);
+            outputStream.writeBytes("/system/bin/sh " + script.getPath());
             outputStream.close();
 
             BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
@@ -64,8 +66,8 @@ public class Server {
                     mCallback.startPointer();
             }
             sh.waitFor();
-        } catch (IOException | InterruptedException e) {
-            Log.e("Server", e.toString());
+        } catch (IOException | InterruptedException ex) {
+            Log.e("Server", ex.toString());
         }
     }
 

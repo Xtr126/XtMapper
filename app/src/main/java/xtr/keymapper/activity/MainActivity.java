@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
             if (autorun) new Thread(server::startServer).start();
-            else mCallback.updateCmdView1("run in adb shell:\n sh " + server.script_name);
+            else mCallback.updateCmdView1("run in adb shell:\n sh " + server.script.getPath());
         }
     }
 
