@@ -34,7 +34,7 @@
             android:layout_gravity="top"
             android:background="#00FFFFFF"
             android:foreground="@drawable/ic_profiles_2"
-            android:foregroundTint="@color/white"
+            android:foregroundTint="?attr/colorOnSurface"
             android:translationZ="0dp" />
     </LinearLayout>
 
