@@ -31,6 +31,9 @@
 
 APK can be obtained from GitHub actions (latest) or [`releases`](https://github.com/Xtr126/XtMapper/releases).
 
+
+
+
 ## Development
 
 ### Build
@@ -41,10 +44,19 @@ If you want to contribute code, please base your commits on the latest dev branc
 - Touch emulation is handled by TouchPointer.java and Input.java.  
 - InputService.java runs separately from the app as an elevated java process using app_process and adb shell/root. 
 
-## Useful discord servers 
+## Help and support
+Feel free to file an [issue](https://github.com/Xtr126/XtMapper/issues).  
+Some useful discord servers (related):  
 BlissLabs: https://discord.com/invite/F9n5gbdNy2  
+AndroidEmu: https://discord.gg/mRpT4Qq  
 SupremeGamers: https://aopc.dev/discord  
-AndroidEmu: https://discord.gg/mRpT4Qq
+
+## Credits
+Open source libraries used:
+- [Material Design Components](https://github.com/material-components/material-components-android) used for the app user interface.
+- [FloatingActionButtonSpeedDial](https://github.com/leinardi/FloatingActionButtonSpeedDial)
+
+[Some code](./app/src/main/java/com/genymobile/scrcpy) from the [scrcpy](https://github.com/Genymobile/scrcpy) project was used for implementing multi-touch support in the keymapper. 
 
 ## Copyright and License
 This project is licensed under the GPL v3.  
