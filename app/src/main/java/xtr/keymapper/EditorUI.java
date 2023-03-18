@@ -197,7 +197,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         // Save Config
         KeymapProfiles profiles = new KeymapProfiles(context);
-        profiles.saveProfile(profileName, linesToWrite, context.getPackageName());
+        profiles.saveProfile(profileName, linesToWrite, profile.packageName);
 
         // Reload keymap if service running
         InputService.reloadKeymap();
