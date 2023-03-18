@@ -45,6 +45,8 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
         closeButton.setElevation(2);
         closeButton.setOnClickListener(v -> {
             removeAllViews();
+            invalidate();
+            key.invalidate();
             key = null;
         });
         closeButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);

@@ -136,14 +136,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     public void hideView() {
-        try {
-            saveKeymap();
-            removeView(binding.getRoot());
-            removeView(mainView);
-            onHideListener.onHideView();
-        } catch (Exception e) {
-            Log.d("Error2", e.toString());
-        }
+        saveKeymap();
+        removeView(mainView);
+        onHideListener.onHideView();
     }
 
     private void removeView(ViewGroup view) {
@@ -175,11 +170,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
         if (dpadUdlr != null) {
             Dpad dpad = new Dpad(dpadUdlr, DpadType.UDLR);
             linesToWrite.add(dpad.getData());
-
-            // If WASD keys already added, remove them
-            for (int i = 0; i < keyList.size(); i++)
-                if (keyList.get(i).getText().matches("[WASD]"))
-                    keyList.get(i).key = null;
         }
 
         if (crosshair != null) {
@@ -190,10 +180,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
         }
         
         // Keyboard keys
-        keyList.forEach(movableFloatingActionKey -> {
-            if(movableFloatingActionKey != null)
-                linesToWrite.add(movableFloatingActionKey.getData());
-        });
+        keyList.stream().filter(movableFloatingActionKey -> movableFloatingActionKey.key != null)
+                .map(MovableFloatingActionKey::getData).forEach(linesToWrite::add);
 
         // Save Config
         KeymapProfiles profiles = new KeymapProfiles(context);
