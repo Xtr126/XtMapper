@@ -13,6 +13,10 @@
         android:icon="@drawable/ic_baseline_mouse_36"
         android:title="Left Click" />
     <item
+        android:id="@+id/swipe_key"
+        android:icon="@drawable/ic_baseline_touch_app_24"
+        android:title="Swipe Key" />
+    <item
         android:id="@+id/add"
         android:icon="@drawable/newkey"
         android:title="Add Key" />

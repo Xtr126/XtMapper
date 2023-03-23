@@ -13,6 +13,7 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
 
     public FloatingActionKey key;
     private float dX, dY;
+    private OnXyChangeListener xyChangeListener;
 
     public MovableFloatingActionKey(Context context) {
         super(context);
@@ -80,7 +81,6 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent){
         ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams)view.getLayoutParams();
-
         int action = motionEvent.getAction();
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
@@ -109,15 +109,23 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
                 newY = Math.max(layoutParams.topMargin, newY); // Don't allow the FAB past the top of the parent
                 newY = Math.min(parentHeight - viewHeight - layoutParams.bottomMargin, newY); // Don't allow the FAB past the bottom of the parent
 
-                view.animate()
-                        .x(newX)
-                        .y(newY)
-                        .setDuration(0)
-                        .start();
+                view.animate().x(newX).y(newY).setDuration(0).start();
+
+                if (xyChangeListener != null)
+                    xyChangeListener.onNewXY(newX, newY);
+
                 return true; // Consumed
             }
             default:
                 return super.onTouchEvent(motionEvent);
         }
+    }
+    public void setXyChangeListener(OnXyChangeListener xyChangeListener) {
+        this.xyChangeListener = xyChangeListener;
+        xyChangeListener.onNewXY(getX(), getY());
+    }
+
+    public interface OnXyChangeListener {
+        void onNewXY(float x, float y);
     }
 }

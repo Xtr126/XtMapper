@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xtr.keymapper.floatingkeys.MovableFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="320dp"
+    android:layout_height="240dp"
+    android:translationZ="2dp"
+    android:focusable="false"
+    android:theme="@style/Theme.XtMapper"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:ignore="HardcodedText,ContentDescription">
+
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_gravity="top|left"
+            android:id="@+id/key_1"
+            style="@style/Widget.Material3.Button.IconButton.Filled" />
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_gravity="bottom|right"
+            android:id="@+id/key_2"
+            style="@style/Widget.Material3.Button.IconButton.Filled" />
+
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/close_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            app:icon="@android:drawable/ic_delete"
+            style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+            />
+
+</xtr.keymapper.floatingkeys.MovableFrameLayout>

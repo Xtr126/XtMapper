@@ -30,6 +30,7 @@ import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.dpad.Dpad.DpadType;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
+import xtr.keymapper.floatingkeys.SwipeKeyView;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.mouse.MouseAimSettings;
 import xtr.keymapper.profiles.KeymapProfiles;
@@ -49,7 +50,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     private MovableFrameLayout dpadWasd, dpadUdlr, crosshair;
     // Default position of new views added
-    private static final Float DEFAULT_X = 200f, DEFAULT_Y = 200f;
     private final KeymapEditorBinding binding;
     private final Context context;
     private final OnHideListener onHideListener;
@@ -73,6 +73,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         binding = KeymapEditorBinding.inflate(layoutInflater);
         mainView = binding.getRoot();
+
+
         binding.speedDial.inflate(R.menu.keymap_editor_menu);
         binding.speedDial.open();
         setupButtons();
@@ -193,16 +195,20 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     public void setupButtons() {
         binding.speedDial.setOnActionSelectedListener(actionItem -> {
+            // X y coordinates of center of root view
+            float defaultX = mainView.getPivotX();
+            float defaultY = mainView.getPivotY();
+
             switch (actionItem.getId()) {
                 case R.id.add:
-                    addKey();
+                    addKey(defaultX, defaultY);
                     break;
                 case R.id.dpad:
                     final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
                     AlertDialog.Builder builder = new AlertDialog.Builder(context);
                     builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
-                        if (i == 0) addArrowKeysDpad(DEFAULT_X, DEFAULT_Y);
-                        else addWasdDpad(DEFAULT_X, DEFAULT_Y);
+                        if (i == 0) addArrowKeysDpad(defaultX, defaultY);
+                        else addWasdDpad(defaultX, defaultY);
                     });
                     AlertDialog dialog = builder.create();
                     dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
@@ -214,14 +220,17 @@ public class EditorUI extends OnKeyEventListener.Stub {
                     break;
 
                 case R.id.mouse_left:
-                    addLeftClick(DEFAULT_X, DEFAULT_Y);
+                    addLeftClick(defaultX, defaultY);
                     break;
 
                 case R.id.crosshair:
                     profile.mouseAimConfig = new MouseAimConfig();
-                    addCrosshair(DEFAULT_X, DEFAULT_Y);
+                    addCrosshair(defaultX, defaultY);
                     break;
 
+                case R.id.swipe_key:
+                    addSwipeKey();
+                    break;
             }
             return true;
         });
@@ -283,11 +292,11 @@ public class EditorUI extends OnKeyEventListener.Stub {
         keyList.add(floatingKey);
     }
 
-    private void addKey() {
+    private void addKey(float x, float y) {
         final KeymapProfiles.Key key = new KeymapProfiles.Key();
         key.code = "KEY_X";
-        key.x = DEFAULT_X;
-        key.y = DEFAULT_Y;
+        key.x = x;
+        key.y = y;
         addKey(key);
     }
 
@@ -324,6 +333,11 @@ public class EditorUI extends OnKeyEventListener.Stub {
         leftClick.animate().x(x).y(y)
                 .setDuration(500)
                 .start();
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void addSwipeKey() {
+        SwipeKeyView swipeKeyView = new SwipeKeyView(mainView);
     }
 
     private void resizeView(View view, float x, float y) {
