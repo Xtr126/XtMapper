@@ -5,6 +5,8 @@ import static android.content.Context.MODE_PRIVATE;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import androidx.collection.ArraySet;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,6 +16,7 @@ import java.util.function.BiConsumer;
 
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.mouse.MouseAimConfig;
+import xtr.keymapper.swipekey.SwipeKey;
 
 public class KeymapProfiles {
     final SharedPreferences sharedPref;
@@ -46,13 +49,16 @@ public class KeymapProfiles {
         public float x;
         public float y;
     }
+
      public static final class Profile {
          public String packageName = "xtr.keymapper";
          public Dpad dpadUdlr = null;
          public Dpad dpadWasd = null;
          public MouseAimConfig mouseAimConfig = null;
          public ArrayList<Key> keys = new ArrayList<>();
+         public ArrayList<SwipeKey> swipeKeys = new ArrayList<>();
      }
+
     public void saveProfile(String profile, ArrayList<String> lines, String packageName) {
         lines.removeIf(line -> line.contains("APPLICATION"));
         lines.add("APPLICATION " + packageName);
@@ -88,6 +94,10 @@ public class KeymapProfiles {
 
                 case "APPLICATION":
                     profile.packageName = data[1];
+                    break;
+
+                case SwipeKey.type:
+                    if (data.length > 6) profile.swipeKeys.add(new SwipeKey(data));
                     break;
 
                 default: {

@@ -20,7 +20,7 @@ import java.util.Random;
 
 public class FloatingActionKey extends FloatingActionButton  {
 
-    public String key;
+    public String key = "X";
     private ColorStateList colorInactive;
     private ColorStateList textColor;
     private ColorStateList textColorInactive;

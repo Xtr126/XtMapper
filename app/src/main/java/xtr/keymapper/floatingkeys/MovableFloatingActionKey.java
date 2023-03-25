@@ -14,14 +14,25 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
     public FloatingActionKey key;
     private float dX, dY;
     private OnXyChangeListener xyChangeListener;
+    public FloatingActionKey closeButton;
+    private OnKeyRemoved callback;
 
+    public interface OnKeyRemoved {
+        void onKeyRemoved(MovableFloatingActionKey key);
+    }
+
+    public MovableFloatingActionKey(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init();
+    }
     public MovableFloatingActionKey(Context context) {
         super(context);
         init();
     }
 
-    public MovableFloatingActionKey(Context context, AttributeSet attrs) {
-        super(context, attrs);
+    public MovableFloatingActionKey(Context context, OnKeyRemoved callback) {
+        super(context);
+        this.callback = callback;
         init();
     }
 
@@ -41,7 +52,7 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
         key.setLayoutParams(mParams);
         key.setElevation(1);
 
-        FloatingActionKey closeButton = new FloatingActionKey(getContext());
+        closeButton = new FloatingActionKey(getContext());
         closeButton.setImageResource(android.R.drawable.ic_delete);
         closeButton.setElevation(2);
         closeButton.setOnClickListener(v -> {
@@ -49,6 +60,7 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
             invalidate();
             key.invalidate();
             key = null;
+            if (callback != null) callback.onKeyRemoved(this);
         });
         closeButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
 

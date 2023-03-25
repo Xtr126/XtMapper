@@ -28,7 +28,7 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
             editor = new EditorUI(this, profile);
             editor.open();
 
-            if (mService != null)
+            if (getEvent())
                 try {
                     mService.registerOnKeyEventListener(editor);
                 } catch (RemoteException ignored) {
@@ -51,7 +51,7 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
 
     @Override
     public void onHideView() {
-        try {
+        if (getEvent()) try {
             mService.unregisterOnKeyEventListener(editor);
         } catch (RemoteException ignored) {
         }

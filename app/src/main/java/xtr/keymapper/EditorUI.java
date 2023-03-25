@@ -7,7 +7,6 @@ import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -17,7 +16,6 @@ import android.view.WindowManager;
 
 import androidx.appcompat.view.ContextThemeWrapper;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,11 +28,12 @@ import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.dpad.Dpad.DpadType;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
-import xtr.keymapper.floatingkeys.SwipeKeyView;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.mouse.MouseAimSettings;
 import xtr.keymapper.profiles.KeymapProfiles;
 import xtr.keymapper.server.InputService;
+import xtr.keymapper.swipekey.SwipeKey;
+import xtr.keymapper.swipekey.SwipeKeyView;
 
 public class EditorUI extends OnKeyEventListener.Stub {
 
@@ -46,6 +45,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private MovableFloatingActionKey keyInFocus;
     // Keyboard keys
     private final List<MovableFloatingActionKey> keyList = new ArrayList<>();
+    private final List<SwipeKeyView> swipeKeyList = new ArrayList<>();
     private MovableFloatingActionKey leftClick;
 
     private MovableFrameLayout dpadWasd, dpadUdlr, crosshair;
@@ -74,18 +74,13 @@ public class EditorUI extends OnKeyEventListener.Stub {
         binding = KeymapEditorBinding.inflate(layoutInflater);
         mainView = binding.getRoot();
 
-
         binding.speedDial.inflate(R.menu.keymap_editor_menu);
         binding.speedDial.open();
         setupButtons();
     }
 
     public void open() {
-        try {
-            loadKeymap();
-        } catch (IOException e) {
-            Log.d("EditorUI", e.toString());
-        }
+        loadKeymap();
         addView(mainView);
 
         if (!onHideListener.getEvent()) {
@@ -149,10 +144,11 @@ public class EditorUI extends OnKeyEventListener.Stub {
         view.invalidate();
     }
 
-    private void loadKeymap() throws IOException {
+    private void loadKeymap() {
         profile = new KeymapProfiles(context).getProfile(profileName);
         // Add Keyboard keys as Views
         profile.keys.forEach(this::addKey);
+        profile.swipeKeys.forEach(swipeKey -> swipeKeyList.add(new SwipeKeyView(mainView, swipeKey, swipeKeyList::remove, this::onClick)));
 
         if (profile.dpadUdlr != null) addArrowKeysDpad(profile.dpadUdlr.getX(), profile.dpadUdlr.getY());
 
@@ -182,8 +178,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
         }
         
         // Keyboard keys
-        keyList.stream().filter(movableFloatingActionKey -> movableFloatingActionKey.key != null)
-                .map(MovableFloatingActionKey::getData).forEach(linesToWrite::add);
+        keyList.stream().map(MovableFloatingActionKey::getData).forEach(linesToWrite::add);
+
+        swipeKeyList.stream().map(swipeKeyView -> new SwipeKey(swipeKeyView).getData()).forEach(linesToWrite::add);
 
         // Save Config
         KeymapProfiles profiles = new KeymapProfiles(context);
@@ -199,38 +196,34 @@ public class EditorUI extends OnKeyEventListener.Stub {
             float defaultX = mainView.getPivotX();
             float defaultY = mainView.getPivotY();
 
-            switch (actionItem.getId()) {
-                case R.id.add:
-                    addKey(defaultX, defaultY);
-                    break;
-                case R.id.dpad:
-                    final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
-                    AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                    builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
-                        if (i == 0) addArrowKeysDpad(defaultX, defaultY);
-                        else addWasdDpad(defaultX, defaultY);
-                    });
-                    AlertDialog dialog = builder.create();
-                    dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
-                    dialog.show();
-                    break;
+            int id = actionItem.getId();
 
-                case R.id.save:
-                    hideView();
-                    break;
-
-                case R.id.mouse_left:
-                    addLeftClick(defaultX, defaultY);
-                    break;
-
-                case R.id.crosshair:
-                    profile.mouseAimConfig = new MouseAimConfig();
-                    addCrosshair(defaultX, defaultY);
-                    break;
-
-                case R.id.swipe_key:
-                    addSwipeKey();
-                    break;
+            if (id == R.id.add) {
+                addKey(defaultX, defaultY);
+            }
+            else if (id == R.id.save) {
+                hideView();
+            }
+            else if (id == R.id.dpad) {
+                final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
+                    if (i == 0) addArrowKeysDpad(defaultX, defaultY);
+                    else addWasdDpad(defaultX, defaultY);
+                });
+                AlertDialog dialog = builder.create();
+                dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                dialog.show();
+            }
+            else if (id == R.id.crosshair) {
+                profile.mouseAimConfig = new MouseAimConfig();
+                addCrosshair(defaultX, defaultY);
+            }
+            else if (id == R.id.mouse_left) {
+                addLeftClick(defaultX, defaultY);
+            }
+            else if (id == R.id.swipe_key) {
+                addSwipeKey();
             }
             return true;
         });
@@ -277,7 +270,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void addKey(KeymapProfiles.Key key) {
-        MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(context);
+        MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(context, keyList::remove);
 
         floatingKey.setText(key.code.substring(4));
         floatingKey.animate()
@@ -288,7 +281,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
         floatingKey.setOnClickListener(this::onClick);
 
         mainView.addView(floatingKey);
-
         keyList.add(floatingKey);
     }
 
@@ -335,9 +327,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .start();
     }
 
-    @SuppressLint("ClickableViewAccessibility")
     private void addSwipeKey() {
-        SwipeKeyView swipeKeyView = new SwipeKeyView(mainView);
+        SwipeKeyView swipeKeyView = new SwipeKeyView(mainView, swipeKeyList::remove, this::onClick);
+        swipeKeyList.add(swipeKeyView);
     }
 
     private void resizeView(View view, float x, float y) {

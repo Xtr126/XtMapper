@@ -1,4 +1,4 @@
-package xtr.keymapper.floatingkeys;
+package xtr.keymapper.swipekey;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -10,6 +10,8 @@ import android.view.View;
 
 import androidx.annotation.UiContext;
 import androidx.annotation.UiThread;
+
+import com.google.android.material.button.MaterialButton;
 
 public class SwipeKeyOverlay extends View {
     private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -48,4 +50,15 @@ public class SwipeKeyOverlay extends View {
         invalidate();
     }
 
+    private float getLineMidPointX(){
+        return (lineStartX + lineStopX) / 2;
+    }
+    private float getLineMidPointY(){
+        return (lineStartY + lineStopY) / 2;
+    }
+
+    public void centerViewOnLine(View view) {
+        view.setX(getLineMidPointX() - view.getPivotX());
+        view.setY(getLineMidPointY() - view.getPivotY());
+    }
 }
