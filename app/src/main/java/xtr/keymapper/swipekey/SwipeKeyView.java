@@ -29,6 +29,7 @@ public class SwipeKeyView {
                 .x(swipeKey.key1.x)
                 .y(swipeKey.key1.y)
                 .setDuration(500)
+                .withEndAction(() -> onXyChange(0, 0))
                 .start();
 
         button2.setText(swipeKey.key2.code);
@@ -36,15 +37,14 @@ public class SwipeKeyView {
                 .x(swipeKey.key2.x)
                 .y(swipeKey.key2.y)
                 .setDuration(500)
+                .withEndAction(() -> onXyChange(0, 0))
                 .start();
-        Handler handler = new Handler(Looper.myLooper());
-        handler.postDelayed(() -> onXyChange(0, 0), 500);
     }
 
     public SwipeKeyView(ViewGroup rootView, OnViewRemoved callback, View.OnClickListener onClickListener){
         Context context = rootView.getContext();
-        button1 = new MovableFloatingActionKey(context);
-        button2 = new MovableFloatingActionKey(context);
+        button1 = new MovableFloatingActionKey(context, true);
+        button2 = new MovableFloatingActionKey(context, true);
 
         closeButton = SwipeKeyBinding.inflate(LayoutInflater.from(context)).getRoot();
 

@@ -16,24 +16,29 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
     private OnXyChangeListener xyChangeListener;
     public FloatingActionKey closeButton;
     private OnKeyRemoved callback;
+    boolean isSwipeKey;
 
     public interface OnKeyRemoved {
+
         void onKeyRemoved(MovableFloatingActionKey key);
     }
-
     public MovableFloatingActionKey(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
+
     public MovableFloatingActionKey(Context context) {
         super(context);
         init();
     }
-
     public MovableFloatingActionKey(Context context, OnKeyRemoved callback) {
-        super(context);
+        this(context);
         this.callback = callback;
-        init();
+    }
+
+    public MovableFloatingActionKey(Context context, boolean isSwipeKey) {
+        this(context);
+        this.isSwipeKey = isSwipeKey;
     }
 
     public MovableFloatingActionKey(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -56,11 +61,13 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
         closeButton.setImageResource(android.R.drawable.ic_delete);
         closeButton.setElevation(2);
         closeButton.setOnClickListener(v -> {
-            removeAllViews();
-            invalidate();
-            key.invalidate();
-            key = null;
-            if (callback != null) callback.onKeyRemoved(this);
+            if (!isSwipeKey) {
+                removeAllViews();
+                key = null;
+                if (callback != null) callback.onKeyRemoved(this);
+            } else {
+                setText(" ");
+            }
         });
         closeButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
 
