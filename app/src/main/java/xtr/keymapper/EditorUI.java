@@ -1,5 +1,7 @@
 package xtr.keymapper;
 
+import static xtr.keymapper.profiles.KeymapProfiles.MOUSE_RIGHT;
+
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -46,7 +48,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     // Keyboard keys
     private final List<MovableFloatingActionKey> keyList = new ArrayList<>();
     private final List<SwipeKeyView> swipeKeyList = new ArrayList<>();
-    private MovableFloatingActionKey leftClick;
+    private MovableFloatingActionKey leftClick, rightClick;
 
     private MovableFrameLayout dpadWasd, dpadUdlr, crosshair;
     // Default position of new views added
@@ -155,6 +157,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         if (profile.dpadWasd != null) addWasdDpad(profile.dpadWasd.getX(), profile.dpadWasd.getY());
 
         if (profile.mouseAimConfig != null) addCrosshair(profile.mouseAimConfig.xCenter, profile.mouseAimConfig.yCenter);
+        if (profile.rightClick != null) addRightClick(profile.rightClick.x, profile.rightClick.y);
     }
 
     private void saveKeymap() {
@@ -175,6 +178,10 @@ public class EditorUI extends OnKeyEventListener.Stub {
             profile.mouseAimConfig.setCenterXY(crosshair);
             profile.mouseAimConfig.setLeftClickXY(leftClick);
             linesToWrite.add(profile.mouseAimConfig.getData());
+        }
+
+        if (rightClick != null) {
+            linesToWrite.add(MOUSE_RIGHT + " " + rightClick.getX() + " " + rightClick.getY());
         }
         
         // Keyboard keys
@@ -224,6 +231,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
             }
             else if (id == R.id.swipe_key) {
                 addSwipeKey();
+            }
+            else if (id == R.id.mouse_right) {
+                addRightClick(defaultX, defaultY);
             }
             return true;
         });
@@ -323,6 +333,17 @@ public class EditorUI extends OnKeyEventListener.Stub {
             mainView.addView(leftClick);
         }
         leftClick.animate().x(x).y(y)
+                .setDuration(500)
+                .start();
+    }
+
+    private void addRightClick(float x, float y) {
+        if (rightClick == null) {
+            rightClick = new MovableFloatingActionKey(context);
+            rightClick.key.setImageResource(R.drawable.ic_baseline_mouse_36);
+            mainView.addView(rightClick);
+        }
+        rightClick.animate().x(x).y(y)
                 .setDuration(500)
                 .start();
     }

@@ -38,6 +38,7 @@ public class MouseAimHandler {
             area.right = width;
             area.bottom = height;
         } else {
+            // An area around the center point
             area.left = currentX - config.width;
             area.right = currentX + config.width;
             area.top = currentY - config.height;

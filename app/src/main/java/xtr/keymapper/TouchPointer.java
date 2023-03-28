@@ -10,6 +10,7 @@ import static xtr.keymapper.KeymapConfig.KEY_CTRL;
 import static xtr.keymapper.TouchPointer.PointerId.dpad1pid;
 import static xtr.keymapper.TouchPointer.PointerId.dpad2pid;
 import static xtr.keymapper.TouchPointer.PointerId.pid1;
+import static xtr.keymapper.TouchPointer.PointerId.pid2;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
@@ -51,8 +52,6 @@ public class TouchPointer extends Service {
     private View cursorView;
     private WindowManager mWindowManager;
     int x1 = 100, y1 = 100;
-    private DpadHandler dpad1Handler, dpad2Handler;
-    private MouseAimHandler mouseAimHandler;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
@@ -199,16 +198,16 @@ public class TouchPointer extends Service {
         keyList = profile.keys;
 
         if (profile.dpadUdlr != null)
-            dpad1Handler = new DpadHandler(this, profile.dpadUdlr, dpad1pid.id);
+            keyEventHandler.dpad1Handler = new DpadHandler(this, profile.dpadUdlr, dpad1pid.id);
         if (profile.dpadWasd != null)
-            dpad2Handler = new DpadHandler(this, profile.dpadWasd, dpad2pid.id);
+            keyEventHandler.dpad2Handler = new DpadHandler(this, profile.dpadWasd, dpad2pid.id);
         if (profile.mouseAimConfig != null)
-            mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
+            mouseEventHandler.mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
+        mouseEventHandler.rightClick = profile.rightClick;
 
         keymapConfig = new KeymapConfig(this);
         mouseEventHandler.sensitivity = keymapConfig.mouseSensitivity.intValue();
         mouseEventHandler.scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
-
     }
 
     public void sendSettingstoServer() throws RemoteException {
@@ -293,6 +292,7 @@ public class TouchPointer extends Service {
     private class KeyEventHandler {
         boolean ctrlKeyPressed = false;
         boolean altKeyPressed = false;
+        private DpadHandler dpad1Handler, dpad2Handler;
 
         private void init() {
             if (dpad1Handler != null) dpad1Handler.setInterface(mService);
@@ -377,7 +377,10 @@ public class TouchPointer extends Service {
         int scroll_speed_multiplier = 1;
         private MousePinchZoom pinchZoom;
         private MouseWheelZoom scrollZoomHandler;
-        private final int pointerId = pid1.id;
+        private final int pointerId1 = pid1.id;
+        private final int pointerId2 = pid2.id;
+        private MouseAimHandler mouseAimHandler;
+        private KeymapProfiles.Key rightClick;
 
         private void triggerMouseAim() throws RemoteException {
             if (mouseAimHandler != null) {
@@ -422,7 +425,7 @@ public class TouchPointer extends Service {
                     value *= sensitivity;
                     x1 += value;
                     if (x1 > width || x1 < 0) x1 -= value;
-                    if (pointer_down) mService.injectEvent(x1, y1, MOVE, pointerId);
+                    if (pointer_down) mService.injectEvent(x1, y1, MOVE, pointerId1);
                     else mService.moveCursorX(x1);
                     break;
                 }
@@ -431,7 +434,7 @@ public class TouchPointer extends Service {
                     value *= sensitivity;
                     y1 += value;
                     if (y1 > height || y1 < 0) y1 -= value;
-                    if (pointer_down) mService.injectEvent(x1, y1, MOVE, pointerId);
+                    if (pointer_down) mService.injectEvent(x1, y1, MOVE, pointerId1);
                     else mService.moveCursorY(y1);
                     break;
                 }
@@ -440,11 +443,12 @@ public class TouchPointer extends Service {
                     if (keyEventHandler.ctrlKeyPressed && keymapConfig.ctrlDragMouseGesture) {
                         pinchZoom = new MousePinchZoom(mService, x1, y1);
                         pinchZoom.handleEvent(code, value);
-                    } else mService.injectEvent(x1, y1, value, pointerId);
+                    } else mService.injectEvent(x1, y1, value, pointerId1);
                     break;
 
                 case BTN_RIGHT:
-                    if (value == 1 && keymapConfig.rightClickMouseAim) triggerMouseAim();
+                    if (rightClick != null) mService.injectEvent(rightClick.x, rightClick.y, value, pointerId2);
+                    else if (value == 1 && keymapConfig.rightClickMouseAim) triggerMouseAim();
                     break;
 
                 case REL_WHEEL:

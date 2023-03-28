@@ -20,6 +20,7 @@ import xtr.keymapper.swipekey.SwipeKey;
 
 public class KeymapProfiles {
     final SharedPreferences sharedPref;
+    public static final String MOUSE_RIGHT = "MOUSE_RIGHT";
 
     public KeymapProfiles(Context context) {
         sharedPref = context.getSharedPreferences("profiles", MODE_PRIVATE);
@@ -57,6 +58,7 @@ public class KeymapProfiles {
          public MouseAimConfig mouseAimConfig = null;
          public ArrayList<Key> keys = new ArrayList<>();
          public ArrayList<SwipeKey> swipeKeys = new ArrayList<>();
+         public Key rightClick;
      }
 
     public void saveProfile(String profile, ArrayList<String> lines, String packageName) {
@@ -90,6 +92,12 @@ public class KeymapProfiles {
 
                 case "MOUSE_AIM":
                     profile.mouseAimConfig = new MouseAimConfig().parse(data);
+                    break;
+
+                case MOUSE_RIGHT:
+                    profile.rightClick = new Key();
+                    profile.rightClick.x = Float.parseFloat(data[1]);
+                    profile.rightClick.y = Float.parseFloat(data[2]);
                     break;
 
                 case "APPLICATION":
