@@ -1,0 +1,57 @@
+package xtr.keymapper.swipekey;
+
+import static xtr.keymapper.server.InputService.MOVE;
+
+import android.os.Handler;
+import android.os.Looper;
+import android.os.RemoteException;
+
+import xtr.keymapper.IRemoteService;
+import xtr.keymapper.TouchPointer.KeyEventHandler.KeyEvent;
+
+public class SwipeKeyHandler {
+
+    private final SwipeEvent swipeEvent1;
+    private final SwipeEvent swipeEvent2;
+    private final String keycode1;
+    private final String keycode2;
+
+    public SwipeKeyHandler(SwipeKey key){
+        this.keycode1 = key.key1.code;
+        this.keycode2 = key.key2.code;
+        float midpointX = (key.key1.x + key.key2.x) / 2;
+        float midpointY = (key.key1.y + key.key2.y) / 2;
+        swipeEvent1 = new SwipeEvent(midpointX, midpointY, key.key1.x, key.key1.y);
+        swipeEvent2 = new SwipeEvent(midpointX, midpointY, key.key2.x, key.key2.y);
+    }
+
+    private static class SwipeEvent {
+        float startX, startY;
+        float stopX, stopY;
+
+        public SwipeEvent(float startX, float startY, float stopX, float stopY) {
+            this.startX = startX;
+            this.startY = startY;
+            this.stopX = stopX;
+            this.stopY = stopY;
+        }
+    }
+
+    public void handleEvent(KeyEvent event, IRemoteService service, Handler handler, int pid) throws RemoteException {
+        SwipeEvent swipeEvent;
+        if (event.code.equals(keycode1))
+            swipeEvent = swipeEvent1;
+        else if (event.code.equals(keycode2))
+            swipeEvent = swipeEvent2;
+        else return;
+
+        service.injectEvent(swipeEvent.startX, swipeEvent.startY, event.action, pid);
+        handler.postDelayed(() -> {
+            try {
+                service.injectEvent(swipeEvent.stopX, swipeEvent.stopY, MOVE, pid);
+            } catch (RemoteException ignored) {
+            }
+        }, 100);
+    }
+
+}

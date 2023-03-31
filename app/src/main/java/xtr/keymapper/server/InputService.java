@@ -86,8 +86,8 @@ public class InputService extends Service {
     private native void cursorSetY(int y);
 
     private final IRemoteService.Stub binder = new IRemoteService.Stub() {
-        public void injectEvent(float x, float y, int type, int pointerId) {
-            switch (type) {
+        public void injectEvent(float x, float y, int action, int pointerId) {
+            switch (action) {
                 case UP:
                     input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
                     break;

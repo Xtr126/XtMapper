@@ -34,6 +34,8 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import androidx.collection.SimpleArrayMap;
+
 import java.util.ArrayList;
 
 import xtr.keymapper.activity.InputDeviceSelector;
@@ -46,6 +48,8 @@ import xtr.keymapper.mouse.MouseWheelZoom;
 import xtr.keymapper.profiles.KeymapProfiles;
 import xtr.keymapper.profiles.ProfileSelector;
 import xtr.keymapper.server.InputService;
+import xtr.keymapper.swipekey.SwipeKey;
+import xtr.keymapper.swipekey.SwipeKeyHandler;
 
 public class TouchPointer extends Service {
 
@@ -205,6 +209,11 @@ public class TouchPointer extends Service {
             mouseEventHandler.mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
         mouseEventHandler.rightClick = profile.rightClick;
 
+        keyEventHandler.swipeKeyHandlers = new ArrayList<>();
+        for (SwipeKey key : profile.swipeKeys) {
+            keyEventHandler.swipeKeyHandlers.add(new SwipeKeyHandler(key));
+        }
+
         keymapConfig = new KeymapConfig(this);
         mouseEventHandler.sensitivity = keymapConfig.mouseSensitivity.intValue();
         mouseEventHandler.scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
@@ -289,19 +298,30 @@ public class TouchPointer extends Service {
         height = size.y;
     }
 
-    private class KeyEventHandler {
+    private static final class PidProvider {
+        private final SimpleArrayMap<String, Integer> pidList = new SimpleArrayMap<>();
+        private Integer getPid(String keycode){
+            if (!pidList.containsKey(keycode))
+                pidList.put(keycode, pidList.size());
+            return pidList.get(keycode);
+        }
+    }
+
+    public class KeyEventHandler {
         boolean ctrlKeyPressed = false;
         boolean altKeyPressed = false;
         private DpadHandler dpad1Handler, dpad2Handler;
+        private ArrayList<SwipeKeyHandler> swipeKeyHandlers;
+        private final PidProvider pidProvider = new PidProvider();
 
         private void init() {
             if (dpad1Handler != null) dpad1Handler.setInterface(mService);
             if (dpad2Handler != null) dpad2Handler.setInterface(mService);
         }
 
-        private class KeyEvent {
-            String code;
-            int action;
+        public class KeyEvent {
+            public String code;
+            public int action;
         }
 
         private void handleEvent(String line) throws RemoteException {
@@ -343,11 +363,12 @@ public class TouchPointer extends Service {
             if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
             if (event.code.contains("ALT")) altKeyPressed = event.action == DOWN;
 
-            for (int n = 0; n < keyList.size(); n++) {
-                KeymapProfiles.Key key = keyList.get(n);
+            for (KeymapProfiles.Key key : keyList)
                 if (event.code.equals(key.code))
-                    mService.injectEvent(key.x, key.y, event.action, n);
-            }
+                    mService.injectEvent(key.x, key.y, event.action, pidProvider.getPid(key.code));
+
+            for (SwipeKeyHandler swipeKeyHandler : swipeKeyHandlers)
+                swipeKeyHandler.handleEvent(event, mService, mHandler, pidProvider.getPid(event.code));
         }
 
         private void handleKeyboardShortcuts(int keycode) throws RemoteException {

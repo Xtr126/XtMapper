@@ -5,7 +5,7 @@ import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.OnMouseEventListener;
 
 interface IRemoteService {
-    void injectEvent(float x, float y, int type, int pointerId);
+    void injectEvent(float x, float y, int action, int pointerId);
     void injectScroll(float x, float y, int value);
 
     void moveCursorX(int x);
