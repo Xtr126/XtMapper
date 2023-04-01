@@ -298,9 +298,9 @@ public class TouchPointer extends Service {
         height = size.y;
     }
 
-    private static final class PidProvider {
+    public static final class PidProvider {
         private final SimpleArrayMap<String, Integer> pidList = new SimpleArrayMap<>();
-        private Integer getPid(String keycode){
+        public Integer getPid(String keycode){
             if (!pidList.containsKey(keycode))
                 pidList.put(keycode, pidList.size());
             return pidList.get(keycode);
@@ -368,7 +368,7 @@ public class TouchPointer extends Service {
                     mService.injectEvent(key.x, key.y, event.action, pidProvider.getPid(key.code));
 
             for (SwipeKeyHandler swipeKeyHandler : swipeKeyHandlers)
-                swipeKeyHandler.handleEvent(event, mService, mHandler, pidProvider.getPid(event.code));
+                swipeKeyHandler.handleEvent(event, mService, mHandler, pidProvider);
         }
 
         private void handleKeyboardShortcuts(int keycode) throws RemoteException {
