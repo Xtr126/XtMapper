@@ -155,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public void startPointer() {
-            MainActivity.this.startPointer();
+            runOnUiThread(MainActivity.this::startPointer);
         }
     };
 

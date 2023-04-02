@@ -50,6 +50,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.sliderDpad.setValue(dpadConfig.getDpadRadiusMultiplier());
         binding.sliderMouse.setValue(keymapConfig.mouseSensitivity);
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
+        binding.sliderSwipeDelay.setValue(keymapConfig.swipeDelayMs);
         binding.inputDevice.setText(keymapConfig.device);
 
         binding.mouseDragToggle.setChecked(keymapConfig.ctrlDragMouseGesture);
@@ -66,19 +67,16 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
         binding.bottomNavigation.setOnItemSelectedListener(item -> {
             setDefaultVisibilty();
-
-            switch (item.getItemId()) {
-                case R.id.sliders:
-                    binding.sliders.setVisibility(View.VISIBLE);
-                    return true;
-
-                case R.id.shortcuts:
-                    binding.shortcuts.setVisibility(View.VISIBLE);
-                    return true;
-
-                case R.id.misc:
-                    binding.misc.setVisibility(View.VISIBLE);
-                    return true;
+            int itemId = item.getItemId();
+            if (itemId == R.id.sliders) {
+                binding.sliders.setVisibility(View.VISIBLE);
+                return true;
+            } else if (itemId == R.id.shortcuts) {
+                binding.shortcuts.setVisibility(View.VISIBLE);
+                return true;
+            } else if (itemId == R.id.misc) {
+                binding.misc.setVisibility(View.VISIBLE);
+                return true;
             }
             return false;
         });
@@ -180,6 +178,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
         keymapConfig.mouseSensitivity = binding.sliderMouse.getValue();
         keymapConfig.scrollSpeed = binding.sliderScrollSpeed.getValue();
+        keymapConfig.swipeDelayMs = (int) binding.sliderSwipeDelay.getValue();
 
         keymapConfig.ctrlMouseWheelZoom = binding.mouseWheelToggle.isChecked();
         keymapConfig.ctrlDragMouseGesture = binding.mouseDragToggle.isChecked();

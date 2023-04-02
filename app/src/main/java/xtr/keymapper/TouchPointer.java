@@ -25,6 +25,7 @@ import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Binder;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
@@ -57,6 +58,10 @@ public class TouchPointer extends Service {
     private WindowManager mWindowManager;
     int x1 = 100, y1 = 100;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
+
+    private HandlerThread mHandlerThread;
+    private Handler eventHandler;
+
     private final MouseEventHandler mouseEventHandler = new MouseEventHandler();
     private final KeyEventHandler keyEventHandler = new KeyEventHandler();
     private KeymapConfig keymapConfig;
@@ -85,6 +90,9 @@ public class TouchPointer extends Service {
     }
 
     public void init(){
+        mHandlerThread = new HandlerThread("events");
+        mHandlerThread.start();
+        eventHandler = new Handler(mHandlerThread.getLooper());
         ProfileSelector.select(this, profile -> {
             loadKeymap(profile);
             getDisplayMetrics();
@@ -192,6 +200,10 @@ public class TouchPointer extends Service {
             cursorView.invalidate();
             cursorView = null;
         }
+        mHandlerThread.quit();
+        mHandlerThread = null;
+        eventHandler = null;
+        keymapConfig = null;
     }
 
     public void loadKeymap(String profileName) {
@@ -201,10 +213,6 @@ public class TouchPointer extends Service {
         // Keyboard keys
         keyList = profile.keys;
 
-        if (profile.dpadUdlr != null)
-            keyEventHandler.dpad1Handler = new DpadHandler(this, profile.dpadUdlr, dpad1pid.id);
-        if (profile.dpadWasd != null)
-            keyEventHandler.dpad2Handler = new DpadHandler(this, profile.dpadWasd, dpad2pid.id);
         if (profile.mouseAimConfig != null)
             mouseEventHandler.mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
         mouseEventHandler.rightClick = profile.rightClick;
@@ -217,6 +225,11 @@ public class TouchPointer extends Service {
         keymapConfig = new KeymapConfig(this);
         mouseEventHandler.sensitivity = keymapConfig.mouseSensitivity.intValue();
         mouseEventHandler.scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
+
+        if (profile.dpadUdlr != null)
+            keyEventHandler.dpad1Handler = new DpadHandler(this, profile.dpadUdlr, dpad1pid.id, eventHandler, keymapConfig.swipeDelayMs);
+        if (profile.dpadWasd != null)
+            keyEventHandler.dpad2Handler = new DpadHandler(this, profile.dpadWasd, dpad2pid.id, eventHandler, keymapConfig.swipeDelayMs);
     }
 
     public void sendSettingstoServer() throws RemoteException {
@@ -368,7 +381,7 @@ public class TouchPointer extends Service {
                     mService.injectEvent(key.x, key.y, event.action, pidProvider.getPid(key.code));
 
             for (SwipeKeyHandler swipeKeyHandler : swipeKeyHandlers)
-                swipeKeyHandler.handleEvent(event, mService, mHandler, pidProvider);
+                swipeKeyHandler.handleEvent(event, mService, eventHandler, pidProvider, keymapConfig.swipeDelayMs);
         }
 
         private void handleKeyboardShortcuts(int keycode) throws RemoteException {

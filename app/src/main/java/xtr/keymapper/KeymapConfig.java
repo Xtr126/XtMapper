@@ -14,6 +14,7 @@ public class KeymapConfig {
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
 
     public int stopServiceShortcutKey, launchEditorShortcutKey, switchProfileShortcutKey;
+    public int swipeDelayMs;
     public String stopServiceShortcutKeyModifier, launchEditorShortcutKeyModifier, switchProfileShortcutKeyModifier;
 
     public static final String KEY_CTRL = "Ctrl", KEY_ALT = "Alt";
@@ -45,6 +46,8 @@ public class KeymapConfig {
 
         keyGraveMouseAim = sharedPref.getBoolean("key_grave_mouse_aim", true);
         rightClickMouseAim = sharedPref.getBoolean("right_click_mouse_aim", true);
+
+        swipeDelayMs = sharedPref.getInt("swipe_delay_ms", 100);
     }
 
     public void applySharedPrefs() {
@@ -64,6 +67,7 @@ public class KeymapConfig {
             .putString("launch_editor_shortcut_modifier", launchEditorShortcutKeyModifier)
             .putString("switch_profile_shortcut_modifier", switchProfileShortcutKeyModifier)
             .putString("mouse_aim_shortcut_modifier", mouseAimShortcutKeyModifier)
+            .putInt("swipe_delay_ms", swipeDelayMs)
             .apply();
     }
 }

@@ -62,5 +62,6 @@
     <string name="mouse_aim">Mouse Aim</string>
     <string name="cancel">@android:string/cancel</string>
     <string name="ok">@android:string/ok</string>
+    <string name="swipe_delay_ms">Swipe delay in milliseconds</string>
 
 </resources>

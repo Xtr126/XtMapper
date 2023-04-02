@@ -5,7 +5,10 @@ import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.RemoteException;
+import android.os.SystemClock;
 
 import xtr.keymapper.IRemoteService;
 
@@ -23,8 +26,11 @@ public class DpadHandler {
     private boolean KEY_RIGHT;
     
     private IRemoteService input;
-    private final int pointerId; 
-    
+    private final int pointerId;
+    private final Handler mHandler;
+    private final int delayMillis;
+    private long lastEvent;
+
     private static class DpadEvent {
         float x, y;
         int action;
@@ -36,8 +42,10 @@ public class DpadHandler {
         }
     }
 
-    public DpadHandler(Context context, Dpad dpad, int pointerId){
+    public DpadHandler(Context context, Dpad dpad, int pointerId, Handler handler, int delayMillis){
         this.pointerId = pointerId;
+        this.mHandler = handler;
+        this.delayMillis = delayMillis;
         DpadConfig dpadConfig = new DpadConfig(context);
         
         float radius = dpad.radius * dpadConfig.getDpadRadiusMultiplier();
@@ -62,7 +70,7 @@ public class DpadHandler {
         this.input = input;
     }
 
-    public void handleEvent(String key, int action) throws RemoteException {
+    public void handleEvent(String key, int action) {
         if (action == DOWN) {
             sendEventDown(key);
         } else {
@@ -70,11 +78,21 @@ public class DpadHandler {
         }
     }
     
-    private void sendDpadEvent(DpadEvent event) throws RemoteException {
-        input.injectEvent(event.x, event.y, event.action, pointerId);
+    private void sendDpadEvent(DpadEvent event) {
+        long now = SystemClock.uptimeMillis();
+
+        Runnable sendEvent = () -> {
+            try {
+                input.injectEvent(event.x, event.y, event.action, pointerId);
+            } catch (RemoteException ignored) {
+            }
+        };
+        if ( (now - lastEvent) >= delayMillis ) mHandler.postDelayed(sendEvent, delayMillis);
+        else mHandler.postDelayed(sendEvent, delayMillis + delayMillis);
+        lastEvent = now;
     }
     
-    private void sendEventDown(String key) throws RemoteException {
+    private void sendEventDown(String key) {
         switch (key){
             case "KEY_UP":
             case "KEY_W": {
@@ -127,7 +145,7 @@ public class DpadHandler {
         }
     }
 
-    private void sendEventUp(String key) throws RemoteException {
+    private void sendEventUp(String key) {
         switch (key){
             case "KEY_UP":
             case "KEY_W":{

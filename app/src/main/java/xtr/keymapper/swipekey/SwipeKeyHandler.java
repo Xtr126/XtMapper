@@ -38,7 +38,7 @@ public class SwipeKeyHandler {
         }
     }
 
-    public void handleEvent(KeyEvent event, IRemoteService service, Handler handler, PidProvider mPid) throws RemoteException {
+    public void handleEvent(KeyEvent event, IRemoteService service, Handler handler, PidProvider mPid, int swipeDelayMs) throws RemoteException {
         SwipeEvent swipeEvent;
         if (event.code.equals(keycode1))
             swipeEvent = swipeEvent1;
@@ -54,7 +54,7 @@ public class SwipeKeyHandler {
                 service.injectEvent(swipeEvent.stopX, swipeEvent.stopY, MOVE, pid);
             } catch (RemoteException ignored) {
             }
-        }, 100);
+        }, swipeDelayMs);
     }
 
 }
