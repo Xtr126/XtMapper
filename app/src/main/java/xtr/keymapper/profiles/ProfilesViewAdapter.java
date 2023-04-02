@@ -18,6 +18,7 @@ import java.util.ArrayList;
 
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.ProfileRowItemBinding;
+import xtr.keymapper.databinding.TextFieldNewProfileBinding;
 
 /**
  * Provide views to RecyclerView.
@@ -92,14 +93,14 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
 
 
         viewHolder.binding.editButton.setOnClickListener(view -> {
-            EditText editText = new EditText(view.getContext());
-            editText.setText(profileName);
+            TextFieldNewProfileBinding binding = TextFieldNewProfileBinding.inflate(LayoutInflater.from(context));
+            binding.editText.setText(profileName);
 
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
             builder.setTitle(R.string.dialog_alert_add_profile)
-                    .setPositiveButton(R.string.ok, (dialog, which) -> keymapProfiles.renameProfile(profileName, editText.getText().toString()))
+                    .setPositiveButton(R.string.ok, (dialog, which) -> keymapProfiles.renameProfile(profileName, binding.editText.getText().toString()))
                     .setNegativeButton(R.string.cancel, (dialog, which) -> {})
-                    .setView(editText)
+                    .setView(binding.getRoot())
                     .show();
         });
 

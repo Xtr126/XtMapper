@@ -1,17 +1,18 @@
 package xtr.keymapper.profiles;
 
 import android.content.Context;
+import android.view.LayoutInflater;
 import android.view.WindowManager;
 
 import androidx.annotation.UiContext;
 import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import java.util.ArrayList;
 
 import xtr.keymapper.R;
+import xtr.keymapper.databinding.TextFieldNewProfileBinding;
 
 public class ProfileSelector {
 
@@ -50,18 +51,18 @@ public class ProfileSelector {
         showAppSelectionDialog(context, packageName -> {
 
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-            MaterialAutoCompleteTextView editText = new MaterialAutoCompleteTextView(context);
-            editText.setText(packageName);
+            TextFieldNewProfileBinding binding = TextFieldNewProfileBinding.inflate(LayoutInflater.from(context));
+            binding.editText.setText(packageName);
 
             builder.setTitle(R.string.dialog_alert_add_profile)
                     .setPositiveButton(R.string.ok, (d, which) -> {
-                        String selectedProfile = editText.getText().toString();
+                        String selectedProfile = binding.editText.getText().toString();
                         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
                         keymapProfiles.saveProfile(selectedProfile, new ArrayList<>(), packageName);
                         listener.onProfileSelected(selectedProfile);
                     })
                     .setNegativeButton(R.string.cancel, (d, which) -> {})
-                    .setView(editText);
+                    .setView(binding.getRoot());
             showDialog(builder);
         });
 
