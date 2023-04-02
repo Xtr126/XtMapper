@@ -62,6 +62,7 @@ public class ProfileSelector {
                     })
                     .setNegativeButton(R.string.cancel, (d, which) -> {})
                     .setView(editText);
+            showDialog(builder);
         });
 
     }
