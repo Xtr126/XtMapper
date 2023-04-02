@@ -3,6 +3,7 @@ package xtr.keymapper.profiles;
 import android.content.Context;
 import android.view.WindowManager;
 
+import androidx.annotation.UiContext;
 import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -17,6 +18,9 @@ public class ProfileSelector {
     public interface OnProfileSelectedListener {
         void onProfileSelected(String profile);
     }
+    public interface OnAppSelectedListener {
+        void onAppSelected(String packageName);
+    }
 
     public static void select(Context context, OnProfileSelectedListener listener){
         ArrayList<String> allProfiles = new ArrayList<>(new KeymapProfiles(context).getAllProfiles().keySet());
@@ -27,37 +31,48 @@ public class ProfileSelector {
         CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
 
         context.setTheme(R.style.Theme_XtMapper);
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
 
         // Show dialog to select profile
-        if (!allProfiles.isEmpty())
-            builder.setTitle(xtr.keymapper.R.string.dialog_alert_select_profile)
+        if (!allProfiles.isEmpty()) {
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+            builder.setTitle(R.string.dialog_alert_select_profile)
                     .setItems(items, (d, which) -> {
                         String selectedProfile = allProfiles.get(which);
                         listener.onProfileSelected(selectedProfile);
                     });
-        else { // Create profile if no profile found
+            showDialog(builder);
+        } else { // Create profile if no profile found
+            createNewProfile(context, listener);
+        }
+    }
+
+    public static void createNewProfile(@UiContext Context context, OnProfileSelectedListener listener) {
+        showAppSelectionDialog(context, packageName -> {
+
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
             MaterialAutoCompleteTextView editText = new MaterialAutoCompleteTextView(context);
-            builder.setTitle(xtr.keymapper.R.string.dialog_alert_add_profile)
+            editText.setText(packageName);
+
+            builder.setTitle(R.string.dialog_alert_add_profile)
                     .setPositiveButton(R.string.ok, (d, which) -> {
                         String selectedProfile = editText.getText().toString();
-                        showsAppSelectionDialog(context, listener, selectedProfile);
+                        KeymapProfiles keymapProfiles = new KeymapProfiles(context);
+                        keymapProfiles.saveProfile(selectedProfile, new ArrayList<>(), packageName);
+                        listener.onProfileSelected(selectedProfile);
                     })
                     .setNegativeButton(R.string.cancel, (d, which) -> {})
                     .setView(editText);
-        }
-        showDialog(builder);
+        });
+
     }
 
-    public static void showsAppSelectionDialog(Context context, OnProfileSelectedListener listener, String profile) {
-        ProfilesApps appsView = new ProfilesApps(context, profile);
+    public static void showAppSelectionDialog(Context context, OnAppSelectedListener listener) {
+        ProfilesApps appsView = new ProfilesApps(context);
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
         builder.setPositiveButton(R.string.ok, (dialog, which) -> {
-                    KeymapProfiles keymapProfiles = new KeymapProfiles(context);
-                    keymapProfiles.saveProfile(profile, new ArrayList<>(), appsView.packageName);
+                    listener.onAppSelected(appsView.packageName);
                     appsView.onDestroyView();
-                    listener.onProfileSelected(profile);
                 })
                 .setNegativeButton(R.string.cancel, (dialog, which) -> {})
                 .setView(appsView.view);

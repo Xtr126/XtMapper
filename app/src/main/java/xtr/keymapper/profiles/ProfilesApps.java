@@ -34,6 +34,12 @@ public class ProfilesApps {
         onViewCreated(view);
     }
 
+    public ProfilesApps(Context context){
+        this.packageName = defaultProfile;
+        view = createView(LayoutInflater.from(context));
+        onViewCreated(view);
+    }
+
     public View createView(@NonNull LayoutInflater inflater) {
         // Inflate the layout for this fragment
         binding = FragmentProfilesAppsBinding.inflate(inflater);

@@ -61,12 +61,12 @@ public class KeymapProfiles {
          public Key rightClick;
      }
 
-    public void saveProfile(String profile, ArrayList<String> lines, String packageName) {
+    public void saveProfile(String profileName, ArrayList<String> lines, String packageName) {
         lines.removeIf(line -> line.contains("APPLICATION"));
         lines.add("APPLICATION " + packageName);
         Set<String> stringSet = new HashSet<>(lines);
         sharedPref.edit()
-                .putStringSet(profile, stringSet)
+                .putStringSet(profileName, stringSet)
                 .apply();
     }
 

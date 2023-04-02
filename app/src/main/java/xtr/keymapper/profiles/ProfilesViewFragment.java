@@ -40,18 +40,7 @@ public class ProfilesViewFragment extends Fragment {
 
         setAdapter();
 
-        binding.addButton.setOnClickListener(v -> {
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-            EditText editText = new EditText(context);
-            builder.setTitle(R.string.dialog_alert_add_profile)
-                    .setPositiveButton(R.string.ok, (dialog, which) -> {
-                        String selectedProfile = editText.getText().toString();
-                        ProfileSelector.showsAppSelectionDialog(context, p -> setAdapter(), selectedProfile);
-                    })
-                    .setNegativeButton(R.string.cancel, (dialog, which) -> {})
-                    .setView(editText)
-                    .show();
-        });
+        binding.addButton.setOnClickListener(v -> ProfileSelector.createNewProfile(context, p -> setAdapter()));
 
         binding.profilesButton.setOnClickListener(v -> {
             switch (binding.profiles.getVisibility()) {
