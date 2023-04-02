@@ -43,6 +43,7 @@ import xtr.keymapper.activity.InputDeviceSelector;
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
+import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.mouse.MouseAimHandler;
 import xtr.keymapper.mouse.MousePinchZoom;
 import xtr.keymapper.mouse.MouseWheelZoom;

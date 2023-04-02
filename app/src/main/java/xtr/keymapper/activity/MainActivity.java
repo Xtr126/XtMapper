@@ -12,7 +12,7 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import xtr.keymapper.EditorService;
+import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
 import xtr.keymapper.TouchPointer;

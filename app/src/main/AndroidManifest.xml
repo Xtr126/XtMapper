@@ -25,7 +25,7 @@
         android:supportsRtl="false"
         android:theme="@style/Theme.XtMapper">
         <service
-            android:name=".EditorService"
+            android:name=".editor.EditorService"
             android:enabled="true"
             android:exported="false" />
 

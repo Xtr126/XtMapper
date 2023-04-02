@@ -1,4 +1,4 @@
-package xtr.keymapper;
+package xtr.keymapper.editor;
 
 import android.app.Service;
 import android.content.Intent;
@@ -11,6 +11,8 @@ import androidx.appcompat.view.ContextThemeWrapper;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import xtr.keymapper.IRemoteService;
+import xtr.keymapper.R;
 import xtr.keymapper.profiles.ProfileSelector;
 import xtr.keymapper.server.InputService;
 

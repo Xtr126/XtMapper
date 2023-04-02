@@ -1,4 +1,4 @@
-package xtr.keymapper;
+package xtr.keymapper.editor;
 
 import static xtr.keymapper.profiles.KeymapProfiles.MOUSE_RIGHT;
 
@@ -21,6 +21,8 @@ import androidx.appcompat.view.ContextThemeWrapper;
 import java.util.ArrayList;
 import java.util.List;
 
+import xtr.keymapper.OnKeyEventListener;
+import xtr.keymapper.R;
 import xtr.keymapper.databinding.CrosshairBinding;
 import xtr.keymapper.databinding.DpadArrowsBinding;
 import xtr.keymapper.databinding.DpadWasdBinding;
@@ -273,6 +275,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .start();
 
         if (dpad != null) {
+            // resize dpad from saved profile configuration
             float x1 = dpad.getWidth() - dpadLayout.getLayoutParams().width;
             float y1 = dpad.getHeight() - dpadLayout.getLayoutParams().height;
             resizeView(dpadLayout, x1, y1);
@@ -353,7 +356,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         swipeKeyList.add(swipeKeyView);
     }
 
-    private void resizeView(View view, float x, float y) {
+    public static void resizeView(View view, float x, float y) {
         ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
         layoutParams.width += x;
         layoutParams.height += y;
@@ -362,6 +365,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     class ResizableArea implements View.OnTouchListener, View.OnClickListener {
         private final ViewGroup rootView;
+        private float defaultPivotX, defaultPivotY;
 
         @SuppressLint("ClickableViewAccessibility")
         public ResizableArea(){
@@ -371,11 +375,25 @@ public class EditorUI extends OnKeyEventListener.Stub {
             binding1.saveButton.setOnClickListener(this);
             moveView();
         }
+
+        private void getDefaultPivotXY(){
+            defaultPivotX = rootView.getPivotX();
+            defaultPivotY = rootView.getPivotY();
+        }
+
         @Override
         public boolean onTouch(View v, MotionEvent event) {
-            if (event.getAction() == MotionEvent.ACTION_MOVE)
+            if (event.getAction() == MotionEvent.ACTION_MOVE) {
                 resizeView(rootView, event.getX(), event.getY());
-            else
+                // Resize View from center point
+                if (defaultPivotX > 0) {
+                    float newPivotX = rootView.getPivotX() - defaultPivotX;
+                    float newPivotY = rootView.getPivotY() - defaultPivotY;
+                    rootView.setX(rootView.getX() - newPivotX);
+                    rootView.setY(rootView.getY() - newPivotY);
+                }
+                getDefaultPivotXY();
+            } else
                 v.performClick();
             return true;
         }
@@ -396,22 +414,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
             float y = crosshair.getY() - crosshair.getHeight();
             rootView.setX(x);
             rootView.setY(y);
-        }
-    }
-
-    class ResizeableDpadView implements View.OnTouchListener {
-        final View rootView;
-
-        public ResizeableDpadView(View rootView) {
-            this.rootView = rootView;
-        }
-
-        @SuppressLint("ClickableViewAccessibility")
-        @Override
-        public boolean onTouch(View v, MotionEvent event) {
-            if (event.getAction() == MotionEvent.ACTION_MOVE)
-                resizeView(rootView, event.getX(), event.getY());
-            return v.onTouchEvent(event);
         }
     }
 }
