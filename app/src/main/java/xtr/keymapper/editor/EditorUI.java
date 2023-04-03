@@ -342,7 +342,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     private void addRightClick(float x, float y) {
         if (rightClick == null) {
-            rightClick = new MovableFloatingActionKey(context);
+            rightClick = new MovableFloatingActionKey(context, key -> rightClick = null);
             rightClick.key.setImageResource(R.drawable.ic_baseline_mouse_36);
             mainView.addView(rightClick);
         }
