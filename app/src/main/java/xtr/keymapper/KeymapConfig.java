@@ -45,9 +45,9 @@ public class KeymapConfig {
         mouseAimShortcutKeyModifier = sharedPref.getString("mouse_aim_shortcut_modifier", KEY_CTRL);
 
         keyGraveMouseAim = sharedPref.getBoolean("key_grave_mouse_aim", true);
-        rightClickMouseAim = sharedPref.getBoolean("right_click_mouse_aim", true);
+        rightClickMouseAim = sharedPref.getBoolean("right_click_mouse_aim", false);
 
-        swipeDelayMs = sharedPref.getInt("swipe_delay_ms", 100);
+        swipeDelayMs = sharedPref.getInt("swipe_delay_ms", 0);
     }
 
     public void applySharedPrefs() {

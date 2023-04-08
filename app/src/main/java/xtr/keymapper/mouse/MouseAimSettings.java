@@ -16,15 +16,16 @@ public class MouseAimSettings {
         KeymapConfig keymapConfig = new KeymapConfig(context);
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         CharSequence[] list = {"Mouse right click", "~ key"};
+        boolean[] checkedItems = {keymapConfig.rightClickMouseAim, keymapConfig.keyGraveMouseAim};
         // Set the dialog title
         builder.setTitle("Activate with")
-                .setMultiChoiceItems(list, null,
+                .setMultiChoiceItems(list, checkedItems,
                         (dialog, which, isChecked) -> {
                             if (which == 0) {
                                 keymapConfig.rightClickMouseAim = isChecked;
                             } else if (which == 1)
                                 keymapConfig.keyGraveMouseAim = isChecked;
-                            
+
                             keymapConfig.applySharedPrefs();
                         });
         AlertDialog dialog = builder.create();

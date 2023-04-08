@@ -444,9 +444,14 @@ public class TouchPointer extends Service {
             }
         });}
 
+        private void handleRightClick(int value) throws RemoteException {
+            if (value == 1 && keymapConfig.rightClickMouseAim) triggerMouseAim();
+            if (rightClick != null) mService.injectEvent(rightClick.x, rightClick.y, value, pointerId2);
+        }
+
         private void handleEvent(int code, int value) throws RemoteException {
             if (mouseAimHandler != null && mouseAimHandler.active) {
-                mouseAimHandler.handleEvent(code, value);
+                mouseAimHandler.handleEvent(code, value, this::handleRightClick);
                 return;
             }
             if (keyEventHandler.ctrlKeyPressed && pointer_down)
@@ -482,8 +487,7 @@ public class TouchPointer extends Service {
                     break;
 
                 case BTN_RIGHT:
-                    if (rightClick != null) mService.injectEvent(rightClick.x, rightClick.y, value, pointerId2);
-                    else if (value == 1 && keymapConfig.rightClickMouseAim) triggerMouseAim();
+                    handleRightClick(value);
                     break;
 
                 case REL_WHEEL:

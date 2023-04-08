@@ -54,7 +54,7 @@ public class MouseAimHandler {
     }
 
 
-    public void handleEvent(int code, int value) throws RemoteException {
+    public void handleEvent(int code, int value, OnRightClick r) throws RemoteException {
         switch (code) {
             case REL_X:
                 currentX += value;
@@ -72,10 +72,12 @@ public class MouseAimHandler {
                 break;
 
             case BTN_RIGHT:
-                if(value == 1) {
-                    active = false;
-                    service.injectEvent(currentX, currentY, UP, pointerId1);
-                }
+                r.onRightClick(value);
+                break;
         }
+    }
+
+    public interface OnRightClick {
+        void onRightClick(int value) throws RemoteException;
     }
 }
