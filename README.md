@@ -28,11 +28,9 @@
 - Aim with mouse in FPS games (shooting mode) 
 - Pinch-to-zoom gesture using ctrl key + move mouse or ctrl + scroll wheel 
 - Smooth pixel by pixel scrolling emulation for mouse wheel
-
-APK can be obtained from GitHub actions (latest) or [`releases`](https://github.com/Xtr126/XtMapper/releases).
-
-
-
+- Swipes with keyboard keys
+ 
+[Video Demonstration](https://www.youtube.com/watch?v=iK2OLMXRMTs)
 
 ## Development
 
