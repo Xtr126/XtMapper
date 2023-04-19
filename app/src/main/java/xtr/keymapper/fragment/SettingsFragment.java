@@ -18,6 +18,7 @@ import androidx.annotation.Nullable;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.navigation.NavigationBarView;
+import com.google.android.material.slider.Slider;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import xtr.keymapper.KeymapConfig;
@@ -52,6 +53,9 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
         binding.sliderSwipeDelay.setValue(keymapConfig.swipeDelayMs);
         binding.inputDevice.setText(keymapConfig.device);
+
+        binding.swipeDelayText.setText(getString(R.string.swipe_delay_ms, keymapConfig.swipeDelayMs));
+        binding.sliderSwipeDelay.addOnChangeListener((slider, value, fromUser) -> binding.swipeDelayText.setText(getString(R.string.swipe_delay_ms, (int)value)));
 
         binding.mouseDragToggle.setChecked(keymapConfig.ctrlDragMouseGesture);
         binding.mouseWheelToggle.setChecked(keymapConfig.ctrlMouseWheelZoom);
