@@ -39,6 +39,7 @@ android {
         targetCompatibility JavaVersion.VERSION_11
     }
     packagingOptions.jniLibs.useLegacyPackaging true
+    android.defaults.buildfeatures.aidl true
 
     ndkVersion '25.1.8937393'
     namespace 'xtr.keymapper'
