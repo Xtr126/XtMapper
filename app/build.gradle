@@ -10,8 +10,8 @@ android {
         applicationId "xtr.keymapper"
         minSdk 28
         targetSdk 33
-        versionCode 6
-        versionName "1.4.1"
+        versionCode 7
+        versionName '1.4.2'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
          ndk {
@@ -45,7 +45,7 @@ android {
 }
 
 dependencies {
-    implementation "androidx.core:core:1.9.0"
+    implementation "androidx.core:core:1.10.1"
     implementation "androidx.constraintlayout:constraintlayout:2.1.4"
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
 
