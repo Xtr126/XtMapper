@@ -64,5 +64,7 @@
     <string name="ok">@android:string/ok</string>
     <string name="swipe_delay_ms">Swipe delay %d milliseconds</string>
     <string name="profile_name">Profile Name</string>
+    <string name="root_not_found_title">Root access not found</string>
+    <string name="root_not_found_message">Root access is required for the keymapper to function. \n Please grant root access to XtMapper from KernelSU manager app:</string>
 
 </resources>

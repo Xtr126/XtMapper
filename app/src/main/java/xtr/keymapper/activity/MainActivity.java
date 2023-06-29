@@ -10,7 +10,10 @@ import android.os.IBinder;
 import android.provider.Settings;
 import android.widget.Button;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.R;
@@ -123,6 +126,7 @@ public class MainActivity extends AppCompatActivity {
         void updateCmdView2(String line);
         void stopPointer();
         void startPointer();
+        void alertRootAccessNotFound();
     }
 
     private final Callback mCallback = new Callback() {
@@ -156,6 +160,18 @@ public class MainActivity extends AppCompatActivity {
 
         public void startPointer() {
             runOnUiThread(MainActivity.this::startPointer);
+        }
+
+        @Override
+        public void alertRootAccessNotFound() {
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
+            builder.setTitle(R.string.root_not_found_title)
+            .setMessage(R.string.root_not_found_message)
+                    .setPositiveButton("OK", (dialog, which) -> {
+                        Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("me.weishu.kernelsu");
+                        startActivity(launchIntent);
+                    });
+            runOnUiThread(() -> builder.create().show());
         }
     };
 

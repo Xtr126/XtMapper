@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.concurrent.TimeUnit;
 
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.server.InputService;
@@ -58,14 +59,17 @@ public class Server {
             outputStream.writeBytes("/system/bin/sh " + script.getPath());
             outputStream.close();
 
+            if (sh.waitFor(5, TimeUnit.SECONDS)) mCallback.alertRootAccessNotFound();
+
             BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
             String line;
             while ((line = stdout.readLine()) != null) {
                 mCallback.updateCmdView1("stdout: " + line + "\n");
                 if (line.equals("Waiting for overlay..."))
                     mCallback.startPointer();
+                else mCallback.alertRootAccessNotFound();
             }
-            sh.waitFor();
+            sh.destroy();
         } catch (IOException | InterruptedException ex) {
             Log.e("Server", ex.toString());
         }
