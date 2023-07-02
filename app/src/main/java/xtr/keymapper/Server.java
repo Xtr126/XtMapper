@@ -59,8 +59,6 @@ public class Server {
             outputStream.writeBytes("/system/bin/sh " + script.getPath());
             outputStream.close();
 
-            if (sh.waitFor(5, TimeUnit.SECONDS)) mCallback.alertRootAccessNotFound();
-
             BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
             String line;
             while ((line = stdout.readLine()) != null) {
@@ -69,6 +67,7 @@ public class Server {
                     mCallback.startPointer();
                 else mCallback.alertRootAccessNotFound();
             }
+            if (sh.waitFor(1, TimeUnit.SECONDS)) mCallback.alertRootAccessNotFound();
             sh.destroy();
         } catch (IOException | InterruptedException ex) {
             Log.e("Server", ex.toString());
