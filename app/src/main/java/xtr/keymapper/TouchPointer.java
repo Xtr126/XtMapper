@@ -214,6 +214,12 @@ public class TouchPointer extends Service {
         // Keyboard keys
         keyList = profile.keys;
 
+        // Correction of x and y deviation from center
+        for (KeymapProfiles.Key key: keyList) {
+            key.x += key.offset;
+            key.y += key.offset;
+        }
+
         if (profile.mouseAimConfig != null)
             mouseEventHandler.mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
         mouseEventHandler.rightClick = profile.rightClick;

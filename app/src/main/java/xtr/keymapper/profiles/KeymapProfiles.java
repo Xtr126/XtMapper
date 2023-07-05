@@ -49,6 +49,7 @@ public class KeymapProfiles {
         public String code;
         public float x;
         public float y;
+        public float offset;
     }
 
      public static final class Profile {
@@ -113,6 +114,7 @@ public class KeymapProfiles {
                     key.code = data[0];
                     key.x = Float.parseFloat(data[1]);
                     key.y = Float.parseFloat(data[2]);
+                    key.offset = Float.parseFloat(data[3]);
                     profile.keys.add(key);
                     break;
                 }

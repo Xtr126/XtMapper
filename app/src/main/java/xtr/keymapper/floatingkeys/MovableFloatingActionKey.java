@@ -80,7 +80,7 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
     }
 
     public String getData(){
-        return "KEY_" + getText() + " " + getX() + " " + getY();
+        return "KEY_" + getText() + " " + getX() + " " + getY() + " " + getPivotX();
     }
 
     public void setText(String s) {
