@@ -1,25 +1,28 @@
 package xtr.keymapper.activity;
 
+import static android.Manifest.permission.POST_NOTIFICATIONS;
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.ColorStateList;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.widget.Button;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
 import xtr.keymapper.TouchPointer;
 import xtr.keymapper.databinding.ActivityMainBinding;
+import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.fragment.SettingsFragment;
 import xtr.keymapper.server.InputService;
 
@@ -71,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
             setButtonActive(binding.controls.startPointer);
             binding.controls.startPointer.setText(R.string.stop);
             binding.controls.startPointer.setOnClickListener(v -> stopPointer());
+            requestNotificationPermission();
         }
     }
 
@@ -111,6 +115,13 @@ public class MainActivity extends AppCompatActivity {
             // send user to the device settings
             Intent myIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
             startActivity(myIntent);
+        }
+    }
+
+    private void requestNotificationPermission(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!(checkSelfPermission(POST_NOTIFICATIONS) ==
+                    PERMISSION_GRANTED)) requestPermissions(new String[]{POST_NOTIFICATIONS}, 0);
         }
     }
 
