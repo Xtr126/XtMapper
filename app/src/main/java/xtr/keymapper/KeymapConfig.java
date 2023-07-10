@@ -20,7 +20,6 @@ public class KeymapConfig {
     public static final String KEY_CTRL = "Ctrl", KEY_ALT = "Alt";
     public static final String TOGGLE = "Toggle", HOLD = "Hold";
     public int mouseAimShortcutKey;
-    public String mouseAimShortcutKeyModifier;
     public boolean mouseAimToggle;
 
     public KeymapConfig(Context context) {
@@ -45,7 +44,6 @@ public class KeymapConfig {
         launchEditorShortcutKeyModifier = sharedPref.getString("launch_editor_shortcut_modifier", KEY_CTRL);
         stopServiceShortcutKeyModifier = sharedPref.getString("stop_service_shortcut_modifier", KEY_CTRL);
         switchProfileShortcutKeyModifier = sharedPref.getString("switch_profile_shortcut_modifier", KEY_CTRL);
-        mouseAimShortcutKeyModifier = sharedPref.getString("mouse_aim_shortcut_modifier", KEY_CTRL);
 
         keyGraveMouseAim = sharedPref.getBoolean("key_grave_mouse_aim", true);
         rightClickMouseAim = sharedPref.getBoolean("right_click_mouse_aim", false);
@@ -70,7 +68,6 @@ public class KeymapConfig {
             .putString("stop_service_shortcut_modifier", stopServiceShortcutKeyModifier)
             .putString("launch_editor_shortcut_modifier", launchEditorShortcutKeyModifier)
             .putString("switch_profile_shortcut_modifier", switchProfileShortcutKeyModifier)
-            .putString("mouse_aim_shortcut_modifier", mouseAimShortcutKeyModifier)
             .putInt("swipe_delay_ms", swipeDelayMs)
             .apply();
     }

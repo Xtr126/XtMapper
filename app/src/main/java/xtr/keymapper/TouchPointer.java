@@ -368,6 +368,7 @@ public class TouchPointer extends Service {
             int i = Utils.obtainIndex(event.code);
             if (i > 0) { // A-Z and 0-9 keys
                 if (event.action == DOWN) handleKeyboardShortcuts(i);
+                handleMouseAim(i, event.action);
 
                 if (dpad2Handler != null) // Dpad with WASD keys
                     dpad2Handler.handleEvent(event.code, event.action);
@@ -391,7 +392,7 @@ public class TouchPointer extends Service {
                 swipeKeyHandler.handleEvent(event, mService, eventHandler, pidProvider, keymapConfig.swipeDelayMs);
         }
 
-        private void handleKeyboardShortcuts(int keycode) throws RemoteException {
+        private void handleKeyboardShortcuts(int keycode) {
             final String modifier = ctrlKeyPressed ? KEY_CTRL : KEY_ALT;
 
             if (keymapConfig.launchEditorShortcutKeyModifier.equals(modifier))
@@ -405,11 +406,12 @@ public class TouchPointer extends Service {
             if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
                 if (keycode == keymapConfig.switchProfileShortcutKey)
                     mHandler.post(InputService::reloadKeymap);
+        }
 
-            if (keymapConfig.mouseAimShortcutKeyModifier.equals(modifier))
-                if (keycode == keymapConfig.mouseAimShortcutKey)
-                    mouseEventHandler.triggerMouseAim();
-
+        private  void handleMouseAim(int keycode, int action) throws RemoteException {
+            if (keycode == keymapConfig.mouseAimShortcutKey)
+                if (action == DOWN && keymapConfig.mouseAimToggle) mouseEventHandler.triggerMouseAim();
+                else mouseEventHandler.triggerMouseAim();
         }
     }
 

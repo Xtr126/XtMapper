@@ -7,7 +7,6 @@ import android.content.Context;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -17,8 +16,6 @@ import androidx.annotation.Nullable;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.android.material.navigation.NavigationBarView;
-import com.google.android.material.slider.Slider;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import xtr.keymapper.KeymapConfig;
@@ -128,13 +125,11 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.launchEditorModifier.setText(keymapConfig.launchEditorShortcutKeyModifier);
         binding.stopServiceModifier.setText(keymapConfig.stopServiceShortcutKeyModifier);
         binding.switchProfileModifier.setText(keymapConfig.switchProfileShortcutKeyModifier);
-        binding.mouseAimModifier.setText(keymapConfig.mouseAimShortcutKeyModifier);
 
         final String[] modifierKeys = {KeymapConfig.KEY_CTRL, KeymapConfig.KEY_ALT};
         ((MaterialAutoCompleteTextView)binding.launchEditorModifier).setSimpleItems(modifierKeys);
         ((MaterialAutoCompleteTextView)binding.stopServiceModifier).setSimpleItems(modifierKeys);
         ((MaterialAutoCompleteTextView)binding.switchProfileModifier).setSimpleItems(modifierKeys);
-        ((MaterialAutoCompleteTextView)binding.mouseAimModifier).setSimpleItems(modifierKeys);
     }
 
     private void mouseAimActions() {
@@ -179,7 +174,6 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         keymapConfig.launchEditorShortcutKeyModifier = binding.launchEditorModifier.getText().toString();
         keymapConfig.stopServiceShortcutKeyModifier = binding.stopServiceModifier.getText().toString();
         keymapConfig.switchProfileShortcutKeyModifier = binding.switchProfileModifier.getText().toString();
-        keymapConfig.mouseAimShortcutKeyModifier = binding.mouseAimModifier.getText().toString();
     }
 
     @Override
