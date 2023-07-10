@@ -84,6 +84,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
             }
             return false;
         });
+        mouseAimActions();
         setDefaultVisibilty();
         binding.sliders.setVisibility(View.VISIBLE);
     }
@@ -136,6 +137,14 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         ((MaterialAutoCompleteTextView)binding.mouseAimModifier).setSimpleItems(modifierKeys);
     }
 
+    private void mouseAimActions() {
+        if (keymapConfig.mouseAimToggle) binding.mouseAimAction.setText(KeymapConfig.TOGGLE);
+        else binding.mouseAimAction.setText(KeymapConfig.HOLD);
+
+        final String[] mouseAimActions = {KeymapConfig.HOLD, KeymapConfig.TOGGLE};
+        ((MaterialAutoCompleteTextView)binding.mouseAimAction).setSimpleItems(mouseAimActions);
+    }
+
     public boolean onKey(View view, int keyCode, KeyEvent event) {
         String key = String.valueOf(event.getDisplayLabel());
         if ( key.matches("[a-zA-Z0-9]+" )) ((EditText) view).setText(key);
@@ -176,6 +185,8 @@ public class SettingsFragment extends BottomSheetDialogFragment {
     @Override
     public void onDestroyView() {
         saveKeyboardShortcuts();
+
+        keymapConfig.mouseAimToggle = binding.mouseAimAction.getText().toString().equals(KeymapConfig.TOGGLE);
         // Split the string to allow only one string without whitespaces
         String[] device = binding.inputDevice.getText().toString().split("\\s+");
         keymapConfig.device = device[0];

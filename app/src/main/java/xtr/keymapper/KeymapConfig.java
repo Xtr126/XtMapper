@@ -18,8 +18,10 @@ public class KeymapConfig {
     public String stopServiceShortcutKeyModifier, launchEditorShortcutKeyModifier, switchProfileShortcutKeyModifier;
 
     public static final String KEY_CTRL = "Ctrl", KEY_ALT = "Alt";
+    public static final String TOGGLE = "Toggle", HOLD = "Hold";
     public int mouseAimShortcutKey;
     public String mouseAimShortcutKeyModifier;
+    public boolean mouseAimToggle;
 
     public KeymapConfig(Context context) {
         sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
@@ -33,6 +35,7 @@ public class KeymapConfig {
         scrollSpeed = sharedPref.getFloat("scroll_speed_multiplier", 1);
         ctrlMouseWheelZoom = sharedPref.getBoolean("ctrl_mouse_wheel_zoom", false);
         ctrlDragMouseGesture = sharedPref.getBoolean("ctrl_drag_mouse_gesture", true);
+        mouseAimToggle = sharedPref.getBoolean("mouse_aim_shortcut_toggle", true);
 
         launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", -1);
         stopServiceShortcutKey = sharedPref.getInt("stop_service_shortcut", -1);
@@ -59,6 +62,7 @@ public class KeymapConfig {
             .putBoolean("ctrl_drag_mouse_gesture", ctrlDragMouseGesture)
             .putBoolean("key_grave_mouse_aim", keyGraveMouseAim)
             .putBoolean("right_click_mouse_aim", rightClickMouseAim)
+            .putBoolean("mouse_aim_shortcut_toggle", mouseAimToggle)
             .putInt("stop_service_shortcut", stopServiceShortcutKey)
             .putInt("launch_editor_shortcut", launchEditorShortcutKey)
             .putInt("switch_profile_shortcut", switchProfileShortcutKey)
