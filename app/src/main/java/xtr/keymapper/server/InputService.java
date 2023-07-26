@@ -23,6 +23,7 @@ public class InputService extends Service {
     private static final Input input = new Input();
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final int supportsUinput;
+    private String currentDevice = "";
 
     final RemoteCallbackList<OnKeyEventListener> mOnKeyEventListeners = new RemoteCallbackList<>();
     private IRemoteServiceCallback mCallback;
@@ -52,9 +53,12 @@ public class InputService extends Service {
             try {
                 BufferedReader getevent = Utils.geteventStream();
                 String line;
+
                 while ((line = getevent.readLine()) != null) {
-                    final int N = mOnKeyEventListeners.beginBroadcast();
-                    for (int i=0; i<N; i++) {
+                    addNewDevices(line);
+                    int i = mOnKeyEventListeners.beginBroadcast();
+                    while (i > 0) {
+                        i--;
                         try {
                             mOnKeyEventListeners.getBroadcastItem(i).onKeyEvent(line);
                         } catch (RemoteException e) {
@@ -70,13 +74,26 @@ public class InputService extends Service {
         }).start();
     }
 
+    private void addNewDevices(String line) {
+        String[] input_event, data;
+        String evdev;
+        data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
+        evdev = data[0];
+        input_event = data[1].split("\\s+");
+
+        if( !currentDevice.equals(evdev) )
+            if (input_event[1].equals("EV_REL")) {
+                System.out.println("add device: " + evdev);
+                currentDevice = evdev;
+            }
+    }
+
     @Override
     public IBinder onBind(Intent intent) {
         return binder;
     }
 
-    public native void startMouse();
-    public static native int openDevice(String device);
+    public native int openDevice(String device);
     public native void stopMouse();
 
     // mouse cursor created with uinput in MouseCursor.cpp
@@ -115,12 +132,9 @@ public class InputService extends Service {
             return supportsUinput > 0;
         }
 
-        public void startServer() {
-            startMouse();
-        }
-
-        public int tryOpenDevice(String device) {
-             return openDevice(device);
+        @Override
+        public void startMouse() {
+            openDevice(currentDevice);
         }
 
         @Override

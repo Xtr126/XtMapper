@@ -13,10 +13,9 @@ interface IRemoteService {
 
     boolean isRoot();
 
-    void startServer();
+    void startMouse();
     void reloadKeymap();
     void setScreenSize(int width, int height);
-    int tryOpenDevice(String device);
 
     void setCallback(IRemoteServiceCallback cb);
     void removeCallback(IRemoteServiceCallback cb);

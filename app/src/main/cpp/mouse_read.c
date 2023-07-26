@@ -92,11 +92,8 @@ void* send_mouse_events(void* context) {
     return context;
 }
 
-/*
-* Interface to Java side to start
-*/
-JNIEXPORT void JNICALL
-Java_xtr_keymapper_server_InputService_startMouse(JNIEnv *env, jobject thiz) {
+
+void startMouseThread(JNIEnv *env, jobject thiz) {
 
     pthread_t threadInfo_;
     pthread_attr_t threadAttr_;
@@ -115,19 +112,20 @@ Java_xtr_keymapper_server_InputService_startMouse(JNIEnv *env, jobject thiz) {
 }
 
 JNIEXPORT jint JNICALL
-Java_xtr_keymapper_server_InputService_openDevice(JNIEnv *env, jclass clazz, jstring device) {
+Java_xtr_keymapper_server_InputService_openDevice(JNIEnv *env, jobject thiz, jstring device) {
     const char *evdev = (*env)->GetStringUTFChars(env, device, NULL);
 
     if ((mouse_fd = open(evdev, O_RDONLY)) == -1) {
         perror("opening device");
+    } else {
+        startMouseThread(env, thiz);
     }
-
     (*env)->ReleaseStringUTFChars(env, device, evdev);
     return mouse_fd;
 }
 
 /*
- * Interface to Java side to stop ticks:
+ * Interface to Java side to stop:
  */
 JNIEXPORT void JNICALL
 Java_xtr_keymapper_server_InputService_stopMouse(JNIEnv *env, jobject thiz) {
@@ -142,8 +140,6 @@ Java_xtr_keymapper_server_InputService_stopMouse(JNIEnv *env, jobject thiz) {
     while (g_ctx.done) {
         nanosleep(&sleepTime, NULL);
     }
-
-    close(mouse_fd);
 
     // release object we allocated
     (*env)->DeleteGlobalRef(env, g_ctx.inputServiceClz);

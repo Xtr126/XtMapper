@@ -39,7 +39,6 @@ import androidx.collection.SimpleArrayMap;
 
 import java.util.ArrayList;
 
-import xtr.keymapper.activity.InputDeviceSelector;
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.dpad.DpadHandler;
@@ -111,7 +110,7 @@ public class TouchPointer extends Service {
         if (mService != null) {
             keyEventHandler.init();
             mouseEventHandler.init();
-            startInputDeviceSelector();
+            sendSettingstoServer();
             connected = true;
         } else {
             if (counter > 0) {
@@ -239,19 +238,17 @@ public class TouchPointer extends Service {
             keyEventHandler.dpad2Handler = new DpadHandler(this, profile.dpadWasd, dpad2pid.id, eventHandler, keymapConfig.swipeDelayMs);
     }
 
-    public void sendSettingstoServer() throws RemoteException {
-        checkRootAccess();
-        keymapConfig = new KeymapConfig(this);
-        int result = mService.tryOpenDevice(keymapConfig.device);
-        if ( result < 0 ) {
-            startInputDeviceSelector();
-        } else {
+    public void sendSettingstoServer() {
+        try {
+            checkRootAccess();
             mService.setScreenSize(width, height);
-            mService.startServer();
+            mService.startMouse();
             mService.setCallback(mCallback);
             mService.setOnMouseEventListener(mOnMouseEventListener);
             mService.registerOnKeyEventListener(mOnKeyEventListener);
             if (launchIntent != null) startActivity(launchIntent);
+        } catch (RemoteException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -263,12 +260,6 @@ public class TouchPointer extends Service {
             }
             cursorView = null;
         });
-    }
-
-    private void startInputDeviceSelector() {
-        Intent intent = new Intent(TouchPointer.this, InputDeviceSelector.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
     }
 
     public enum PointerId {

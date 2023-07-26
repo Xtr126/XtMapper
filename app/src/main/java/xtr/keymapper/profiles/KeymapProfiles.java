@@ -110,12 +110,14 @@ public class KeymapProfiles {
                     break;
 
                 default: {
-                    final Key key = new Key();
-                    key.code = data[0];
-                    key.x = Float.parseFloat(data[1]);
-                    key.y = Float.parseFloat(data[2]);
-                    key.offset = Float.parseFloat(data[3]);
-                    profile.keys.add(key);
+                    if (data.length > 3) {
+                        final Key key = new Key();
+                        key.code = data[0];
+                        key.x = Float.parseFloat(data[1]);
+                        key.y = Float.parseFloat(data[2]);
+                        key.offset = Float.parseFloat(data[3]);
+                        profile.keys.add(key);
+                    }
                     break;
                 }
             }

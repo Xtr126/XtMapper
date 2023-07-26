@@ -33,10 +33,6 @@
             android:name=".activity.InfoActivity"
             android:exported="false" />
         <activity
-            android:name=".activity.InputDeviceSelector"
-            android:exported="false"
-            android:theme="@style/Theme.Material3.Dark.DialogWhenLarge" />
-        <activity
             android:name=".activity.MainActivity"
             android:exported="true">
             <intent-filter>
