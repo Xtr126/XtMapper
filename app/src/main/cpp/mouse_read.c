@@ -17,6 +17,7 @@ typedef struct input_service_context {
     jobject inputServiceObj;
     pthread_mutex_t lock;
     int done;
+    int mouse_lock;
 } serviceContext;
 serviceContext g_ctx;
 
@@ -63,8 +64,8 @@ void* send_mouse_events(void* context) {
     // get inputService sendMouseEvent function
     jmethodID mouseEvent = (*env)->GetMethodID(env, pctx->inputServiceClz, "sendMouseEvent", "(II)V");
 
-    // mouse grab
-    ioctl(mouse_fd, EVIOCGRAB, (void *)1);
+    int mouse_lock = 1;
+    ioctl(mouse_fd, EVIOCGRAB, (void *)mouse_lock);
 
     struct input_event ie;
     while (read(mouse_fd, &ie, sizeof(struct input_event))) {
@@ -72,6 +73,11 @@ void* send_mouse_events(void* context) {
         int done = pctx->done;
         if (pctx->done) {
             pctx->done = 0;
+        }
+
+        if (pctx->mouse_lock != mouse_lock) {
+            mouse_lock = pctx->mouse_lock;
+            ioctl(mouse_fd, EVIOCGRAB, (void *)mouse_lock);
         }
         pthread_mutex_unlock(&pctx->lock);
         if (done) {
@@ -84,7 +90,7 @@ void* send_mouse_events(void* context) {
             case REL_WHEEL :
             case BTN_MOUSE :
             case BTN_RIGHT :
-                (*env)->CallVoidMethod(env, pctx->inputServiceObj, mouseEvent, ie.code, ie.value);
+                if (mouse_lock) (*env)->CallVoidMethod(env, pctx->inputServiceObj, mouseEvent, ie.code, ie.value);
                 break;
         }
     }
@@ -146,4 +152,15 @@ Java_xtr_keymapper_server_InputService_stopMouse(JNIEnv *env, jobject thiz) {
     (*env)->DeleteGlobalRef(env, g_ctx.inputServiceObj);
     g_ctx.inputServiceObj = NULL;
     g_ctx.inputServiceClz = NULL;
+}
+
+JNIEXPORT void JNICALL
+Java_xtr_keymapper_server_InputService_setMouseLock(JNIEnv *env, jobject thiz, jboolean lock) {
+    pthread_mutex_lock(&g_ctx.lock);
+    if (lock == JNI_TRUE) {
+        g_ctx.mouse_lock = 1;
+    } else {
+        g_ctx.mouse_lock = 0;
+    }
+    pthread_mutex_unlock(&g_ctx.lock);
 }

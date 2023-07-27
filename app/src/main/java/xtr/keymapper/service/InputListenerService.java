@@ -8,6 +8,7 @@ import xtr.keymapper.server.InputService;
 public class InputListenerService extends InputMethodService {
     @Override
     public void onDestroy() {
+        InputService.resumeKeymap();
         super.onDestroy();
     }
 
@@ -18,7 +19,7 @@ public class InputListenerService extends InputMethodService {
 
     @Override
     public void onStartInput(EditorInfo attribute, boolean restarting) {
-        InputService.reloadKeymap();
+        InputService.pauseKeymap();
         super.onStartInput(attribute, restarting);
     }
 }

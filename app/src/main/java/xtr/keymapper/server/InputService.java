@@ -24,6 +24,7 @@ public class InputService extends Service {
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final int supportsUinput;
     private String currentDevice = "";
+    private boolean stopEvents;
 
     final RemoteCallbackList<OnKeyEventListener> mOnKeyEventListeners = new RemoteCallbackList<>();
     private IRemoteServiceCallback mCallback;
@@ -53,8 +54,12 @@ public class InputService extends Service {
             try {
                 BufferedReader getevent = Utils.geteventStream();
                 String line;
-
+                stopEvents = false;
                 while ((line = getevent.readLine()) != null) {
+                    if (stopEvents) {
+                        getevent.close();
+                        break;
+                    }
                     addNewDevices(line);
                     int i = mOnKeyEventListeners.beginBroadcast();
                     while (i > 0) {
@@ -101,6 +106,7 @@ public class InputService extends Service {
     private native void destroyUinputDev();
     private native void cursorSetX(int x);
     private native void cursorSetY(int y);
+    private native void setMouseLock(boolean lock);
 
     private final IRemoteService.Stub binder = new IRemoteService.Stub() {
         public void injectEvent(float x, float y, int action, int pointerId) {
@@ -134,6 +140,7 @@ public class InputService extends Service {
 
         @Override
         public void startMouse() {
+            setMouseLock(true);
             openDevice(currentDevice);
         }
 
@@ -175,9 +182,17 @@ public class InputService extends Service {
             initMouseCursor(width, height);
         }
 
-
         public void reloadKeymap() throws RemoteException {
             if (mCallback != null) mCallback.loadKeymap();
+        }
+
+        public void pauseMouse(){
+            setMouseLock(false);
+            stopEvents = true;
+        }
+        public void resumeMouse(){
+            setMouseLock(true);
+            if (stopEvents) start_getevent();
         }
     };
 
@@ -202,12 +217,28 @@ public class InputService extends Service {
 
     public static void reloadKeymap(){
         IRemoteService mService = getInstance();
-        if (mService != null) {
-            try {
-                mService.reloadKeymap();
-            } catch (RemoteException e) {
-                Log.i("RemoteService", e.toString());
-            }
+        if (mService != null) try {
+            mService.reloadKeymap();
+        } catch (RemoteException e) {
+            Log.i("RemoteService", e.toString());
+        }
+    }
+
+    public static void pauseKeymap(){
+        IRemoteService mService = getInstance();
+        if (mService != null) try {
+            mService.pauseMouse();
+        } catch (RemoteException e) {
+            Log.i("RemoteService", e.toString());
+        }
+    }
+
+    public static void resumeKeymap(){
+        IRemoteService mService = getInstance();
+        if (mService != null) try {
+            mService.resumeMouse();
+        } catch (RemoteException e) {
+            Log.i("RemoteService", e.toString());
         }
     }
 

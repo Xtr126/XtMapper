@@ -25,4 +25,7 @@ interface IRemoteService {
 
     void setOnMouseEventListener(OnMouseEventListener l);
     void removeOnMouseEventListener(OnMouseEventListener l);
+
+    void resumeMouse();
+    void pauseMouse();
 }
