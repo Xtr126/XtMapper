@@ -4,14 +4,12 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 import android.view.MotionEvent;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
@@ -26,7 +24,7 @@ public class InputService extends Service {
     private String currentDevice = "";
     private boolean stopEvents;
 
-    final RemoteCallbackList<OnKeyEventListener> mOnKeyEventListeners = new RemoteCallbackList<>();
+    private OnKeyEventListener mOnKeyEventListener = null;
     private IRemoteServiceCallback mCallback;
     private OnMouseEventListener mOnMouseEventListener;
 
@@ -54,26 +52,14 @@ public class InputService extends Service {
             try {
                 BufferedReader getevent = Utils.geteventStream();
                 String line;
-                stopEvents = false;
+                stopEvents = true;
                 while ((line = getevent.readLine()) != null) {
-                    if (stopEvents) {
-                        getevent.close();
-                        break;
-                    }
                     addNewDevices(line);
-                    int i = mOnKeyEventListeners.beginBroadcast();
-                    while (i > 0) {
-                        i--;
-                        try {
-                            mOnKeyEventListeners.getBroadcastItem(i).onKeyEvent(line);
-                        } catch (RemoteException e) {
-                            // The RemoteCallbackList will take care of removing
-                            // the dead object for us.
-                        }
-                    }
-                    mOnKeyEventListeners.finishBroadcast();
+                    if (!stopEvents)
+                        if (mOnKeyEventListener != null)
+                            mOnKeyEventListener.onKeyEvent(line);
                 }
-            } catch (IOException e) {
+            } catch (Exception e){
                 e.printStackTrace(System.out);
             }
         }).start();
@@ -140,6 +126,7 @@ public class InputService extends Service {
 
         @Override
         public void startMouse() {
+            stopEvents = false;
             setMouseLock(true);
             openDevice(currentDevice);
         }
@@ -156,12 +143,12 @@ public class InputService extends Service {
 
         @Override
         public void registerOnKeyEventListener(OnKeyEventListener l)  {
-            mOnKeyEventListeners.register(l);
+            mOnKeyEventListener = l;
         }
 
         @Override
         public void unregisterOnKeyEventListener(OnKeyEventListener l)  {
-            mOnKeyEventListeners.unregister(l);
+            mOnKeyEventListener = null;
         }
 
         @Override
@@ -192,7 +179,7 @@ public class InputService extends Service {
         }
         public void resumeMouse(){
             setMouseLock(true);
-            if (stopEvents) start_getevent();
+            stopEvents = false;
         }
     };
 
