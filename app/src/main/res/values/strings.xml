@@ -44,7 +44,7 @@
 
     <string name="switch_profile">Switch Profile</string>
     <string name="launch_editor">Launch Editor</string>
-    <string name="stop_service">Stop Service</string>
+    <string name="pause_resume">Pause/Resume</string>
 
     <!-- bottom navigation in settings fragment -->
     <string name="tuning">Tuning</string>

@@ -390,9 +390,9 @@ public class TouchPointer extends Service {
                 if (keycode == keymapConfig.launchEditorShortcutKey)
                     startService(new Intent(TouchPointer.this, EditorService.class));
 
-            if (keymapConfig.stopServiceShortcutKeyModifier.equals(modifier))
-                if (keycode == keymapConfig.stopServiceShortcutKey)
-                    stopPointer();
+            if (keymapConfig.pauseResumeShortcutKeyModifier.equals(modifier))
+                if (keycode == keymapConfig.pauseResumeShortcutKey)
+                    InputService.pauseKeymap();
 
             if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
                 if (keycode == keymapConfig.switchProfileShortcutKey)

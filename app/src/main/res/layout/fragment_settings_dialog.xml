@@ -95,7 +95,7 @@
             android:orientation="horizontal">
 
             <TextView
-                android:layout_width="90dp"
+                android:layout_width="100dp"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="10dp"
                 android:labelFor="@id/launch_editor_modifier"
@@ -136,11 +136,11 @@
             android:orientation="horizontal">
 
             <TextView
-                android:layout_width="90dp"
+                android:layout_width="100dp"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="10dp"
-                android:labelFor="@id/stop_service_modifier"
-                android:text="@string/stop_service" />
+                android:labelFor="@id/pause_resume_modifier"
+                android:text="@string/pause_resume" />
 
 
             <com.google.android.material.textfield.TextInputLayout
@@ -149,7 +149,7 @@
                 android:layout_height="wrap_content">
 
                 <AutoCompleteTextView
-                    android:id="@+id/stop_service_modifier"
+                    android:id="@+id/pause_resume_modifier"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="none" />
@@ -163,7 +163,7 @@
                 android:hint="@string/key">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/stop_service"
+                    android:id="@+id/pause_resume"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="none" />
@@ -176,7 +176,7 @@
             android:orientation="horizontal">
 
             <TextView
-                android:layout_width="90dp"
+                android:layout_width="100dp"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="10dp"
                 android:text="@string/switch_profile" />
@@ -215,7 +215,7 @@
             android:orientation="horizontal">
 
             <TextView
-                android:layout_width="90dp"
+                android:layout_width="100dp"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="10dp"
                 android:text="@string/mouse_aim" />

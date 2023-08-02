@@ -62,7 +62,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
         loadKeyboardShortcuts();
         binding.launchEditor.setOnKeyListener(this::onKey);
-        binding.stopService.setOnKeyListener(this::onKey);
+        binding.pauseResume.setOnKeyListener(this::onKey);
         binding.switchProfile.setOnKeyListener(this::onKey);
         binding.mouseAimKey.setOnKeyListener(this::onKey);
 
@@ -93,14 +93,14 @@ public class SettingsFragment extends BottomSheetDialogFragment {
     }
 
     private void loadKeyboardShortcuts(){
-        int stop_service = keymapConfig.stopServiceShortcutKey;
+        int pause_resume = keymapConfig.pauseResumeShortcutKey;
         int launch_editor = keymapConfig.launchEditorShortcutKey;
         int switch_profile = keymapConfig.switchProfileShortcutKey;
         int mouse_aim = keymapConfig.mouseAimShortcutKey;
 
-        if (stop_service > -1) {
-            String stopServiceShortcutKey = String.valueOf(Utils.alphabet.charAt(stop_service));
-            binding.stopService.setText(stopServiceShortcutKey);
+        if (pause_resume > -1) {
+            String pauseResumeShortcutKey = String.valueOf(Utils.alphabet.charAt(pause_resume));
+            binding.pauseResume.setText(pauseResumeShortcutKey);
         }
 
         if (launch_editor > -1) {
@@ -123,12 +123,12 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
     private void loadModifierKeys() {
         binding.launchEditorModifier.setText(keymapConfig.launchEditorShortcutKeyModifier);
-        binding.stopServiceModifier.setText(keymapConfig.stopServiceShortcutKeyModifier);
+        binding.pauseResumeModifier.setText(keymapConfig.pauseResumeShortcutKeyModifier);
         binding.switchProfileModifier.setText(keymapConfig.switchProfileShortcutKeyModifier);
 
         final String[] modifierKeys = {KeymapConfig.KEY_CTRL, KeymapConfig.KEY_ALT};
         ((MaterialAutoCompleteTextView)binding.launchEditorModifier).setSimpleItems(modifierKeys);
-        ((MaterialAutoCompleteTextView)binding.stopServiceModifier).setSimpleItems(modifierKeys);
+        ((MaterialAutoCompleteTextView)binding.pauseResumeModifier).setSimpleItems(modifierKeys);
         ((MaterialAutoCompleteTextView)binding.switchProfileModifier).setSimpleItems(modifierKeys);
     }
 
@@ -157,22 +157,22 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
     private void saveKeyboardShortcuts() {
         if(binding.launchEditor.getText().toString().isEmpty()) binding.launchEditor.setText(" ");
-        if(binding.stopService.getText().toString().isEmpty()) binding.stopService.setText(" ");
+        if(binding.pauseResume.getText().toString().isEmpty()) binding.pauseResume.setText(" ");
         if(binding.switchProfile.getText().toString().isEmpty()) binding.switchProfile.setText(" ");
         if(binding.mouseAimKey.getText().toString().isEmpty()) binding.mouseAimKey.setText(" ");
 
         int launch_editor_shortcut = Utils.alphabet.indexOf(binding.launchEditor.getText().charAt(0));
-        int stop_service_shortcut = Utils.alphabet.indexOf(binding.stopService.getText().charAt(0));
+        int pause_resume_shortcut = Utils.alphabet.indexOf(binding.pauseResume.getText().charAt(0));
         int switch_profile_shortcut = Utils.alphabet.indexOf(binding.switchProfile.getText().charAt(0));
         int mouse_aim_shortcut = Utils.alphabet.indexOf(binding.mouseAimKey.getText().charAt(0));
 
         keymapConfig.launchEditorShortcutKey = launch_editor_shortcut;
-        keymapConfig.stopServiceShortcutKey = stop_service_shortcut;
+        keymapConfig.pauseResumeShortcutKey = pause_resume_shortcut;
         keymapConfig.switchProfileShortcutKey = switch_profile_shortcut;
         keymapConfig.mouseAimShortcutKey = mouse_aim_shortcut;
 
         keymapConfig.launchEditorShortcutKeyModifier = binding.launchEditorModifier.getText().toString();
-        keymapConfig.stopServiceShortcutKeyModifier = binding.stopServiceModifier.getText().toString();
+        keymapConfig.pauseResumeShortcutKeyModifier = binding.pauseResumeModifier.getText().toString();
         keymapConfig.switchProfileShortcutKeyModifier = binding.switchProfileModifier.getText().toString();
     }
 

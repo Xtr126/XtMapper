@@ -13,9 +13,9 @@ public class KeymapConfig {
     public Float mouseSensitivity, scrollSpeed;
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
 
-    public int stopServiceShortcutKey, launchEditorShortcutKey, switchProfileShortcutKey;
+    public int pauseResumeShortcutKey, launchEditorShortcutKey, switchProfileShortcutKey;
     public int swipeDelayMs;
-    public String stopServiceShortcutKeyModifier, launchEditorShortcutKeyModifier, switchProfileShortcutKeyModifier;
+    public String pauseResumeShortcutKeyModifier, launchEditorShortcutKeyModifier, switchProfileShortcutKeyModifier;
 
     public static final String KEY_CTRL = "Ctrl", KEY_ALT = "Alt";
     public static final String TOGGLE = "Toggle", HOLD = "Hold";
@@ -37,12 +37,12 @@ public class KeymapConfig {
         mouseAimToggle = sharedPref.getBoolean("mouse_aim_shortcut_toggle", true);
 
         launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", -1);
-        stopServiceShortcutKey = sharedPref.getInt("stop_service_shortcut", -1);
+        pauseResumeShortcutKey = sharedPref.getInt("pause_resume_shortcut", -1);
         switchProfileShortcutKey = sharedPref.getInt("switch_profile_shortcut", -1);
         mouseAimShortcutKey = sharedPref.getInt("mouse_aim_shortcut", -1);
 
         launchEditorShortcutKeyModifier = sharedPref.getString("launch_editor_shortcut_modifier", KEY_CTRL);
-        stopServiceShortcutKeyModifier = sharedPref.getString("stop_service_shortcut_modifier", KEY_CTRL);
+        pauseResumeShortcutKeyModifier = sharedPref.getString("pause_resume_shortcut_modifier", KEY_CTRL);
         switchProfileShortcutKeyModifier = sharedPref.getString("switch_profile_shortcut_modifier", KEY_CTRL);
 
         keyGraveMouseAim = sharedPref.getBoolean("key_grave_mouse_aim", true);
@@ -61,11 +61,11 @@ public class KeymapConfig {
             .putBoolean("key_grave_mouse_aim", keyGraveMouseAim)
             .putBoolean("right_click_mouse_aim", rightClickMouseAim)
             .putBoolean("mouse_aim_shortcut_toggle", mouseAimToggle)
-            .putInt("stop_service_shortcut", stopServiceShortcutKey)
+            .putInt("pause_resume_shortcut", pauseResumeShortcutKey)
             .putInt("launch_editor_shortcut", launchEditorShortcutKey)
             .putInt("switch_profile_shortcut", switchProfileShortcutKey)
             .putInt("mouse_aim_shortcut", mouseAimShortcutKey)
-            .putString("stop_service_shortcut_modifier", stopServiceShortcutKeyModifier)
+            .putString("pause_resume_shortcut_modifier", pauseResumeShortcutKeyModifier)
             .putString("launch_editor_shortcut_modifier", launchEditorShortcutKeyModifier)
             .putString("switch_profile_shortcut_modifier", switchProfileShortcutKeyModifier)
             .putInt("swipe_delay_ms", swipeDelayMs)
