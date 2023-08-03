@@ -11,7 +11,7 @@ import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.swipekey.SwipeKey;
 
-public final class KeymapProfile implements Parcelable {
+public class KeymapProfile implements Parcelable {
     public String packageName = "xtr.keymapper";
     public Dpad dpadUdlr = null;
     public Dpad dpadWasd = null;
@@ -19,6 +19,10 @@ public final class KeymapProfile implements Parcelable {
     public ArrayList<KeymapProfileKey> keys = new ArrayList<>();
     public ArrayList<SwipeKey> swipeKeys = new ArrayList<>();
     public KeymapProfileKey rightClick;
+
+    public KeymapProfile() {
+
+    }
 
     protected KeymapProfile(Parcel in) {
         packageName = in.readString();
@@ -30,7 +34,7 @@ public final class KeymapProfile implements Parcelable {
         rightClick = in.readParcelable(KeymapProfileKey.class.getClassLoader());
     }
 
-    public static final Creator<KeymapProfile> CREATOR = new Creator<KeymapProfile>() {
+    public static final Creator<KeymapProfile> CREATOR = new Creator<>() {
         @Override
         public KeymapProfile createFromParcel(Parcel in) {
             return new KeymapProfile(in);
