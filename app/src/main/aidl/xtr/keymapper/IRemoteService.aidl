@@ -4,17 +4,13 @@ import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.OnMouseEventListener;
 
+parcelable KeymapConfig;
+parcelable KeymapProfile;
+
 interface IRemoteService {
-    void injectEvent(float x, float y, int action, int pointerId);
-    void injectScroll(float x, float y, int value);
-
-    void moveCursorX(int x);
-    void moveCursorY(int y);
-
     boolean isRoot();
 
-    void startMouse();
-    void reloadKeymap();
+    void startMouse(KeymapProfile keymapProfile, KeymapConfig keymapConfig);
     void setScreenSize(int width, int height);
 
     void setCallback(IRemoteServiceCallback cb);
@@ -22,9 +18,6 @@ interface IRemoteService {
 
     void registerOnKeyEventListener(OnKeyEventListener l);
     void unregisterOnKeyEventListener(OnKeyEventListener l);
-
-    void setOnMouseEventListener(OnMouseEventListener l);
-    void removeOnMouseEventListener(OnMouseEventListener l);
 
     void resumeMouse();
     void pauseMouse();

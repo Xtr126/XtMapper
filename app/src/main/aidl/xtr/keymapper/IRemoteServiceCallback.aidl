@@ -4,4 +4,8 @@ package xtr.keymapper;
 
 interface IRemoteServiceCallback {
     void loadKeymap();
+    void launchEditor();
+    void alertMouseAimActivated();
+    void cursorSetX(int x);
+    void cursorSetY(int y);
 }
