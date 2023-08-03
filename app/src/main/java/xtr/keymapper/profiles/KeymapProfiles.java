@@ -5,8 +5,6 @@ import static android.content.Context.MODE_PRIVATE;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import androidx.collection.ArraySet;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,8 +24,8 @@ public class KeymapProfiles {
         sharedPref = context.getSharedPreferences("profiles", MODE_PRIVATE);
     }
 
-    public Map<String, Profile> getAllProfiles(){
-        Map<String, Profile> profiles = new HashMap<>();
+    public Map<String, KeymapProfile> getAllProfiles(){
+        Map<String, KeymapProfile> profiles = new HashMap<>();
         sharedPref.getAll().forEach((BiConsumer<String, Object>) (key, o) -> profiles.put(key, getProfile(key)));
         return profiles;
     }
@@ -45,23 +43,6 @@ public class KeymapProfiles {
         saveProfile(profileName, new ArrayList<>(stringSet), packageName);
     }
 
-    public static final class Key {
-        public String code;
-        public float x;
-        public float y;
-        public float offset;
-    }
-
-     public static final class Profile {
-         public String packageName = "xtr.keymapper";
-         public Dpad dpadUdlr = null;
-         public Dpad dpadWasd = null;
-         public MouseAimConfig mouseAimConfig = null;
-         public ArrayList<Key> keys = new ArrayList<>();
-         public ArrayList<SwipeKey> swipeKeys = new ArrayList<>();
-         public Key rightClick;
-     }
-
     public void saveProfile(String profileName, ArrayList<String> lines, String packageName) {
         lines.removeIf(line -> line.contains("APPLICATION"));
         lines.add("APPLICATION " + packageName);
@@ -75,10 +56,10 @@ public class KeymapProfiles {
         sharedPref.edit().remove(profileName).apply();
     }
 
-    public Profile getProfile(String profileName) {
+    public KeymapProfile getProfile(String profileName) {
         Set<String> stream = sharedPref.getStringSet(profileName, null);
 
-        Profile profile = new Profile();
+        KeymapProfile profile = new KeymapProfile();
         if (stream != null) stream.forEach(s -> {
 
             String[] data = s.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
@@ -96,7 +77,7 @@ public class KeymapProfiles {
                     break;
 
                 case MOUSE_RIGHT:
-                    profile.rightClick = new Key();
+                    profile.rightClick = new KeymapProfileKey();
                     profile.rightClick.x = Float.parseFloat(data[1]);
                     profile.rightClick.y = Float.parseFloat(data[2]);
                     break;
@@ -111,7 +92,7 @@ public class KeymapProfiles {
 
                 default: {
                     if (data.length > 3) {
-                        final Key key = new Key();
+                        final KeymapProfileKey key = new KeymapProfileKey();
                         key.code = data[0];
                         key.x = Float.parseFloat(data[1]);
                         key.y = Float.parseFloat(data[2]);

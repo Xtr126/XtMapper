@@ -1,8 +1,13 @@
 package xtr.keymapper.dpad;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
+import androidx.annotation.NonNull;
+
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 
-public class Dpad {
+public class Dpad implements Parcelable {
     public final String type;
     private final float viewX, viewY;
     private final int width, height;
@@ -11,6 +16,46 @@ public class Dpad {
 
     public static final String UDLR = "UDLR_DPAD";
     public static final String WASD = "WASD_DPAD";
+
+    protected Dpad(Parcel in) {
+        type = in.readString();
+        viewX = in.readFloat();
+        viewY = in.readFloat();
+        width = in.readInt();
+        height = in.readInt();
+        xOfCenter = in.readFloat();
+        yOfCenter = in.readFloat();
+        radius = in.readFloat();
+    }
+
+    public static final Creator<Dpad> CREATOR = new Creator<>() {
+        @Override
+        public Dpad createFromParcel(Parcel in) {
+            return new Dpad(in);
+        }
+
+        @Override
+        public Dpad[] newArray(int size) {
+            return new Dpad[size];
+        }
+    };
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(@NonNull Parcel dest, int flags) {
+        dest.writeString(type);
+        dest.writeFloat(viewX);
+        dest.writeFloat(viewY);
+        dest.writeInt(width);
+        dest.writeInt(height);
+        dest.writeFloat(xOfCenter);
+        dest.writeFloat(yOfCenter);
+        dest.writeFloat(radius);
+    }
 
     public enum DpadType {
         // Dpad for up down left right arrow keys
