@@ -4,11 +4,10 @@ import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 
 import android.os.Handler;
-import android.os.RemoteException;
 
-import xtr.keymapper.IRemoteService;
-import xtr.keymapper.TouchPointer.PidProvider;
-import xtr.keymapper.TouchPointer.KeyEventHandler.KeyEvent;
+import xtr.keymapper.server.IInputInterface;
+import xtr.keymapper.touchpointer.KeyEventHandler.KeyEvent;
+import xtr.keymapper.touchpointer.PidProvider;
 
 public class SwipeKeyHandler {
 
@@ -38,7 +37,7 @@ public class SwipeKeyHandler {
         }
     }
 
-    public void handleEvent(KeyEvent event, IRemoteService service, Handler handler, PidProvider mPid, int swipeDelayMs) throws RemoteException {
+    public void handleEvent(KeyEvent event, IInputInterface service, Handler handler, PidProvider mPid, int swipeDelayMs) {
         SwipeEvent swipeEvent;
         if (event.code.equals(keycode1))
             swipeEvent = swipeEvent1;
@@ -50,10 +49,7 @@ public class SwipeKeyHandler {
         service.injectEvent(swipeEvent.startX, swipeEvent.startY, event.action, pid);
 
         if (event.action == DOWN) handler.postDelayed(() -> {
-            try {
-                service.injectEvent(swipeEvent.stopX, swipeEvent.stopY, MOVE, pid);
-            } catch (RemoteException ignored) {
-            }
+            service.injectEvent(swipeEvent.stopX, swipeEvent.stopY, MOVE, pid);
         }, swipeDelayMs);
     }
 

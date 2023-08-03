@@ -4,13 +4,10 @@ import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
 
-import android.content.Context;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.RemoteException;
 import android.os.SystemClock;
 
-import xtr.keymapper.IRemoteService;
+import xtr.keymapper.server.IInputInterface;
 
 public class DpadHandler {
 
@@ -25,7 +22,7 @@ public class DpadHandler {
     private boolean KEY_LEFT;
     private boolean KEY_RIGHT;
     
-    private IRemoteService input;
+    private IInputInterface input;
     private final int pointerId;
     private final Handler mHandler;
     private final int delayMillis;
@@ -42,13 +39,12 @@ public class DpadHandler {
         }
     }
 
-    public DpadHandler(Context context, Dpad dpad, int pointerId, Handler handler, int delayMillis){
+    public DpadHandler(float dpadRadiusMultiplier, Dpad dpad, int pointerId, Handler handler, int delayMillis){
         this.pointerId = pointerId;
         this.mHandler = handler;
         this.delayMillis = delayMillis;
-        DpadConfig dpadConfig = new DpadConfig(context);
-        
-        float radius = dpad.radius * dpadConfig.getDpadRadiusMultiplier();
+
+        float radius = dpad.radius * dpadRadiusMultiplier;
         float xOfCenter = dpad.xOfCenter;
         float yOfCenter = dpad.yOfCenter;
         
@@ -66,7 +62,7 @@ public class DpadHandler {
         tapDown = new DpadEvent(xOfCenter, yOfCenter, DOWN);
     }
 
-    public void setInterface(IRemoteService input){
+    public void setInterface(IInputInterface input){
         this.input = input;
     }
 
@@ -82,10 +78,7 @@ public class DpadHandler {
         long now = SystemClock.uptimeMillis();
 
         Runnable sendEvent = () -> {
-            try {
-                input.injectEvent(event.x, event.y, event.action, pointerId);
-            } catch (RemoteException ignored) {
-            }
+            input.injectEvent(event.x, event.y, event.action, pointerId);
         };
         if ( (now - lastEvent) >= delayMillis ) mHandler.postDelayed(sendEvent, delayMillis);
         else mHandler.postDelayed(sendEvent, delayMillis + delayMillis);
