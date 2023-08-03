@@ -8,4 +8,5 @@ interface IRemoteServiceCallback {
     void alertMouseAimActivated();
     void cursorSetX(int x);
     void cursorSetY(int y);
+    void reloadKeymap();
 }

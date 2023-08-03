@@ -2,15 +2,14 @@ package xtr.keymapper;
 
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.OnKeyEventListener;
-import xtr.keymapper.OnMouseEventListener;
 
 parcelable KeymapConfig;
-parcelable KeymapProfile;
+parcelable profiles.KeymapProfile;
 
 interface IRemoteService {
     boolean isRoot();
 
-    void startMouse(KeymapProfile keymapProfile, KeymapConfig keymapConfig);
+    void startMouse(in profiles.KeymapProfile keymapProfile, in KeymapConfig keymapConfig);
     void setScreenSize(int width, int height);
 
     void setCallback(IRemoteServiceCallback cb);

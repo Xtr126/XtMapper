@@ -1,30 +1,29 @@
 package xtr.keymapper.server;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
-import android.view.MotionEvent;
 
 import java.io.BufferedReader;
 
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
+import xtr.keymapper.KeymapConfig;
 import xtr.keymapper.OnKeyEventListener;
-import xtr.keymapper.OnMouseEventListener;
 import xtr.keymapper.Utils;
+import xtr.keymapper.profiles.KeymapProfile;
+import xtr.keymapper.profiles.KeymapProfiles;
 
 public class RemoteService extends Service {
     private final int supportsUinput;
     private String currentDevice = "";
     private boolean stopEvents;
-
-
-
-    private IRemoteServiceCallback mCallback;
+    private InputService inputService;
     private OnKeyEventListener mOnKeyEventListener;
 
     public static void main(String[] args) {
@@ -36,7 +35,8 @@ public class RemoteService extends Service {
     public RemoteService() {
         super();
         Log.i("XtMapper", "starting server...");
-        supportsUinput = initMouseCursor(1280, 720);
+        inputService = new InputService(null, null);
+        supportsUinput = inputService.initMouseCursor(1280, 720);
         try {
             ServiceManager.addService("xtmapper", binder);
             System.out.println("Waiting for overlay...");
@@ -55,9 +55,10 @@ public class RemoteService extends Service {
                 stopEvents = true;
                 while ((line = getevent.readLine()) != null) {
                     addNewDevices(line);
-                    if (!stopEvents)
-                        if (mOnKeyEventListener != null)
-                            mOnKeyEventListener.onKeyEvent(line);
+                    if (!stopEvents) {
+                        inputService.getKeyEventHandler().handleEvent(line);
+                        if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
+                    }
                 }
             } catch (Exception e){
                 e.printStackTrace(System.out);
@@ -85,50 +86,26 @@ public class RemoteService extends Service {
     }
 
     private final IRemoteService.Stub binder = new IRemoteService.Stub() {
-        public void injectEvent(float x, float y, int action, int pointerId) {
-            switch (action) {
-                case UP:
-                    input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
-                    break;
-                case DOWN:
-                    input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
-                    break;
-                case MOVE:
-                    input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f, x, y);
-                    break;
-            }
-        }
-        public void injectScroll(float x, float y, int value) {
-            input.onScrollEvent(x, y, value);
-        }
-
-        public void moveCursorX(int x) {
-            cursorSetX(x);
-        }
-
-        public void moveCursorY(int y) {
-            cursorSetY(y);
-        }
-
         public boolean isRoot() {
             return supportsUinput > 0;
         }
 
         @Override
-        public void startMouse() {
+        public void startMouse(KeymapProfile profile, KeymapConfig keymapConfig) {
             stopEvents = false;
-            setMouseLock(true);
-            openDevice(currentDevice);
+            inputService = new InputService(profile, keymapConfig);
+            inputService.setMouseLock(true);
+            inputService.openDevice(currentDevice);
         }
 
         @Override
         public void setCallback(IRemoteServiceCallback cb) {
-            mCallback = cb;
+            inputService.setCallback(cb);
         }
 
         @Override
         public void removeCallback(IRemoteServiceCallback cb) {
-            mCallback = null;
+            inputService.setCallback(null);
         }
 
         @Override
@@ -141,61 +118,37 @@ public class RemoteService extends Service {
             mOnKeyEventListener = null;
         }
 
-        @Override
-        public void setOnMouseEventListener(OnMouseEventListener l) throws RemoteException {
-            l.asBinder().linkToDeath(mDeathRecipient, 0);
-            mOnMouseEventListener = l;
-        }
-
-        @Override
-        public void removeOnMouseEventListener(OnMouseEventListener l)  {
-            l.asBinder().unlinkToDeath(mDeathRecipient, 0);
-            stopMouse();
-            mOnMouseEventListener = null;
-        }
-
         public void setScreenSize(int width, int height){
-            destroyUinputDev();
-            initMouseCursor(width, height);
-        }
-
-        public void reloadKeymap() throws RemoteException {
-            if (mCallback != null) mCallback.loadKeymap();
+            inputService.destroyUinputDev();
+            inputService.initMouseCursor(width, height);
         }
 
         public void pauseMouse(){
-            setMouseLock(false);
+            inputService.setMouseLock(false);
             stopEvents = true;
         }
         public void resumeMouse(){
-            setMouseLock(true);
+            inputService.setMouseLock(true);
             stopEvents = false;
         }
     };
-
-    private final IBinder.DeathRecipient mDeathRecipient = this::stopMouse;
-
     /*
      * Called from native code to send mouse event to client
      */
     private void sendMouseEvent(int code, int value) {
-        try {
-            if (mOnMouseEventListener != null)
-                mOnMouseEventListener.onMouseEvent(code, value);
-            else stopMouse();
-        } catch (RemoteException ex) {
-            stopMouse();
-        }
+        inputService.onMouseEvent(code, value);
     }
 
     public static IRemoteService getInstance(){
         return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
     }
 
-    public static void reloadKeymap(){
+    public static void reloadKeymap(Context context){
         IRemoteService mService = getInstance();
         if (mService != null) try {
-            mService.reloadKeymap();
+            KeymapConfig keymapConfig = new KeymapConfig(context);
+            KeymapProfile profile = new KeymapProfiles(context).getProfile(null);
+            mService.startMouse(profile, keymapConfig);
         } catch (RemoteException e) {
             Log.i("RemoteService", e.toString());
         }

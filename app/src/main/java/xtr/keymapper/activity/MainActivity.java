@@ -20,11 +20,11 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
-import xtr.keymapper.TouchPointer;
+import xtr.keymapper.touchpointer.TouchPointer;
 import xtr.keymapper.databinding.ActivityMainBinding;
 import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.fragment.SettingsFragment;
-import xtr.keymapper.server.InputService;
+import xtr.keymapper.server.RemoteService;
 
 public class MainActivity extends AppCompatActivity {
     public TouchPointer pointerOverlay;
@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
                 (v -> new SettingsFragment(this).show(getSupportFragmentManager(), "dialog"));
         binding.controls.aboutButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
-        if (InputService.getInstance() != null) {
+        if (RemoteService.getInstance() != null) {
             binding.cmdview.view1.setText(R.string.activated_start);
             binding.controls.startServer.setEnabled(false);
         }

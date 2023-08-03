@@ -14,7 +14,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.R;
 import xtr.keymapper.profiles.ProfileSelector;
-import xtr.keymapper.server.InputService;
+import xtr.keymapper.server.RemoteService;
 
 public class EditorService extends Service implements EditorUI.OnHideListener {
     private EditorUI editor;
@@ -22,7 +22,7 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        mService = InputService.getInstance();
+        mService = RemoteService.getInstance();
 
         if (editor != null) editor.hideView();
 

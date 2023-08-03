@@ -33,13 +33,17 @@ public class MouseEventHandler {
     private final IInputInterface mInput;
     boolean pointer_down;
 
-    public void triggerMouseAim() throws RemoteException {
+    public void triggerMouseAim() {
         if (mouseAimHandler != null) {
             mouseAimHandler.active = !mouseAimHandler.active;
             if (mouseAimHandler.active) {
                 mouseAimHandler.resetPointer();
                 // Notifying user that shooting mode was activated
-                mInput.getCallback().alertMouseAimActivated(); //post(() -> Toast.makeText(TouchPointer.this, R.string.mouse_aim_activated, Toast.LENGTH_LONG).show());
+                try {
+                    mInput.getCallback().alertMouseAimActivated(); //post(() -> Toast.makeText(TouchPointer.this, R.string.mouse_aim_activated, Toast.LENGTH_LONG).show());
+                } catch (RemoteException e) {
+                    e.printStackTrace(System.out);
+                }
             }
         }
     }
@@ -72,12 +76,12 @@ public class MouseEventHandler {
         mInput.moveCursorY(y1);
     }
 
-    private void handleRightClick(int value) throws RemoteException {
+    private void handleRightClick(int value) {
         if (value == 1 && mInput.getKeymapConfig().rightClickMouseAim) triggerMouseAim();
         if (rightClick != null) mInput.injectEvent(rightClick.x, rightClick.y, value, pointerId2);
     }
 
-    private void handleEvent(int code, int value) throws RemoteException {
+    public void handleEvent(int code, int value) {
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
         if (mouseAimHandler != null && mouseAimHandler.active) {
             mouseAimHandler.handleEvent(code, value, this::handleRightClick);

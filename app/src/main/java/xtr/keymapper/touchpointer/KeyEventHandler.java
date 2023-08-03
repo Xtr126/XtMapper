@@ -29,13 +29,11 @@ public class KeyEventHandler {
     private DpadHandler dpad1Handler, dpad2Handler;
     private final ArrayList<SwipeKeyHandler> swipeKeyHandlers = new ArrayList<>();
     private final PidProvider pidProvider = new PidProvider();
-    private final Handler mHandler;
     private Handler eventHandler;
     private final IInputInterface mInput;
 
-    public KeyEventHandler(IInputInterface mInput, Handler mHandler) {
+    public KeyEventHandler(IInputInterface mInput) {
         this.mInput = mInput;
-        this.mHandler = mHandler;
     }
 
     public void init(){
@@ -67,7 +65,7 @@ public class KeyEventHandler {
         public int action;
     }
 
-    private void handleEvent(String line) throws RemoteException {
+    public void handleEvent(String line) throws RemoteException {
         // line: /dev/input/event3: EV_KEY KEY_X DOWN
         String[] input_event = line.split("\\s+");
         if (!input_event[1].equals("EV_KEY")) return;
@@ -116,7 +114,7 @@ public class KeyEventHandler {
             swipeKeyHandler.handleEvent(event, mInput, eventHandler, pidProvider, keymapConfig.swipeDelayMs);
     }
 
-    private void handleKeyboardShortcuts(int keycode) {
+    private void handleKeyboardShortcuts(int keycode) throws RemoteException {
         final String modifier = ctrlKeyPressed ? KEY_CTRL : KEY_ALT;
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
 
@@ -130,10 +128,10 @@ public class KeyEventHandler {
 
         if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
             if (keycode == keymapConfig.switchProfileShortcutKey)
-                mHandler.post(RemoteService::reloadKeymap);
+                mInput.getCallback().reloadKeymap();
     }
 
-    private void handleMouseAim(int keycode, int action) throws RemoteException {
+    private void handleMouseAim(int keycode, int action) {
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
         if (keycode == keymapConfig.mouseAimShortcutKey)
             if (action == DOWN && keymapConfig.mouseAimToggle) mInput.getMouseEventHandler().triggerMouseAim();

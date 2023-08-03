@@ -1,9 +1,8 @@
 package xtr.keymapper.server;
 
-import android.os.Handler;
-import android.os.Looper;
 import android.view.MotionEvent;
 
+import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.KeymapConfig;
 import xtr.keymapper.profiles.KeymapProfile;
 import xtr.keymapper.touchpointer.KeyEventHandler;
@@ -12,15 +11,17 @@ import xtr.keymapper.touchpointer.MouseEventHandler;
 public class InputService implements IInputInterface {
     private final MouseEventHandler mouseEventHandler;
     private final KeyEventHandler keyEventHandler;
-    private KeymapConfig keymapConfig;
-    private final Handler mHandler = new Handler(Looper.getMainLooper());
-    private KeymapProfile keymapProfile;
+    private final KeymapConfig keymapConfig;
+    private final KeymapProfile keymapProfile;
     private static final Input input = new Input();
     public static final int UP = 0, DOWN = 1, MOVE = 2;
+    private IRemoteServiceCallback mCallback;
 
-    public InputService(){
+    public InputService(KeymapProfile profile, KeymapConfig keymapConfig){
+        this.keymapProfile = profile;
+        this.keymapConfig = keymapConfig;
         mouseEventHandler = new MouseEventHandler(this);
-        keyEventHandler = new KeyEventHandler(this, mHandler);
+        keyEventHandler = new KeyEventHandler(this);
 
         keyEventHandler.init();
         mouseEventHandler.init();
@@ -65,27 +66,36 @@ public class InputService implements IInputInterface {
         return mCallback;
     }
 
+    public void setCallback(IRemoteServiceCallback mCallback) {
+        this.mCallback = mCallback;
+    }
+
     public void moveCursorX(float x) {
-        cursorSetX(x);
+        cursorSetX((int) x);
     }
 
     public void moveCursorY(float y) {
-        cursorSetY(y);
+        cursorSetY((int) y);
     }
-    private native void cursorSetX(int x);
-    private native void cursorSetY(int y);
+    public native void cursorSetX(int x);
+    public native void cursorSetY(int y);
     public native int openDevice(String device);
     public native void stopMouse();
 
     // mouse cursor created with uinput in MouseCursor.cpp
-    private native int initMouseCursor(int width, int height);
-    private native void destroyUinputDev();
+    public native int initMouseCursor(int width, int height);
+    public native void destroyUinputDev();
 
-    private native void setMouseLock(boolean lock);
+    public native void setMouseLock(boolean lock);
 
     static {
         System.loadLibrary("mouse_read");
         System.loadLibrary("mouse_cursor");
     }
 
+    public void onMouseEvent(int code, int value) {
+        if (mouseEventHandler != null)
+            mouseEventHandler.handleEvent(code, value);
+        else stopMouse();
+    }
 }

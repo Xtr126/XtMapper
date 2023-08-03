@@ -5,11 +5,10 @@ import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
 import static xtr.keymapper.InputEventCodes.REL_X;
 import static xtr.keymapper.InputEventCodes.REL_Y;
 import static xtr.keymapper.server.InputService.DOWN;
-import static xtr.keymapper.server.InputService.UP;
 import static xtr.keymapper.server.InputService.MOVE;
+import static xtr.keymapper.server.InputService.UP;
 
 import android.graphics.RectF;
-import android.os.RemoteException;
 
 import xtr.keymapper.server.IInputInterface;
 import xtr.keymapper.touchpointer.PointerId;
@@ -56,7 +55,7 @@ public class MouseAimHandler {
     }
 
 
-    public void handleEvent(int code, int value, OnRightClick r) throws RemoteException {
+    public void handleEvent(int code, int value, OnRightClick r) {
         switch (code) {
             case REL_X:
                 currentX += value;
@@ -80,6 +79,6 @@ public class MouseAimHandler {
     }
 
     public interface OnRightClick {
-        void onRightClick(int value) throws RemoteException;
+        void onRightClick(int value);
     }
 }

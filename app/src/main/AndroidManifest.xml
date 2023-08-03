@@ -4,7 +4,6 @@
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
@@ -43,7 +42,7 @@
         </activity>
 
         <service
-            android:name=".TouchPointer"
+            android:name=".touchpointer.TouchPointer"
             android:enabled="true" />
 
         <!-- Declares the input method service. -->
