@@ -42,7 +42,7 @@
         </activity>
 
         <service
-            android:name=".touchpointer.TouchPointer"
+            android:name="TouchPointer"
             android:enabled="true" />
 
         <!-- Declares the input method service. -->
