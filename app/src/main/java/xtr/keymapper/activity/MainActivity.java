@@ -20,7 +20,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
-import xtr.keymapper.touchpointer.TouchPointer;
+import xtr.keymapper.TouchPointer;
 import xtr.keymapper.databinding.ActivityMainBinding;
 import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.fragment.SettingsFragment;
@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void stopPointer(){
-        pointerOverlay.hideCursor();
+//        pointerOverlay.hideCursor();
         unbindService(connection);
         stopService(intent);
 
@@ -196,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
             pointerOverlay.activityCallback = mCallback;
-            if(!pointerOverlay.connected) pointerOverlay.init();
+//            if(!pointerOverlay.connected) startService();
         }
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
