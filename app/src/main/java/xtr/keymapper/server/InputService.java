@@ -1,5 +1,6 @@
 package xtr.keymapper.server;
 
+import android.os.RemoteException;
 import android.view.MotionEvent;
 
 import xtr.keymapper.IRemoteServiceCallback;
@@ -11,21 +12,23 @@ import xtr.keymapper.touchpointer.MouseEventHandler;
 public class InputService implements IInputInterface {
     private final MouseEventHandler mouseEventHandler;
     private final KeyEventHandler keyEventHandler;
-    private final KeymapConfig keymapConfig;
-    private final KeymapProfile keymapProfile;
+    private KeymapConfig keymapConfig;
+    private KeymapProfile keymapProfile;
     private static final Input input = new Input();
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final IRemoteServiceCallback mCallback;
+    final int supportsUinput;
 
-    public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback){
+    public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight){
         this.keymapProfile = profile;
         this.keymapConfig = keymapConfig;
         this.mCallback = mCallback;
+        supportsUinput = initMouseCursor(screenWidth, screenHeight);
         mouseEventHandler = new MouseEventHandler(this);
         keyEventHandler = new KeyEventHandler(this);
 
         keyEventHandler.init();
-        mouseEventHandler.init();
+        mouseEventHandler.init(screenWidth, screenHeight);
     }
 
     public void injectEvent(float x, float y, int action, int pointerId) {
@@ -74,6 +77,25 @@ public class InputService implements IInputInterface {
     public void moveCursorY(float y) {
         cursorSetY((int) y);
     }
+
+    @Override
+    public void reloadKeymap() {
+        try {
+            this.keymapProfile = mCallback.requestKeymapProfile();
+            this.keymapConfig = mCallback.requestKeymapConfig();
+            this.stop();
+            keyEventHandler.init();
+            mouseEventHandler.init();
+        } catch (RemoteException e) {
+            e.printStackTrace(System.out);
+        }
+    }
+
+    public void stop() {
+        keyEventHandler.stop();
+        mouseEventHandler.stop();
+    }
+
     public native void cursorSetX(int x);
     public native void cursorSetY(int y);
     public native int openDevice(String device);

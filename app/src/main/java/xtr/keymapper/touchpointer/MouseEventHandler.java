@@ -52,7 +52,14 @@ public class MouseEventHandler {
         this.mInput = mInput;
     }
 
-    public void init() {
+    public void init(){
+        init(width, height);
+    }
+
+    public void init(int width, int height) {
+        this.width = width;
+        this.height = height;
+
         KeymapProfile profile = mInput.getKeymapProfile();
         if (profile.mouseAimConfig != null)
             mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
@@ -129,5 +136,10 @@ public class MouseEventHandler {
                 break;
         }
         if (code == REL_X || code == REL_Y) movePointer();
+    }
+
+    public void stop() {
+        mouseAimHandler = null;
+        scrollZoomHandler = null;
     }
 }

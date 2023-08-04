@@ -27,17 +27,18 @@ public class KeyEventHandler {
     boolean ctrlKeyPressed = false;
     boolean altKeyPressed = false;
     private DpadHandler dpad1Handler, dpad2Handler;
-    private final ArrayList<SwipeKeyHandler> swipeKeyHandlers = new ArrayList<>();
+    private ArrayList<SwipeKeyHandler> swipeKeyHandlers;
     private final PidProvider pidProvider = new PidProvider();
-    private Handler eventHandler;
     private final IInputInterface mInput;
+    private HandlerThread mHandlerThread;
+    private Handler eventHandler;
 
     public KeyEventHandler(IInputInterface mInput) {
         this.mInput = mInput;
     }
 
     public void init(){
-        HandlerThread mHandlerThread = new HandlerThread("events");
+        mHandlerThread = new HandlerThread("events");
         mHandlerThread.start();
         eventHandler = new Handler(mHandlerThread.getLooper());
 
@@ -55,9 +56,19 @@ public class KeyEventHandler {
             key.y += key.offset;
         }
 
+        swipeKeyHandlers = new ArrayList<>();
         for (SwipeKey key : profile.swipeKeys) {
             swipeKeyHandlers.add(new SwipeKeyHandler(key));
         }
+    }
+
+    public void stop() {
+        dpad1Handler = null;
+        dpad2Handler = null;
+        swipeKeyHandlers = null;
+        mHandlerThread.quit();
+        mHandlerThread = null;
+        eventHandler = null;
     }
 
     public static class KeyEvent {

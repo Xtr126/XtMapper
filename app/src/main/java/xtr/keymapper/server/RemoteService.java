@@ -18,7 +18,6 @@ import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.Utils;
 
 public class RemoteService extends Service {
-    private int supportsUinput;
     private String currentDevice = "";
     private boolean stopEvents;
     private InputService inputService;
@@ -83,15 +82,13 @@ public class RemoteService extends Service {
 
     private final IRemoteService.Stub binder = new IRemoteService.Stub() {
         public boolean isRoot() {
-            return supportsUinput > 0;
+            return inputService.supportsUinput > 0;
         }
 
         @Override
         public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) {
-            supportsUinput = inputService.initMouseCursor(screenWidth, screenHeight);
-
             stopEvents = false;
-            inputService = new InputService(profile, keymapConfig, cb);
+            inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight);
             inputService.setMouseLock(true);
             inputService.openDevice(currentDevice);
         }
