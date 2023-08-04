@@ -41,7 +41,6 @@ public class RemoteService extends Service {
         }
     }
 
-
     private void start_getevent() {
         new Thread(() -> {
             try {
@@ -51,7 +50,7 @@ public class RemoteService extends Service {
                 while ((line = getevent.readLine()) != null) {
                     addNewDevices(line);
                     if (!stopEvents) {
-                        inputService.getKeyEventHandler().handleEvent(line);
+                        if (inputService != null) inputService.getKeyEventHandler().handleEvent(line);
                         if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
                     }
                 }
@@ -95,6 +94,7 @@ public class RemoteService extends Service {
 
         @Override
         public void stopServer() {
+            inputService.stop();
             inputService.stopMouse();
             inputService.destroyUinputDev();
             inputService = null;
@@ -123,7 +123,7 @@ public class RemoteService extends Service {
      * Called from native code to send mouse event to client
      */
     private void sendMouseEvent(int code, int value) {
-        inputService.onMouseEvent(code, value);
+        if (!stopEvents) inputService.onMouseEvent(code, value);
     }
 
     public static IRemoteService getInstance(){
