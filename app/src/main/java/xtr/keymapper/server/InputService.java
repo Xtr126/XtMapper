@@ -4,7 +4,7 @@ import android.view.MotionEvent;
 
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.KeymapConfig;
-import xtr.keymapper.profiles.KeymapProfile;
+import xtr.keymapper.KeymapProfile;
 import xtr.keymapper.touchpointer.KeyEventHandler;
 import xtr.keymapper.touchpointer.MouseEventHandler;
 
@@ -15,11 +15,12 @@ public class InputService implements IInputInterface {
     private final KeymapProfile keymapProfile;
     private static final Input input = new Input();
     public static final int UP = 0, DOWN = 1, MOVE = 2;
-    private IRemoteServiceCallback mCallback;
+    private final IRemoteServiceCallback mCallback;
 
-    public InputService(KeymapProfile profile, KeymapConfig keymapConfig){
+    public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback){
         this.keymapProfile = profile;
         this.keymapConfig = keymapConfig;
+        this.mCallback = mCallback;
         mouseEventHandler = new MouseEventHandler(this);
         keyEventHandler = new KeyEventHandler(this);
 
@@ -66,10 +67,6 @@ public class InputService implements IInputInterface {
         return mCallback;
     }
 
-    public void setCallback(IRemoteServiceCallback mCallback) {
-        this.mCallback = mCallback;
-    }
-
     public void moveCursorX(float x) {
         cursorSetX((int) x);
     }
@@ -98,4 +95,5 @@ public class InputService implements IInputInterface {
             mouseEventHandler.handleEvent(code, value);
         else stopMouse();
     }
+
 }

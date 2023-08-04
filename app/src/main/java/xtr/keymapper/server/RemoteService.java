@@ -1,7 +1,6 @@
 package xtr.keymapper.server;
 
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Looper;
@@ -14,13 +13,12 @@ import java.io.BufferedReader;
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.KeymapProfile;
 import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.Utils;
-import xtr.keymapper.profiles.KeymapProfile;
-import xtr.keymapper.profiles.KeymapProfiles;
 
 public class RemoteService extends Service {
-    private final int supportsUinput;
+    private int supportsUinput;
     private String currentDevice = "";
     private boolean stopEvents;
     private InputService inputService;
@@ -35,8 +33,6 @@ public class RemoteService extends Service {
     public RemoteService() {
         super();
         Log.i("XtMapper", "starting server...");
-        inputService = new InputService(null, null);
-        supportsUinput = inputService.initMouseCursor(1280, 720);
         try {
             ServiceManager.addService("xtmapper", binder);
             System.out.println("Waiting for overlay...");
@@ -91,21 +87,20 @@ public class RemoteService extends Service {
         }
 
         @Override
-        public void startMouse(KeymapProfile profile, KeymapConfig keymapConfig) {
+        public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) {
+            supportsUinput = inputService.initMouseCursor(screenWidth, screenHeight);
+
             stopEvents = false;
-            inputService = new InputService(profile, keymapConfig);
+            inputService = new InputService(profile, keymapConfig, cb);
             inputService.setMouseLock(true);
             inputService.openDevice(currentDevice);
         }
 
         @Override
-        public void setCallback(IRemoteServiceCallback cb) {
-            inputService.setCallback(cb);
-        }
-
-        @Override
-        public void removeCallback(IRemoteServiceCallback cb) {
-            inputService.setCallback(null);
+        public void stopServer() {
+            inputService.stopMouse();
+            inputService.destroyUinputDev();
+            inputService = null;
         }
 
         @Override
@@ -116,11 +111,6 @@ public class RemoteService extends Service {
         @Override
         public void unregisterOnKeyEventListener(OnKeyEventListener l)  {
             mOnKeyEventListener = null;
-        }
-
-        public void setScreenSize(int width, int height){
-            inputService.destroyUinputDev();
-            inputService.initMouseCursor(width, height);
         }
 
         public void pauseMouse(){
@@ -141,17 +131,6 @@ public class RemoteService extends Service {
 
     public static IRemoteService getInstance(){
         return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
-    }
-
-    public static void reloadKeymap(Context context){
-        IRemoteService mService = getInstance();
-        if (mService != null) try {
-            KeymapConfig keymapConfig = new KeymapConfig(context);
-            KeymapProfile profile = new KeymapProfiles(context).getProfile(null);
-            mService.startMouse(profile, keymapConfig);
-        } catch (RemoteException e) {
-            Log.i("RemoteService", e.toString());
-        }
     }
 
     public static void pauseKeymap(){

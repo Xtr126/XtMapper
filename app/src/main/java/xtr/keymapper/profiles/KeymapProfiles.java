@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
+import xtr.keymapper.KeymapProfile;
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.swipekey.SwipeKey;

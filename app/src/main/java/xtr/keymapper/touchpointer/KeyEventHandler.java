@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import xtr.keymapper.KeymapConfig;
 import xtr.keymapper.Utils;
 import xtr.keymapper.dpad.DpadHandler;
-import xtr.keymapper.profiles.KeymapProfile;
+import xtr.keymapper.KeymapProfile;
 import xtr.keymapper.profiles.KeymapProfileKey;
 import xtr.keymapper.server.IInputInterface;
 import xtr.keymapper.server.RemoteService;

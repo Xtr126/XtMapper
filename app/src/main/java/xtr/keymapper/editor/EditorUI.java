@@ -34,7 +34,7 @@ import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.mouse.MouseAimSettings;
-import xtr.keymapper.profiles.KeymapProfile;
+import xtr.keymapper.KeymapProfile;
 import xtr.keymapper.profiles.KeymapProfileKey;
 import xtr.keymapper.profiles.KeymapProfiles;
 import xtr.keymapper.server.RemoteService;

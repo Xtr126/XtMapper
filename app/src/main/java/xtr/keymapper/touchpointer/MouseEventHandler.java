@@ -15,7 +15,7 @@ import xtr.keymapper.KeymapConfig;
 import xtr.keymapper.mouse.MouseAimHandler;
 import xtr.keymapper.mouse.MousePinchZoom;
 import xtr.keymapper.mouse.MouseWheelZoom;
-import xtr.keymapper.profiles.KeymapProfile;
+import xtr.keymapper.KeymapProfile;
 import xtr.keymapper.profiles.KeymapProfileKey;
 import xtr.keymapper.server.IInputInterface;
 

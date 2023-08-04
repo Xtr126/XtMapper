@@ -2,7 +2,7 @@ package xtr.keymapper.server;
 
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.KeymapConfig;
-import xtr.keymapper.profiles.KeymapProfile;
+import xtr.keymapper.KeymapProfile;
 import xtr.keymapper.touchpointer.KeyEventHandler;
 import xtr.keymapper.touchpointer.MouseEventHandler;
 
