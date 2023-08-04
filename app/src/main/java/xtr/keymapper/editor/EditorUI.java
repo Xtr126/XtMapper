@@ -1,6 +1,6 @@
 package xtr.keymapper.editor;
 
-import static xtr.keymapper.profiles.KeymapProfiles.MOUSE_RIGHT;
+import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -34,9 +34,9 @@ import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.mouse.MouseAimSettings;
-import xtr.keymapper.KeymapProfile;
-import xtr.keymapper.profiles.KeymapProfileKey;
-import xtr.keymapper.profiles.KeymapProfiles;
+import xtr.keymapper.keymap.KeymapProfile;
+import xtr.keymapper.keymap.KeymapProfileKey;
+import xtr.keymapper.keymap.KeymapProfiles;
 import xtr.keymapper.server.RemoteService;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyView;

@@ -3,8 +3,8 @@ package xtr.keymapper;
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.OnKeyEventListener;
 
-parcelable KeymapConfig;
-parcelable KeymapProfile;
+import xtr.keymapper.keymap.KeymapConfig;
+import xtr.keymapper.keymap.KeymapProfile;
 
 interface IRemoteService {
     boolean isRoot();

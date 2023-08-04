@@ -1,4 +1,4 @@
-package xtr.keymapper;
+package xtr.keymapper.keymap;
 
 import static android.content.Context.MODE_PRIVATE;
 

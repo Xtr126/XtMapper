@@ -1,6 +1,7 @@
 package xtr.keymapper;
 
-// Declare any non-default types here with import statements
+import xtr.keymapper.keymap.KeymapConfig;
+import xtr.keymapper.keymap.KeymapProfile;
 
 interface IRemoteServiceCallback {
     void loadKeymap();
@@ -8,5 +9,6 @@ interface IRemoteServiceCallback {
     void alertMouseAimActivated();
     void cursorSetX(int x);
     void cursorSetY(int y);
-    void reloadKeymap();
+    KeymapProfile requestKeymapProfile();
+    KeymapConfig requestKeymapConfig();
 }

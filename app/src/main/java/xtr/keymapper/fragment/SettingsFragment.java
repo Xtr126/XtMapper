@@ -18,7 +18,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
-import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.R;
 import xtr.keymapper.Utils;
 import xtr.keymapper.databinding.FragmentSettingsDialogBinding;

@@ -11,12 +11,12 @@ import static xtr.keymapper.server.InputService.MOVE;
 
 import android.os.RemoteException;
 
-import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.mouse.MouseAimHandler;
 import xtr.keymapper.mouse.MousePinchZoom;
 import xtr.keymapper.mouse.MouseWheelZoom;
-import xtr.keymapper.KeymapProfile;
-import xtr.keymapper.profiles.KeymapProfileKey;
+import xtr.keymapper.keymap.KeymapProfile;
+import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.server.IInputInterface;
 
 public class MouseEventHandler {

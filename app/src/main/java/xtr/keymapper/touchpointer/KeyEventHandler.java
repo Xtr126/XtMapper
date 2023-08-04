@@ -1,7 +1,7 @@
 package xtr.keymapper.touchpointer;
 
-import static xtr.keymapper.KeymapConfig.KEY_ALT;
-import static xtr.keymapper.KeymapConfig.KEY_CTRL;
+import static xtr.keymapper.keymap.KeymapConfig.KEY_ALT;
+import static xtr.keymapper.keymap.KeymapConfig.KEY_CTRL;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.UP;
 import static xtr.keymapper.touchpointer.PointerId.dpad1pid;
@@ -13,11 +13,11 @@ import android.os.RemoteException;
 
 import java.util.ArrayList;
 
-import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.Utils;
 import xtr.keymapper.dpad.DpadHandler;
-import xtr.keymapper.KeymapProfile;
-import xtr.keymapper.profiles.KeymapProfileKey;
+import xtr.keymapper.keymap.KeymapProfile;
+import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.server.IInputInterface;
 import xtr.keymapper.server.RemoteService;
 import xtr.keymapper.swipekey.SwipeKey;
@@ -128,7 +128,7 @@ public class KeyEventHandler {
 
         if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
             if (keycode == keymapConfig.switchProfileShortcutKey)
-                mInput.getCallback().reloadKeymap();
+                mInput.reloadKeymap();
     }
 
     private void handleMouseAim(int keycode, int action) {

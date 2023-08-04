@@ -5,7 +5,7 @@ import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
 
-import xtr.keymapper.profiles.KeymapProfileKey;
+import xtr.keymapper.keymap.KeymapProfileKey;
 
 public class SwipeKey implements Parcelable {
     public KeymapProfileKey key1 = new KeymapProfileKey();

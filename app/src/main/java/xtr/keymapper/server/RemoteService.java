@@ -12,8 +12,8 @@ import java.io.BufferedReader;
 
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
-import xtr.keymapper.KeymapConfig;
-import xtr.keymapper.KeymapProfile;
+import xtr.keymapper.keymap.KeymapConfig;
+import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.Utils;
 

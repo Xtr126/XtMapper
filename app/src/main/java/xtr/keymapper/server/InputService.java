@@ -3,8 +3,8 @@ package xtr.keymapper.server;
 import android.view.MotionEvent;
 
 import xtr.keymapper.IRemoteServiceCallback;
-import xtr.keymapper.KeymapConfig;
-import xtr.keymapper.KeymapProfile;
+import xtr.keymapper.keymap.KeymapConfig;
+import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.touchpointer.KeyEventHandler;
 import xtr.keymapper.touchpointer.MouseEventHandler;
 

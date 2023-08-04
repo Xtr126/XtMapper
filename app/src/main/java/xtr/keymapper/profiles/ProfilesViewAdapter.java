@@ -6,7 +6,6 @@ import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
-import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.content.res.AppCompatResources;
@@ -19,6 +18,7 @@ import java.util.ArrayList;
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.ProfileRowItemBinding;
 import xtr.keymapper.databinding.TextFieldNewProfileBinding;
+import xtr.keymapper.keymap.KeymapProfiles;
 
 /**
  * Provide views to RecyclerView.

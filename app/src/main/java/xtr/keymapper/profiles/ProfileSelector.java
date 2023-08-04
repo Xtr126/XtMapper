@@ -13,6 +13,7 @@ import java.util.ArrayList;
 
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.TextFieldNewProfileBinding;
+import xtr.keymapper.keymap.KeymapProfiles;
 
 public class ProfileSelector {
 

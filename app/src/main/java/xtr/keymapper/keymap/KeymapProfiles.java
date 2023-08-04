@@ -1,4 +1,4 @@
-package xtr.keymapper.profiles;
+package xtr.keymapper.keymap;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -12,13 +12,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
-import xtr.keymapper.KeymapProfile;
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.swipekey.SwipeKey;
 
 public class KeymapProfiles {
-    final SharedPreferences sharedPref;
+    public final SharedPreferences sharedPref;
     public static final String MOUSE_RIGHT = "MOUSE_RIGHT";
 
     public KeymapProfiles(Context context) {

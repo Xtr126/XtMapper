@@ -1,4 +1,4 @@
-package xtr.keymapper;
+package xtr.keymapper.keymap;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -9,7 +9,6 @@ import java.util.ArrayList;
 
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.mouse.MouseAimConfig;
-import xtr.keymapper.profiles.KeymapProfileKey;
 import xtr.keymapper.swipekey.SwipeKey;
 
 public class KeymapProfile implements Parcelable {

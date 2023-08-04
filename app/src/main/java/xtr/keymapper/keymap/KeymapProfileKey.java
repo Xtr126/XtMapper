@@ -1,4 +1,4 @@
-package xtr.keymapper.profiles;
+package xtr.keymapper.keymap;
 
 import android.os.Parcel;
 import android.os.Parcelable;
