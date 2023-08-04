@@ -22,7 +22,7 @@ public class TouchPointer extends Service {
     private final IBinder binder = new TouchPointerBinder();
     public MainActivity.Callback activityCallback;
     private WindowManager mWindowManager;
-    private View cursorView;
+    public View cursorView;
 
     public class TouchPointerBinder extends Binder {
         public TouchPointer getService() {
@@ -32,14 +32,8 @@ public class TouchPointer extends Service {
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
-        return binder;
-    }
-
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        startNotification();
+    public void onCreate() {
+        super.onCreate();
         if (cursorView != null) mWindowManager.removeView(cursorView);
         LayoutInflater layoutInflater = getSystemService(LayoutInflater.class);
         mWindowManager = getSystemService(WindowManager.class);
@@ -63,10 +57,16 @@ public class TouchPointer extends Service {
         if(cursorView.getWindowToken()==null)
             if (cursorView.getParent() == null)
                 mWindowManager.addView(cursorView, mParams);
-        return super.onStartCommand(intent, flags, startId);
     }
 
-    private void startNotification() {
+    @Override
+    public IBinder onBind(Intent intent) {
+        return binder;
+    }
+
+
+    @Override
+    public int onStartCommand(Intent i, int flags, int startId) {
         String CHANNEL_ID = "pointer_service";
         String name = "Overlay";
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW);
@@ -86,7 +86,9 @@ public class TouchPointer extends Service {
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .build();
         startForeground(2, notification);
+        return super.onStartCommand(i, flags, startId);
     }
+
 
     @Override
     public void onDestroy() {

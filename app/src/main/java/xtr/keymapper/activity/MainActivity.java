@@ -45,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
         server.setupServer(this);
 
         setupButtons();
+
+        Context context = getApplicationContext();
+        intent = new Intent(context, TouchPointer.class);
+        bindService(intent, connection, Context.BIND_AUTO_CREATE);
     }
 
     private void setupButtons() {
@@ -66,9 +70,6 @@ public class MainActivity extends AppCompatActivity {
     public void startPointer(){
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
-            Context context = getApplicationContext();
-            intent = new Intent(context, TouchPointer.class);
-            bindService(intent, connection, Context.BIND_AUTO_CREATE);
             startForegroundService(intent);
 
             setButtonActive(binding.controls.startPointer);
@@ -80,12 +81,20 @@ public class MainActivity extends AppCompatActivity {
 
     public void stopPointer(){
 //        pointerOverlay.hideCursor();
-        unbindService(connection);
+        unbindTouchPointer();
         stopService(intent);
 
         setButtonInactive(binding.controls.startPointer);
         binding.controls.startPointer.setText(R.string.start);
         binding.controls.startPointer.setOnClickListener(v -> startPointer());
+    }
+
+    private void unbindTouchPointer() {
+        if (pointerOverlay != null) {
+            pointerOverlay.activityCallback = null;
+            pointerOverlay = null;
+            unbindService(connection);
+        }
     }
 
     public void setButtonActive(Button button){
@@ -127,8 +136,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (pointerOverlay != null)
-            pointerOverlay.activityCallback = null;
+        unbindTouchPointer();
         super.onDestroy();
     }
 
@@ -196,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
             pointerOverlay.activityCallback = mCallback;
-//            if(!pointerOverlay.connected) startService();
+            if(pointerOverlay.cursorView != null) startPointer();
         }
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
