@@ -37,7 +37,7 @@ import xtr.keymapper.mouse.MouseAimSettings;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.keymap.KeymapProfiles;
-import xtr.keymapper.server.RemoteService;
+import xtr.keymapper.server.RemoteServiceHelper;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyView;
 
@@ -198,7 +198,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         profiles.saveProfile(profileName, linesToWrite, profile.packageName);
 
         // Reload keymap if service running
-        RemoteService.reloadKeymap();
+        RemoteServiceHelper.reloadKeymap();
     }
 
     public void setupButtons() {

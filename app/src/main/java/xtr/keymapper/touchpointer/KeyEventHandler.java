@@ -19,7 +19,7 @@ import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.server.IInputInterface;
-import xtr.keymapper.server.RemoteService;
+import xtr.keymapper.server.RemoteServiceHelper;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyHandler;
 
@@ -140,7 +140,7 @@ public class KeyEventHandler {
 
         if (keymapConfig.pauseResumeShortcutKeyModifier.equals(modifier))
             if (keycode == keymapConfig.pauseResumeShortcutKey)
-                RemoteService.pauseKeymap();
+                RemoteServiceHelper.pauseKeymap();
 
         if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
             if (keycode == keymapConfig.switchProfileShortcutKey)

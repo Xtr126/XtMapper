@@ -22,7 +22,7 @@ import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.R;
 import xtr.keymapper.Utils;
 import xtr.keymapper.databinding.FragmentSettingsDialogBinding;
-import xtr.keymapper.server.RemoteService;
+import xtr.keymapper.server.RemoteServiceHelper;
 
 public class SettingsFragment extends BottomSheetDialogFragment {
     private final KeymapConfig keymapConfig;
@@ -195,7 +195,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         keymapConfig.dpadRadiusMultiplier = binding.sliderDpad.getValue();
 
         keymapConfig.applySharedPrefs();
-        RemoteService.reloadKeymap();
+        RemoteServiceHelper.reloadKeymap();
         binding = null;
         super.onDestroyView();
     }

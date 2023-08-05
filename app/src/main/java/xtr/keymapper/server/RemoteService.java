@@ -4,7 +4,6 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 
@@ -132,33 +131,6 @@ public class RemoteService extends Service {
 
     public static IRemoteService getInstance(){
         return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
-    }
-
-    public static void pauseKeymap(){
-        IRemoteService mService = getInstance();
-        if (mService != null) try {
-            mService.pauseMouse();
-        } catch (RemoteException e) {
-            Log.i("RemoteService", e.toString());
-        }
-    }
-
-    public static void resumeKeymap(){
-        IRemoteService mService = getInstance();
-        if (mService != null) try {
-            mService.resumeMouse();
-        } catch (RemoteException e) {
-            Log.i("RemoteService", e.toString());
-        }
-    }
-
-    public static void reloadKeymap() {
-        IRemoteService mService = getInstance();
-        if (mService != null) try {
-            mService.reloadKeymap();
-        } catch (RemoteException e) {
-            Log.i("RemoteService", e.toString());
-        }
     }
 
 }
