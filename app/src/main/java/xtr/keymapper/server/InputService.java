@@ -18,17 +18,19 @@ public class InputService implements IInputInterface {
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final IRemoteServiceCallback mCallback;
     final int supportsUinput;
+    boolean stopEvents = false;
 
     public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight){
         this.keymapProfile = profile;
         this.keymapConfig = keymapConfig;
         this.mCallback = mCallback;
         supportsUinput = initMouseCursor(screenWidth, screenHeight);
-        mouseEventHandler = new MouseEventHandler(this);
-        keyEventHandler = new KeyEventHandler(this);
 
-        keyEventHandler.init();
+        mouseEventHandler = new MouseEventHandler(this);
         mouseEventHandler.init(screenWidth, screenHeight);
+
+        keyEventHandler = new KeyEventHandler(this);
+        keyEventHandler.init();
     }
 
     public void injectEvent(float x, float y, int action, int pointerId) {
@@ -71,11 +73,17 @@ public class InputService implements IInputInterface {
     }
 
     public void moveCursorX(float x) {
-        cursorSetX((int) x);
+        try {
+            mCallback.cursorSetX((int) x);
+        } catch (RemoteException ignored) {
+        }
     }
 
     public void moveCursorY(float y) {
-        cursorSetY((int) y);
+        try {
+            mCallback.cursorSetY((int) y);
+        } catch (RemoteException ignored) {
+        }
     }
 
     @Override
@@ -92,6 +100,8 @@ public class InputService implements IInputInterface {
     }
 
     public void stop() {
+        stopMouse();
+        destroyUinputDev();
         keyEventHandler.stop();
         mouseEventHandler.stop();
     }
@@ -107,15 +117,11 @@ public class InputService implements IInputInterface {
 
     public native void setMouseLock(boolean lock);
 
-    static {
-        System.loadLibrary("mouse_read");
-        System.loadLibrary("mouse_cursor");
-    }
-
-    public void onMouseEvent(int code, int value) {
-        if (mouseEventHandler != null)
-            mouseEventHandler.handleEvent(code, value);
-        else stopMouse();
+    /*
+     * Called from native code to send mouse event to client
+     */
+    public void sendMouseEvent(int code, int value) {
+        mouseEventHandler.handleEvent(code, value);
     }
 
 }

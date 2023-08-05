@@ -19,7 +19,6 @@ import xtr.keymapper.Utils;
 
 public class RemoteService extends Service {
     private String currentDevice = "";
-    private boolean stopEvents;
     private InputService inputService;
     private OnKeyEventListener mOnKeyEventListener;
 
@@ -46,7 +45,8 @@ public class RemoteService extends Service {
             try {
                 BufferedReader getevent = Utils.geteventStream();
                 String line;
-                stopEvents = true;
+                boolean stopEvents = true;
+                if (inputService != null) stopEvents = inputService.stopEvents;
                 while ((line = getevent.readLine()) != null) {
                     addNewDevices(line);
                     if (!stopEvents) {
@@ -86,7 +86,6 @@ public class RemoteService extends Service {
 
         @Override
         public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) {
-            stopEvents = false;
             inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight);
             inputService.setMouseLock(true);
             inputService.openDevice(currentDevice);
@@ -112,7 +111,7 @@ public class RemoteService extends Service {
 
         public void pauseMouse(){
             inputService.setMouseLock(false);
-            stopEvents = true;
+            inputService.stopEvents = true;
         }
 
         @Override
@@ -122,14 +121,13 @@ public class RemoteService extends Service {
 
         public void resumeMouse(){
             inputService.setMouseLock(true);
-            stopEvents = false;
+            inputService.stopEvents = false;
         }
     };
-    /*
-     * Called from native code to send mouse event to client
-     */
-    private void sendMouseEvent(int code, int value) {
-        if (!stopEvents) inputService.onMouseEvent(code, value);
+
+    static {
+        System.loadLibrary("mouse_read");
+        System.loadLibrary("mouse_cursor");
     }
 
     public static IRemoteService getInstance(){
