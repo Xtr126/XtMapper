@@ -114,6 +114,12 @@ public class RemoteService extends Service {
             inputService.setMouseLock(false);
             stopEvents = true;
         }
+
+        @Override
+        public void reloadKeymap() {
+            inputService.reloadKeymap();
+        }
+
         public void resumeMouse(){
             inputService.setMouseLock(true);
             stopEvents = false;
@@ -143,6 +149,15 @@ public class RemoteService extends Service {
         IRemoteService mService = getInstance();
         if (mService != null) try {
             mService.resumeMouse();
+        } catch (RemoteException e) {
+            Log.i("RemoteService", e.toString());
+        }
+    }
+
+    public static void reloadKeymap() {
+        IRemoteService mService = getInstance();
+        if (mService != null) try {
+            mService.reloadKeymap();
         } catch (RemoteException e) {
             Log.i("RemoteService", e.toString());
         }

@@ -198,7 +198,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         profiles.saveProfile(profileName, linesToWrite, profile.packageName);
 
         // Reload keymap if service running
-        RemoteService.reloadKeymap(context);
+        RemoteService.reloadKeymap();
     }
 
     public void setupButtons() {

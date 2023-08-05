@@ -195,7 +195,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         keymapConfig.dpadRadiusMultiplier = binding.sliderDpad.getValue();
 
         keymapConfig.applySharedPrefs();
-        RemoteService.reloadKeymap(getContext());
+        RemoteService.reloadKeymap();
         binding = null;
         super.onDestroyView();
     }
