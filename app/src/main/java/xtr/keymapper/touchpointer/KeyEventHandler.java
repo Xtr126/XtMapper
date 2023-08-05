@@ -43,13 +43,18 @@ public class KeyEventHandler {
         eventHandler = new Handler(mHandlerThread.getLooper());
 
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
-        dpad1Handler = new DpadHandler(keymapConfig.dpadRadiusMultiplier, mInput.getKeymapProfile().dpadUdlr, dpad1pid.id, eventHandler, keymapConfig.swipeDelayMs);
-        dpad2Handler = new DpadHandler(keymapConfig.dpadRadiusMultiplier, mInput.getKeymapProfile().dpadWasd, dpad2pid.id, eventHandler, keymapConfig.swipeDelayMs);
-
-        if (dpad1Handler != null) dpad1Handler.setInterface(mInput);
-        if (dpad2Handler != null) dpad2Handler.setInterface(mInput);
-
         KeymapProfile profile = mInput.getKeymapProfile();
+
+        if (profile.dpadUdlr != null) {
+            dpad1Handler = new DpadHandler(keymapConfig.dpadRadiusMultiplier, profile.dpadUdlr, dpad1pid.id, eventHandler, keymapConfig.swipeDelayMs);
+            dpad1Handler.setInterface(mInput);
+        }
+
+        if (profile.dpadWasd != null) {
+            dpad2Handler = new DpadHandler(keymapConfig.dpadRadiusMultiplier, profile.dpadWasd, dpad2pid.id, eventHandler, keymapConfig.swipeDelayMs);
+            dpad2Handler.setInterface(mInput);
+        }
+
         // Correction of x and y deviation from center
         for (KeymapProfileKey key: profile.keys) {
             key.x += key.offset;
