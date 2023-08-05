@@ -31,10 +31,8 @@ public class TouchPointer extends Service {
         }
     }
 
-    @Override
-    public void onCreate() {
+    private void showCursor() {
         super.onCreate();
-        if (cursorView != null) mWindowManager.removeView(cursorView);
         LayoutInflater layoutInflater = getSystemService(LayoutInflater.class);
         mWindowManager = getSystemService(WindowManager.class);
         // Inflate the layout for the cursor
@@ -64,9 +62,9 @@ public class TouchPointer extends Service {
         return binder;
     }
 
-
     @Override
     public int onStartCommand(Intent i, int flags, int startId) {
+        if (cursorView == null) showCursor();
         String CHANNEL_ID = "pointer_service";
         String name = "Overlay";
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW);

@@ -71,11 +71,21 @@ public class MainActivity extends AppCompatActivity {
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
             startForegroundService(intent);
-
-            setButtonActive(binding.controls.startPointer);
-            binding.controls.startPointer.setText(R.string.stop);
-            binding.controls.startPointer.setOnClickListener(v -> stopPointer());
+            setButtonState(false);
             requestNotificationPermission();
+        }
+    }
+
+    private void setButtonState(boolean start) {
+        Button button = binding.controls.startPointer;
+        if (start) {
+            button.setText(R.string.start);
+            button.setOnClickListener(v -> startPointer());
+            button.setBackgroundTintList(defaultTint);
+        } else {
+            button.setText(R.string.stop);
+            button.setOnClickListener(v -> stopPointer());
+            button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.purple_700)));
         }
     }
 
@@ -83,10 +93,7 @@ public class MainActivity extends AppCompatActivity {
 //        pointerOverlay.hideCursor();
         unbindTouchPointer();
         stopService(intent);
-
-        setButtonInactive(binding.controls.startPointer);
-        binding.controls.startPointer.setText(R.string.start);
-        binding.controls.startPointer.setOnClickListener(v -> startPointer());
+        setButtonState(true);
     }
 
     private void unbindTouchPointer() {
@@ -95,14 +102,6 @@ public class MainActivity extends AppCompatActivity {
             pointerOverlay = null;
             unbindService(connection);
         }
-    }
-
-    public void setButtonActive(Button button){
-        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.purple_700)));
-    }
-
-    public void setButtonInactive(Button button){
-        button.setBackgroundTintList(defaultTint);
     }
 
     private void startEditor(){
@@ -204,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
             pointerOverlay.activityCallback = mCallback;
-            if(pointerOverlay.cursorView != null) startPointer();
+            setButtonState(pointerOverlay.cursorView == null);
         }
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
