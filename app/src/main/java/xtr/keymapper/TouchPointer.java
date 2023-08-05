@@ -7,15 +7,26 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.PixelFormat;
+import android.graphics.Point;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.RemoteException;
+import android.util.Log;
+import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.editor.EditorService;
+import xtr.keymapper.keymap.KeymapConfig;
+import xtr.keymapper.keymap.KeymapProfile;
+import xtr.keymapper.keymap.KeymapProfiles;
+import xtr.keymapper.server.RemoteService;
 
 
 public class TouchPointer extends Service {
@@ -23,6 +34,7 @@ public class TouchPointer extends Service {
     public MainActivity.Callback activityCallback;
     private WindowManager mWindowManager;
     public View cursorView;
+    private IRemoteService mService;
 
     public class TouchPointerBinder extends Binder {
         public TouchPointer getService() {
@@ -65,6 +77,7 @@ public class TouchPointer extends Service {
     @Override
     public int onStartCommand(Intent i, int flags, int startId) {
         if (cursorView == null) showCursor();
+        if (mService == null) connectRemoteService();
         String CHANNEL_ID = "pointer_service";
         String name = "Overlay";
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW);
@@ -87,14 +100,76 @@ public class TouchPointer extends Service {
         return super.onStartCommand(i, flags, startId);
     }
 
+    private void connectRemoteService() {
+        mService = RemoteService.getInstance();
+        if (mService == null) return;
+        KeymapProfile profile = new KeymapProfiles(this).getProfile(null);
+        KeymapConfig keymapConfig = new KeymapConfig(this);
+        Display display = mWindowManager.getDefaultDisplay();
+        Point size = new Point();
+        display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
+        try {
+            mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+        } catch (Exception e) {
+            activityCallback.updateCmdView1(e.toString());
+        }
+    }
+
 
     @Override
     public void onDestroy() {
         if (cursorView != null) {
             mWindowManager.removeView(cursorView);
             cursorView.invalidate();
-            cursorView = null;
         }
+        if (mService != null) try {
+            mService.stopServer();
+        } catch (Exception ignored) {
+        }
+        cursorView = null;
+        mService = null;
+        activityCallback = null;
         super.onDestroy();
     }
+
+    /**
+     * This implementation is used to receive callbacks from the remote
+     * service.
+     */
+    private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
+
+        private final Handler mHandler = new Handler(Looper.getMainLooper());
+
+        @Override
+        public void launchEditor() {
+            startService(new Intent(TouchPointer.this, EditorService.class));
+        }
+
+        @Override
+        public void alertMouseAimActivated() {
+            // Notifying user that shooting mode was activated
+            mHandler.post(() -> Toast.makeText(TouchPointer.this, R.string.mouse_aim_activated, Toast.LENGTH_LONG).show());
+        }
+
+        @Override
+        public void cursorSetX(int x) {
+            mHandler.post(() -> cursorView.setX(x));
+        }
+
+        @Override
+        public void cursorSetY(int y) {
+            mHandler.post(() -> cursorView.setY(y));
+        }
+
+        @Override
+        public KeymapProfile requestKeymapProfile() {
+            return new KeymapProfiles(TouchPointer.this).getProfile(null);
+        }
+
+        @Override
+        public KeymapConfig requestKeymapConfig() {
+            return new KeymapConfig(TouchPointer.this);
+        }
+    };
+
 }
