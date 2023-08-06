@@ -104,8 +104,15 @@ public class TouchPointer extends Service {
     }
 
     private void connectRemoteService() {
+        activityCallback.updateCmdView1("\n connecting to server..");
         mService = RemoteService.getInstance();
-        if (mService == null) return;
+        if (mService == null) {
+            if (activityCallback != null) {
+                activityCallback.updateCmdView1("\n connection failed\n Please retry activation \n");
+                activityCallback.stopPointer();
+            } else stopSelf();
+            return;
+        }
         KeymapProfile profile = new KeymapProfiles(this).getProfile(selectedProfile);
         KeymapConfig keymapConfig = new KeymapConfig(this);
         Display display = mWindowManager.getDefaultDisplay();

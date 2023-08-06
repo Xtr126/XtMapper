@@ -90,7 +90,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void stopPointer(){
-//        pointerOverlay.hideCursor();
         unbindTouchPointer();
         stopService(intent);
         setButtonState(true);
@@ -141,7 +140,6 @@ public class MainActivity extends AppCompatActivity {
 
     public interface Callback {
         void updateCmdView1(String line);
-        void updateCmdView2(String line);
         void stopPointer();
         void startPointer();
         void alertRootAccessNotFound();
@@ -150,9 +148,7 @@ public class MainActivity extends AppCompatActivity {
     private final Callback mCallback = new Callback() {
         public static final int MAX_LINES = 16;
         private int counter1 = 0;
-        private int counter2 = 0;
         private final StringBuilder c1 = new StringBuilder();
-        private final StringBuilder c2 = new StringBuilder();
 
         public void updateCmdView1(String line) {
             c1.append(line);
@@ -161,15 +157,6 @@ public class MainActivity extends AppCompatActivity {
             else c1.delete(0, c1.indexOf("\n") + 1);
 
             runOnUiThread(() -> binding.cmdview.view1.setText(c1));
-        }
-
-        public void updateCmdView2(String line) {
-            c2.append(line);
-
-            if (counter2 < MAX_LINES) counter2++;
-            else c2.delete(0, c2.indexOf("\n") + 1);
-
-            runOnUiThread(() -> binding.cmdview.view2.setText(c2));
         }
 
         public void stopPointer() {
