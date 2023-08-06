@@ -70,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     public void startPointer(){
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
+            bindService(intent, connection, Context.BIND_AUTO_CREATE);
             startForegroundService(intent);
             setButtonState(false);
             requestNotificationPermission();
