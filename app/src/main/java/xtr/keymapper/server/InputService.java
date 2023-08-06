@@ -100,8 +100,6 @@ public class InputService implements IInputInterface {
     }
 
     public void stop() {
-        stopMouse();
-        destroyUinputDev();
         keyEventHandler.stop();
         mouseEventHandler.stop();
     }

@@ -104,7 +104,7 @@ public class TouchPointer extends Service {
     }
 
     private void connectRemoteService() {
-        activityCallback.updateCmdView1("\n connecting to server..");
+        if (activityCallback != null) activityCallback.updateCmdView1("\n connecting to server..");
         mService = RemoteService.getInstance();
         if (mService == null) {
             if (activityCallback != null) {
