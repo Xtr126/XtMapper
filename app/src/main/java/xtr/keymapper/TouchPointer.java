@@ -12,8 +12,6 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.RemoteException;
-import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,6 +24,7 @@ import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfiles;
+import xtr.keymapper.profiles.ProfileSelector;
 import xtr.keymapper.server.RemoteService;
 
 
@@ -35,6 +34,7 @@ public class TouchPointer extends Service {
     private WindowManager mWindowManager;
     public View cursorView;
     private IRemoteService mService;
+    private String selectedProfile = null;
 
     public class TouchPointerBinder extends Binder {
         public TouchPointer getService() {
@@ -77,7 +77,10 @@ public class TouchPointer extends Service {
     @Override
     public int onStartCommand(Intent i, int flags, int startId) {
         if (cursorView == null) showCursor();
-        if (mService == null) connectRemoteService();
+        if (mService == null) ProfileSelector.select(this, profile -> {
+            this.selectedProfile = profile;
+            connectRemoteService();
+        });
         String CHANNEL_ID = "pointer_service";
         String name = "Overlay";
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW);
@@ -103,7 +106,7 @@ public class TouchPointer extends Service {
     private void connectRemoteService() {
         mService = RemoteService.getInstance();
         if (mService == null) return;
-        KeymapProfile profile = new KeymapProfiles(this).getProfile(null);
+        KeymapProfile profile = new KeymapProfiles(this).getProfile(selectedProfile);
         KeymapConfig keymapConfig = new KeymapConfig(this);
         Display display = mWindowManager.getDefaultDisplay();
         Point size = new Point();
@@ -163,7 +166,7 @@ public class TouchPointer extends Service {
 
         @Override
         public KeymapProfile requestKeymapProfile() {
-            return new KeymapProfiles(TouchPointer.this).getProfile(null);
+            return new KeymapProfiles(TouchPointer.this).getProfile(selectedProfile);
         }
 
         @Override
