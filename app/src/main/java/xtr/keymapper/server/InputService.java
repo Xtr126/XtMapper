@@ -48,7 +48,7 @@ public class InputService implements IInputInterface {
     }
 
     public void injectScroll(float x, float y, int value) {
-
+        input.onScrollEvent(x, y, value);
     }
 
     public KeymapConfig getKeymapConfig() {
