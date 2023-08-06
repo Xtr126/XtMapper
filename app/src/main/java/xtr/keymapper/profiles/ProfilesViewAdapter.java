@@ -50,6 +50,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
      */
     public ProfilesViewAdapter(Context context, OnItemRemovedListener l) {
         this.callback = l;
+        if (context == null) return;
         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
         keymapProfiles.sharedPref.registerOnSharedPreferenceChangeListener(this);
 
