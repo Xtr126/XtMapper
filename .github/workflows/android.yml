@@ -22,8 +22,8 @@ jobs:
         cache: gradle
         
     - uses: actions/cache@v3
-    - name: cache Android sdk
       with:
+        name: cache Android sdk
         path: |
          ~/Android
         key: ${{ runner.os }}-gradle-android
