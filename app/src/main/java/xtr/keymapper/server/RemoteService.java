@@ -92,6 +92,7 @@ public class RemoteService extends Service {
 
         @Override
         public void stopServer() {
+            inputService.stopEvents = true;
             inputService.stop();
             inputService.stopMouse();
             inputService.destroyUinputDev();

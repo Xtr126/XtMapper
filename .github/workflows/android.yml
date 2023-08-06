@@ -21,13 +21,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: gradle
-        
-    - uses: actions/cache@v3
-      with:
-        path: |
-         /usr/local/lib/android/sdk/ndk
-        key: ${{ runner.os }}-android-ndk
-           
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
