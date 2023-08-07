@@ -116,7 +116,7 @@ public class RemoteService extends Service {
 
         @Override
         public void reloadKeymap() {
-            inputService.reloadKeymap();
+            if (inputService != null) inputService.reloadKeymap();
         }
 
         public void resumeMouse(){
