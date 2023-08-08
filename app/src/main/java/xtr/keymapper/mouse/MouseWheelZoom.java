@@ -10,15 +10,15 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.RemoteException;
 
-import xtr.keymapper.IRemoteService;
+import xtr.keymapper.server.IInputInterface;
 
 public class MouseWheelZoom extends HandlerThread {
     private final Handler mHandler;
-    private final IRemoteService service;
+    private final IInputInterface service;
     private static final int pixels = 50;
     int x1, x2;
 
-    public MouseWheelZoom(IRemoteService service) {
+    public MouseWheelZoom(IInputInterface service) {
         super("mouse_wheel");
         start();
         mHandler = new Handler(getLooper());

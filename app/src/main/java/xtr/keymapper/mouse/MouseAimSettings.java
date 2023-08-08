@@ -3,12 +3,9 @@ package xtr.keymapper.mouse;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.view.WindowManager;
 
-import java.util.ArrayList;
-
-import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.keymap.KeymapConfig;
 
 public class MouseAimSettings {
 

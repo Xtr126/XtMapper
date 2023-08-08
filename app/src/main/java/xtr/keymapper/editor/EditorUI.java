@@ -1,6 +1,6 @@
 package xtr.keymapper.editor;
 
-import static xtr.keymapper.profiles.KeymapProfiles.MOUSE_RIGHT;
+import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -34,8 +34,10 @@ import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.mouse.MouseAimSettings;
-import xtr.keymapper.profiles.KeymapProfiles;
-import xtr.keymapper.server.InputService;
+import xtr.keymapper.keymap.KeymapProfile;
+import xtr.keymapper.keymap.KeymapProfileKey;
+import xtr.keymapper.keymap.KeymapProfiles;
+import xtr.keymapper.server.RemoteServiceHelper;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyView;
 
@@ -59,7 +61,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final OnHideListener onHideListener;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final String profileName;
-    private KeymapProfiles.Profile profile;
+    private KeymapProfile profile;
 
     public EditorUI (Context context, String profileName) {
         this.context = new ContextThemeWrapper(context, R.style.Theme_XtMapper_EditorUI);
@@ -196,7 +198,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         profiles.saveProfile(profileName, linesToWrite, profile.packageName);
 
         // Reload keymap if service running
-        InputService.reloadKeymap();
+        RemoteServiceHelper.reloadKeymap();
     }
 
     public void setupButtons() {
@@ -282,7 +284,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         }
     }
 
-    private void addKey(KeymapProfiles.Key key) {
+    private void addKey(KeymapProfileKey key) {
         MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(context, keyList::remove);
 
         floatingKey.setText(key.code.substring(4));
@@ -298,7 +300,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void addKey(float x, float y) {
-        final KeymapProfiles.Key key = new KeymapProfiles.Key();
+        final KeymapProfileKey key = new KeymapProfileKey();
         key.code = "KEY_X";
         key.x = x;
         key.y = y;

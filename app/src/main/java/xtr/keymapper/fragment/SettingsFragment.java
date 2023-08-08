@@ -18,20 +18,17 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
-import xtr.keymapper.KeymapConfig;
+import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.R;
 import xtr.keymapper.Utils;
 import xtr.keymapper.databinding.FragmentSettingsDialogBinding;
-import xtr.keymapper.dpad.DpadConfig;
-import xtr.keymapper.server.InputService;
+import xtr.keymapper.server.RemoteServiceHelper;
 
 public class SettingsFragment extends BottomSheetDialogFragment {
-    private final DpadConfig dpadConfig;
     private final KeymapConfig keymapConfig;
     private FragmentSettingsDialogBinding binding;
 
     public SettingsFragment(Context context) {
-        dpadConfig = new DpadConfig(context);
         keymapConfig = new KeymapConfig(context);
     }
 
@@ -45,7 +42,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        binding.sliderDpad.setValue(dpadConfig.getDpadRadiusMultiplier());
+        binding.sliderDpad.setValue(keymapConfig.dpadRadiusMultiplier);
         binding.sliderMouse.setValue(keymapConfig.mouseSensitivity);
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
         binding.sliderSwipeDelay.setValue(keymapConfig.swipeDelayMs);
@@ -195,11 +192,10 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         keymapConfig.rightClickMouseAim = binding.mouseAimRightClick.isChecked();
         keymapConfig.keyGraveMouseAim = binding.mouseAimKeyGrave.isChecked();
 
-        dpadConfig.setDpadRadiusMultiplier(binding.sliderDpad.getValue());
+        keymapConfig.dpadRadiusMultiplier = binding.sliderDpad.getValue();
 
         keymapConfig.applySharedPrefs();
-        // Reload keymap if remote service running
-        InputService.reloadKeymap();
+        RemoteServiceHelper.reloadKeymap();
         binding = null;
         super.onDestroyView();
     }

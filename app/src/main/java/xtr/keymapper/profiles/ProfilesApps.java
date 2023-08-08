@@ -20,6 +20,7 @@ import java.util.List;
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.AppViewBinding;
 import xtr.keymapper.databinding.FragmentProfilesAppsBinding;
+import xtr.keymapper.keymap.KeymapProfiles;
 
 public class ProfilesApps {
     public static final String defaultProfile = "xtr.keymapper.default";

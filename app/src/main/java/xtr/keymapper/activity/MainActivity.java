@@ -24,7 +24,7 @@ import xtr.keymapper.TouchPointer;
 import xtr.keymapper.databinding.ActivityMainBinding;
 import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.fragment.SettingsFragment;
-import xtr.keymapper.server.InputService;
+import xtr.keymapper.server.RemoteService;
 
 public class MainActivity extends AppCompatActivity {
     public TouchPointer pointerOverlay;
@@ -45,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
         server.setupServer(this);
 
         setupButtons();
+
+        Context context = getApplicationContext();
+        intent = new Intent(context, TouchPointer.class);
+        bindService(intent, connection, Context.BIND_AUTO_CREATE);
     }
 
     private void setupButtons() {
@@ -57,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
                 (v -> new SettingsFragment(this).show(getSupportFragmentManager(), "dialog"));
         binding.controls.aboutButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
-        if (InputService.getInstance() != null) {
+        if (RemoteService.getInstance() != null) {
             binding.cmdview.view1.setText(R.string.activated_start);
             binding.controls.startServer.setEnabled(false);
         }
@@ -66,34 +70,38 @@ public class MainActivity extends AppCompatActivity {
     public void startPointer(){
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
-            Context context = getApplicationContext();
-            intent = new Intent(context, TouchPointer.class);
             bindService(intent, connection, Context.BIND_AUTO_CREATE);
             startForegroundService(intent);
-
-            setButtonActive(binding.controls.startPointer);
-            binding.controls.startPointer.setText(R.string.stop);
-            binding.controls.startPointer.setOnClickListener(v -> stopPointer());
+            setButtonState(false);
             requestNotificationPermission();
         }
     }
 
+    private void setButtonState(boolean start) {
+        Button button = binding.controls.startPointer;
+        if (start) {
+            button.setText(R.string.start);
+            button.setOnClickListener(v -> startPointer());
+            button.setBackgroundTintList(defaultTint);
+        } else {
+            button.setText(R.string.stop);
+            button.setOnClickListener(v -> stopPointer());
+            button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.purple_700)));
+        }
+    }
+
     public void stopPointer(){
-        pointerOverlay.hideCursor();
-        unbindService(connection);
+        unbindTouchPointer();
         stopService(intent);
-
-        setButtonInactive(binding.controls.startPointer);
-        binding.controls.startPointer.setText(R.string.start);
-        binding.controls.startPointer.setOnClickListener(v -> startPointer());
+        setButtonState(true);
     }
 
-    public void setButtonActive(Button button){
-        button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.purple_700)));
-    }
-
-    public void setButtonInactive(Button button){
-        button.setBackgroundTintList(defaultTint);
+    private void unbindTouchPointer() {
+        if (pointerOverlay != null) {
+            pointerOverlay.activityCallback = null;
+            pointerOverlay = null;
+            unbindService(connection);
+        }
     }
 
     private void startEditor(){
@@ -127,14 +135,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (pointerOverlay != null)
-            pointerOverlay.activityCallback = null;
+        unbindTouchPointer();
         super.onDestroy();
     }
 
     public interface Callback {
         void updateCmdView1(String line);
-        void updateCmdView2(String line);
         void stopPointer();
         void startPointer();
         void alertRootAccessNotFound();
@@ -143,9 +149,7 @@ public class MainActivity extends AppCompatActivity {
     private final Callback mCallback = new Callback() {
         public static final int MAX_LINES = 16;
         private int counter1 = 0;
-        private int counter2 = 0;
         private final StringBuilder c1 = new StringBuilder();
-        private final StringBuilder c2 = new StringBuilder();
 
         public void updateCmdView1(String line) {
             c1.append(line);
@@ -154,15 +158,6 @@ public class MainActivity extends AppCompatActivity {
             else c1.delete(0, c1.indexOf("\n") + 1);
 
             runOnUiThread(() -> binding.cmdview.view1.setText(c1));
-        }
-
-        public void updateCmdView2(String line) {
-            c2.append(line);
-
-            if (counter2 < MAX_LINES) counter2++;
-            else c2.delete(0, c2.indexOf("\n") + 1);
-
-            runOnUiThread(() -> binding.cmdview.view2.setText(c2));
         }
 
         public void stopPointer() {
@@ -196,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
             pointerOverlay.activityCallback = mCallback;
-            if(!pointerOverlay.connected) pointerOverlay.init();
+            setButtonState(pointerOverlay.cursorView == null);
         }
         @Override
         public void onServiceDisconnected(ComponentName arg0) {

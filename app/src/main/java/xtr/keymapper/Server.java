@@ -14,7 +14,7 @@ import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
 
 import xtr.keymapper.activity.MainActivity;
-import xtr.keymapper.server.InputService;
+import xtr.keymapper.server.RemoteService;
 
 public class Server {
 
@@ -22,7 +22,7 @@ public class Server {
     public MainActivity.Callback mCallback;
 
     private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
-        final String className = InputService.class.getName();
+        final String className = RemoteService.class.getName();
 
         FileWriter linesToWrite = new FileWriter(script, false);
         linesToWrite.append("#!/system/bin/sh\n");

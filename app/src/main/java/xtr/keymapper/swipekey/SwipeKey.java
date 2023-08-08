@@ -1,10 +1,15 @@
 package xtr.keymapper.swipekey;
 
-import xtr.keymapper.profiles.KeymapProfiles;
+import android.os.Parcel;
+import android.os.Parcelable;
 
-public class SwipeKey {
-    public final KeymapProfiles.Key key1 = new KeymapProfiles.Key();
-    public final KeymapProfiles.Key key2 = new KeymapProfiles.Key();
+import androidx.annotation.NonNull;
+
+import xtr.keymapper.keymap.KeymapProfileKey;
+
+public class SwipeKey implements Parcelable {
+    public KeymapProfileKey key1 = new KeymapProfileKey();
+    public KeymapProfileKey key2 = new KeymapProfileKey();
 
     public static final String type = "SWIPE_KEY";
 
@@ -28,6 +33,23 @@ public class SwipeKey {
         key2.y = swipeKey.button2.getY();
     }
 
+    protected SwipeKey(Parcel in) {
+        key1 = in.readParcelable(KeymapProfileKey.class.getClassLoader());
+        key2 = in.readParcelable(KeymapProfileKey.class.getClassLoader());
+    }
+
+    public static final Creator<SwipeKey> CREATOR = new Creator<>() {
+        @Override
+        public SwipeKey createFromParcel(Parcel in) {
+            return new SwipeKey(in);
+        }
+
+        @Override
+        public SwipeKey[] newArray(int size) {
+            return new SwipeKey[size];
+        }
+    };
+
     public String getData(){
         return type + " " +
                 key1.code + " " +
@@ -36,5 +58,16 @@ public class SwipeKey {
                 key2.code + " " +
                 key2.x + " " +
                 key2.y;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(@NonNull Parcel dest, int flags) {
+        dest.writeParcelable(key1, flags);
+        dest.writeParcelable(key2, flags);
     }
 }

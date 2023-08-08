@@ -1,236 +1,125 @@
 package xtr.keymapper.server;
 
-import android.app.Service;
-import android.content.Intent;
-import android.os.IBinder;
-import android.os.Looper;
 import android.os.RemoteException;
-import android.os.ServiceManager;
-import android.util.Log;
 import android.view.MotionEvent;
 
-import java.io.BufferedReader;
-
-import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
-import xtr.keymapper.OnKeyEventListener;
-import xtr.keymapper.OnMouseEventListener;
-import xtr.keymapper.Utils;
+import xtr.keymapper.keymap.KeymapConfig;
+import xtr.keymapper.keymap.KeymapProfile;
+import xtr.keymapper.touchpointer.KeyEventHandler;
+import xtr.keymapper.touchpointer.MouseEventHandler;
 
-public class InputService extends Service {
+public class InputService implements IInputInterface {
+    private final MouseEventHandler mouseEventHandler;
+    private final KeyEventHandler keyEventHandler;
+    private KeymapConfig keymapConfig;
+    private KeymapProfile keymapProfile;
     private static final Input input = new Input();
     public static final int UP = 0, DOWN = 1, MOVE = 2;
-    private final int supportsUinput;
-    private String currentDevice = "";
-    private boolean stopEvents;
+    private final IRemoteServiceCallback mCallback;
+    final int supportsUinput;
+    boolean stopEvents = false;
 
-    private OnKeyEventListener mOnKeyEventListener = null;
-    private IRemoteServiceCallback mCallback;
-    private OnMouseEventListener mOnMouseEventListener;
+    public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight){
+        this.keymapProfile = profile;
+        this.keymapConfig = keymapConfig;
+        this.mCallback = mCallback;
+        supportsUinput = initMouseCursor(screenWidth, screenHeight);
 
-    public static void main(String[] args) {
-        Looper.prepare();
-        new InputService();
-        Looper.loop();
+        mouseEventHandler = new MouseEventHandler(this);
+        mouseEventHandler.init(screenWidth, screenHeight);
+
+        keyEventHandler = new KeyEventHandler(this);
+        keyEventHandler.init();
     }
 
-    public InputService() {
-        super();
-        Log.i("XtMapper", "starting server...");
-        supportsUinput = initMouseCursor(1280, 720);
-        try {
-            ServiceManager.addService("xtmapper", binder);
-            System.out.println("Waiting for overlay...");
-            start_getevent();
-        } catch (Exception e) {
-            e.printStackTrace();
+    public void injectEvent(float x, float y, int action, int pointerId) {
+        switch (action) {
+            case UP:
+                input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
+                break;
+            case DOWN:
+                input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
+                break;
+            case MOVE:
+                input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f, x, y);
+                break;
         }
     }
 
-    private void start_getevent() {
-        new Thread(() -> {
-            try {
-                BufferedReader getevent = Utils.geteventStream();
-                String line;
-                stopEvents = true;
-                while ((line = getevent.readLine()) != null) {
-                    addNewDevices(line);
-                    if (!stopEvents)
-                        if (mOnKeyEventListener != null)
-                            mOnKeyEventListener.onKeyEvent(line);
-                }
-            } catch (Exception e){
-                e.printStackTrace(System.out);
-            }
-        }).start();
+    public void injectScroll(float x, float y, int value) {
+        input.onScrollEvent(x, y, value);
     }
 
-    private void addNewDevices(String line) {
-        String[] input_event, data;
-        String evdev;
-        data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
-        evdev = data[0];
-        input_event = data[1].split("\\s+");
+    public KeymapConfig getKeymapConfig() {
+        return keymapConfig;
+    }
 
-        if( !currentDevice.equals(evdev) )
-            if (input_event[1].equals("EV_REL")) {
-                System.out.println("add device: " + evdev);
-                currentDevice = evdev;
-            }
+    public KeyEventHandler getKeyEventHandler() {
+        return keyEventHandler;
+    }
+
+    public MouseEventHandler getMouseEventHandler() {
+        return mouseEventHandler;
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
-        return binder;
+    public KeymapProfile getKeymapProfile() {
+        return keymapProfile;
     }
 
+    public IRemoteServiceCallback getCallback() {
+        return mCallback;
+    }
+
+    public void moveCursorX(float x) {
+        try {
+            mCallback.cursorSetX((int) x);
+        } catch (RemoteException ignored) {
+        }
+    }
+
+    public void moveCursorY(float y) {
+        try {
+            mCallback.cursorSetY((int) y);
+        } catch (RemoteException ignored) {
+        }
+    }
+
+    @Override
+    public void reloadKeymap() {
+        try {
+            this.keymapProfile = mCallback.requestKeymapProfile();
+            this.keymapConfig = mCallback.requestKeymapConfig();
+            this.stop();
+            keyEventHandler.init();
+            mouseEventHandler.init();
+        } catch (RemoteException e) {
+            e.printStackTrace(System.out);
+        }
+    }
+
+    public void stop() {
+        keyEventHandler.stop();
+        mouseEventHandler.stop();
+    }
+
+    public native void cursorSetX(int x);
+    public native void cursorSetY(int y);
     public native int openDevice(String device);
     public native void stopMouse();
 
     // mouse cursor created with uinput in MouseCursor.cpp
-    private native int initMouseCursor(int width, int height);
-    private native void destroyUinputDev();
-    private native void cursorSetX(int x);
-    private native void cursorSetY(int y);
-    private native void setMouseLock(boolean lock);
+    public native int initMouseCursor(int width, int height);
+    public native void destroyUinputDev();
 
-    private final IRemoteService.Stub binder = new IRemoteService.Stub() {
-        public void injectEvent(float x, float y, int action, int pointerId) {
-            switch (action) {
-                case UP:
-                    input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
-                    break;
-                case DOWN:
-                    input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
-                    break;
-                case MOVE:
-                    input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f, x, y);
-                    break;
-            }
-        }
-        public void injectScroll(float x, float y, int value) {
-            input.onScrollEvent(x, y, value);
-        }
-
-        public void moveCursorX(int x) {
-            cursorSetX(x);
-        }
-
-        public void moveCursorY(int y) {
-            cursorSetY(y);
-        }
-
-        public boolean isRoot() {
-            return supportsUinput > 0;
-        }
-
-        @Override
-        public void startMouse() {
-            stopEvents = false;
-            setMouseLock(true);
-            openDevice(currentDevice);
-        }
-
-        @Override
-        public void setCallback(IRemoteServiceCallback cb) {
-            mCallback = cb;
-        }
-
-        @Override
-        public void removeCallback(IRemoteServiceCallback cb) {
-            mCallback = null;
-        }
-
-        @Override
-        public void registerOnKeyEventListener(OnKeyEventListener l)  {
-            mOnKeyEventListener = l;
-        }
-
-        @Override
-        public void unregisterOnKeyEventListener(OnKeyEventListener l)  {
-            mOnKeyEventListener = null;
-        }
-
-        @Override
-        public void setOnMouseEventListener(OnMouseEventListener l) throws RemoteException {
-            l.asBinder().linkToDeath(mDeathRecipient, 0);
-            mOnMouseEventListener = l;
-        }
-
-        @Override
-        public void removeOnMouseEventListener(OnMouseEventListener l)  {
-            l.asBinder().unlinkToDeath(mDeathRecipient, 0);
-            stopMouse();
-            mOnMouseEventListener = null;
-        }
-
-        public void setScreenSize(int width, int height){
-            destroyUinputDev();
-            initMouseCursor(width, height);
-        }
-
-        public void reloadKeymap() throws RemoteException {
-            if (mCallback != null) mCallback.loadKeymap();
-        }
-
-        public void pauseMouse(){
-            setMouseLock(false);
-            stopEvents = true;
-        }
-        public void resumeMouse(){
-            setMouseLock(true);
-            stopEvents = false;
-        }
-    };
-
-    private final IBinder.DeathRecipient mDeathRecipient = this::stopMouse;
+    public native void setMouseLock(boolean lock);
 
     /*
      * Called from native code to send mouse event to client
      */
-    private void sendMouseEvent(int code, int value) {
-        try {
-            if (mOnMouseEventListener != null)
-                mOnMouseEventListener.onMouseEvent(code, value);
-            else stopMouse();
-        } catch (RemoteException ex) {
-            stopMouse();
-        }
+    public void sendMouseEvent(int code, int value) {
+        if (!stopEvents) mouseEventHandler.handleEvent(code, value);
     }
 
-    public static IRemoteService getInstance(){
-        return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
-    }
-
-    public static void reloadKeymap(){
-        IRemoteService mService = getInstance();
-        if (mService != null) try {
-            mService.reloadKeymap();
-        } catch (RemoteException e) {
-            Log.i("RemoteService", e.toString());
-        }
-    }
-
-    public static void pauseKeymap(){
-        IRemoteService mService = getInstance();
-        if (mService != null) try {
-            mService.pauseMouse();
-        } catch (RemoteException e) {
-            Log.i("RemoteService", e.toString());
-        }
-    }
-
-    public static void resumeKeymap(){
-        IRemoteService mService = getInstance();
-        if (mService != null) try {
-            mService.resumeMouse();
-        } catch (RemoteException e) {
-            Log.i("RemoteService", e.toString());
-        }
-    }
-
-    static {
-        System.loadLibrary("mouse_read");
-        System.loadLibrary("mouse_cursor");
-    }
 }

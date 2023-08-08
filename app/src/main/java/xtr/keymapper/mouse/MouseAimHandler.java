@@ -1,16 +1,17 @@
 package xtr.keymapper.mouse;
 
+import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
+import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
+import static xtr.keymapper.InputEventCodes.REL_X;
+import static xtr.keymapper.InputEventCodes.REL_Y;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
-import static xtr.keymapper.InputEventCodes.*;
-
 
 import android.graphics.RectF;
-import android.os.RemoteException;
 
-import xtr.keymapper.IRemoteService;
-import xtr.keymapper.TouchPointer;
+import xtr.keymapper.server.IInputInterface;
+import xtr.keymapper.touchpointer.PointerId;
 
 public class MouseAimHandler {
 
@@ -18,9 +19,9 @@ public class MouseAimHandler {
     private float currentX, currentY;
     private final RectF area = new RectF();
     public boolean active = false;
-    private IRemoteService service;
-    private final int pointerId1 = TouchPointer.PointerId.pid1.id;
-    private final int pointerId2 = TouchPointer.PointerId.pid2.id;
+    private IInputInterface service;
+    private final int pointerId1 = PointerId.pid1.id;
+    private final int pointerId2 = PointerId.pid2.id;
 
     public MouseAimHandler(MouseAimConfig config){
         currentX = config.xCenter;
@@ -28,7 +29,7 @@ public class MouseAimHandler {
         this.config = config;
     }
 
-    public void setInterface(IRemoteService input) {
+    public void setInterface(IInputInterface input) {
         this.service = input;
     }
 
@@ -46,7 +47,7 @@ public class MouseAimHandler {
         }
     }
 
-    public void resetPointer() throws RemoteException {
+    public void resetPointer() {
         currentY = config.yCenter;
         currentX = config.xCenter;
         service.injectEvent(currentX, currentY, UP, pointerId1);
@@ -54,7 +55,7 @@ public class MouseAimHandler {
     }
 
 
-    public void handleEvent(int code, int value, OnRightClick r) throws RemoteException {
+    public void handleEvent(int code, int value, OnRightClick r) {
         switch (code) {
             case REL_X:
                 currentX += value;
@@ -78,6 +79,6 @@ public class MouseAimHandler {
     }
 
     public interface OnRightClick {
-        void onRightClick(int value) throws RemoteException;
+        void onRightClick(int value);
     }
 }

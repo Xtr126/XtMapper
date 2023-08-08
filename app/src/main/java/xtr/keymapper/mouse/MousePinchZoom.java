@@ -7,21 +7,19 @@ import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
 
-import android.os.RemoteException;
-
-import xtr.keymapper.IRemoteService;
-import xtr.keymapper.TouchPointer;
+import xtr.keymapper.server.IInputInterface;
+import xtr.keymapper.touchpointer.PointerId;
 
 public class MousePinchZoom {
-    private final IRemoteService service;
+    private final IInputInterface service;
     private float currentX1, currentY1;
     private float currentX2, currentY2;
     private final float centerX, centerY;
-    static final int pointerId1 = TouchPointer.PointerId.pid1.id;
-    static final int pointerId2 = TouchPointer.PointerId.pid2.id;
+    static final int pointerId1 = PointerId.pid1.id;
+    static final int pointerId2 = PointerId.pid2.id;
     private static final int pixels = 50;
 
-    public MousePinchZoom(IRemoteService service, float initX, float initY) {
+    public MousePinchZoom(IInputInterface service, float initX, float initY) {
         this.service = service;
         centerX = initX;
         centerY = initY;
@@ -31,12 +29,12 @@ public class MousePinchZoom {
         currentX2 = initX - pixels; currentY2 = initY - pixels;
     }
 
-    private void initPointers() throws RemoteException {
+    private void initPointers() {
         service.injectEvent(currentX1, currentY1, DOWN, pointerId1);
         service.injectEvent(currentX2, currentY2, DOWN, pointerId2);
     }
 
-    public void releasePointers() throws RemoteException {
+    public void releasePointers() {
         service.injectEvent(currentX1, currentY1, UP, pointerId1);
         service.injectEvent(currentX2, currentY2, UP, pointerId2);
     }
@@ -45,14 +43,14 @@ public class MousePinchZoom {
      * Move position of pointers away from center
      * To make space for performing zoom out gesture
      */
-    private void moveAwayPointers() throws RemoteException {
+    private void moveAwayPointers() {
         releasePointers();
         currentX1 += 100; currentX2 -= 100;
         currentY1 += 100; currentY2 -= 100;
         initPointers();
     }
 
-    public boolean handleEvent(int code, int value) throws RemoteException {
+    public boolean handleEvent(int code, int value) {
         switch (code) {
             case REL_X:
                 currentX1 += value;
