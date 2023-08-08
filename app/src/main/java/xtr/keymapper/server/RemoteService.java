@@ -44,8 +44,7 @@ public class RemoteService extends Service {
             try {
                 BufferedReader getevent = Utils.geteventStream();
                 String line;
-                boolean stopEvents = true;
-                if (inputService != null) stopEvents = inputService.stopEvents;
+                boolean stopEvents = false;
                 while ((line = getevent.readLine()) != null) {
                     addNewDevices(line);
                     if (!stopEvents) {
