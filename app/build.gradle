@@ -10,8 +10,8 @@ android {
         applicationId "xtr.keymapper"
         minSdk 28
         targetSdk 33
-        versionCode 7
-        versionName '1.4.2'
+        versionCode 8
+        versionName '2.0'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
          ndk {
