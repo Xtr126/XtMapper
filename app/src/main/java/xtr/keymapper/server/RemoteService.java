@@ -109,8 +109,10 @@ public class RemoteService extends Service {
         }
 
         public void pauseMouse(){
-            inputService.setMouseLock(false);
-            inputService.stopEvents = true;
+            if (inputService != null) {
+                inputService.setMouseLock(false);
+                inputService.stopEvents = true;
+            }
         }
 
         @Override
@@ -119,8 +121,10 @@ public class RemoteService extends Service {
         }
 
         public void resumeMouse(){
-            inputService.setMouseLock(true);
-            inputService.stopEvents = false;
+            if (inputService != null) {
+                inputService.setMouseLock(true);
+                inputService.stopEvents = false;
+            }
         }
     };
 

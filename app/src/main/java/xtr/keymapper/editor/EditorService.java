@@ -15,6 +15,7 @@ import xtr.keymapper.IRemoteService;
 import xtr.keymapper.R;
 import xtr.keymapper.profiles.ProfileSelector;
 import xtr.keymapper.server.RemoteService;
+import xtr.keymapper.server.RemoteServiceHelper;
 
 public class EditorService extends Service implements EditorUI.OnHideListener {
     private EditorUI editor;
@@ -23,9 +24,9 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         mService = RemoteService.getInstance();
+       RemoteServiceHelper.pauseKeymap();
 
         if (editor != null) editor.hideView();
-
         ProfileSelector.select(this, profile -> {
             editor = new EditorUI(this, profile);
             editor.open();
@@ -58,6 +59,7 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
         } catch (RemoteException ignored) {
         }
         editor = null;
+        RemoteServiceHelper.resumeKeymap();
         stopSelf();
     }
 
