@@ -49,6 +49,14 @@ BlissLabs: https://discord.com/invite/F9n5gbdNy2
 AndroidEmu: https://discord.gg/mRpT4Qq  
 SupremeGamers: https://aopc.dev/discord  
 
+## Waydroid support
+Due to how XtMapper works by reading input events directly from the kernel, there are certain difficulties in implementing proper support for android containers.  
+To have only keyboard support in waydroid, see https://github.com/Xtr126/XtMapper/issues/35  
+You will have to compile getevent with the patch and replace the system getevent.   
+If you have two mouses you can passthough one mouse to waydroid by setting the `persist.waydroid.uevent` property and replugging one mouse. Then activate XtMapper.  
+Or the easiest solution is to use Bliss OS in a QEMU VM with virtio-mouse instead. 
+
+
 ## Credits
 Open source libraries used:
 - [Material Design Components](https://github.com/material-components/material-components-android) used for the app user interface.
