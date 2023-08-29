@@ -30,8 +30,8 @@ public class Server {
         linesToWrite.append("exec env ");
         linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
                 .append("\" CLASSPATH=\"").append(ai.publicSourceDir) // Absolute path to apk in /data/app
-                .append("\" /system/bin/app_process /system/bin ")
-                .append(className).append("\n");
+                .append("\" /system/bin/app_process / ")
+                .append(className).append(" \"$@\" \n");
 
         linesToWrite.flush();
         linesToWrite.close();

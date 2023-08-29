@@ -8,6 +8,7 @@ import android.os.ServiceManager;
 import android.util.Log;
 
 import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
@@ -20,19 +21,26 @@ public class RemoteService extends Service {
     private String currentDevice = "";
     private InputService inputService;
     private OnKeyEventListener mOnKeyEventListener;
+    private boolean isWaylandClient = false;
 
     public static void main(String[] args) {
         Looper.prepare();
-        new RemoteService();
+        new RemoteService(args);
         Looper.loop();
     }
 
-    public RemoteService() {
+    public RemoteService(String[] args) {
         super();
         Log.i("XtMapper", "starting server...");
         try {
             ServiceManager.addService("xtmapper", binder);
             System.out.println("Waiting for overlay...");
+            for (String arg: args) {
+                if (arg.equals("--wayland-client")) {
+                    isWaylandClient = true;
+                    System.out.println("using wayland client");
+                }
+            }
             start_getevent();
         } catch (Exception e) {
             e.printStackTrace();
@@ -42,13 +50,18 @@ public class RemoteService extends Service {
     private void start_getevent() {
         new Thread(() -> {
             try {
-                BufferedReader getevent = Utils.geteventStream();
+                final BufferedReader getevent;
+                if (isWaylandClient) {
+                    getevent = new BufferedReader(new InputStreamReader(System.in));
+                } else {
+                    getevent = Utils.geteventStream();
+                }
                 String line;
                 boolean stopEvents = false;
                 while ((line = getevent.readLine()) != null) {
-                    addNewDevices(line);
-                    if (!stopEvents) {
-                        if (inputService != null) inputService.getKeyEventHandler().handleEvent(line);
+                    if (addNewDevices(line)) if (!stopEvents) {
+                        if (inputService != null)
+                            inputService.getKeyEventHandler().handleEvent(line);
                         if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
                     }
                 }
@@ -58,18 +71,21 @@ public class RemoteService extends Service {
         }).start();
     }
 
-    private void addNewDevices(String line) {
+    private boolean addNewDevices(String line) {
         String[] input_event, data;
         String evdev;
         data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
+        if (data.length != 2) return false;
         evdev = data[0];
-        input_event = data[1].split("\\s+");
 
+        input_event = data[1].split("\\s+");
+        if (isWaylandClient) return true;
         if( !currentDevice.equals(evdev) )
             if (input_event[1].equals("EV_REL")) {
                 System.out.println("add device: " + evdev);
                 currentDevice = evdev;
             }
+        return true;
     }
 
     @Override
