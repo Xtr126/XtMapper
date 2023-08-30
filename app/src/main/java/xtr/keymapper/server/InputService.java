@@ -1,5 +1,7 @@
 package xtr.keymapper.server;
 
+import static xtr.keymapper.InputEventCodes.*;
+
 import android.os.RemoteException;
 import android.view.MotionEvent;
 
@@ -115,6 +117,27 @@ public class InputService implements IInputInterface {
 
     public native void setMouseLock(boolean lock);
 
+    public void sendWaylandMouseEvent(String line) {
+        String[] input_event = line.split("\\s+");
+        int value = Integer.parseInt(input_event[3]);
+        switch (input_event[2]) {
+            case "ABS_X":
+                mouseEventHandler.evAbsX(value);
+                break;
+            case "ABS_Y":
+                mouseEventHandler.evAbsY(value);
+                break;
+            case "REL_WHEEL":
+                mouseEventHandler.handleEvent(REL_WHEEL, value);
+                break;
+            case "BTN_LEFT":
+                mouseEventHandler.handleEvent(BTN_MOUSE, value);
+                break;
+            case "BTN_RIGHT":
+                mouseEventHandler.handleEvent(BTN_RIGHT, value);
+                break;
+        }
+    }
     /*
      * Called from native code to send mouse event to client
      */

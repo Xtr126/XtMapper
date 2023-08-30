@@ -138,6 +138,18 @@ public class MouseEventHandler {
         if (code == REL_X || code == REL_Y) movePointer();
     }
 
+    public void evAbsY(int y) {
+        this.y1 = y;
+        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId1);
+        movePointer();
+    }
+
+    public void evAbsX(int x) {
+        this.x1 = x;
+        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId1);
+        movePointer();
+    }
+
     public void stop() {
         mouseAimHandler = null;
         scrollZoomHandler = null;

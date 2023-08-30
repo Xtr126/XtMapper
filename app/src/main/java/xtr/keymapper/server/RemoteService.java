@@ -59,9 +59,13 @@ public class RemoteService extends Service {
                 String line;
                 boolean stopEvents = false;
                 while ((line = getevent.readLine()) != null) {
-                    if (addNewDevices(line)) if (!stopEvents) {
-                        if (inputService != null)
-                            inputService.getKeyEventHandler().handleEvent(line);
+                    String[] data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
+                    if (addNewDevices(data)) if (!stopEvents) {
+                        if (inputService != null) {
+                            inputService.getKeyEventHandler().handleEvent(data[1]);
+                            if (isWaylandClient && data[0].contains("wl_pointer"))
+                                inputService.sendWaylandMouseEvent(data[1]);
+                        }
                         if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
                     }
                 }
@@ -71,12 +75,10 @@ public class RemoteService extends Service {
         }).start();
     }
 
-    private boolean addNewDevices(String line) {
-        String[] input_event, data;
-        String evdev;
-        data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
+    private boolean addNewDevices(String[] data) {
+        String[] input_event;
         if (data.length != 2) return false;
-        evdev = data[0];
+        String evdev = data[0];
 
         input_event = data[1].split("\\s+");
         if (isWaylandClient) return true;
@@ -101,8 +103,10 @@ public class RemoteService extends Service {
         @Override
         public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) {
             inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight);
-            inputService.setMouseLock(true);
-            inputService.openDevice(currentDevice);
+            if (!isWaylandClient) {
+                inputService.setMouseLock(true);
+                inputService.openDevice(currentDevice);
+            }
         }
 
         @Override
