@@ -57,14 +57,14 @@ public class RemoteService extends Service {
                     getevent = Utils.geteventStream();
                 }
                 String line;
-                boolean stopEvents = false;
                 while ((line = getevent.readLine()) != null) {
                     String[] data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
-                    if (addNewDevices(data)) if (!stopEvents) {
-                        if (inputService != null) {
-                            inputService.getKeyEventHandler().handleEvent(data[1]);
+                    if (addNewDevices(data)) {
+                        if (inputService != null && !inputService.stopEvents) {
                             if (isWaylandClient && data[0].contains("wl_pointer"))
                                 inputService.sendWaylandMouseEvent(data[1]);
+                            else
+                                inputService.getKeyEventHandler().handleEvent(data[1]);
                         }
                         if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
                     }
@@ -113,8 +113,10 @@ public class RemoteService extends Service {
         public void stopServer() {
             inputService.stopEvents = true;
             inputService.stop();
-            inputService.stopMouse();
-            inputService.destroyUinputDev();
+            if (!isWaylandClient) {
+                inputService.stopMouse();
+                inputService.destroyUinputDev();
+            }
             inputService = null;
         }
 
@@ -130,7 +132,7 @@ public class RemoteService extends Service {
 
         public void pauseMouse(){
             if (inputService != null) {
-                inputService.setMouseLock(false);
+                if(!isWaylandClient) inputService.setMouseLock(false);
                 inputService.stopEvents = true;
             }
         }
@@ -142,7 +144,7 @@ public class RemoteService extends Service {
 
         public void resumeMouse(){
             if (inputService != null) {
-                inputService.setMouseLock(true);
+                if(!isWaylandClient) inputService.setMouseLock(true);
                 inputService.stopEvents = false;
             }
         }

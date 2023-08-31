@@ -84,15 +84,15 @@ public class KeyEventHandler {
     public void handleEvent(String line) throws RemoteException {
         // line: EV_KEY KEY_X DOWN
         String[] input_event = line.split("\\s+");
-        if (!input_event[0].equals("EV_KEY")) return;
+        if (!input_event[1].equals("EV_KEY")) return;
 
         KeyEvent event = new KeyEvent();
-        event.code = input_event[1];
+        event.code = input_event[2];
         if (!event.code.contains("KEY_")) return;
 
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
 
-        switch (input_event[2]) {
+        switch (input_event[3]) {
             case "UP":
                 event.action = UP;
                 break;

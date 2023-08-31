@@ -18,7 +18,6 @@ public class MouseAimHandler {
     private final MouseAimConfig config;
     private float currentX, currentY;
     private final RectF area = new RectF();
-    public boolean active = false;
     private IInputInterface service;
     private final int pointerId1 = PointerId.pid1.id;
     private final int pointerId2 = PointerId.pid2.id;

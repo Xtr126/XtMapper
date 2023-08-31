@@ -32,11 +32,12 @@ public class MouseEventHandler {
     int width; int height;
     private final IInputInterface mInput;
     boolean pointer_down;
+    public boolean mouseAimActive;
 
     public void triggerMouseAim() {
         if (mouseAimHandler != null) {
-            mouseAimHandler.active = !mouseAimHandler.active;
-            if (mouseAimHandler.active) {
+            mouseAimActive = !mouseAimActive;
+            if (mouseAimActive) {
                 mouseAimHandler.resetPointer();
                 // Notifying user that shooting mode was activated
                 try {
@@ -78,8 +79,11 @@ public class MouseEventHandler {
         scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
     }
 
-    private void movePointer() {
+    private void movePointerX() {
         mInput.moveCursorX(x1);
+    }
+
+    private void movePointerY() {
         mInput.moveCursorY(y1);
     }
 
@@ -90,7 +94,7 @@ public class MouseEventHandler {
 
     public void handleEvent(int code, int value) {
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
-        if (mouseAimHandler != null && mouseAimHandler.active) {
+        if (mouseAimHandler != null && mouseAimActive) {
             mouseAimHandler.handleEvent(code, value, this::handleRightClick);
             return;
         }
@@ -135,19 +139,20 @@ public class MouseEventHandler {
                     mInput.injectScroll(x1, y1, value * scroll_speed_multiplier);
                 break;
         }
-        if (code == REL_X || code == REL_Y) movePointer();
+        if (code == REL_X) movePointerX();
+        if (code == REL_Y) movePointerY();
     }
 
     public void evAbsY(int y) {
         this.y1 = y;
         if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId1);
-        movePointer();
+        movePointerY();
     }
 
     public void evAbsX(int x) {
         this.x1 = x;
         if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId1);
-        movePointer();
+        movePointerX();
     }
 
     public void stop() {
