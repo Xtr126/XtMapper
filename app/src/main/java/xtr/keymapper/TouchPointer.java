@@ -76,11 +76,6 @@ public class TouchPointer extends Service {
 
     @Override
     public int onStartCommand(Intent i, int flags, int startId) {
-        if (cursorView == null) showCursor();
-        if (mService == null) ProfileSelector.select(this, profile -> {
-            this.selectedProfile = profile;
-            connectRemoteService();
-        });
         String CHANNEL_ID = "pointer_service";
         String name = "Overlay";
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW);
@@ -100,6 +95,12 @@ public class TouchPointer extends Service {
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .build();
         startForeground(2, notification);
+
+        if (cursorView == null) showCursor();
+        if (mService == null) ProfileSelector.select(this, profile -> {
+            this.selectedProfile = profile;
+            connectRemoteService();
+        });
         return super.onStartCommand(i, flags, startId);
     }
 
@@ -107,8 +108,10 @@ public class TouchPointer extends Service {
         if (activityCallback != null) activityCallback.updateCmdView1("\n connecting to server..");
         mService = RemoteService.getInstance();
         if (mService == null) {
-            activityCallback.updateCmdView1("\n connection failed\n Please retry activation \n");
-            activityCallback.stopPointer();
+            if (activityCallback != null) {
+                activityCallback.updateCmdView1("\n connection failed\n Please retry activation \n");
+                activityCallback.stopPointer();
+            } else stopSelf();
             return;
         }
         KeymapProfile profile = new KeymapProfiles(this).getProfile(selectedProfile);
