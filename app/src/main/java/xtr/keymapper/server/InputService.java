@@ -139,9 +139,11 @@ public class InputService implements IInputInterface {
             case "REL_X":
                 if (mouseEventHandler.mouseAimActive)
                     mouseEventHandler.handleEvent(REL_X, value);
+                break;
             case "REL_Y":
                 if (mouseEventHandler.mouseAimActive)
                     mouseEventHandler.handleEvent(REL_Y, value);
+                break;
         }
     }
     /*

@@ -32,7 +32,7 @@ public class MouseEventHandler {
     int width; int height;
     private final IInputInterface mInput;
     boolean pointer_down;
-    public boolean mouseAimActive;
+    public boolean mouseAimActive = false;
 
     public void triggerMouseAim() {
         if (mouseAimHandler != null) {
