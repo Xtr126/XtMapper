@@ -2,6 +2,7 @@ package xtr.keymapper;
 
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.OnKeyEventListener;
+import xtr.keymapper.ActivityObserver;
 
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
@@ -14,6 +15,9 @@ interface IRemoteService {
 
     void registerOnKeyEventListener(OnKeyEventListener l);
     void unregisterOnKeyEventListener(OnKeyEventListener l);
+
+    void registerActivityObserver(ActivityObserver callback);
+    void unregisterActivityObserver(ActivityObserver callback);
 
     void resumeMouse();
     void pauseMouse();

@@ -10,6 +10,7 @@ import android.util.Log;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+import xtr.keymapper.ActivityObserver;
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.OnKeyEventListener;
@@ -22,6 +23,7 @@ public class RemoteService extends Service {
     private InputService inputService;
     private OnKeyEventListener mOnKeyEventListener;
     private boolean isWaylandClient = false;
+    private final ActivityObserverService activityObserverService = new ActivityObserverService();
 
     public static void main(String[] args) {
         Looper.prepare();
@@ -34,8 +36,6 @@ public class RemoteService extends Service {
         Log.i("XtMapper", "starting server...");
         try {
             ServiceManager.addService("xtmapper", binder);
-
-            new ActivityObserverService();
 
             System.out.println("Waiting for overlay...");
             for (String arg: args) {
@@ -131,6 +131,16 @@ public class RemoteService extends Service {
         @Override
         public void unregisterOnKeyEventListener(OnKeyEventListener l)  {
             mOnKeyEventListener = null;
+        }
+
+        @Override
+        public void registerActivityObserver(ActivityObserver callback) {
+            activityObserverService.mCallback = callback;
+        }
+
+        @Override
+        public void unregisterActivityObserver(ActivityObserver callback) {
+            activityObserverService.mCallback = null;
         }
 
         public void pauseMouse(){
