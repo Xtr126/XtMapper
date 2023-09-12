@@ -1,25 +1,21 @@
 package xtr.keymapper.server;
 
-import android.app.ActivityManager;
-import android.app.IActivityManager;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.util.List;
 
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
-import xtr.keymapper.keymap.KeymapConfig;
-import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.Utils;
+import xtr.keymapper.keymap.KeymapConfig;
+import xtr.keymapper.keymap.KeymapProfile;
 
 public class RemoteService extends Service {
     private String currentDevice = "";
@@ -39,7 +35,7 @@ public class RemoteService extends Service {
         try {
             ServiceManager.addService("xtmapper", binder);
 
-            showActivities();
+            new ActivityObserverService();
 
             System.out.println("Waiting for overlay...");
             for (String arg: args) {
@@ -51,16 +47,6 @@ public class RemoteService extends Service {
             start_getevent();
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-
-    private void showActivities() {
-        IActivityManager am = IActivityManager.Stub.asInterface(ServiceManager.getService(ACTIVITY_SERVICE));
-        try {
-            List<ActivityManager.RunningTaskInfo> taskInfo = am.getTasks(1);
-            System.out.println("activity: " + taskInfo.get(0).topActivity.getClassName());
-        } catch (RemoteException e) {
-            e.printStackTrace(System.out);
         }
     }
 
