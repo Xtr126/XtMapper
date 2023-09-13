@@ -12,6 +12,7 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.RemoteException;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -121,6 +122,7 @@ public class TouchPointer extends Service {
         display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
         try {
             mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+            mService.registerActivityObserver(mActivityObserverCallback);
         } catch (Exception e) {
             activityCallback.updateCmdView1(e.toString());
         }
@@ -134,6 +136,7 @@ public class TouchPointer extends Service {
             cursorView.invalidate();
         }
         if (mService != null) try {
+            mService.unregisterActivityObserver(mActivityObserverCallback);
             mService.stopServer();
         } catch (Exception ignored) {
         }
@@ -183,4 +186,16 @@ public class TouchPointer extends Service {
         }
     };
 
+
+    /**
+     * This implementation is used to receive callbacks from the remote
+     * service.
+     */
+    private final ActivityObserver mActivityObserverCallback = new ActivityObserver.Stub() {
+        @Override
+        public void onForegroundActivitiesChanged(String packageName) throws RemoteException {
+            TouchPointer.this.selectedProfile = packageName;
+            mService.reloadKeymap();
+        }
+    };
 }

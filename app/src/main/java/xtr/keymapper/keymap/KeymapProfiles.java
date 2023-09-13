@@ -40,12 +40,14 @@ public class KeymapProfiles {
 
     public void setProfilePackageName(String profileName, String packageName) {
         Set<String> stringSet = sharedPref.getStringSet(profileName, null);
-        saveProfile(profileName, new ArrayList<>(stringSet), packageName);
+        saveProfile(profileName, new ArrayList<>(stringSet), packageName, stringSet.contains("ENABLED"));
     }
 
-    public void saveProfile(String profileName, ArrayList<String> lines, String packageName) {
+    public void saveProfile(String profileName, ArrayList<String> lines, String packageName, boolean enabled) {
         lines.removeIf(line -> line.contains("APPLICATION"));
         lines.add("APPLICATION " + packageName);
+        lines.removeIf(line -> line.contains("ENABLED"));
+        if (enabled) lines.add("ENABLED");
         Set<String> stringSet = new HashSet<>(lines);
         sharedPref.edit()
                 .putStringSet(profileName, stringSet)
@@ -84,6 +86,10 @@ public class KeymapProfiles {
 
                 case "APPLICATION":
                     profile.packageName = data[1];
+                    break;
+
+                case "ENABLED":
+                    profile.disabled = false;
                     break;
 
                 case SwipeKey.type:

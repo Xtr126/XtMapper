@@ -59,7 +59,7 @@ public class ProfileSelector {
                     .setPositiveButton(R.string.ok, (d, which) -> {
                         String selectedProfile = binding.editText.getText().toString();
                         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
-                        keymapProfiles.saveProfile(selectedProfile, new ArrayList<>(), packageName);
+                        keymapProfiles.saveProfile(selectedProfile, new ArrayList<>(), packageName, true);
                         listener.onProfileSelected(selectedProfile);
                     })
                     .setNegativeButton(R.string.cancel, (d, which) -> {})
