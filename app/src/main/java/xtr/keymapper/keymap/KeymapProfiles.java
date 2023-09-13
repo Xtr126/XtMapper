@@ -43,6 +43,17 @@ public class KeymapProfiles {
         saveProfile(profileName, new ArrayList<>(stringSet), packageName, stringSet.contains("ENABLED"));
     }
 
+    public void setProfileEnabled(String profileName, boolean enabled) {
+        Set<String> stringSet = sharedPref.getStringSet(profileName, null);
+        String packageName = "xtr.keymapper.default";
+        for (String line : stringSet) {
+            String[] data = line.split("\\s+");
+            if (data[0].equals("APPLICATION"))
+                packageName = data[1];
+        }
+        saveProfile(profileName, new ArrayList<>(stringSet), packageName, enabled);
+    }
+
     public void saveProfile(String profileName, ArrayList<String> lines, String packageName, boolean enabled) {
         lines.removeIf(line -> line.contains("APPLICATION"));
         lines.add("APPLICATION " + packageName);
@@ -62,9 +73,9 @@ public class KeymapProfiles {
         Set<String> stream = sharedPref.getStringSet(profileName, null);
 
         KeymapProfile profile = new KeymapProfile();
-        if (stream != null) stream.forEach(s -> {
+        if (stream != null) stream.forEach(line -> {
 
-            String[] data = s.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
+            String[] data = line.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
             switch (data[0]){
                 case Dpad.UDLR:
                     if (data.length >= 8) profile.dpadUdlr = new Dpad(data);

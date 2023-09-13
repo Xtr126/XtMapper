@@ -82,7 +82,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         // Get element from your dataset at this position and replace the contents of the view
         // with that element
         RecyclerData recyclerData = recyclerDataArrayList.get(position);
-        viewHolder.binding.textView.setText(recyclerData.name);
+        viewHolder.binding.switch1.setText(recyclerData.name);
         viewHolder.binding.appIcon.setImageDrawable(recyclerData.icon);
 
         final String profileName = recyclerData.name.toString();
@@ -91,7 +91,6 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
 
         viewHolder.binding.deleteButton.setOnClickListener(v -> keymapProfiles.deleteProfile(profileName));
-
 
         viewHolder.binding.editButton.setOnClickListener(view -> {
             TextFieldNewProfileBinding binding = TextFieldNewProfileBinding.inflate(LayoutInflater.from(context));
@@ -117,6 +116,8 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
                     .setView(appsView.view)
                     .show();
         });
+
+        viewHolder.binding.switch1.setOnCheckedChangeListener((buttonView, isChecked) -> keymapProfiles.setProfileEnabled(recyclerData.name.toString(), isChecked));
     }
 
     // Return the size of your dataset (invoked by the layout manager)

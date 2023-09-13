@@ -19,7 +19,7 @@
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/profiles"
-            android:layout_width="300dp"
+            android:layout_width="380dp"
             android:layout_height="match_parent"
             android:scrollbars="vertical"
             android:scrollIndicators="bottom"
