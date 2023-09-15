@@ -114,13 +114,15 @@ public class RemoteService extends Service {
 
         @Override
         public void stopServer() {
-            inputService.stopEvents = true;
-            inputService.stop();
-            if (!isWaylandClient) {
-                inputService.stopMouse();
-                inputService.destroyUinputDev();
+            if (inputService != null) {
+                inputService.stopEvents = true;
+                inputService.stop();
+                if (!isWaylandClient) {
+                    inputService.stopMouse();
+                    inputService.destroyUinputDev();
+                }
+                inputService = null;
             }
-            inputService = null;
         }
 
         @Override

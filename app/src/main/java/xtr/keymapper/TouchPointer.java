@@ -100,7 +100,7 @@ public class TouchPointer extends Service {
         startForeground(2, notification);
 
         if (cursorView == null) showCursor();
-        if (mService == null) ProfileSelector.select(this, profile -> {
+        ProfileSelector.select(this, profile -> {
             this.selectedProfile = profile;
             KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
             connectRemoteService(keymapProfile);
@@ -123,12 +123,12 @@ public class TouchPointer extends Service {
         Point size = new Point();
         display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
         try {
-            mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+            mService.registerActivityObserver(mActivityObserverCallback);
+            if (!profile.disabled) mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
         } catch (Exception e) {
             activityCallback.updateCmdView1(e.toString());
         }
     }
-
 
     @Override
     public void onDestroy() {
@@ -204,7 +204,7 @@ public class TouchPointer extends Service {
                         connectRemoteService(keymapProfiles.getProfile(profile));
                     })));
                 // restart server to reload keymap
-            }
+            } 
         }
     };
 }
