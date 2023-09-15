@@ -193,21 +193,18 @@ public class TouchPointer extends Service {
      */
     private final ActivityObserver mActivityObserverCallback = new ActivityObserver.Stub() {
         @Override
-        public void onForegroundActivitiesChanged(String packageName) {
+        public void onForegroundActivitiesChanged(String packageName) throws RemoteException {
             TouchPointer.this.selectedProfile = packageName;
             Context context = TouchPointer.this;
             KeymapProfiles keymapProfiles = new KeymapProfiles(context);
-
-            if (!keymapProfiles.profileExistsWithPackageName(packageName)) mHandler.post(() ->
-                ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
-                ProfileSelector.createNewProfileWithPackageName(context, packageName, enabled, profile -> {
-                    try {
-                        // restart server to reload keymap
-                        mService.stopServer();
-                        connectRemoteService();
-                    } catch (RemoteException ignored) {
-                    }
-                })));
+            if (!keymapProfiles.profileExistsWithPackageName(packageName)) {
+                mService.stopServer();
+                mHandler.post(() ->
+                    ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
+                    ProfileSelector.createNewProfileWithPackageName(context, packageName, enabled, profile ->
+                    connectRemoteService())));
+                // restart server to reload keymap
+            }
         }
     };
 }
