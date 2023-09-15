@@ -39,6 +39,7 @@
     <string name="dialog_alert_editor_title">Not Activated</string>
     <string name="dialog_alert_add_profile">Enter new profile name:</string>
     <string name="dialog_alert_select_profile">Select Profile</string>
+    <string name="dialog_alert_enable_profile">Enable keymapping for this app?</string>
 
     <string name="key">Key</string>
 
@@ -62,6 +63,8 @@
     <string name="mouse_aim">Mouse Aim</string>
     <string name="cancel">@android:string/cancel</string>
     <string name="ok">@android:string/ok</string>
+    <string name="yes">@android:string/yes</string>
+    <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">Swipe delay %d milliseconds</string>
     <string name="profile_name">Profile Name</string>
     <string name="root_not_found_title">Root access not found</string>

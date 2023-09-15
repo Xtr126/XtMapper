@@ -1,6 +1,7 @@
 package xtr.keymapper.profiles;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.WindowManager;
@@ -13,6 +14,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.ArrayList;
 
 import xtr.keymapper.R;
+import xtr.keymapper.databinding.AppViewBinding;
 import xtr.keymapper.databinding.TextFieldNewProfileBinding;
 import xtr.keymapper.keymap.KeymapProfiles;
 
@@ -23,6 +25,9 @@ public class ProfileSelector {
     }
     public interface OnAppSelectedListener {
         void onAppSelected(String packageName);
+    }
+    public interface OnProfileEnabledListener {
+        void onEnabled(boolean enabled);
     }
 
     public static void select(Context context, OnProfileSelectedListener listener){
@@ -50,24 +55,41 @@ public class ProfileSelector {
     }
 
     public static void createNewProfile(@UiContext Context context, OnProfileSelectedListener listener) {
-        showAppSelectionDialog(context, packageName -> {
+        showAppSelectionDialog(context, packageName -> createNewProfileWithPackageName(context, packageName, true, listener));
+    }
 
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-            TextFieldNewProfileBinding binding = TextFieldNewProfileBinding.inflate(LayoutInflater.from(context));
-            binding.editText.setText(packageName);
+    public static void showEnableProfileDialog(@UiContext Context context, String packageName, OnProfileEnabledListener listener){
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        AppViewBinding binding = AppViewBinding.inflate(LayoutInflater.from(context));
+        PackageManager pm = context.getPackageManager();
+        try {
+            binding.appName.setText(pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)));
+            binding.appIcon.setImageDrawable(pm.getApplicationIcon(packageName));
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
 
-            builder.setTitle(R.string.dialog_alert_add_profile)
-                    .setPositiveButton(R.string.ok, (d, which) -> {
-                        String selectedProfile = binding.editText.getText().toString();
-                        KeymapProfiles keymapProfiles = new KeymapProfiles(context);
-                        keymapProfiles.saveProfile(selectedProfile, new ArrayList<>(), packageName, true);
-                        listener.onProfileSelected(selectedProfile);
-                    })
-                    .setNegativeButton(R.string.cancel, (d, which) -> {})
-                    .setView(binding.getRoot());
-            showDialog(builder);
-        });
+        builder.setTitle(R.string.dialog_alert_enable_profile)
+                .setPositiveButton(R.string.yes, (d, which) -> listener.onEnabled(true))
+                .setNegativeButton(R.string.no, (d, which) -> listener.onEnabled(false))
+                .setView(binding.getRoot());
+        showDialog(builder);
+    }
 
+    public static void createNewProfileWithPackageName(@UiContext Context context, String packageName, boolean enabled, OnProfileSelectedListener listener){
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        TextFieldNewProfileBinding binding = TextFieldNewProfileBinding.inflate(LayoutInflater.from(context));
+        binding.editText.setText(packageName);
+
+        builder.setTitle(R.string.dialog_alert_add_profile)
+                .setPositiveButton(R.string.ok, (d, which) -> {
+                    String selectedProfile = binding.editText.getText().toString();
+                    KeymapProfiles keymapProfiles = new KeymapProfiles(context);
+                    keymapProfiles.saveProfile(selectedProfile, new ArrayList<>(), packageName, enabled);
+                    listener.onProfileSelected(selectedProfile);
+                })
+                .setNegativeButton(R.string.cancel, (d, which) -> {})
+                .setView(binding.getRoot());
+        showDialog(builder);
     }
 
     public static void showAppSelectionDialog(Context context, OnAppSelectedListener listener) {

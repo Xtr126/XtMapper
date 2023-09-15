@@ -48,6 +48,15 @@ public class KeymapProfiles {
         return stringSet.contains("ENABLED");
     }
 
+    public boolean profileExistsWithPackageName(String packageName){
+        boolean profileExists = false;
+        for (Map.Entry<String, KeymapProfile> profile: getAllProfiles().entrySet()) {
+            if (profile.getValue().packageName.equals(packageName))
+                profileExists = true;
+        }
+        return profileExists;
+    }
+
     public void setProfileEnabled(String profileName, boolean enabled) {
         Set<String> stringSet = sharedPref.getStringSet(profileName, null);
         String packageName = "xtr.keymapper.default";

@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
@@ -193,9 +194,19 @@ public class TouchPointer extends Service {
      */
     private final ActivityObserver mActivityObserverCallback = new ActivityObserver.Stub() {
         @Override
-        public void onForegroundActivitiesChanged(String packageName) throws RemoteException {
+        public void onForegroundActivitiesChanged(String packageName) {
             TouchPointer.this.selectedProfile = packageName;
-            mService.reloadKeymap();
+            Context context = TouchPointer.this;
+            KeymapProfiles keymapProfiles = new KeymapProfiles(context);
+            if (!keymapProfiles.profileExistsWithPackageName(packageName))
+                ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
+                        ProfileSelector.createNewProfileWithPackageName(context, packageName, enabled, profile -> {
+                            try {
+                                mService.stopServer();
+                                connectRemoteService();
+                            } catch (RemoteException ignored) {
+                            }
+                        }));
         }
     };
 }
