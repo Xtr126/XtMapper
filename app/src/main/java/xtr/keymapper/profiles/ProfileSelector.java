@@ -87,7 +87,6 @@ public class ProfileSelector {
                     keymapProfiles.saveProfile(selectedProfile, new ArrayList<>(), packageName, enabled);
                     listener.onProfileSelected(selectedProfile);
                 })
-                .setNegativeButton(R.string.cancel, (d, which) -> {})
                 .setView(binding.getRoot());
         showDialog(builder);
     }
