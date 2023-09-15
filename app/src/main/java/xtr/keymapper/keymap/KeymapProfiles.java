@@ -25,9 +25,20 @@ public class KeymapProfiles {
     }
 
     public Map<String, KeymapProfile> getAllProfiles(){
-        Map<String, KeymapProfile> profiles = new HashMap<>();
-        sharedPref.getAll().forEach((BiConsumer<String, Object>) (key, o) -> profiles.put(key, getProfile(key)));
-        return profiles;
+        Map<String, KeymapProfile> allProfiles = new HashMap<>();
+        sharedPref.getAll().forEach((BiConsumer<String, Object>) (key, lines) ->
+                allProfiles.put(key, getProfile((Set<String>) lines)));
+        return allProfiles;
+    }
+
+    public Map<String, KeymapProfile> getAllProfilesForApp(String packageName){
+        Map<String, KeymapProfile> appProfiles = new HashMap<>();
+        sharedPref.getAll().forEach((BiConsumer<String, Object>) (key, lines) -> {
+            KeymapProfile profile = getProfile((Set<String>) lines);
+            if(profile.packageName.equals(packageName))
+                appProfiles.put(key, profile);
+        });
+        return appProfiles;
     }
 
     public void renameProfile(String profileName, String newProfile) {
@@ -49,12 +60,7 @@ public class KeymapProfiles {
     }
 
     public boolean profileExistsWithPackageName(String packageName){
-        boolean profileExists = false;
-        for (Map.Entry<String, KeymapProfile> profile: getAllProfiles().entrySet()) {
-            if (profile.getValue().packageName.equals(packageName))
-                profileExists = true;
-        }
-        return profileExists;
+        return !getAllProfilesForApp(packageName).isEmpty();
     }
 
     public void setProfileEnabled(String profileName, boolean enabled) {
@@ -85,9 +91,12 @@ public class KeymapProfiles {
 
     public KeymapProfile getProfile(String profileName) {
         Set<String> stream = sharedPref.getStringSet(profileName, null);
+        return getProfile(stream);
+    }
 
+    public KeymapProfile getProfile(Set<String> lines) {
         KeymapProfile profile = new KeymapProfile();
-        if (stream != null) stream.forEach(line -> {
+        if (lines != null) lines.forEach(line -> {
 
             String[] data = line.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
             switch (data[0]){
