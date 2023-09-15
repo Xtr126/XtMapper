@@ -37,6 +37,7 @@ public class TouchPointer extends Service {
     public View cursorView;
     private IRemoteService mService;
     private String selectedProfile = null;
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     public class TouchPointerBinder extends Binder {
         public TouchPointer getService() {
@@ -153,8 +154,6 @@ public class TouchPointer extends Service {
      */
     private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
 
-        private final Handler mHandler = new Handler(Looper.getMainLooper());
-
         @Override
         public void launchEditor() {
             startService(new Intent(TouchPointer.this, EditorService.class));
@@ -198,15 +197,17 @@ public class TouchPointer extends Service {
             TouchPointer.this.selectedProfile = packageName;
             Context context = TouchPointer.this;
             KeymapProfiles keymapProfiles = new KeymapProfiles(context);
-            if (!keymapProfiles.profileExistsWithPackageName(packageName))
+
+            if (!keymapProfiles.profileExistsWithPackageName(packageName)) mHandler.post(() ->
                 ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
-                        ProfileSelector.createNewProfileWithPackageName(context, packageName, enabled, profile -> {
-                            try {
-                                mService.stopServer();
-                                connectRemoteService();
-                            } catch (RemoteException ignored) {
-                            }
-                        }));
+                ProfileSelector.createNewProfileWithPackageName(context, packageName, enabled, profile -> {
+                    try {
+                        // restart server to reload keymap
+                        mService.stopServer();
+                        connectRemoteService();
+                    } catch (RemoteException ignored) {
+                    }
+                })));
         }
     };
 }
