@@ -201,10 +201,17 @@ public class TouchPointer extends Service {
                     ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
                     ProfileSelector.createNewProfileForApp(context, packageName, enabled, profile -> {
                         TouchPointer.this.selectedProfile = profile;
+                        // restart server to reload keymap
                         connectRemoteService(keymapProfiles.getProfile(profile));
                     })));
-                // restart server to reload keymap
-            } 
+            } else {
+                mService.stopServer();
+                // Show profile selection dialog for app
+                ProfileSelector.select(context, profile -> {
+                    TouchPointer.this.selectedProfile = profile;
+                    connectRemoteService(keymapProfiles.getProfile(profile));
+                }, packageName);
+            }
         }
     };
 }

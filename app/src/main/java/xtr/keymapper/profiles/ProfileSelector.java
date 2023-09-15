@@ -32,27 +32,30 @@ public class ProfileSelector {
 
     public static void select(Context context, OnProfileSelectedListener listener){
         context.setTheme(R.style.Theme_XtMapper);
-        showAppSelectionDialog(context, packageName -> {
-            ArrayList<String> allProfiles = new ArrayList<>(new KeymapProfiles(context).getAllProfilesForApp(packageName).keySet());
+        showAppSelectionDialog(context, packageName -> select(context, listener, packageName));
+    }
 
-            if (allProfiles.size() == 1) {
-                listener.onProfileSelected(allProfiles.get(0));
-                return;
-            } else if (allProfiles.isEmpty()) {
-                createNewProfileForApp(context, packageName, true, listener);
-                return;
-            }
-            CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
+    public static void select(Context context, OnProfileSelectedListener listener, String packageName) {
+        context.setTheme(R.style.Theme_XtMapper);
+        ArrayList<String> allProfiles = new ArrayList<>(new KeymapProfiles(context).getAllProfilesForApp(packageName).keySet());
 
-            // Show dialog to select profile
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-            builder.setTitle(R.string.dialog_alert_select_profile)
-                    .setItems(items, (d, which) -> {
-                        String selectedProfile = allProfiles.get(which);
-                        listener.onProfileSelected(selectedProfile);
-                    });
-            showDialog(builder);
-        });
+        if (allProfiles.size() == 1) {
+            listener.onProfileSelected(allProfiles.get(0));
+            return;
+        } else if (allProfiles.isEmpty()) {
+            createNewProfileForApp(context, packageName, true, listener);
+            return;
+        }
+        CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
+
+        // Show dialog to select profile
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        builder.setTitle(R.string.dialog_alert_select_profile)
+                .setItems(items, (d, which) -> {
+                    String selectedProfile = allProfiles.get(which);
+                    listener.onProfileSelected(selectedProfile);
+                });
+        showDialog(builder);
     }
 
     public static void createNewProfile(@UiContext Context context, OnProfileSelectedListener listener) {
