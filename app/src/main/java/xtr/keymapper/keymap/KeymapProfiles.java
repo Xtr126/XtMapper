@@ -43,6 +43,11 @@ public class KeymapProfiles {
         saveProfile(profileName, new ArrayList<>(stringSet), packageName, stringSet.contains("ENABLED"));
     }
 
+    public boolean isProfileEnabled(String profileName) {
+        Set<String> stringSet = sharedPref.getStringSet(profileName, null);
+        return stringSet.contains("ENABLED");
+    }
+
     public void setProfileEnabled(String profileName, boolean enabled) {
         Set<String> stringSet = sharedPref.getStringSet(profileName, null);
         String packageName = "xtr.keymapper.default";

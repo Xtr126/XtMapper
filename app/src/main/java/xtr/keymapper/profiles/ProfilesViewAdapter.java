@@ -117,6 +117,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
                     .show();
         });
 
+        viewHolder.binding.switch1.setChecked(keymapProfiles.isProfileEnabled(recyclerData.name.toString()));
         viewHolder.binding.switch1.setOnCheckedChangeListener((buttonView, isChecked) -> keymapProfiles.setProfileEnabled(recyclerData.name.toString(), isChecked));
     }
 
