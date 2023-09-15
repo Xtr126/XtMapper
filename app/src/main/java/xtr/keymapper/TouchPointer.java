@@ -102,12 +102,13 @@ public class TouchPointer extends Service {
         if (cursorView == null) showCursor();
         if (mService == null) ProfileSelector.select(this, profile -> {
             this.selectedProfile = profile;
-            connectRemoteService();
+            KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
+            connectRemoteService(keymapProfile);
         });
         return super.onStartCommand(i, flags, startId);
     }
 
-    private void connectRemoteService() {
+    private void connectRemoteService(KeymapProfile profile) {
         if (activityCallback != null) activityCallback.updateCmdView1("\n connecting to server..");
         mService = RemoteService.getInstance();
         if (mService == null) {
@@ -117,14 +118,12 @@ public class TouchPointer extends Service {
             } else stopSelf();
             return;
         }
-        KeymapProfile profile = new KeymapProfiles(this).getProfile(selectedProfile);
         KeymapConfig keymapConfig = new KeymapConfig(this);
         Display display = mWindowManager.getDefaultDisplay();
         Point size = new Point();
         display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
         try {
             mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
-            mService.registerActivityObserver(mActivityObserverCallback);
         } catch (Exception e) {
             activityCallback.updateCmdView1(e.toString());
         }
@@ -194,15 +193,16 @@ public class TouchPointer extends Service {
     private final ActivityObserver mActivityObserverCallback = new ActivityObserver.Stub() {
         @Override
         public void onForegroundActivitiesChanged(String packageName) throws RemoteException {
-            TouchPointer.this.selectedProfile = packageName;
             Context context = TouchPointer.this;
             KeymapProfiles keymapProfiles = new KeymapProfiles(context);
             if (!keymapProfiles.profileExistsWithPackageName(packageName)) {
                 mService.stopServer();
                 mHandler.post(() ->
                     ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
-                    ProfileSelector.createNewProfileWithPackageName(context, packageName, enabled, profile ->
-                    connectRemoteService())));
+                    ProfileSelector.createNewProfileForApp(context, packageName, enabled, profile -> {
+                        TouchPointer.this.selectedProfile = profile;
+                        connectRemoteService(keymapProfiles.getProfile(profile));
+                    })));
                 // restart server to reload keymap
             }
         }

@@ -31,17 +31,20 @@ public class ProfileSelector {
     }
 
     public static void select(Context context, OnProfileSelectedListener listener){
-        ArrayList<String> allProfiles = new ArrayList<>(new KeymapProfiles(context).getAllProfiles().keySet());
-        if (allProfiles.size() == 1) {
-            listener.onProfileSelected(allProfiles.get(0));
-            return;
-        }
-        CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
-
         context.setTheme(R.style.Theme_XtMapper);
+        showAppSelectionDialog(context, packageName -> {
+            ArrayList<String> allProfiles = new ArrayList<>(new KeymapProfiles(context).getAllProfilesForApp(packageName).keySet());
 
-        // Show dialog to select profile
-        if (!allProfiles.isEmpty()) {
+            if (allProfiles.size() == 1) {
+                listener.onProfileSelected(allProfiles.get(0));
+                return;
+            } else if (allProfiles.isEmpty()) {
+                createNewProfileForApp(context, packageName, true, listener);
+                return;
+            }
+            CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
+
+            // Show dialog to select profile
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
             builder.setTitle(R.string.dialog_alert_select_profile)
                     .setItems(items, (d, which) -> {
@@ -49,13 +52,11 @@ public class ProfileSelector {
                         listener.onProfileSelected(selectedProfile);
                     });
             showDialog(builder);
-        } else { // Create profile if no profile found
-            createNewProfile(context, listener);
-        }
+        });
     }
 
     public static void createNewProfile(@UiContext Context context, OnProfileSelectedListener listener) {
-        showAppSelectionDialog(context, packageName -> createNewProfileWithPackageName(context, packageName, true, listener));
+        showAppSelectionDialog(context, packageName -> createNewProfileForApp(context, packageName, true, listener));
     }
 
     public static void showEnableProfileDialog(@UiContext Context context, String packageName, OnProfileEnabledListener listener){
@@ -75,7 +76,7 @@ public class ProfileSelector {
         showDialog(builder);
     }
 
-    public static void createNewProfileWithPackageName(@UiContext Context context, String packageName, boolean enabled, OnProfileSelectedListener listener){
+    public static void createNewProfileForApp(@UiContext Context context, String packageName, boolean enabled, OnProfileSelectedListener listener){
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
         TextFieldNewProfileBinding binding = TextFieldNewProfileBinding.inflate(LayoutInflater.from(context));
         binding.editText.setText(packageName);
