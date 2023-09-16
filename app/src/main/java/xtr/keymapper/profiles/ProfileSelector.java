@@ -2,6 +2,7 @@ package xtr.keymapper.profiles;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.WindowManager;
@@ -48,13 +49,22 @@ public class ProfileSelector {
         }
         CharSequence[] items = allProfiles.toArray(new CharSequence[0]);
 
+        PackageManager pm = context.getPackageManager();
+
+        CharSequence appName = "";
+        Drawable appIcon = null;
+        try {
+            appName = pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0));
+            appIcon = pm.getApplicationIcon(packageName);
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
         // Show dialog to select profile
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-        builder.setTitle(R.string.dialog_alert_select_profile)
+        builder.setTitle(context.getString(R.string.dialog_alert_select_profile) + appName)
                 .setItems(items, (d, which) -> {
                     String selectedProfile = allProfiles.get(which);
                     listener.onProfileSelected(selectedProfile);
-                });
+                }).setIcon(appIcon);
         showDialog(builder);
     }
 

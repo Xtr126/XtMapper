@@ -36,7 +36,7 @@
 
     <string name="dialog_alert_editor_title">Not Activated</string>
     <string name="dialog_alert_add_profile">Enter new profile name:</string>
-    <string name="dialog_alert_select_profile">Select Profile</string>
+    <string name="dialog_alert_select_profile">Select Profile for \ </string>
     <string name="dialog_alert_enable_profile">Enable keymapping for this app?</string>
 
     <string name="key">Key</string>
