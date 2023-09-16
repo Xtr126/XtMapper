@@ -105,6 +105,7 @@ public class RemoteService extends Service {
 
         @Override
         public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) {
+            if (inputService != null) stopServer();
             inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight);
             if (!isWaylandClient) {
                 inputService.setMouseLock(true);

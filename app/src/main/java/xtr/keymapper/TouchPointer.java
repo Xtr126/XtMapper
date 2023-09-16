@@ -218,7 +218,6 @@ public class TouchPointer extends Service {
                     TouchPointer.this.selectedProfile = profile;
                     connectRemoteService(keymapProfiles.getProfile(profile));
                 }, packageName);
-
             }
         }
     };
