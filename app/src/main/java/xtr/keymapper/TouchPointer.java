@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
+import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -128,7 +129,7 @@ public class TouchPointer extends Service {
             mService.registerActivityObserver(mActivityObserverCallback);
             if (!profile.disabled) mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
         } catch (Exception e) {
-            activityCallback.updateCmdView1(e.toString());
+            Log.e("startServer", e.toString(), e);
         }
     }
 
@@ -209,15 +210,21 @@ public class TouchPointer extends Service {
             } else {
                 for (var entry : keymapProfiles.getAllProfilesForApp(packageName).entrySet())
                     if (entry.getValue().disabled) { // profile disabled
-                        mService.stopServer();
+                        mHandler.postDelayed(() -> {
+                            try {
+                                mService.stopServer();
+                            } catch (RemoteException ignored) {
+                            }
+                        }, 2000);
                         break;
                     }
                 // App specific profiles selection dialog
-                ProfileSelector.select(context, profile -> {
+                // Show after 2 seconds
+                mHandler.postDelayed(() -> ProfileSelector.select(context, profile -> {
                     // Reloading profile
                     TouchPointer.this.selectedProfile = profile;
                     connectRemoteService(keymapProfiles.getProfile(profile));
-                }, packageName);
+                }, packageName), 2000);
             }
         }
     };
