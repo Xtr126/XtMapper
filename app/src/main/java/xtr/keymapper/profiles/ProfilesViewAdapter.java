@@ -104,6 +104,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
                     .show();
         });
 
+        // Show dialog for user to select app for a profile from a grid of apps
         viewHolder.binding.appIconButton.setOnClickListener(view -> {
             ProfilesApps appsView = new ProfilesApps(view.getContext(), profileName);
 

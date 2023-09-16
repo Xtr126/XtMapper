@@ -65,7 +65,7 @@ public class KeymapProfiles {
 
     public void setProfileEnabled(String profileName, boolean enabled) {
         Set<String> stringSet = sharedPref.getStringSet(profileName, null);
-        String packageName = "xtr.keymapper.default";
+        String packageName = "xtr.keymapper";
         for (String line : stringSet) {
             String[] data = line.split("\\s+");
             if (data[0].equals("APPLICATION"))

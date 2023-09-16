@@ -11,19 +11,16 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.content.res.AppCompatResources;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import xtr.keymapper.R;
 import xtr.keymapper.databinding.AppViewBinding;
 import xtr.keymapper.databinding.FragmentProfilesAppsBinding;
 import xtr.keymapper.keymap.KeymapProfiles;
 
 public class ProfilesApps {
-    public static final String defaultProfile = "xtr.keymapper.default";
     public String packageName;
     public FragmentProfilesAppsBinding binding;
     public final View view;
@@ -36,7 +33,7 @@ public class ProfilesApps {
     }
 
     public ProfilesApps(Context context){
-        this.packageName = defaultProfile;
+        this.packageName = null;
         view = createView(LayoutInflater.from(context));
         onViewCreated(view);
     }
@@ -75,11 +72,6 @@ public class ProfilesApps {
 
             List<ResolveInfo> allApps = pm.queryIntentActivities(i, 0);
 
-            Drawable drawable = AppCompatResources.getDrawable(context, R.mipmap.ic_launcher_foreground);
-            appsDataArrayList.add(
-                    new RecyclerData(defaultProfile,
-                            "Default",
-                            drawable));
             for(ResolveInfo ri:allApps)
                 appsDataArrayList.add(new RecyclerData(
                         ri.activityInfo.packageName,
