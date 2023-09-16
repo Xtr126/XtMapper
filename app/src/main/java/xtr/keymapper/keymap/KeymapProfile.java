@@ -33,7 +33,7 @@ public class KeymapProfile implements Parcelable {
         keys = in.createTypedArrayList(KeymapProfileKey.CREATOR);
         swipeKeys = in.createTypedArrayList(SwipeKey.CREATOR);
         rightClick = in.readParcelable(KeymapProfileKey.class.getClassLoader());
-        disabled = in.readBoolean();
+        disabled = in.readByte() != 0;
     }
 
     public static final Creator<KeymapProfile> CREATOR = new Creator<>() {
@@ -62,6 +62,6 @@ public class KeymapProfile implements Parcelable {
         dest.writeTypedList(keys);
         dest.writeTypedList(swipeKeys);
         dest.writeParcelable(rightClick, flags);
-        dest.writeBoolean(disabled);
+        dest.writeByte((byte) (disabled ? 1 : 0));
     }
 }
