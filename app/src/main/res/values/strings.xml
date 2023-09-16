@@ -5,13 +5,11 @@
     <string name="auto_activate">Auto-Activate</string>
     <string name="activation">Activation</string>
     <string name="configure">Settings</string>
-    <string name="configurex">@android:string/selectAll</string>
     <string name="edit_keymap">Edit keymap</string>
     <string name="help">Help</string>
     <string name="package_name">package name: </string>
     <string name="mouse_sensitivity">Mouse Sensitivity</string>
     <string name="dpad_radius">Dpad Radius</string>
-    <string name="mouse_input_device">Mouse Input Device</string>
     <string name="about_info">
         \n XtMapper: Free and open source keymapper. \n\n
 

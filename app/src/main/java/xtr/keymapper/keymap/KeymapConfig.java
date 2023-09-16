@@ -9,11 +9,8 @@ import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
 
-import xtr.keymapper.profiles.ProfilesApps;
-
 public class KeymapConfig implements Parcelable {
     private SharedPreferences sharedPref;
-    public String profile, device;
     public Float mouseSensitivity, scrollSpeed;
     public Float dpadRadiusMultiplier;
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
@@ -33,8 +30,6 @@ public class KeymapConfig implements Parcelable {
     }
 
     protected KeymapConfig(Parcel in) {
-        profile = in.readString();
-        device = in.readString();
         if (in.readByte() == 0) {
             mouseSensitivity = null;
         } else {
@@ -78,8 +73,6 @@ public class KeymapConfig implements Parcelable {
     };
 
     private void loadSharedPrefs() {
-        profile = sharedPref.getString("profile", ProfilesApps.defaultProfile);
-        device = sharedPref.getString("device", "null");
         mouseSensitivity = sharedPref.getFloat("mouse_sensitivity_multiplier", 1);
         scrollSpeed = sharedPref.getFloat("scroll_speed_multiplier", 1);
         ctrlMouseWheelZoom = sharedPref.getBoolean("ctrl_mouse_wheel_zoom", false);
@@ -103,9 +96,7 @@ public class KeymapConfig implements Parcelable {
     }
 
     public void applySharedPrefs() {
-        sharedPref.edit().putString("profile", profile)
-                .putString("device", device)
-                .putFloat("mouse_sensitivity_multiplier", mouseSensitivity)
+        sharedPref.edit().putFloat("mouse_sensitivity_multiplier", mouseSensitivity)
                 .putFloat("scroll_speed_multiplier", scrollSpeed)
                 .putFloat("dpad_radius", dpadRadiusMultiplier)
                 .putBoolean("ctrl_mouse_wheel_zoom", ctrlMouseWheelZoom)
@@ -131,8 +122,6 @@ public class KeymapConfig implements Parcelable {
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
-        dest.writeString(profile);
-        dest.writeString(device);
         if (mouseSensitivity == null) {
             dest.writeByte((byte) 0);
         } else {

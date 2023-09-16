@@ -312,19 +312,6 @@
 
             </com.google.android.material.button.MaterialButtonToggleGroup>
         </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:labelFor="@id/input_device"
-            android:text="@string/mouse_input_device" />
-
-        <EditText
-            android:id="@+id/input_device"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:importantForAutofill="no"
-            android:inputType="textNoSuggestions" />
     </LinearLayout>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView

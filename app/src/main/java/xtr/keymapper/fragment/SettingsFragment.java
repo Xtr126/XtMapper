@@ -46,7 +46,6 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.sliderMouse.setValue(keymapConfig.mouseSensitivity);
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
         binding.sliderSwipeDelay.setValue(keymapConfig.swipeDelayMs);
-        binding.inputDevice.setText(keymapConfig.device);
 
         binding.swipeDelayText.setText(getString(R.string.swipe_delay_ms, keymapConfig.swipeDelayMs));
         binding.sliderSwipeDelay.addOnChangeListener((slider, value, fromUser) -> binding.swipeDelayText.setText(getString(R.string.swipe_delay_ms, (int)value)));
@@ -176,11 +175,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
     @Override
     public void onDestroyView() {
         saveKeyboardShortcuts();
-
         keymapConfig.mouseAimToggle = binding.mouseAimAction.getText().toString().equals(KeymapConfig.TOGGLE);
-        // Split the string to allow only one string without whitespaces
-        String[] device = binding.inputDevice.getText().toString().split("\\s+");
-        keymapConfig.device = device[0];
 
         keymapConfig.mouseSensitivity = binding.sliderMouse.getValue();
         keymapConfig.scrollSpeed = binding.sliderScrollSpeed.getValue();
