@@ -104,6 +104,8 @@ public class TouchPointer extends Service {
             this.selectedProfile = profile;
             KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
             connectRemoteService(keymapProfile);
+            Intent launchIntent = getPackageManager().getLaunchIntentForPackage(keymapProfile.packageName);
+            startActivity(launchIntent);
         });
         return super.onStartCommand(i, flags, startId);
     }
