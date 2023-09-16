@@ -207,12 +207,18 @@ public class TouchPointer extends Service {
                         connectRemoteService(keymapProfiles.getProfile(profile));
                     })));
             } else {
-                mService.stopServer();
-                // Show profile selection dialog for app
+                for (var entry : keymapProfiles.getAllProfilesForApp(packageName).entrySet())
+                    if (entry.getValue().disabled) { // profile disabled
+                        mService.stopServer();
+                        break;
+                    }
+                // App specific profiles selection dialog
                 ProfileSelector.select(context, profile -> {
+                    // Reloading profile
                     TouchPointer.this.selectedProfile = profile;
                     connectRemoteService(keymapProfiles.getProfile(profile));
                 }, packageName);
+
             }
         }
     };
