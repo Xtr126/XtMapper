@@ -175,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
             .setMessage(R.string.root_not_found_message)
                     .setPositiveButton("OK", (dialog, which) -> {
                         Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("me.weishu.kernelsu");
-                        startActivity(launchIntent);
+                        if (launchIntent != null) startActivity(launchIntent);
                     });
             runOnUiThread(() -> builder.create().show());
         }
