@@ -4,6 +4,7 @@ import static android.content.Context.MODE_PRIVATE;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.RemoteException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,13 +66,22 @@ public class KeymapProfiles {
 
     public void setProfileEnabled(String profileName, boolean enabled) {
         Set<String> stringSet = sharedPref.getStringSet(profileName, null);
-        String packageName = "xtr.keymapper";
+        String packageName = null;
         for (String line : stringSet) {
             String[] data = line.split("\\s+");
             if (data[0].equals("APPLICATION"))
                 packageName = data[1];
         }
-        saveProfile(profileName, new ArrayList<>(stringSet), packageName, enabled);
+        if (packageName == null) return;
+
+        for (var entry : sharedPref.getAll().entrySet()) {
+            // disable or enable all profiles for app for consistency
+            KeymapProfile profile = getProfile((Set<String>) entry.getValue());
+            if(profile.packageName.equals(packageName)) {
+                Set<String> lines = sharedPref.getStringSet(entry.getKey(), null);
+                saveProfile(entry.getKey(), new ArrayList<>(lines), packageName, enabled);
+            }
+        }
     }
 
     public void saveProfile(String profileName, ArrayList<String> lines, String packageName, boolean enabled) {
