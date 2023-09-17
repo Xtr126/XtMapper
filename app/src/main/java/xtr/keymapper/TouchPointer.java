@@ -37,7 +37,7 @@ public class TouchPointer extends Service {
     private WindowManager mWindowManager;
     public View cursorView;
     private IRemoteService mService;
-    private String selectedProfile = null;
+    public String selectedProfile = null;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     public class TouchPointerBinder extends Binder {
