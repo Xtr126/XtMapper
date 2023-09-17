@@ -4,7 +4,8 @@ import static android.content.Context.ACTIVITY_SERVICE;
 
 import android.app.ActivityManager;
 import android.app.IActivityManager;
-import android.app.IProcessObserver;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 
@@ -12,36 +13,31 @@ import java.util.List;
 
 import xtr.keymapper.ActivityObserver;
 
-public class ActivityObserverService extends IProcessObserver.Stub {
+public class ActivityObserverService implements Runnable {
+    private final Handler mHandler;
     public ActivityObserver mCallback;
+    private final IActivityManager am = IActivityManager.Stub.asInterface(ServiceManager.getService(ACTIVITY_SERVICE));
+    private String currentActivity = null;
 
     public ActivityObserverService() {
-        IActivityManager am = IActivityManager.Stub.asInterface(ServiceManager.getService(ACTIVITY_SERVICE));
-        try {
-            am.registerProcessObserver(this);
-        } catch (RemoteException e) {
-            e.printStackTrace(System.out);
-        }
+        mHandler = new Handler(Looper.myLooper());
+        // Send activity to client app every 5seconds
+        mHandler.postDelayed(this, 5000);
     }
 
     @Override
-    public void onForegroundActivitiesChanged(int pid, int uid, boolean fg) {
-        if (!fg) return;
-        IActivityManager am = IActivityManager.Stub.asInterface(ServiceManager.getService(ACTIVITY_SERVICE));
+    public void run() {
         try {
             List<ActivityManager.RunningTaskInfo> taskInfo = am.getTasks(1);
-            if ( mCallback != null )
-                mCallback.onForegroundActivitiesChanged(taskInfo.get(0).topActivity.getPackageName());
+            String packageName = taskInfo.get(0).topActivity.getPackageName();
+            if ( mCallback != null && !packageName.equals(currentActivity) ) {
+                currentActivity = packageName;
+                mCallback.onForegroundActivitiesChanged(packageName);
+            }
+            mHandler.postDelayed(this, 5000);
         } catch (RemoteException e) {
             e.printStackTrace(System.out);
         }
     }
 
-    @Override
-    public void onProcessDied(int pid, int uid) {
-    }
-
-    @Override
-    public void onForegroundServicesChanged(int pid, int uid, int serviceTypes) {
-    }
 }
