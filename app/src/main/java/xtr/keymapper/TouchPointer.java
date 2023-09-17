@@ -47,26 +47,26 @@ public class TouchPointer extends Service {
         }
     }
 
+    // set the layout parameters of the cursor
+    private final WindowManager.LayoutParams mParams = new WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            // Don't let the cursor grab the input focus
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN |
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            // Make the underlying application window visible
+            // through the cursor
+            PixelFormat.TRANSLUCENT);
+
     private void showCursor() {
         super.onCreate();
         LayoutInflater layoutInflater = getSystemService(LayoutInflater.class);
         mWindowManager = getSystemService(WindowManager.class);
         // Inflate the layout for the cursor
         cursorView = CursorBinding.inflate(layoutInflater).getRoot();
-
-        // set the layout parameters of the cursor
-        WindowManager.LayoutParams mParams = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                // Don't let the cursor grab the input focus
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
-                        WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                        WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-                // Make the underlying application window visible
-                // through the cursor
-                PixelFormat.TRANSLUCENT);
 
         if(cursorView.getWindowToken()==null)
             if (cursorView.getParent() == null)
@@ -220,11 +220,15 @@ public class TouchPointer extends Service {
                     }
                 // App specific profiles selection dialog
                 // Show after 2 seconds
-                mHandler.postDelayed(() -> ProfileSelector.select(context, profile -> {
-                    // Reloading profile
-                    TouchPointer.this.selectedProfile = profile;
-                    connectRemoteService(keymapProfiles.getProfile(profile));
-                }, packageName), 2000);
+                mHandler.postDelayed(() -> {
+                    mWindowManager.removeView(cursorView);
+                    ProfileSelector.select(context, profile -> {
+                        // Reloading profile
+                        TouchPointer.this.selectedProfile = profile;
+                        connectRemoteService(keymapProfiles.getProfile(profile));
+                    }, packageName);
+                    mWindowManager.addView(cursorView, mParams);
+                }, 2000);
             }
         }
     };
