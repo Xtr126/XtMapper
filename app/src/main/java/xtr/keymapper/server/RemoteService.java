@@ -14,11 +14,12 @@ import xtr.keymapper.ActivityObserver;
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.OnKeyEventListener;
+import xtr.keymapper.Server;
 import xtr.keymapper.Utils;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 
-public class RemoteService extends Service {
+public class RemoteService extends IRemoteService.Stub {
     private String currentDevice = "";
     private InputService inputService;
     private OnKeyEventListener mOnKeyEventListener;
@@ -31,11 +32,15 @@ public class RemoteService extends Service {
         Looper.loop();
     }
 
+    public RemoteService() {
+        this(new String[0]);
+    }
+
     public RemoteService(String[] args) {
         super();
         Log.i("XtMapper", "starting server...");
         try {
-            ServiceManager.addService("xtmapper", binder);
+            ServiceManager.addService("xtmapper", this);
 
             System.out.println("Waiting for overlay...");
             for (String arg: args) {
@@ -93,81 +98,75 @@ public class RemoteService extends Service {
         return true;
     }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return binder;
+    public boolean isRoot() {
+        return inputService.supportsUinput > 0;
     }
 
-    private final IRemoteService.Stub binder = new IRemoteService.Stub() {
-        public boolean isRoot() {
-            return inputService.supportsUinput > 0;
+    @Override
+    public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) {
+        if (inputService != null) stopServer();
+        inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight);
+        if (!isWaylandClient) {
+            inputService.setMouseLock(true);
+            inputService.openDevice(currentDevice);
         }
+    }
 
-        @Override
-        public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) {
-            if (inputService != null) stopServer();
-            inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight);
+    @Override
+    public void stopServer() {
+        if (inputService != null) {
+            inputService.stopEvents = true;
+            inputService.stop();
             if (!isWaylandClient) {
-                inputService.setMouseLock(true);
-                inputService.openDevice(currentDevice);
+                inputService.stopMouse();
+                inputService.destroyUinputDev();
             }
+            inputService = null;
         }
+    }
 
-        @Override
-        public void stopServer() {
-            if (inputService != null) {
-                inputService.stopEvents = true;
-                inputService.stop();
-                if (!isWaylandClient) {
-                    inputService.stopMouse();
-                    inputService.destroyUinputDev();
-                }
-                inputService = null;
-            }
-        }
+    @Override
+    public void registerOnKeyEventListener(OnKeyEventListener l)  {
+        mOnKeyEventListener = l;
+    }
 
-        @Override
-        public void registerOnKeyEventListener(OnKeyEventListener l)  {
-            mOnKeyEventListener = l;
-        }
+    @Override
+    public void unregisterOnKeyEventListener(OnKeyEventListener l)  {
+        mOnKeyEventListener = null;
+    }
 
-        @Override
-        public void unregisterOnKeyEventListener(OnKeyEventListener l)  {
-            mOnKeyEventListener = null;
-        }
+    @Override
+    public void registerActivityObserver(ActivityObserver callback) {
+        activityObserverService.mCallback = callback;
+    }
 
-        @Override
-        public void registerActivityObserver(ActivityObserver callback) {
-            activityObserverService.mCallback = callback;
-        }
+    @Override
+    public void unregisterActivityObserver(ActivityObserver callback) {
+        activityObserverService.mCallback = null;
+    }
 
-        @Override
-        public void unregisterActivityObserver(ActivityObserver callback) {
-            activityObserverService.mCallback = null;
+    public void pauseMouse(){
+        if (inputService != null) {
+            if(!isWaylandClient) inputService.setMouseLock(false);
+            inputService.stopEvents = true;
         }
+    }
 
-        public void pauseMouse(){
-            if (inputService != null) {
-                if(!isWaylandClient) inputService.setMouseLock(false);
-                inputService.stopEvents = true;
-            }
+    @Override
+    public void reloadKeymap() {
+        if (inputService != null) {
+            inputService.reloadKeymap();
+            if (inputService.getKeymapProfile().disabled) stopServer();
         }
+    }
 
-        @Override
-        public void reloadKeymap() {
-            if (inputService != null) {
-                inputService.reloadKeymap();
-                if (inputService.getKeymapProfile().disabled) stopServer();
-            }
+    public void resumeMouse(){
+        if (inputService != null) {
+            if(!isWaylandClient) inputService.setMouseLock(true);
+            inputService.stopEvents = false;
         }
+    }
 
-        public void resumeMouse(){
-            if (inputService != null) {
-                if(!isWaylandClient) inputService.setMouseLock(true);
-                inputService.stopEvents = false;
-            }
-        }
-    };
 
     static {
         System.loadLibrary("mouse_read");
@@ -175,7 +174,12 @@ public class RemoteService extends Service {
     }
 
     public static IRemoteService getInstance(){
+        try {
+            Server.bindRemoteService();
+        } catch (Throwable tr) {
+            Log.e("bindRemoteService", tr.toString(), tr);
+        }
+        if (Server.mService != null) return Server.mService;
         return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
     }
-
 }

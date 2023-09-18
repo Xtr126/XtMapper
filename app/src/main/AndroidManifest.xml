@@ -54,6 +54,16 @@
             <meta-data android:name="android.view.im"
                 android:resource="@xml/method"/>
         </service>
+
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="xtr.keymapper.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+        <!-- android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" is to protect this provider from accessing by normal apps -->
     </application>
 
 </manifest>
