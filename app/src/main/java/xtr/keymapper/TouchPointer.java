@@ -140,7 +140,8 @@ public class TouchPointer extends Service {
         if (mService != null) try {
             mService.unregisterActivityObserver(mActivityObserverCallback);
             mService.stopServer();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.e("stopServer", e.toString(), e);
         }
         cursorView = null;
         mService = null;
@@ -219,6 +220,7 @@ public class TouchPointer extends Service {
                 // App specific profiles selection dialog
                 // Show after 2 seconds
                 mHandler.postDelayed(() -> {
+                    if (cursorView == null) return;
                     mWindowManager.removeView(cursorView);
                     ProfileSelector.select(context, profile -> {
                         // Reloading profile

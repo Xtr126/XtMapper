@@ -1,8 +1,5 @@
 package xtr.keymapper.server;
 
-import android.app.Service;
-import android.content.Intent;
-import android.os.IBinder;
 import android.os.Looper;
 import android.os.ServiceManager;
 import android.util.Log;
@@ -14,7 +11,6 @@ import xtr.keymapper.ActivityObserver;
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.OnKeyEventListener;
-import xtr.keymapper.Server;
 import xtr.keymapper.Utils;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
@@ -30,10 +26,6 @@ public class RemoteService extends IRemoteService.Stub {
         Looper.prepare();
         new RemoteService(args);
         Looper.loop();
-    }
-
-    public RemoteService() {
-        this(new String[0]);
     }
 
     public RemoteService(String[] args) {
@@ -167,19 +159,13 @@ public class RemoteService extends IRemoteService.Stub {
         }
     }
 
-
     static {
         System.loadLibrary("mouse_read");
         System.loadLibrary("mouse_cursor");
     }
 
     public static IRemoteService getInstance(){
-        try {
-            Server.bindRemoteService();
-        } catch (Throwable tr) {
-            Log.e("bindRemoteService", tr.toString(), tr);
-        }
-        if (Server.mService != null) return Server.mService;
         return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
     }
+
 }

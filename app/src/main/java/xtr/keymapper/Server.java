@@ -1,11 +1,8 @@
 package xtr.keymapper;
 
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.ServiceConnection;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.os.IBinder;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -16,7 +13,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
 
-import rikka.shizuku.Shizuku;
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.server.RemoteService;
 
@@ -77,56 +73,5 @@ public class Server {
             Log.e("Server", ex.toString());
         }
     }
-    public static IRemoteService mService;
 
-    private static final Shizuku.UserServiceArgs userServiceArgs =
-            new Shizuku.UserServiceArgs(new ComponentName(BuildConfig.APPLICATION_ID, RemoteService.class.getName()))
-                    .daemon(true).processNameSuffix("xtmapper_server")
-                    .version(BuildConfig.VERSION_CODE)
-                    .debuggable(BuildConfig.DEBUG);
-    private static final ServiceConnection userServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder binder) {
-            if (binder != null && binder.pingBinder()) {
-                mService = IRemoteService.Stub.asInterface(binder);
-            } else {
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-        }
-    };
-
-    private static void onRequestPermissionsResult(int requestCode, int grantResult) {
-        if(grantResult == PackageManager.PERMISSION_GRANTED)
-            Shizuku.bindUserService(userServiceArgs, userServiceConnection);
-        Shizuku.removeRequestPermissionResultListener(REQUEST_PERMISSION_RESULT_LISTENER);
-    }
-
-    private static final Shizuku.OnRequestPermissionResultListener REQUEST_PERMISSION_RESULT_LISTENER = Server::onRequestPermissionsResult;
-
-    private static boolean checkPermission(int code) {
-        if (Shizuku.isPreV11()) {
-            // Pre-v11 is unsupported
-            return false;
-        }
-
-        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-            // Granted
-            return true;
-        } else if (Shizuku.shouldShowRequestPermissionRationale()) {
-            // Users choose "Deny and don't ask again"
-            return false;
-        } else {
-            // Request the permission
-            Shizuku.requestPermission(code);
-            return false;
-        }
-    }
-
-    public static void bindRemoteService() {
-        Shizuku.addRequestPermissionResultListener(REQUEST_PERMISSION_RESULT_LISTENER);
-        checkPermission(0);
-    }
 }
