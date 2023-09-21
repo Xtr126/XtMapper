@@ -27,11 +27,11 @@ public class Server {
         FileWriter linesToWrite = new FileWriter(script, false);
         linesToWrite.append("#!/system/bin/sh\n");
         linesToWrite.append("pgrep -f ").append(className).append(" && echo Waiting for overlay... && exit 1\n");
-        linesToWrite.append("exec env ");
-        linesToWrite.append("LD_LIBRARY_PATH=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
-                .append("\" CLASSPATH=\"").append(ai.publicSourceDir) // Absolute path to apk in /data/app
-                .append("\" /system/bin/app_process / ")
-                .append(className).append(" \"$@\" \n");
+        linesToWrite.append("exec /system/bin/app_process");
+        linesToWrite.append(" -Djava.library.path=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
+                .append("\" -Djava.class.path=\"").append(ai.publicSourceDir) // Absolute path to apk in /data/app
+                .append("\" / ").append(className)
+                .append(" \"$@\" \n");
 
         linesToWrite.flush();
         linesToWrite.close();
