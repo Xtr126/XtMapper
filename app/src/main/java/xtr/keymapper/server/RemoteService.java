@@ -106,13 +106,11 @@ public class RemoteService extends IRemoteService.Stub {
 
     @Override
     public void stopServer() {
-        if (inputService != null) {
+        if (inputService != null && !isWaylandClient) {
             inputService.stopEvents = true;
             inputService.stop();
-            if (!isWaylandClient) {
-                inputService.stopMouse();
-                inputService.destroyUinputDev();
-            }
+            inputService.stopMouse();
+            inputService.destroyUinputDev();
             inputService = null;
         }
     }
