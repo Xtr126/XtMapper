@@ -19,7 +19,7 @@ public class KeymapProfile implements Parcelable {
     public ArrayList<KeymapProfileKey> keys = new ArrayList<>();
     public ArrayList<SwipeKey> swipeKeys = new ArrayList<>();
     public KeymapProfileKey rightClick;
-    public boolean disabled = true;
+    public boolean disabled = false;
 
     public KeymapProfile() {
 
