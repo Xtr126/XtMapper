@@ -1,5 +1,5 @@
 <p align="center">
-<a href="#" target="_blank"><img src="https://cdn.discordapp.com/attachments/915513100730523668/1070200201761005588/ic_launcher_background.png" width="120px" height="120px"/></a>
+<a href="#" target="_blank"><img src="https://github.com/Xtr126/XtMapper/assets/80520774/90679c12-eca4-44c4-addc-1ab2635e5091" /></a>
 </p>
 
 <h1 align="center">
@@ -82,3 +82,5 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License 
 along with this program. If not, see https://www.gnu.org/licenses/.
 ```
+
+
