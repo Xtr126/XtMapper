@@ -1,5 +1,5 @@
 <p align="center">
-<a href="#" target="_blank"><img src="https://github.com/Xtr126/XtMapper/assets/80520774/dcb955b5-0305-469b-8613-d5aceea7a294" /></a>
+<a href="#" target="_blank"><img src="https://github.com/Xtr126/XtMapper/assets/80520774/2093a10b-f63f-4687-a4c9-d803f66d4e82" width="400px" height="400px"/></a>
 </p>
 
 <h1 align="center">
