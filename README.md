@@ -20,7 +20,7 @@
  </p>
 
 ## Features:
-
+[Documentation site](https://xtr126.github.io/XtMapper-docs)  
 - Multi-touch emulation
 - Emulate a touch pointer with mouse - Useful for games that only accept touch events and not mouse clicks.
 - Emulate a D-pad with W,A,S,D or arrow keys
@@ -29,7 +29,7 @@
 - Pinch-to-zoom gesture using ctrl key + move mouse or ctrl + scroll wheel 
 - Smooth pixel by pixel scrolling emulation for mouse wheel
 - Swipes with keyboard keys
- 
+
 [Video Demonstration](https://www.youtube.com/watch?v=iK2OLMXRMTs)
 
 ## Development
@@ -50,10 +50,9 @@ AndroidEmu: https://discord.gg/mRpT4Qq
 SupremeGamers: https://aopc.dev/discord  
 
 ## Waydroid support
-Tracking issue: 
-https://github.com/Xtr126/XtMapper/issues/35  
-Due to how XtMapper works by reading input events directly from the kernel, there are certain difficulties in implementing proper support for android containers.
+Due to how XtMapper works by reading input events directly from the kernel, there are certain difficulties in implementing proper support for android containers.  
 An experimental solution was developed: https://github.com/Xtr126/wayland-getevent  
+Read issue: https://github.com/Xtr126/XtMapper/issues/35  
 
 
 ## Credits
