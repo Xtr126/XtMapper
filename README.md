@@ -7,7 +7,8 @@
 </h1>
 <p align="center">
   XtMapper, a free and open source keymapper. <br>
-  Play your Android games with keyboard and mouse on Bliss OS
+  Play your Android games with keyboard and mouse on Bliss OS <br>
+  https://xtr126.github.io/XtMapper-docs
 </p>
 
 <p align="center">
@@ -20,7 +21,6 @@
  </p>
 
 ## Features:
-[Documentation site](https://xtr126.github.io/XtMapper-docs)  
 - Multi-touch emulation
 - Emulate a touch pointer with mouse - Useful for games that only accept touch events and not mouse clicks.
 - Emulate a D-pad with W,A,S,D or arrow keys
