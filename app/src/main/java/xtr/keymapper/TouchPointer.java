@@ -23,7 +23,7 @@ import android.widget.Toast;
 
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CursorBinding;
-import xtr.keymapper.editor.EditorService;
+import xtr.keymapper.editor.EditorActivity;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfiles;
@@ -87,8 +87,9 @@ public class TouchPointer extends Service {
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.createNotificationChannel(channel);
 
-        Intent intent = new Intent(this, EditorService.class);
-        PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+        Intent intent = new Intent(this, EditorActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
 
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
         Notification notification = builder.setOngoing(true)
@@ -157,7 +158,9 @@ public class TouchPointer extends Service {
 
         @Override
         public void launchEditor() {
-            startService(new Intent(TouchPointer.this, EditorService.class));
+            Intent intent = new Intent(TouchPointer.this, EditorActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
         }
 
         @Override

@@ -1,13 +1,17 @@
 package xtr.keymapper.editor;
 
+import android.app.Activity;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.view.WindowManager;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.view.ContextThemeWrapper;
@@ -21,19 +25,18 @@ import xtr.keymapper.profiles.ProfileSelector;
 import xtr.keymapper.server.RemoteService;
 import xtr.keymapper.server.RemoteServiceHelper;
 
-public class EditorService extends Service implements EditorUI.OnHideListener {
+public class EditorActivity extends Activity implements EditorUI.OnHideListener {
     private EditorUI editor;
     private IRemoteService mService;
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         mService = RemoteService.getInstance();
         RemoteServiceHelper.pauseKeymap();
 
         if (editor != null) editor.hideView();
         bindService(new Intent(this, TouchPointer.class), connection, Context.BIND_AUTO_CREATE);
-
-        return super.onStartCommand(intent, flags, startId);
     }
 
     ProfileSelector.OnProfileSelectedListener listener = profile -> {
@@ -52,7 +55,6 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
                     .setPositiveButton(R.string.ok, (dialog, which) -> {})
                     .setTitle(R.string.dialog_alert_editor_title);
             AlertDialog dialog = builder.create();
-            dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
             dialog.show();
         }
     };
@@ -71,7 +73,7 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
                 listener.onProfileSelected(pointerOverlay.selectedProfile);
             } else {
                 // service is not active, show profile selection dialog
-                ProfileSelector.select(EditorService.this, listener);
+                ProfileSelector.select(EditorActivity.this, listener);
             }
         }
         @Override
@@ -81,22 +83,23 @@ public class EditorService extends Service implements EditorUI.OnHideListener {
 
     @Override
     public void onHideView() {
+       onDestroy();
+       finish();
+    }
+
+    @Override
+    protected void onDestroy() {
         if (getEvent()) try {
             mService.unregisterOnKeyEventListener(editor);
         } catch (RemoteException ignored) {
         }
         editor = null;
         RemoteServiceHelper.resumeKeymap();
-        stopSelf();
+        super.onDestroy();
     }
 
     @Override
     public boolean getEvent() {
         return mService != null;
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
     }
 }

@@ -16,8 +16,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 
-import androidx.appcompat.view.ContextThemeWrapper;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,8 +41,6 @@ import xtr.keymapper.swipekey.SwipeKeyView;
 
 public class EditorUI extends OnKeyEventListener.Stub {
 
-    private final WindowManager.LayoutParams mParams;
-    private final WindowManager mWindowManager;
     private final LayoutInflater layoutInflater;
     private final ViewGroup mainView;
 
@@ -64,18 +60,11 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private KeymapProfile profile;
 
     public EditorUI (Context context, String profileName) {
-        this.context = new ContextThemeWrapper(context, R.style.Theme_XtMapper_EditorUI);
+        this.context = context;
         this.onHideListener = ((OnHideListener) context);
         this.profileName = profileName;
 
         layoutInflater = context.getSystemService(LayoutInflater.class);
-        mWindowManager = context.getSystemService(WindowManager.class);
-        mParams = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                        WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                PixelFormat.TRANSLUCENT);
 
         binding = KeymapEditorBinding.inflate(layoutInflater);
         mainView = binding.getRoot();
@@ -87,17 +76,13 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     public void open() {
         loadKeymap();
-        addView(mainView);
+        if (mainView.getWindowToken() == null && mainView.getParent() == null)
+            ((EditorActivity)context).setContentView(mainView);
 
         if (!onHideListener.getEvent()) {
             mainView.setOnKeyListener(this::onKey);
             mainView.setFocusable(true);
         }
-    }
-
-    private void addView(View view) {
-        if (view.getWindowToken() == null && view.getParent() == null)
-            mWindowManager.addView(view, mParams);
     }
 
     public boolean onKey(View v, int keyCode, KeyEvent event) {
@@ -145,7 +130,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void removeView(ViewGroup view) {
-        mWindowManager.removeView(view);
         view.removeAllViews();
         view.invalidate();
     }
