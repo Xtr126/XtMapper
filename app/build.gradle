@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace 'xtr.keymapper'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "xtr.keymapper"
@@ -50,7 +50,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation "androidx.constraintlayout:constraintlayout:2.1.4"
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
-    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'com.google.android.material:material:1.10.0'
     implementation "com.leinardi.android:speed-dial:3.3.0"
     implementation 'androidx.webkit:webkit:1.7.0'
     compileOnly project(path: ':app:hidden-api')
