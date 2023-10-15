@@ -17,11 +17,11 @@ public class Utils {
         return alphabet.indexOf(key.substring(4));
     }
 
-    public static BufferedReader geteventStream() throws IOException {
+    public static BufferedReader geteventStream(String nativeLibraryDir) throws IOException {
         Process sh = Runtime.getRuntime().exec("sh");
         DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
 
-        outputStream.writeBytes("exec env LD_PRELOAD=$LD_LIBRARY_PATH/libgetevent.so getevent -ql\n");
+        outputStream.writeBytes("exec env LD_PRELOAD=" + nativeLibraryDir + "/libgetevent.so getevent -ql\n");
         outputStream.flush();
 
         return new BufferedReader(new InputStreamReader(sh.getInputStream()));

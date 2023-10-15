@@ -54,7 +54,7 @@ public class RemoteService extends IRemoteService.Stub {
                 if (isWaylandClient) {
                     getevent = new BufferedReader(new InputStreamReader(System.in));
                 } else {
-                    getevent = Utils.geteventStream();
+                    getevent = Utils.geteventStream(System.getProperty("java.library.path"));
                 }
                 String line;
                 while ((line = getevent.readLine()) != null) {
