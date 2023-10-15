@@ -125,7 +125,11 @@ public class TouchPointer extends Service {
         Point size = new Point();
         display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
         try {
-            mService.registerActivityObserver(mActivityObserverCallback);
+            if (keymapConfig.disableAutoProfiling) {
+                mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+            } else {
+                mService.registerActivityObserver(mActivityObserverCallback);
+            }
             if (!profile.disabled) mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
         } catch (Exception e) {
             Log.e("startServer", e.toString(), e);

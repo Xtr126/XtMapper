@@ -14,6 +14,7 @@ public class KeymapConfig implements Parcelable {
     public Float mouseSensitivity, scrollSpeed;
     public Float dpadRadiusMultiplier;
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
+    public boolean disableAutoProfiling;
 
     public int pauseResumeShortcutKey, launchEditorShortcutKey, switchProfileShortcutKey;
     public int swipeDelayMs;
@@ -58,6 +59,7 @@ public class KeymapConfig implements Parcelable {
         switchProfileShortcutKeyModifier = in.readString();
         mouseAimShortcutKey = in.readInt();
         mouseAimToggle = in.readByte() != 0;
+        disableAutoProfiling = in.readByte() != 0;
     }
 
     public static final Creator<KeymapConfig> CREATOR = new Creator<>() {
@@ -78,6 +80,7 @@ public class KeymapConfig implements Parcelable {
         ctrlMouseWheelZoom = sharedPref.getBoolean("ctrl_mouse_wheel_zoom", false);
         ctrlDragMouseGesture = sharedPref.getBoolean("ctrl_drag_mouse_gesture", true);
         mouseAimToggle = sharedPref.getBoolean("mouse_aim_shortcut_toggle", true);
+        disableAutoProfiling = sharedPref.getBoolean("disable_auto_profile", true);
 
         launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", -1);
         pauseResumeShortcutKey = sharedPref.getInt("pause_resume_shortcut", -1);
@@ -104,6 +107,7 @@ public class KeymapConfig implements Parcelable {
                 .putBoolean("key_grave_mouse_aim", keyGraveMouseAim)
                 .putBoolean("right_click_mouse_aim", rightClickMouseAim)
                 .putBoolean("mouse_aim_shortcut_toggle", mouseAimToggle)
+                .putBoolean("disable_auto_profile", disableAutoProfiling)
                 .putInt("pause_resume_shortcut", pauseResumeShortcutKey)
                 .putInt("launch_editor_shortcut", launchEditorShortcutKey)
                 .putInt("switch_profile_shortcut", switchProfileShortcutKey)
@@ -153,5 +157,6 @@ public class KeymapConfig implements Parcelable {
         dest.writeString(switchProfileShortcutKeyModifier);
         dest.writeInt(mouseAimShortcutKey);
         dest.writeByte((byte) (mouseAimToggle ? 1 : 0));
+        dest.writeByte((byte) (disableAutoProfiling ? 1 : 0));
     }
 }

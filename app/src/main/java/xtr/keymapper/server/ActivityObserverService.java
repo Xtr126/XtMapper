@@ -19,7 +19,8 @@ public class ActivityObserverService implements Runnable {
     private final IActivityManager am = IActivityManager.Stub.asInterface(ServiceManager.getService(ACTIVITY_SERVICE));
     private String currentActivity = null;
 
-    public ActivityObserverService() {
+    public ActivityObserverService(ActivityObserver observer) {
+        this.mCallback = observer;
         mHandler = new Handler(Looper.myLooper());
         // Send activity to client app every 5seconds
         mHandler.postDelayed(this, 5000);
@@ -34,7 +35,7 @@ public class ActivityObserverService implements Runnable {
                 currentActivity = packageName;
                 mCallback.onForegroundActivitiesChanged(packageName);
             }
-            mHandler.postDelayed(this, 5000);
+            if (mCallback != null) mHandler.postDelayed(this, 5000);
         } catch (RemoteException e) {
             e.printStackTrace(System.out);
         }

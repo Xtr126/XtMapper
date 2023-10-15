@@ -20,7 +20,7 @@ public class RemoteService extends IRemoteService.Stub {
     private InputService inputService;
     private OnKeyEventListener mOnKeyEventListener;
     private boolean isWaylandClient = false;
-    private final ActivityObserverService activityObserverService = new ActivityObserverService();
+    private ActivityObserverService activityObserverService;
 
     public static void main(String[] args) {
         Looper.prepare();
@@ -127,12 +127,13 @@ public class RemoteService extends IRemoteService.Stub {
 
     @Override
     public void registerActivityObserver(ActivityObserver callback) {
-        activityObserverService.mCallback = callback;
+        activityObserverService = new ActivityObserverService(callback);
     }
 
     @Override
     public void unregisterActivityObserver(ActivityObserver callback) {
         activityObserverService.mCallback = null;
+        activityObserverService = null;
     }
 
     public void pauseMouse(){
