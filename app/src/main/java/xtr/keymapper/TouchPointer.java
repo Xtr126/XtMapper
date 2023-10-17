@@ -88,7 +88,7 @@ public class TouchPointer extends Service {
         notificationManager.createNotificationChannel(channel);
 
         Intent intent = new Intent(this, EditorActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
 
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
@@ -163,7 +163,7 @@ public class TouchPointer extends Service {
         @Override
         public void launchEditor() {
             Intent intent = new Intent(TouchPointer.this, EditorActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
             startActivity(intent);
         }
 

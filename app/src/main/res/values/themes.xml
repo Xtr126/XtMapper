@@ -4,14 +4,7 @@
 
     <style name="Theme.XtMapper.EditorUI" parent="Theme.MaterialComponents">
         <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowActionBar">true</item>
-        <item name="android:windowActionBarOverlay">true</item>
-        <item name="android:windowActionModeOverlay">false</item>
-        <item name="android:windowNoTitle">true</item>
         <item name="android:windowIsFloating">false</item>
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:immersive">true</item>
-        <item name="android:windowTranslucentNavigation">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
     </style>
 </resources>
