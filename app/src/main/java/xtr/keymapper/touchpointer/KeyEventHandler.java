@@ -71,7 +71,8 @@ public class KeyEventHandler {
         dpad1Handler = null;
         dpad2Handler = null;
         swipeKeyHandlers = null;
-        mHandlerThread.quit();
+        if (mHandlerThread != null)
+            mHandlerThread.quit();
         mHandlerThread = null;
         eventHandler = null;
     }
