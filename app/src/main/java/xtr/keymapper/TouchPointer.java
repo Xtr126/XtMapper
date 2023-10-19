@@ -129,8 +129,8 @@ public class TouchPointer extends Service {
                 mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
             } else {
                 mService.registerActivityObserver(mActivityObserverCallback);
+                if (!profile.disabled) mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
             }
-            if (!profile.disabled) mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
         } catch (Exception e) {
             Log.e("startServer", e.toString(), e);
         }

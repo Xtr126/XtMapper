@@ -74,6 +74,7 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
                 // service is active and a profile is selected
                 listener.onProfileSelected(pointerOverlay.selectedProfile);
             } else {
+                listener.onProfileSelected(null);
                 // service is not active, show profile selection dialog
                 ProfileSelector.select(EditorActivity.this, listener);
             }

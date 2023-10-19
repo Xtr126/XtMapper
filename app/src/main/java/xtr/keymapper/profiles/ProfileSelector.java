@@ -1,7 +1,6 @@
 package xtr.keymapper.profiles;
 
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.provider.Settings;
@@ -66,7 +65,6 @@ public class ProfileSelector {
                     String selectedProfile = allProfiles.get(which);
                     listener.onProfileSelected(selectedProfile);
                 })
-                .setOnDismissListener((dialog -> listener.onProfileSelected(null)))
                 .setIcon(appIcon);
         showDialog(builder);
     }
@@ -104,7 +102,6 @@ public class ProfileSelector {
                     keymapProfiles.saveProfile(selectedProfile, new ArrayList<>(), packageName, enabled);
                     listener.onProfileSelected(selectedProfile);
                 })
-                .setOnDismissListener((dialog -> listener.onProfileSelected(null)))
                 .setView(binding.getRoot());
         showDialog(builder);
     }
@@ -117,7 +114,6 @@ public class ProfileSelector {
                     listener.onAppSelected(appsView.packageName);
                     appsView.onDestroyView();
                 })
-                .setOnDismissListener(dialog -> listener.onAppSelected(null))
                 .setView(appsView.view);
         showDialog(builder);
     }
