@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
         binding.controls.aboutButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
         if (RemoteService.getInstance() != null) {
-            binding.cmdview.view1.setText(R.string.activated_start);
+            mCallback.alertActivation();
             binding.controls.startServer.setEnabled(false);
         }
     }
@@ -142,8 +142,8 @@ public class MainActivity extends AppCompatActivity {
     public interface Callback {
         void updateCmdView1(String line);
         void stopPointer();
-        void startPointer();
         void alertRootAccessNotFound();
+        void alertActivation();
     }
 
     private final Callback mCallback = new Callback() {
@@ -164,9 +164,6 @@ public class MainActivity extends AppCompatActivity {
             MainActivity.this.stopPointer();
         }
 
-        public void startPointer() {
-            runOnUiThread(MainActivity.this::startPointer);
-        }
 
         @Override
         public void alertRootAccessNotFound() {
@@ -177,6 +174,14 @@ public class MainActivity extends AppCompatActivity {
                         Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("me.weishu.kernelsu");
                         if (launchIntent != null) startActivity(launchIntent);
                     });
+            runOnUiThread(() -> builder.create().show());
+        }
+
+        @Override
+        public void alertActivation() {
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
+            builder.setTitle(R.string.activated)
+                    .setMessage(R.string.activation_successful);
             runOnUiThread(() -> builder.create().show());
         }
     };

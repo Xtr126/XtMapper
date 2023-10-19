@@ -4,6 +4,8 @@
     <string name="stop">Stop</string>
     <string name="auto_activate">Auto-Activate</string>
     <string name="activation">Activation</string>
+    <string name="activated">Activated</string>
+    <string name="activation_successful">Keymapper is activated. Tap on Start button to start keymapper.</string>
     <string name="configure">Settings</string>
     <string name="edit_keymap">Edit keymap</string>
     <string name="help">Help</string>
@@ -49,7 +51,6 @@
     <string name="tuning">Tuning</string>
     <string name="config">Config</string>
     <string name="shortcuts">Shortcuts</string>
-    <string name="activated_start">Activated \n Tap on start button</string>
 
     <string name="trigger_mouse_aim_with">Trigger mouse aim with:</string>
     <string name="right_click">Right click</string>

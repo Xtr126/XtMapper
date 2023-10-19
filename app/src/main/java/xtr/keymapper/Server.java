@@ -64,7 +64,7 @@ public class Server {
             while ((line = stdout.readLine()) != null) {
                 mCallback.updateCmdView1("stdout: " + line + "\n");
                 if (line.equals("Waiting for overlay..."))
-                    mCallback.startPointer();
+                    mCallback.alertActivation();
             }
             if (sh.waitFor(5, TimeUnit.SECONDS)) mCallback.alertRootAccessNotFound();
             sh.destroy();
