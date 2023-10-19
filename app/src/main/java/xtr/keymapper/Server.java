@@ -65,9 +65,8 @@ public class Server {
                 mCallback.updateCmdView1("stdout: " + line + "\n");
                 if (line.equals("Waiting for overlay..."))
                     mCallback.startPointer();
-                else mCallback.alertRootAccessNotFound();
             }
-            if (sh.waitFor(1, TimeUnit.SECONDS)) mCallback.alertRootAccessNotFound();
+            if (sh.waitFor(5, TimeUnit.SECONDS)) mCallback.alertRootAccessNotFound();
             sh.destroy();
         } catch (IOException | InterruptedException ex) {
             Log.e("Server", ex.toString());
