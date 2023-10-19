@@ -44,16 +44,15 @@ If you want to contribute code, please base your commits on the latest dev branc
 
 ## Help and support
 Feel free to file an [issue](https://github.com/Xtr126/XtMapper/issues).  
-Some useful discord servers (related):  
-BlissLabs: https://discord.com/invite/F9n5gbdNy2  
-AndroidEmu: https://discord.gg/mRpT4Qq  
-SupremeGamers: https://aopc.dev/discord  
+You can ask about XtMapper on Bliss OS in  
+BlissLabs discord server: https://discord.com/invite/F9n5gbdNy2  
+Telegram: https://t.me/blissx86
+
 
 ## Waydroid support
-Due to how XtMapper works by reading input events directly from the kernel, there are certain difficulties in implementing proper support for android containers.  
-An experimental solution was developed: https://github.com/Xtr126/wayland-getevent  
-Read issue: https://github.com/Xtr126/XtMapper/issues/35  
-
+Due to how XtMapper works by reading input events directly from the kernel, there are certain difficulties in implementing support for android containers. 
+An experimental solution was developed: https://github.com/Xtr126/wayland-getevent 
+It is mostly a "hack" that we have to rely on due to how wayland/waydroid works. 
 
 ## Credits
 Open source libraries used:
