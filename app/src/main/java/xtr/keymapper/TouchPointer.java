@@ -103,12 +103,26 @@ public class TouchPointer extends Service {
         startForeground(2, notification);
 
         if (cursorView == null) showCursor();
-        // Launch default profile for current app
-        ProfileSelector.select(this, profile -> {
-            this.selectedProfile = profile;
-            KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
-            connectRemoteService(keymapProfile);
-        }, getPackageName());
+
+        KeymapConfig keymapConfig = new KeymapConfig(this);
+
+        if(keymapConfig.disableAutoProfiling) {
+            // Select app
+            ProfileSelector.select(this, profile -> {
+                this.selectedProfile = profile;
+                KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
+                connectRemoteService(keymapProfile);
+                Intent launchIntent = getPackageManager().getLaunchIntentForPackage(keymapProfile.packageName);
+                if (launchIntent != null) startActivity(launchIntent);
+            });
+        } else {
+            // Launch default profile for current app
+            ProfileSelector.select(this, profile -> {
+                this.selectedProfile = profile;
+                KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
+                connectRemoteService(keymapProfile);
+            }, getPackageName());
+        }
         return super.onStartCommand(i, flags, startId);
     }
 
@@ -187,7 +201,8 @@ public class TouchPointer extends Service {
         @Override
         public void alertMouseAimActivated() {
             // Notifying user that shooting mode was activated
-            mHandler.post(() -> Toast.makeText(TouchPointer.this, R.string.mouse_aim_activated, Toast.LENGTH_SHORT).show());
+            mHandler.post(() -> Toast.makeText(TouchPointer.this, R.string.mouse_aim_activated, Toast.LENGTH_SHORT
+            ).show());
         }
 
         @Override
