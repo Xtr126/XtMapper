@@ -16,7 +16,6 @@ import xtr.keymapper.ActivityObserver;
 public class ActivityObserverService implements Runnable {
     public ActivityObserver mCallback;
     private final IActivityManager am = IActivityManager.Stub.asInterface(ServiceManager.getService(ACTIVITY_SERVICE));
-    private String currentActivity = null;
     private HandlerThread mHandlerThread;
     private Handler mHandler;
 
@@ -26,8 +25,8 @@ public class ActivityObserverService implements Runnable {
         mHandlerThread = new HandlerThread("activity_observer");
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
-        // Send activity to client app every 5seconds
-        mHandler.postDelayed(this, 5000);
+        // Send activity to client app every 5 seconds
+        mHandler.post(this);
     }
 
     @Override
@@ -36,10 +35,7 @@ public class ActivityObserverService implements Runnable {
             List<ActivityManager.RunningTaskInfo> taskInfo = am.getTasks(1);
             String packageName = taskInfo.get(0).topActivity.getPackageName();
             if (mCallback != null) {
-                if (!packageName.equals(currentActivity)) {
-                    currentActivity = packageName;
-                    mCallback.onForegroundActivitiesChanged(packageName);
-                }
+                mCallback.onForegroundActivitiesChanged(packageName);
                 mHandler.postDelayed(this, 5000);
             } else {
                 stop();

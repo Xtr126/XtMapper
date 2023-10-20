@@ -4,7 +4,6 @@ import static android.content.Context.MODE_PRIVATE;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.RemoteException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -106,6 +105,7 @@ public class KeymapProfiles {
 
     public KeymapProfile getProfile(Set<String> lines) {
         KeymapProfile profile = new KeymapProfile();
+        profile.disabled = true;
         if (lines != null) lines.forEach(line -> {
 
             String[] data = line.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
