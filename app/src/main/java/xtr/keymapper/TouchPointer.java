@@ -117,7 +117,10 @@ public class TouchPointer extends Service {
             if (activityCallback != null) {
                 activityCallback.updateCmdView1("\n connection failed\n Please retry activation \n");
                 activityCallback.stopPointer();
-            } else stopSelf();
+            } else {
+                onDestroy();
+                stopSelf();
+            }
             return;
         }
         KeymapConfig keymapConfig = new KeymapConfig(this);
@@ -132,6 +135,13 @@ public class TouchPointer extends Service {
                 if (!profile.disabled) mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
             }
         } catch (Exception e) {
+            if(activityCallback != null) {
+                activityCallback.updateCmdView1(e.toString());
+                activityCallback.stopPointer();
+            } else {
+                onDestroy();
+                stopSelf();
+            }
             Log.e("startServer", e.toString(), e);
         }
     }
