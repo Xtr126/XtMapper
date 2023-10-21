@@ -1,6 +1,7 @@
 package xtr.keymapper.server;
 
 import android.os.Looper;
+import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 
@@ -118,13 +119,17 @@ public class RemoteService extends IRemoteService.Stub {
         }
     }
 
+    private final DeathRecipient mDeathRecipient = () -> mOnKeyEventListener = null;
+
     @Override
-    public void registerOnKeyEventListener(OnKeyEventListener l)  {
+    public void registerOnKeyEventListener(OnKeyEventListener l) throws RemoteException {
+        l.asBinder().linkToDeath(mDeathRecipient, 0);
         mOnKeyEventListener = l;
     }
 
     @Override
     public void unregisterOnKeyEventListener(OnKeyEventListener l)  {
+        if (l != null) l.asBinder().unlinkToDeath(mDeathRecipient, 0);
         mOnKeyEventListener = null;
     }
 
