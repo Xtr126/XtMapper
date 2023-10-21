@@ -60,12 +60,15 @@ public class RemoteService extends IRemoteService.Stub {
                 while ((line = getevent.readLine()) != null) {
                     String[] data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
                     if (addNewDevices(data)) {
-                        if (inputService != null && !inputService.stopEvents) {
-                            if (isWaylandClient && data[0].contains("wl_pointer"))
-                                inputService.sendWaylandMouseEvent(data[1]);
-                            else
-                                inputService.getKeyEventHandler().handleEvent(data[1]);
-                        }
+                        if (inputService != null)
+                            if (!inputService.stopEvents) {
+                                if (isWaylandClient && data[0].contains("wl_pointer"))
+                                    inputService.sendWaylandMouseEvent(data[1]);
+                                else
+                                    inputService.getKeyEventHandler().handleEvent(data[1]);
+                            } else {
+                                inputService.getKeyEventHandler().handleKeyboardShortcutEvent(data[1]);
+                            }
                         if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
                     }
                 }
@@ -97,7 +100,7 @@ public class RemoteService extends IRemoteService.Stub {
     @Override
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) {
         if (inputService != null) stopServer();
-        inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight);
+        inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight, isWaylandClient);
         if (!isWaylandClient) {
             inputService.setMouseLock(true);
             inputService.openDevice(currentDevice);

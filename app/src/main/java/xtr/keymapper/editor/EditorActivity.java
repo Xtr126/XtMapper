@@ -8,6 +8,7 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.util.Log;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.view.ContextThemeWrapper;
@@ -46,9 +47,11 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
         editor.open();
 
         if (getEvent())
+            // Can receive key events from remote service
             try {
                 mService.registerOnKeyEventListener(editor);
-            } catch (RemoteException ignored) {
+            } catch (RemoteException e) {
+                Log.e("editorActivity", e.getMessage(), e);
             }
         else {
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(this, R.style.Theme_XtMapper));
@@ -92,13 +95,13 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
 
     @Override
     protected void onDestroy() {
+        super.onDestroy();
         if (getEvent()) try {
             mService.unregisterOnKeyEventListener(editor);
         } catch (RemoteException ignored) {
         }
         editor = null;
         RemoteServiceHelper.resumeKeymap();
-        super.onDestroy();
     }
 
     @Override

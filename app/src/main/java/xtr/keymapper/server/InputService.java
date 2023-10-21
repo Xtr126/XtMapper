@@ -21,11 +21,13 @@ public class InputService implements IInputInterface {
     private final IRemoteServiceCallback mCallback;
     final int supportsUinput;
     boolean stopEvents = false;
+    private final boolean isWaylandClient;
 
-    public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight){
+    public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight, boolean isWaylandClient){
         this.keymapProfile = profile;
         this.keymapConfig = keymapConfig;
         this.mCallback = mCallback;
+        this.isWaylandClient = isWaylandClient;
         supportsUinput = initMouseCursor(screenWidth, screenHeight);
 
         mouseEventHandler = new MouseEventHandler(this);
@@ -51,6 +53,14 @@ public class InputService implements IInputInterface {
 
     public void injectScroll(float x, float y, int value) {
         input.onScrollEvent(x, y, value);
+    }
+
+    @Override
+    public void pauseResumeKeymap() {
+        if (!isWaylandClient) {
+            stopEvents = !stopEvents;
+            setMouseLock(!stopEvents);
+        }
     }
 
     public KeymapConfig getKeymapConfig() {

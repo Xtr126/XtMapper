@@ -97,11 +97,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void unbindTouchPointer() {
-        unbindService(connection);
         if (pointerOverlay != null) {
             pointerOverlay.activityCallback = null;
             pointerOverlay = null;
         }
+        unbindService(connection);
     }
 
     private void startEditor(){
@@ -135,8 +135,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        unbindTouchPointer();
         super.onDestroy();
+        unbindTouchPointer();
     }
 
     public interface Callback {

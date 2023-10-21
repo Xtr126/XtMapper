@@ -13,13 +13,12 @@ import android.os.RemoteException;
 
 import java.util.ArrayList;
 
-import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.Utils;
 import xtr.keymapper.dpad.DpadHandler;
+import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.server.IInputInterface;
-import xtr.keymapper.server.RemoteServiceHelper;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyHandler;
 
@@ -84,25 +83,11 @@ public class KeyEventHandler {
 
     public void handleEvent(String line) throws RemoteException {
         // line: EV_KEY KEY_X DOWN
-        String[] input_event = line.split("\\s+");
-        if (!input_event[1].equals("EV_KEY")) return;
 
-        KeyEvent event = new KeyEvent();
-        event.code = input_event[2];
-        if (!event.code.contains("KEY_")) return;
+        KeyEvent event = getEvent(line);
+        if(event == null) return;
 
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
-
-        switch (input_event[3]) {
-            case "UP":
-                event.action = UP;
-                break;
-            case "DOWN":
-                event.action = DOWN;
-                break;
-            default:
-                return;
-        }
 
         int i = Utils.obtainIndex(event.code);
         if (i > 0) { // A-Z and 0-9 keys
@@ -131,6 +116,27 @@ public class KeyEventHandler {
             swipeKeyHandler.handleEvent(event, mInput, eventHandler, pidProvider, keymapConfig.swipeDelayMs);
     }
 
+    private KeyEvent getEvent(String line){
+        KeyEvent event = new KeyEvent();
+        // line: EV_KEY KEY_X DOWN
+        String[] input_event = line.split("\\s+");
+        if (!input_event[1].equals("EV_KEY")) return null;
+        event.code = input_event[2];
+        if (!event.code.contains("KEY_")) return null;
+
+        switch (input_event[3]) {
+            case "UP":
+                event.action = UP;
+                break;
+            case "DOWN":
+                event.action = DOWN;
+                break;
+            default:
+                return null;
+        }
+        return event;
+    }
+
     private void handleKeyboardShortcuts(int keycode) throws RemoteException {
         final String modifier = ctrlKeyPressed ? KEY_CTRL : KEY_ALT;
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
@@ -141,11 +147,19 @@ public class KeyEventHandler {
 
         if (keymapConfig.pauseResumeShortcutKeyModifier.equals(modifier))
             if (keycode == keymapConfig.pauseResumeShortcutKey)
-                RemoteServiceHelper.pauseKeymap();
+                mInput.pauseResumeKeymap();
 
         if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
             if (keycode == keymapConfig.switchProfileShortcutKey)
                 mInput.reloadKeymap();
+    }
+
+    public void handleKeyboardShortcutEvent(String line) throws RemoteException {
+        KeyEvent event = getEvent(line);
+        if (event != null) {
+            int i = Utils.obtainIndex(event.code);
+            if (event.action == DOWN) handleKeyboardShortcuts(i);
+        }
     }
 
     private void handleMouseAim(int keycode, int action) {
