@@ -21,6 +21,8 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import androidx.annotation.UiThread;
+
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.editor.EditorActivity;
@@ -224,8 +226,28 @@ public class TouchPointer extends Service {
         public KeymapConfig requestKeymapConfig() {
             return new KeymapConfig(TouchPointer.this);
         }
-    };
 
+        @UiThread
+        @Override
+        public void switchProfiles() { mHandler.post(() -> {
+
+            KeymapProfiles keymapProfiles = new KeymapProfiles(TouchPointer.this);
+            KeymapProfile keymapProfile = keymapProfiles.getProfile(selectedProfile);
+            String application = keymapProfile.packageName;
+
+            if (keymapProfiles.getAllProfilesForApp(application).size() == 1) {
+                Toast.makeText(TouchPointer.this, "Only one profile saved for " + application, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            ProfileSelector.select(TouchPointer.this, profile -> {
+                TouchPointer.this.selectedProfile = profile;
+                // Reloading profile
+                connectRemoteService(keymapProfiles.getProfile(profile));
+            }, application);
+        });
+        }
+    };
 
     /**
      * This implementation is used to receive callbacks from the remote

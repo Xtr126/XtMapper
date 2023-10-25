@@ -151,7 +151,7 @@ public class KeyEventHandler {
 
         if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
             if (keycode == keymapConfig.switchProfileShortcutKey)
-                mInput.reloadKeymap();
+                mInput.getCallback().switchProfiles();
     }
 
     public void handleKeyboardShortcutEvent(String line) throws RemoteException {

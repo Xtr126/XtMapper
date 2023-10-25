@@ -98,7 +98,6 @@ public class InputService implements IInputInterface {
         }
     }
 
-    @Override
     public void reloadKeymap() {
         try {
             this.keymapProfile = mCallback.requestKeymapProfile();

@@ -17,5 +17,4 @@ public interface IInputInterface {
     IRemoteServiceCallback getCallback();
     void moveCursorX(float x);
     void moveCursorY(float y);
-    void reloadKeymap();
 }
