@@ -148,25 +148,18 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     public void pauseMouse(){
-        if (inputService != null) {
-            if(!isWaylandClient) inputService.setMouseLock(false);
-            inputService.stopEvents = true;
-        }
+        if (inputService != null)
+            if (!inputService.stopEvents) inputService.pauseResumeKeymap();
+    }
+
+    public void resumeMouse(){
+        if (inputService != null)
+            if (inputService.stopEvents) inputService.pauseResumeKeymap();
     }
 
     @Override
     public void reloadKeymap() {
-        if (inputService != null) {
-            inputService.reloadKeymap();
-            if (inputService.getKeymapProfile().disabled) stopServer();
-        }
-    }
-
-    public void resumeMouse(){
-        if (inputService != null) {
-            if(!isWaylandClient) inputService.setMouseLock(true);
-            inputService.stopEvents = false;
-        }
+        if (inputService != null) inputService.reloadKeymap();
     }
 
     static {

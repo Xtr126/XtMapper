@@ -89,6 +89,8 @@ public class KeyEventHandler {
 
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
 
+        if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
+        if (event.code.contains("ALT")) altKeyPressed = event.action == DOWN;
         int i = Utils.obtainIndex(event.code);
         if (i > 0) { // A-Z and 0-9 keys
             if (event.action == DOWN) handleKeyboardShortcuts(i);
@@ -105,8 +107,6 @@ public class KeyEventHandler {
                 if (keymapConfig.keyGraveMouseAim)
                     mInput.getMouseEventHandler().triggerMouseAim();
         }
-        if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
-        if (event.code.contains("ALT")) altKeyPressed = event.action == DOWN;
 
         for (KeymapProfileKey key : mInput.getKeymapProfile().keys)
             if (event.code.equals(key.code))
