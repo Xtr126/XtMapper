@@ -29,7 +29,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
     private final OnItemRemovedListener callback;
 
     /**
-     * Provide a reference to the type of views that you are using (custom ViewHolder)
+     * Provide a reference to the type of views used
      */
     public static class ViewHolder extends RecyclerView.ViewHolder {
 
@@ -79,8 +79,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
     // Replace the contents of a view (invoked by the layout manager)
     @Override
     public void onBindViewHolder(ViewHolder viewHolder, final int position) {
-        // Get element from your dataset at this position and replace the contents of the view
-        // with that element
+        // Get element from dataset at this position and set the contents of the view
         RecyclerData recyclerData = recyclerDataArrayList.get(position);
         viewHolder.binding.switch1.setText(recyclerData.name);
         viewHolder.binding.appIcon.setImageDrawable(recyclerData.icon);
@@ -122,7 +121,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         viewHolder.binding.switch1.setOnCheckedChangeListener((buttonView, isChecked) -> keymapProfiles.setProfileEnabled(recyclerData.name.toString(), isChecked));
     }
 
-    // Return the size of your dataset (invoked by the layout manager)
+    // Return the size of dataset (invoked by the layout manager)
     @Override
     public int getItemCount() {
         return recyclerDataArrayList.size();

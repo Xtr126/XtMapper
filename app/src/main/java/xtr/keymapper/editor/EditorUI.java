@@ -5,7 +5,6 @@ import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
-import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -30,11 +29,11 @@ import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.dpad.Dpad.DpadType;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
-import xtr.keymapper.mouse.MouseAimConfig;
-import xtr.keymapper.mouse.MouseAimSettings;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.keymap.KeymapProfiles;
+import xtr.keymapper.mouse.MouseAimConfig;
+import xtr.keymapper.mouse.MouseAimSettings;
 import xtr.keymapper.server.RemoteServiceHelper;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyView;
@@ -179,7 +178,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         // Save Config
         KeymapProfiles profiles = new KeymapProfiles(context);
-        profiles.saveProfile(profileName, linesToWrite, profile.packageName, profile.disabled);
+        profiles.saveProfile(profileName, linesToWrite, profile.packageName, !profile.disabled);
 
         // Reload keymap if service running
         RemoteServiceHelper.reloadKeymap();
