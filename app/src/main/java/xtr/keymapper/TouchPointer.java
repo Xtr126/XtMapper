@@ -265,38 +265,43 @@ public class TouchPointer extends Service {
 
         @Override
         public void onForegroundActivitiesChanged(String packageName) {
-            if (packageName.equals(lastPackageName)) return;
+            if (packageName.equals(lastPackageName) || cursorView == null) return;
             lastPackageName = packageName;
-
+            cursorView.setVisibility(View.VISIBLE);
+            mWindowManager.removeView(cursorView);
             Context context = TouchPointer.this;
             KeymapProfiles keymapProfiles = new KeymapProfiles(context);
             if (!keymapProfiles.profileExistsWithPackageName(packageName)) {
-                mHandler.post(() ->
+                // No profile found, prompt user to create a new profile
+                mHandler.post(() -> {
                     ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
-                    ProfileSelector.createNewProfileForApp(context, packageName, enabled, profile -> {
-                        TouchPointer.this.selectedProfile = profile;
-                        reloadKeymap();
-                        if (cursorView != null) cursorView.setVisibility(View.VISIBLE);
-                    })));
+                            ProfileSelector.createNewProfileForApp(context, packageName, enabled, profile -> {
+                                TouchPointer.this.selectedProfile = profile;
+                                reloadKeymap();
+                            }));
+                    mWindowManager.addView(cursorView, mParams);
+                });
             } else {
                 // App specific profiles selection dialog
-                mHandler.post(() -> ProfileSelector.select(context, profile -> {
-                    // Reloading profile
-                    TouchPointer.this.selectedProfile = profile;
-                    KeymapProfile keymapProfile = keymapProfiles.getProfile(profile);
-                    if (!keymapProfile.disabled) {
-                        Toast.makeText(TouchPointer.this, "Keymapping enabled for " + packageName, Toast.LENGTH_SHORT).show();
-                        connectRemoteService(keymapProfile);
-                        if (cursorView != null) cursorView.setVisibility(View.VISIBLE);
-                    } else {
-                        try {
-                            mService.pauseMouse();
-                        } catch (RemoteException ignored) {
+                mHandler.post(() -> {
+                    ProfileSelector.select(context, profile -> {
+                        // Reloading profile
+                        TouchPointer.this.selectedProfile = profile;
+                        KeymapProfile keymapProfile = keymapProfiles.getProfile(profile);
+                        if (!keymapProfile.disabled) {
+                            connectRemoteService(keymapProfile);
+                            Toast.makeText(TouchPointer.this, "Keymapping enabled for " + packageName, Toast.LENGTH_SHORT).show();
+                        } else {
+                            try {
+                                mService.pauseMouse();
+                                cursorView.setVisibility(View.GONE);
+                            } catch (RemoteException ignored) {
+                            }
+                            Toast.makeText(TouchPointer.this, "Keymapping disabled for " + packageName, Toast.LENGTH_SHORT).show();
                         }
-                        if (cursorView != null) cursorView.setVisibility(View.GONE);
-                        Toast.makeText(TouchPointer.this, "Keymapping disabled for " + packageName, Toast.LENGTH_SHORT).show();
-                    }
-                }, packageName));
+                    }, packageName);
+                    mWindowManager.addView(cursorView, mParams);
+                });
             }
         }
     };
