@@ -9,34 +9,35 @@
 
 int uinput_fd = -1;
 struct input_event ie {};
-struct uinput_user_dev uinputUserDev {};
 const char* deviceName = "x-virtual-tablet";
 
 void setAbsMinMax(int width, int height) {
-	uinputUserDev.absmin[ABS_X] = 0;
-	uinputUserDev.absmax[ABS_X] = width;
-	uinputUserDev.absfuzz[ABS_X] = 0;
-	uinputUserDev.absflat[ABS_X] = 0;
+	struct uinput_abs_setup uinputAbsSetup {};
 
-	uinputUserDev.absmin[ABS_Y] = 0;
-	uinputUserDev.absmax[ABS_Y] = height;
-	uinputUserDev.absfuzz[ABS_Y] = 0;
-	uinputUserDev.absflat[ABS_Y] = 0;
+	memset(&uinputAbsSetup, 0x00, sizeof(uinputAbsSetup));
+	uinputAbsSetup.code = ABS_X;
+	uinputAbsSetup.absinfo = input_absinfo {0, 0, width, 0 , 0};
+	ioctl(uinput_fd, UI_ABS_SETUP, &uinputAbsSetup);
+
+	uinputAbsSetup.code = ABS_Y;
+	uinputAbsSetup.absinfo = input_absinfo {0, 0, height, 0 , 0};
+	ioctl(uinput_fd, UI_ABS_SETUP, &uinputAbsSetup);
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_xtr_keymapper_server_InputService_initMouseCursor
 (JNIEnv * /*env*/, jobject /*obj*/, jint width, jint height) {
+	struct uinput_setup uinputSetup {};
 	uinput_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
 
 	if (uinput_fd <= 0) return uinput_fd;
 
 	memset(&ie, 0, sizeof(struct input_event));
-	memset(&uinputUserDev, 0x00, sizeof(uinputUserDev));
+	memset(&uinputSetup, 0x00, sizeof(uinputSetup));
 
-	strncpy(uinputUserDev.name, deviceName, strlen(deviceName));
-	uinputUserDev.id.version = 1;
-	uinputUserDev.id.bustype = BUS_VIRTUAL;
+	strncpy(uinputSetup.name, deviceName, strlen(deviceName));
+	uinputSetup.id.version = 1;
+	uinputSetup.id.bustype = BUS_VIRTUAL;
 	setAbsMinMax(width, height);
 
 	ioctl(uinput_fd, UI_SET_EVBIT, EV_ABS);
@@ -52,7 +53,7 @@ Java_xtr_keymapper_server_InputService_initMouseCursor
 	ioctl(uinput_fd, UI_SET_KEYBIT, BTN_RIGHT);
 	ioctl(uinput_fd, UI_SET_KEYBIT, BTN_WHEEL);
 
-	write(uinput_fd, &uinputUserDev, sizeof(uinputUserDev));
+	ioctl(uinput_fd, UI_DEV_SETUP, &uinputSetup);
 
 	if(ioctl(uinput_fd, UI_DEV_CREATE)) {
 		close(uinput_fd);
