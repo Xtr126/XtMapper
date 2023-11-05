@@ -26,6 +26,7 @@ public class Input {
     private long lastTouchDown;
     private final SmoothScroll scrollHandler = new SmoothScroll();
     private Handler mHandler;
+    public int pointerCount;
 
     private void initPointers() {
         for (int i = 0; i < PointersState.MAX_POINTERS; ++i) {
@@ -58,7 +59,7 @@ public class Input {
         pointer.setPressure(pressure);
         pointer.setUp(action == MotionEvent.ACTION_UP);
 
-        int pointerCount = pointersState.update(pointerProperties, pointerCoords);
+        pointerCount = pointersState.update(pointerProperties, pointerCoords);
 
         if (pointerCount == 1) {
             if (action == MotionEvent.ACTION_DOWN) {

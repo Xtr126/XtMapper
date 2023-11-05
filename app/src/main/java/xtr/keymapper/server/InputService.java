@@ -21,6 +21,7 @@ public class InputService implements IInputInterface {
     private final IRemoteServiceCallback mCallback;
     final int supportsUinput;
     boolean stopEvents = false;
+    boolean pointerUp = false;
     private final boolean isWaylandClient;
 
     public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight, boolean isWaylandClient){
@@ -40,9 +41,11 @@ public class InputService implements IInputInterface {
     public void injectEvent(float x, float y, int action, int pointerId) {
         switch (action) {
             case UP:
+		pointerUp = true;
                 input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
                 break;
             case DOWN:
+		pointerUp = false;
                 input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
                 break;
             case MOVE:
@@ -89,6 +92,8 @@ public class InputService implements IInputInterface {
             mCallback.cursorSetX((int) x);
         } catch (RemoteException ignored) {
         }
+        if (input.pointerCount < 1) cursorSetX((int) x);
+	else if (input.pointerCount == 1 && pointerUp) cursorSetX((int) x);
     }
 
     public void moveCursorY(float y) {
@@ -96,6 +101,8 @@ public class InputService implements IInputInterface {
             mCallback.cursorSetY((int) y);
         } catch (RemoteException ignored) {
         }
+        if (input.pointerCount < 1) cursorSetY((int) y);
+	else if (input.pointerCount == 1 && pointerUp) cursorSetY((int) y);
     }
 
     public void reloadKeymap() {
