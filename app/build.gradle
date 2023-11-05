@@ -15,7 +15,7 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
          ndk {
-            abiFilters 'x86_64', 'x86', 'arm64-v8a'
+            abiFilter 'x86_64'
          }
         aaptOptions {
             ignoreAssetsPattern ''

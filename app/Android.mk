@@ -19,3 +19,9 @@ include $(CLEAR_VARS)
 LOCAL_MODULE    := mouse_cursor
 LOCAL_SRC_FILES := $(JNI_SRC_PATH)/mouse_cursor.cpp
 include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := touchpad_direct
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/touchpad_direct.cpp
+include $(BUILD_SHARED_LIBRARY)

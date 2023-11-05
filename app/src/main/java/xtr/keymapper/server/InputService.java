@@ -120,11 +120,14 @@ public class InputService implements IInputInterface {
     public native int openDevice(String device);
     public native void stopMouse();
 
-    // mouse cursor created with uinput in MouseCursor.cpp
-    public native int initMouseCursor(int width, int height);
+    // mouse cursor created with uinput in mouse_cursor.cpp
+    private native int initMouseCursor(int width, int height);
     public native void destroyUinputDev();
 
     public native void setMouseLock(boolean lock);
+
+    // touchpad_direct.cpp
+    private native void startTouchpadDirect();
 
     public void sendWaylandMouseEvent(String line) {
         String[] input_event = line.split("\\s+");
