@@ -156,7 +156,8 @@ public class MouseEventHandler {
     }
 
     public void stop() {
-        mouseAimHandler = null;
         scrollZoomHandler = null;
+        pinchZoom = null;
+        mouseAimHandler = null;
     }
 }

@@ -41,33 +41,21 @@ public class Input {
         }
     }
 
-    static class InjectEvent {
-        float x, y;
-        float pressure = 1.0f;
-        int pointerId;
-
-        InjectEvent(float x, float y, int pointerId) {
-            this.x = x;
-            this.y = y;
-            this.pointerId = pointerId;
-        }
-    }
-
     public Input() {
         initPointers();
     }
 
-    private void injectTouch(int action, InjectEvent event) {
+    public void injectTouch(int action, int pointerId, float pressure, float x, float y) {
         long now = SystemClock.uptimeMillis();
-        Point point = new Point(event.x, event.y);
+        Point point = new Point(x, y);
 
-        int pointerIndex = pointersState.getPointerIndex(event.pointerId);
+        int pointerIndex = pointersState.getPointerIndex(pointerId);
         if (pointerIndex == -1) {
             System.out.println("Too many pointers for touch event");
         }
         Pointer pointer = pointersState.get(pointerIndex);
         pointer.setPoint(point);
-        pointer.setPressure(event.pressure);
+        pointer.setPressure(pressure);
         pointer.setUp(action == MotionEvent.ACTION_UP);
 
         int pointerCount = pointersState.update(pointerProperties, pointerCoords);
@@ -95,12 +83,6 @@ public class Input {
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace(System.out);
         }
-    }
-
-    public void injectTouch(int action, int pointerId, float pressure, float x, float y) {
-        InjectEvent event = new InjectEvent(x, y, pointerId);
-        event.pressure = pressure;
-        injectTouch(action, event);
     }
 
     public void onScrollEvent(float x, float y, int value){
