@@ -267,13 +267,13 @@ public class TouchPointer extends Service {
         public void onForegroundActivitiesChanged(String packageName) {
             if (packageName.equals(lastPackageName) || cursorView == null) return;
             lastPackageName = packageName;
-            cursorView.setVisibility(View.VISIBLE);
             mWindowManager.removeView(cursorView);
             Context context = TouchPointer.this;
             KeymapProfiles keymapProfiles = new KeymapProfiles(context);
             if (!keymapProfiles.profileExistsWithPackageName(packageName)) {
                 // No profile found, prompt user to create a new profile
                 mHandler.post(() -> {
+                    cursorView.setVisibility(View.VISIBLE);
                     ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
                             ProfileSelector.createNewProfileForApp(context, packageName, enabled, profile -> {
                                 TouchPointer.this.selectedProfile = profile;
@@ -284,6 +284,7 @@ public class TouchPointer extends Service {
             } else {
                 // App specific profiles selection dialog
                 mHandler.post(() -> {
+                    cursorView.setVisibility(View.VISIBLE);
                     ProfileSelector.select(context, profile -> {
                         // Reloading profile
                         TouchPointer.this.selectedProfile = profile;
