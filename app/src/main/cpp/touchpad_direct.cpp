@@ -71,6 +71,9 @@ void SetKeyBits(int device_fd, int uinput_fd) {
 			ioctl(uinput_fd, UI_SET_KEYBIT, key_i);
 		}
 	}
+	if(!HasSpecificKey(device_fd, BTN_TOUCH)) {
+		ioctl(uinput_fd, UI_SET_KEYBIT, BTN_TOUCH);
+	}
 }
 
 bool HasEventType(int device_fd, unsigned int type) {
