@@ -14,11 +14,16 @@
 #include <iostream>
 #include <vector>
 #include <thread>
+#include "mouse_cursor.h"
 
 using std::string;
 
 struct input_event ie {};
-const char *deviceName = "x-virtual-touch";
+const char *device_name = "x-virtual-touch";
+
+std::atomic<bool> running;
+
+std::thread looper;
 
 std::vector<string> ListInputDevices() {
     const string input_directory = "/dev/input";
@@ -105,7 +110,7 @@ int SetupUinputDevice(int device_fd) {
 
 	memset(&uinputSetup, 0, sizeof(uinputSetup));
 
-	strncpy(uinputSetup.name, deviceName, strlen(deviceName));
+	strncpy(uinputSetup.name, device_name, strlen(device_name));
 	uinputSetup.id.version = 1;
 	uinputSetup.id.bustype = BUS_VIRTUAL;
 	ioctl(uinput_fd, UI_DEV_SETUP, &uinputSetup);
@@ -127,15 +132,25 @@ int start()
 	for (size_t i = 0; i < evdevNames.size(); i++) {
 		int device_fd = open(evdevNames[i].c_str(), O_RDONLY);
 		if (device_fd < 0) {
-			return 1;
+			perror("opening device");
 		}
 
+		// Print device name
+		char dev_name[24];
+		if(ioctl(device_fd, EVIOCGNAME(sizeof(dev_name) - 1), &dev_name)) {
+
+		}
+		printf("%d %s\n", i, dev_name);
+		// Ignore virtual tablet
+		/*if (strcmp(x_virtual_tablet, dev_name) == 0)
+			continue;*/
 		if(!HasSpecificAbs(device_fd, ABS_X) || !HasSpecificAbs(device_fd, ABS_Y)) {
 			continue;
 		}
 
+		printf("add touch device: %s", evdevNames[i].c_str());
+
 		ioctl(device_fd, EVIOCGRAB, (void *)1);
-		printf("add device: %s\n", evdevNames[i].c_str());
 
 		poll_fds.push_back(pollfd{device_fd, POLLIN, 0});
 		uinput_fds.push_back(SetupUinputDevice(device_fd));
