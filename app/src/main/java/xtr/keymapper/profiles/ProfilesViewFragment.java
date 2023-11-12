@@ -6,14 +6,11 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.fragment.app.Fragment;
-
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.FragmentProfilesViewBinding;
@@ -62,8 +59,10 @@ public class ProfilesViewFragment extends Fragment {
     }
 
     private void setAdapter() {
-        profilesViewAdapter = new ProfilesViewAdapter(getContext(), this::setAdapter);
-        binding.profiles.setAdapter(profilesViewAdapter);
+        if (binding != null) {
+            profilesViewAdapter = new ProfilesViewAdapter(getContext(), this::setAdapter);
+            binding.profiles.setAdapter(profilesViewAdapter);
+        }
     }
 
     @Override
