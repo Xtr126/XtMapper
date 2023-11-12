@@ -6,10 +6,11 @@
 #include <unistd.h>
 #include <cstring>
 #include <cstdio>
+#include "mouse_cursor.h"
 
 int uinput_fd = -1;
 struct input_event ie {};
-const char* deviceName = "x-virtual-tablet";
+const char* device_name = x_virtual_tablet;
 
 void setAbsMinMax(int width, int height) {
 	struct uinput_abs_setup uinputAbsSetup {};
@@ -35,7 +36,7 @@ Java_xtr_keymapper_server_InputService_initMouseCursor
 	memset(&ie, 0, sizeof(struct input_event));
 	memset(&uinputSetup, 0x00, sizeof(uinputSetup));
 
-	strncpy(uinputSetup.name, deviceName, strlen(deviceName));
+	strncpy(uinputSetup.name, device_name, strlen(device_name));
 	uinputSetup.id.version = 1;
 	uinputSetup.id.bustype = BUS_VIRTUAL;
 	setAbsMinMax(width, height);
