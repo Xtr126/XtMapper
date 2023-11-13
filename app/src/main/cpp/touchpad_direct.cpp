@@ -33,9 +33,9 @@ std::vector<string> ListInputDevices() {
     std::vector<string> filenames;
     DIR* directory = opendir(input_directory.c_str());
 
-    struct dirent *entry = NULL;
+    struct dirent *entry;
     while ((entry = readdir(directory))) {
-        if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")) {
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
           filenames.push_back(input_directory + "/" + entry->d_name);
         }
     }
@@ -53,7 +53,7 @@ bool HasSpecificAbs(int device_fd, unsigned int abs) {
 void SetAbsInfoFrom(int device_fd, int uinput_fd) {
 	for(int abs_i = ABS_X; abs_i <= ABS_MAX; abs_i++) {
 		if(HasSpecificAbs(device_fd, abs_i)) {
-			struct input_absinfo absinfo;
+			struct input_absinfo absinfo {};
 			if (ioctl(device_fd, EVIOCGABS(abs_i), &absinfo) == 0) {
 				struct uinput_abs_setup uinputAbsInfo {};
 				memset(&uinputAbsInfo, 0, sizeof(uinputAbsInfo));
@@ -71,6 +71,14 @@ bool HasSpecificKey(int device_fd, unsigned int key) {
   // Get the bit fields of available keys.
   ioctl(device_fd, EVIOCGBIT(EV_KEY, sizeof(bits)), &bits);
   return bits[key/8] & (1 << (key % 8));
+}
+
+bool HasInputProp(int device_fd, unsigned int input_prop) {
+  size_t nchar = INPUT_PROP_MAX/8 + 1;
+  unsigned char bits[nchar];
+  // Get the bit fields of available keys.
+  ioctl(device_fd, EVIOCGPROP(sizeof(bits)), &bits);
+  return bits[input_prop/8] & (1 << (input_prop % 8));
 }
 
 void SetKeyBits(int device_fd, int uinput_fd) {
@@ -101,7 +109,7 @@ void SetEventTypeBits(int device_fd, int uinput_fd) {
 }
 
 int SetupUinputDevice(int device_fd) {
-	struct uinput_setup uinputSetup;
+	struct uinput_setup uinputSetup {};
 	int uinput_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
 
 	if (uinput_fd <= 0) exit(EXIT_FAILURE);
@@ -159,9 +167,9 @@ Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject 
 		// Print device name
 		char dev_name[24];
 		if(ioctl(device_fd, EVIOCGNAME(sizeof(dev_name) - 1), &dev_name)) {
-
+			printf("device: %s\n", dev_name);
 		}
-		printf("device: %s\n", dev_name);
+
 		// Ignore virtual tablet
 		if (strcmp(x_virtual_tablet, dev_name) == 0)
 			continue;
@@ -173,12 +181,15 @@ Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject 
 			continue;
 		}
 
-		printf("add touch device: %s", evdev.c_str());
 
-		ioctl(device_fd, EVIOCGRAB, (void *)1);
+        if(HasInputProp(device_fd, INPUT_PROP_POINTER)) {
+            printf("\n%s has INPUT_PROP_POINTER\n ");
+            printf("add touchpad device: %s\n", evdev.c_str());
+            ioctl(device_fd, EVIOCGRAB, (void *)1);
+            poll_fds.push_back(pollfd{device_fd, POLLIN, 0});
+            uinput_fds.push_back(SetupUinputDevice(device_fd));
+        }
 
-		poll_fds.push_back(pollfd{device_fd, POLLIN, 0});
-		uinput_fds.push_back(SetupUinputDevice(device_fd));
 	}
 
 	if (poll_fds.empty()) return;
