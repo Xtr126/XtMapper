@@ -21,9 +21,12 @@ using std::string;
 struct input_event ie {};
 const char *device_name = "x-virtual-touch";
 
-std::atomic<bool> running;
+std::atomic<bool> running = false;
 
 std::thread looper;
+
+std::vector<pollfd> poll_fds;
+std::vector<int> uinput_fds;
 
 std::vector<string> ListInputDevices() {
     const string input_directory = "/dev/input";
@@ -122,15 +125,33 @@ int SetupUinputDevice(int device_fd) {
 	return uinput_fd;
 }
 
-int start()
+void start()
 {
+	while(running) {
+		if(poll(poll_fds.data(), poll_fds.size(), 1000) <= 0)
+            continue;
+
+		for (size_t i = 0; i < poll_fds.size(); i++)
+			if (poll_fds[i].revents & POLLIN)
+				if (read(poll_fds[i].fd, &ie, sizeof(ie)) == sizeof(struct input_event)){
+                    if (ie.type == EV_KEY) ie.code = BTN_TOUCH;
+                    write(uinput_fds[i], &ie, sizeof(struct input_event));
+				}
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject thiz) {
+	running = true;
+
 	std::vector<string> evdevNames = ListInputDevices();
 
-	std::vector<pollfd> poll_fds;
-	std::vector<int> uinput_fds;
+	poll_fds.clear();
+	uinput_fds.clear();
 
 	for (size_t i = 0; i < evdevNames.size(); i++) {
-		int device_fd = open(evdevNames[i].c_str(), O_RDONLY);
+		int device_fd = open(evdevNames[i].c_str(), O_RDWR);
 		if (device_fd < 0) {
 			perror("opening device");
 		}
@@ -142,8 +163,12 @@ int start()
 		}
 		printf("%d %s\n", i, dev_name);
 		// Ignore virtual tablet
-		/*if (strcmp(x_virtual_tablet, dev_name) == 0)
-			continue;*/
+		if (strcmp(x_virtual_tablet, dev_name) == 0)
+			continue;
+
+		if (strcmp(device_name, dev_name) == 0)
+			return;
+
 		if(!HasSpecificAbs(device_fd, ABS_X) || !HasSpecificAbs(device_fd, ABS_Y)) {
 			continue;
 		}
@@ -156,24 +181,22 @@ int start()
 		uinput_fds.push_back(SetupUinputDevice(device_fd));
 	}
 
-	if (poll_fds.empty()) return 1;
+	if (poll_fds.empty()) return;
 
-	while(true) {
-		poll(poll_fds.data(), poll_fds.size(), -1);
-
-		for (size_t i = 0; i < poll_fds.size(); i++)
-			if (poll_fds[i].revents & POLLIN)
-				if (read(poll_fds[i].fd, &ie, sizeof(ie)) == sizeof(struct input_event)){
-                    if (ie.type == EV_KEY)
-                        ie.code = BTN_TOUCH;
-                    write(uinput_fds[i], &ie, sizeof(struct input_event));
-				}
-	}
+	looper = std::thread(start);
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject thiz) {
-	std::thread looper(start);
-	looper.detach();
+Java_xtr_keymapper_server_InputService_stopTouchpadDirect(JNIEnv *env, jobject thiz) {
+	running = false;
+    for (size_t i = 0; i < poll_fds.size(); i++) {
+        write(poll_fds[i].fd, &ie, sizeof(struct input_event));
+    }
+	for (size_t i = 0; i < poll_fds.size(); i++) {
+		ioctl(uinput_fds[i], UI_DEV_DESTROY);
+		close(uinput_fds[i]);
+		close(poll_fds[i].fd);
+	}
+    looper.join();
 }

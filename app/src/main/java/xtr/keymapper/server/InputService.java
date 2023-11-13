@@ -31,6 +31,9 @@ public class InputService implements IInputInterface {
         this.isWaylandClient = isWaylandClient;
         supportsUinput = initMouseCursor(screenWidth, screenHeight);
 
+        if (keymapConfig.touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
+            startTouchpadDirect();
+
         mouseEventHandler = new MouseEventHandler(this);
         mouseEventHandler.init(screenWidth, screenHeight);
 
@@ -135,6 +138,7 @@ public class InputService implements IInputInterface {
 
     // touchpad_direct.cpp
     private native void startTouchpadDirect();
+    public native void stopTouchpadDirect();
 
     public void sendWaylandMouseEvent(String line) {
         String[] input_event = line.split("\\s+");
