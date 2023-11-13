@@ -150,8 +150,8 @@ Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject 
 	poll_fds.clear();
 	uinput_fds.clear();
 
-	for (size_t i = 0; i < evdevNames.size(); i++) {
-		int device_fd = open(evdevNames[i].c_str(), O_RDWR);
+	for (auto & evdev : evdevNames) {
+		int device_fd = open(evdev.c_str(), O_RDWR);
 		if (device_fd < 0) {
 			perror("opening device");
 		}
@@ -161,7 +161,7 @@ Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject 
 		if(ioctl(device_fd, EVIOCGNAME(sizeof(dev_name) - 1), &dev_name)) {
 
 		}
-		printf("%d %s\n", i, dev_name);
+		printf("device: %s\n", dev_name);
 		// Ignore virtual tablet
 		if (strcmp(x_virtual_tablet, dev_name) == 0)
 			continue;
@@ -173,7 +173,7 @@ Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject 
 			continue;
 		}
 
-		printf("add touch device: %s", evdevNames[i].c_str());
+		printf("add touch device: %s", evdev.c_str());
 
 		ioctl(device_fd, EVIOCGRAB, (void *)1);
 
@@ -190,8 +190,8 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_xtr_keymapper_server_InputService_stopTouchpadDirect(JNIEnv *env, jobject thiz) {
 	running = false;
-    for (size_t i = 0; i < poll_fds.size(); i++) {
-        write(poll_fds[i].fd, &ie, sizeof(struct input_event));
+    for (auto & poll_fd : poll_fds) {
+        write(poll_fd.fd, &ie, sizeof(struct input_event));
     }
 	for (size_t i = 0; i < poll_fds.size(); i++) {
 		ioctl(uinput_fds[i], UI_DEV_DESTROY);
