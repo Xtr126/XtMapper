@@ -88,7 +88,7 @@ public class RemoteService extends IRemoteService.Stub {
         if (isWaylandClient) return true;
         if( !currentDevice.equals(evdev) )
             if (input_event[1].equals("EV_REL")) {
-                System.out.println("add device: " + evdev);
+                System.out.println("add mouse device: " + evdev);
                 currentDevice = evdev;
             }
         return true;

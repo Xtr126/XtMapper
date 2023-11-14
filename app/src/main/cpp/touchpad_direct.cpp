@@ -158,6 +158,7 @@ Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject 
 	poll_fds.clear();
 	uinput_fds.clear();
 
+    printf("I: Searching for touchpad devices...\n");
 	for (auto & evdev : evdevNames) {
 		int device_fd = open(evdev.c_str(), O_RDWR);
 		if (device_fd < 0) {
@@ -170,7 +171,14 @@ Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject 
 			printf("device: %s\n", dev_name);
 		}
 
-		// Ignore virtual tablet
+        if (HasInputProp(device_fd, INPUT_PROP_POINTER)) {
+            printf("has INPUT_PROP_POINTER", dev_name);
+        } else {
+            close(device_fd);
+            continue;
+        }
+
+        // Ignore virtual tablet
 		if (strcmp(x_virtual_tablet, dev_name) == 0)
 			continue;
 
@@ -181,17 +189,13 @@ Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject 
 			continue;
 		}
 
+        printf(" adding touchpad device...\n", evdev.c_str());
 
-        if(HasInputProp(device_fd, INPUT_PROP_POINTER)) {
-            printf("\n%s has INPUT_PROP_POINTER\n ");
-            printf("add touchpad device: %s\n", evdev.c_str());
-            ioctl(device_fd, EVIOCGRAB, (void *)1);
-            poll_fds.push_back(pollfd{device_fd, POLLIN, 0});
-            uinput_fds.push_back(SetupUinputDevice(device_fd));
-        }
+        ioctl(device_fd, EVIOCGRAB, (void *)1);
 
-	}
-
+        poll_fds.push_back(pollfd{device_fd, POLLIN, 0});
+        uinput_fds.push_back(SetupUinputDevice(device_fd));
+    }
 	if (poll_fds.empty()) return;
 
 	looper = std::thread(start);
