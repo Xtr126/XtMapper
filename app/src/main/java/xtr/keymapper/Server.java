@@ -21,6 +21,7 @@ public class Server {
     public File script;
     public MainActivity.Callback mCallback;
 
+
     private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
         final String className = RemoteService.class.getName();
 

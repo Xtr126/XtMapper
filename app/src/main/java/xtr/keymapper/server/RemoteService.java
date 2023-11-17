@@ -23,7 +23,12 @@ public class RemoteService extends IRemoteService.Stub {
     private boolean isWaylandClient = false;
     private ActivityObserverService activityObserverService;
 
+    public RemoteService() {
+
+    }
+
     public static void main(String[] args) {
+        loadLibraries();
         Looper.prepare();
         new RemoteService(args);
         Looper.loop();
@@ -34,7 +39,6 @@ public class RemoteService extends IRemoteService.Stub {
         Log.i("XtMapper", "starting server...");
         try {
             ServiceManager.addService("xtmapper", this);
-
             System.out.println("Waiting for overlay...");
             for (String arg: args) {
                 if (arg.equals("--wayland-client")) {
@@ -44,7 +48,8 @@ public class RemoteService extends IRemoteService.Stub {
             }
             start_getevent();
         } catch (Exception e) {
-            e.printStackTrace();
+            e.printStackTrace(System.out);
+            System.exit(1);
         }
     }
 
@@ -163,7 +168,7 @@ public class RemoteService extends IRemoteService.Stub {
         if (inputService != null) inputService.reloadKeymap();
     }
 
-    static {
+    public static void loadLibraries() {
         System.loadLibrary("mouse_read");
         System.loadLibrary("mouse_cursor");
         System.loadLibrary("touchpad_direct");
