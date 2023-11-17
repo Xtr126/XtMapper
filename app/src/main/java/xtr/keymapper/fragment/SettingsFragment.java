@@ -79,6 +79,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
             return false;
         });
         mouseAimActions();
+        loadTouchpadInputSettings();
         setDefaultVisibilty();
         binding.sliders.setVisibility(View.VISIBLE);
     }
@@ -137,6 +138,13 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         ((MaterialAutoCompleteTextView)binding.mouseAimAction).setSimpleItems(mouseAimActions);
     }
 
+    private void loadTouchpadInputSettings() {
+        binding.touchpadInputMode.setText(keymapConfig.touchpadInputMode);
+
+        final String[] touchpadInputModes = {KeymapConfig.TOUCHPAD_DIRECT, KeymapConfig.TOUCHPAD_RELATIVE, KeymapConfig.TOUCHPAD_DISABLED};
+        ((MaterialAutoCompleteTextView)binding.touchpadInputMode).setSimpleItems(touchpadInputModes);
+    }
+
     public boolean onKey(View view, int keyCode, KeyEvent event) {
         String key = String.valueOf(event.getDisplayLabel());
         if ( key.matches("[a-zA-Z0-9]+" )) ((EditText) view).setText(key);
@@ -177,6 +185,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
     public void onDestroyView() {
         saveKeyboardShortcuts();
         keymapConfig.mouseAimToggle = binding.mouseAimAction.getText().toString().equals(KeymapConfig.TOGGLE);
+        keymapConfig.touchpadInputMode = binding.touchpadInputMode.getText().toString();
 
         keymapConfig.mouseSensitivity = binding.sliderMouse.getValue();
         keymapConfig.scrollSpeed = binding.sliderScrollSpeed.getValue();

@@ -22,12 +22,12 @@ public class KeymapConfig implements Parcelable {
 
     public static final String KEY_CTRL = "Ctrl", KEY_ALT = "Alt";
     public static final String TOGGLE = "Toggle", HOLD = "Hold";
-    public static final int TOUCHPAD_DIRECT = 0;
-    public static final int TOUCHPAD_RELATIVE = 1;
-    public static final int TOUCHPAD_DISABLED = 2;
+    public static final String TOUCHPAD_DIRECT = "Direct";
+    public static final String TOUCHPAD_RELATIVE = "Relative";
+    public static final String TOUCHPAD_DISABLED = "Disabled";
     public int mouseAimShortcutKey;
     public boolean mouseAimToggle;
-    public int touchpadInputMode;
+    public String touchpadInputMode;
 
     public KeymapConfig(Context context) {
         sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
@@ -64,7 +64,7 @@ public class KeymapConfig implements Parcelable {
         mouseAimShortcutKey = in.readInt();
         mouseAimToggle = in.readByte() != 0;
         disableAutoProfiling = in.readByte() != 0;
-        touchpadInputMode = in.readInt();
+        touchpadInputMode = in.readString();
     }
 
     public static final Creator<KeymapConfig> CREATOR = new Creator<>() {
@@ -102,7 +102,7 @@ public class KeymapConfig implements Parcelable {
         swipeDelayMs = sharedPref.getInt("swipe_delay_ms", 0);
         dpadRadiusMultiplier = sharedPref.getFloat("dpad_radius", 1f);
 
-        touchpadInputMode = sharedPref.getInt("touchpad_input_mode", TOUCHPAD_RELATIVE);
+        touchpadInputMode = sharedPref.getString("touchpad_input_mode", TOUCHPAD_RELATIVE);
     }
 
     public void applySharedPrefs() {
@@ -122,8 +122,8 @@ public class KeymapConfig implements Parcelable {
                 .putString("pause_resume_shortcut_modifier", pauseResumeShortcutKeyModifier)
                 .putString("launch_editor_shortcut_modifier", launchEditorShortcutKeyModifier)
                 .putString("switch_profile_shortcut_modifier", switchProfileShortcutKeyModifier)
+                .putString("touchpad_input_mode", touchpadInputMode)
                 .putInt("swipe_delay_ms", swipeDelayMs)
-                .putInt("touchpad_input_mode", touchpadInputMode)
                 .apply();
     }
 
@@ -166,6 +166,6 @@ public class KeymapConfig implements Parcelable {
         dest.writeInt(mouseAimShortcutKey);
         dest.writeByte((byte) (mouseAimToggle ? 1 : 0));
         dest.writeByte((byte) (disableAutoProfiling ? 1 : 0));
-        dest.writeInt(touchpadInputMode);
+        dest.writeString(touchpadInputMode);
     }
 }
