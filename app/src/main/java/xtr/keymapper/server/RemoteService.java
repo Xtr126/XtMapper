@@ -94,6 +94,7 @@ public class RemoteService extends IRemoteService.Stub {
         if( !currentDevice.equals(evdev) )
             if (input_event[1].equals("EV_REL")) {
                 System.out.println("add mouse device: " + evdev);
+                if (inputService != null) inputService.openDevice(evdev);
                 currentDevice = evdev;
             }
         return true;

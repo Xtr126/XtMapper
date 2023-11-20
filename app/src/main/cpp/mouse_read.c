@@ -18,10 +18,9 @@ typedef struct input_service_context {
     pthread_mutex_t lock;
     int done;
     int mouse_lock;
+    int mouse_fd;
 } serviceContext;
 serviceContext g_ctx;
-
-int mouse_fd;
 
 /*
  * processing one time initialization:
@@ -64,6 +63,7 @@ void* send_mouse_events(void* context) {
     // get inputService sendMouseEvent function
     jmethodID mouseEvent = (*env)->GetMethodID(env, pctx->inputServiceClz, "sendMouseEvent", "(II)V");
 
+    int mouse_fd = pctx->mouse_fd;
     int mouse_lock = 1;
     ioctl(mouse_fd, EVIOCGRAB, (void *)mouse_lock);
 
@@ -120,14 +120,14 @@ void startMouseThread(JNIEnv *env, jobject thiz) {
 JNIEXPORT jint JNICALL
 Java_xtr_keymapper_server_InputService_openDevice(JNIEnv *env, jobject thiz, jstring device) {
     const char *evdev = (*env)->GetStringUTFChars(env, device, NULL);
-
-    if ((mouse_fd = open(evdev, O_RDONLY)) == -1) {
+    
+    if ((g_ctx.mouse_fd = open(evdev, O_RDONLY)) == -1) {
         perror("opening device");
     } else {
         startMouseThread(env, thiz);
     }
     (*env)->ReleaseStringUTFChars(env, device, evdev);
-    return mouse_fd;
+    return g_ctx.mouse_fd;
 }
 
 /*
@@ -152,7 +152,7 @@ Java_xtr_keymapper_server_InputService_stopMouse(JNIEnv *env, jobject thiz) {
     (*env)->DeleteGlobalRef(env, g_ctx.inputServiceObj);
     g_ctx.inputServiceObj = NULL;
     g_ctx.inputServiceClz = NULL;
-}
+    }
 
 JNIEXPORT void JNICALL
 Java_xtr_keymapper_server_InputService_setMouseLock(JNIEnv *env, jobject thiz, jboolean lock) {
