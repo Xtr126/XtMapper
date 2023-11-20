@@ -119,7 +119,7 @@ public class RemoteService extends IRemoteService.Stub {
             inputService.stopEvents = true;
             inputService.stop();
             inputService.stopMouse();
-            inputService.stopTouchpadDirect();
+            inputService.stopTouchpad();
             inputService.destroyUinputDev();
             inputService = null;
         }
@@ -172,6 +172,7 @@ public class RemoteService extends IRemoteService.Stub {
         System.loadLibrary("mouse_read");
         System.loadLibrary("mouse_cursor");
         System.loadLibrary("touchpad_direct");
+        System.loadLibrary("touchpad_relative");
     }
 
     public static IRemoteService getInstance(){

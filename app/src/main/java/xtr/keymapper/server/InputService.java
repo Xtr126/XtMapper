@@ -23,6 +23,7 @@ public class InputService implements IInputInterface {
     boolean stopEvents = false;
     boolean pointerUp = false;
     private final boolean isWaylandClient;
+    private final String touchpadInputMode;
 
     public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight, boolean isWaylandClient){
         this.keymapProfile = profile;
@@ -31,8 +32,11 @@ public class InputService implements IInputInterface {
         this.isWaylandClient = isWaylandClient;
         supportsUinput = initMouseCursor(screenWidth, screenHeight);
 
-        if (keymapConfig.touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
+        this.touchpadInputMode = keymapConfig.touchpadInputMode;
+        if (touchpadInputMode.equals(KeymapConfig.TOUCHPAD_DIRECT))
             startTouchpadDirect();
+        else if (touchpadInputMode.equals(KeymapConfig.TOUCHPAD_RELATIVE))
+            startTouchpadRelative();
 
         mouseEventHandler = new MouseEventHandler(this);
         mouseEventHandler.init(screenWidth, screenHeight);
@@ -125,6 +129,13 @@ public class InputService implements IInputInterface {
         mouseEventHandler.stop();
     }
 
+    public void stopTouchpad() {
+        if (touchpadInputMode.equals(KeymapConfig.TOUCHPAD_DIRECT))
+            stopTouchpadDirect();
+        else if (touchpadInputMode.equals(KeymapConfig.TOUCHPAD_RELATIVE))
+            stopTouchpadRelative();
+    }
+
     public native void cursorSetX(int x);
     public native void cursorSetY(int y);
     public native int openDevice(String device);
@@ -139,6 +150,16 @@ public class InputService implements IInputInterface {
     // touchpad_direct.cpp
     private native void startTouchpadDirect();
     public native void stopTouchpadDirect();
+
+    private native void startTouchpadRelative();
+    public native void stopTouchpadRelative();
+
+    /*
+     * Called from native code to send mouse event to client
+     */
+    public void sendMouseEvent(int code, int value) {
+        if (!stopEvents) mouseEventHandler.handleEvent(code, value);
+    }
 
     public void sendWaylandMouseEvent(String line) {
         String[] input_event = line.split("\\s+");
@@ -168,12 +189,6 @@ public class InputService implements IInputInterface {
                     mouseEventHandler.handleEvent(REL_Y, value);
                 break;
         }
-    }
-    /*
-     * Called from native code to send mouse event to client
-     */
-    public void sendMouseEvent(int code, int value) {
-        if (!stopEvents) mouseEventHandler.handleEvent(code, value);
     }
 
 }

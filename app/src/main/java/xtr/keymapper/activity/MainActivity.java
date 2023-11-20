@@ -33,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     public ActivityMainBinding binding;
     private Intent intent;
     private ColorStateList defaultTint;
+    private boolean stopped = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startPointer(){
+        stopped = false;
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
             bindService(intent, connection, Context.BIND_AUTO_CREATE);
@@ -91,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void stopPointer(){
+        stopped = false;
         unbindTouchPointer();
         stopService(intent);
         setButtonState(true);
@@ -136,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unbindTouchPointer();
+        if (!stopped) unbindTouchPointer();
     }
 
     public interface Callback {
@@ -163,7 +166,6 @@ public class MainActivity extends AppCompatActivity {
         public void stopPointer() {
             MainActivity.this.stopPointer();
         }
-
 
         @Override
         public void alertRootAccessNotFound() {

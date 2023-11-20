@@ -22,6 +22,20 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 
+LOCAL_MODULE    := evdev_common
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/evdev_common.cpp
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+
 LOCAL_MODULE    := touchpad_direct
 LOCAL_SRC_FILES := $(JNI_SRC_PATH)/touchpad_direct.cpp
+LOCAL_SHARED_LIBRARIES := evdev_common
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := touchpad_relative
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/touchpad_relative.cpp
+LOCAL_SHARED_LIBRARIES := evdev_common
 include $(BUILD_SHARED_LIBRARY)
