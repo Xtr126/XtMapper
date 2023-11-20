@@ -61,6 +61,7 @@ int SetupUinputDevice() {
 
 void start() {
 	signed int last_absX, last_absY;
+	bool touch_down = false;
 	struct input_event event {}, ie {};
 	while(true) {
 		poll(poll_fds.data(), poll_fds.size(), -1);
@@ -70,7 +71,7 @@ void start() {
 				if (read(poll_fds[i].fd, &event, sizeof(event)) == sizeof(struct input_event)){
                     switch (event.code) {
 						case ABS_X:
-							if (event.value <= 1) break;
+							if (!touch_down || event.value <= 1) break;
 							ie.type = EV_REL;
 							ie.code = REL_X;
 							ie.value = event.value - last_absX;
@@ -79,7 +80,7 @@ void start() {
 						break;
 
 						case ABS_Y:
-							if (event.value <= 1) break;
+							if (!touch_down || event.value <= 1) break;
 							ie.type = EV_REL;
 							ie.code = REL_Y;
 							ie.value = event.value - last_absY;
@@ -91,6 +92,11 @@ void start() {
 						case BTN_RIGHT:
 						case BTN_MIDDLE:
 							write(uinput_fds[i], &event, sizeof(event));
+						break;
+
+						case BTN_TOUCH:
+							touch_down = event.value == 1;
+							if (touch_down) printf("x %d\n", event.value);
 						break;
 					}
 					ie = input_event{0, 0, EV_SYN, SYN_REPORT, 0};
