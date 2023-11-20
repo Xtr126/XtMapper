@@ -65,7 +65,7 @@ void* send_mouse_events(void* context) {
 
     int mouse_fd = pctx->mouse_fd;
     int mouse_lock = 1;
-    ioctl(mouse_fd, EVIOCGRAB, (void *)mouse_lock);
+    ioctl(mouse_fd, EVIOCGRAB, mouse_lock);
 
     struct input_event ie;
     while (read(mouse_fd, &ie, sizeof(struct input_event))) {
@@ -77,7 +77,7 @@ void* send_mouse_events(void* context) {
 
         if (pctx->mouse_lock != mouse_lock) {
             mouse_lock = pctx->mouse_lock;
-            ioctl(mouse_fd, EVIOCGRAB, (void *)mouse_lock);
+            ioctl(mouse_fd, EVIOCGRAB, mouse_lock);
         }
         pthread_mutex_unlock(&pctx->lock);
         if (done) {
