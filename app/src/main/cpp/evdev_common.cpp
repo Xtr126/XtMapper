@@ -24,9 +24,8 @@ std::vector<string> ListInputDevices() {
 
     struct dirent *entry;
     while ((entry = readdir(directory))) {
-        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+        if (entry->d_name[0] == 'e') // is eventX
           filenames.push_back(input_directory + "/" + entry->d_name);
-        }
     }
   return filenames;
 }
@@ -51,22 +50,22 @@ std::vector<int> scanTouchpadDevices() {
         }
 
         if(!HasSpecificAbs(device_fd, ABS_X) || !HasSpecificAbs(device_fd, ABS_Y)) {
-            printf("%s does not have ABS_X or ABS_Y events\n", dev_name);
-            printf("%s: Not a touch device\n", dev_name);
+            printf("%s: ABS_X or ABS_Y events not found\n", dev_name);
+            printf("Not a touch device\n");
             close(device_fd);
             continue;
         }
 
         if (!HasInputProp(device_fd, INPUT_PROP_POINTER)) {
-            printf("%s does not have INPUT_PROP_POINTER\n", dev_name);
-            printf("%s: Not a touchpad device\n", dev_name);
+            printf("%s: INPUT_PROP_POINTER not set\n", dev_name);
+            printf("Not a touchpad device\n");
             close(device_fd);
             continue;
         }
 
 
         // Check for virtual devices
-        if (x_virtual_tablet == dev_name || x_virtual_mouse == dev_name) {
+        if (strcmp(x_virtual_tablet, dev_name) == 0 || strcmp(x_virtual_mouse, dev_name) == 0) {
             printf("skipping %s\n", dev_name);
             close(device_fd);
             continue;
@@ -76,7 +75,7 @@ std::vector<int> scanTouchpadDevices() {
             return touchpadDeviceFds;
         }
 
-        printf(" adding touchpad device...\n", evdev.c_str());
+        printf("I: Add touchpad device: %s %s\n", dev_name, evdev.c_str());
         ioctl(device_fd, EVIOCGRAB, (void *)1);
 
         touchpadDeviceFds.push_back(device_fd);
