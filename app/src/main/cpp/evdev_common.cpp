@@ -50,7 +50,7 @@ std::vector<int> scanTouchpadDevices() {
         }
 
         if(!HasSpecificAbs(device_fd, ABS_X) || !HasSpecificAbs(device_fd, ABS_Y)) {
-            printf("%s: ABS_X or ABS_Y events not found\n", dev_name);
+            printf("%s: no ABS_X or ABS_Y events found\n", dev_name);
             printf("Not a touch device\n");
             close(device_fd);
             continue;
@@ -58,9 +58,12 @@ std::vector<int> scanTouchpadDevices() {
 
         if (!HasInputProp(device_fd, INPUT_PROP_POINTER)) {
             printf("%s: INPUT_PROP_POINTER not set\n", dev_name);
-            printf("Not a touchpad device\n");
-            close(device_fd);
-            continue;
+            if (!HasSpecificKey(device_fd, BTN_MOUSE)) {
+                printf("BTN_MOUSE not found\n");
+                printf("Not a touchpad device\n");
+                close(device_fd);
+                continue;
+            }
         }
 
 
