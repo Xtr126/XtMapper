@@ -65,12 +65,10 @@ XtMapper ensures a stable and reliable performance across most Android-x86 syste
 ## Development
 
 ### Build
-- Run `./gradlew assembleDebug` at the base directory of the project 
+- Run `./gradlew assembleDebug` or `./gradlew.bat assembleDebug` at the base directory of the project 
 
-If you want to contribute code, please base your commits on the latest dev branch.  
-
-- Touch emulation is handled by TouchPointer.java and Input.java.  
-- InputService.java runs separately from the app as an elevated java process using app_process and adb shell/root. 
+- Touch emulation is handled by InputService.java and Input.java.  
+- RemoteService.java runs separately from the app as an elevated java process using app_process and adb shell/root. 
 
 ## Help and support
 Feel free to file an [issue](https://github.com/Xtr126/XtMapper/issues).  
