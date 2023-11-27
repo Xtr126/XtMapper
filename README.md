@@ -22,10 +22,9 @@
 
 ## About
 
-
 Introducing XtMapper, the ultimate keymapper for Android on PC gaming designed to revolutionize your gaming experience with unparalleled features that set it apart from the rest. It offers a comprehensive set of features unmatched by other keymapper available.
 
-Unlike other keymappers that often inject ads or having users to pay, XtMapper is committed to providing a clean and user-friendly experience. With its extensive feature set, user-friendly interface, and commitment to it's userbase, XtMapper stands as the choice for Android-x86 gaming enthusiasts. 
+Unlike other keymappers that often inject ads or having users to pay, XtMapper is committed to providing a clean and user-friendly experience. With its extensive feature set, user-friendly interface, and commitment to it's userbase, XtMapper stands as the keymapper of choice for Android-x86 gaming enthusiasts. 
 
 It is free and open-source software boasting a comprehensive array of functionalities that cater to Android-x86 users diverse needs for mouse/keyboard/touchpad input, making it a standout choice among keymapping applications that usually only target mobile phone hardware.
 
@@ -58,7 +57,7 @@ Automatic profile switching: Automatically switch between keymapper profiles bas
 
 Open-source development: Contribute to the ongoing development of XtMapper and benefit from its open-source nature.
 
-XtMapper ensures a stable and reliable performance across most Android-x86 systems as long as it is Android 9 or newer. Older Android versions are not supported.
+XtMapper ensures a stable and reliable experience across most Android-x86 systems as long as it is Android 9 or newer. Older Android versions are not supported.
 
 [Video Demonstration (outdated)](https://www.youtube.com/watch?v=iK2OLMXRMTs)
 

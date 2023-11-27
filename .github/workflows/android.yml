@@ -2,9 +2,9 @@ name: Build APK
 
 on:
   pull_request:
-    branches: [ "dev" ]
   push:
-    branches: [ "main", "dev" ]
+    paths-ignore:
+      - 'README.md'
   workflow_dispatch:
 
 jobs:
