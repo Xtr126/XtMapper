@@ -59,8 +59,6 @@ Open-source development: Contribute to the ongoing development of XtMapper and b
 
 XtMapper ensures a stable and reliable experience across most Android-x86 systems as long as it is Android 9 or newer. Older Android versions are not supported.
 
-[Video Demonstration (outdated)](https://www.youtube.com/watch?v=iK2OLMXRMTs)
-
 ## Development
 
 ### Build
@@ -80,6 +78,7 @@ Telegram: https://t.me/blissx86
 Due to how XtMapper works by reading input events directly from the kernel, there are certain difficulties in implementing support for android containers. 
 An experimental solution was developed: https://github.com/Xtr126/wayland-getevent 
 It is mostly a "hack" that we have to rely on due to how wayland/waydroid works.  
+https://youtube.com/watch?v=yvZD2E7kgG0
 
 ## Credits
 Open source libraries used:
