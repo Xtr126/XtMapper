@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,24 +17,21 @@ import java.util.List;
 
 import xtr.keymapper.databinding.AppViewBinding;
 import xtr.keymapper.databinding.FragmentProfilesAppsBinding;
-import xtr.keymapper.keymap.KeymapProfiles;
 
 public class ProfilesApps {
-    public String packageName;
     public FragmentProfilesAppsBinding binding;
     public final View view;
 
-    public ProfilesApps(Context context, String profileName){
-        this.packageName  = new KeymapProfiles(context).getProfile(profileName).packageName;
+    private ProfileSelector.OnAppSelectedListener mListener;
 
+
+    public ProfilesApps(Context context){
         view = createView(LayoutInflater.from(context));
         onViewCreated(view);
     }
 
-    public ProfilesApps(Context context){
-        this.packageName = null;
-        view = createView(LayoutInflater.from(context));
-        onViewCreated(view);
+    public void setListener(ProfileSelector.OnAppSelectedListener mListener) {
+        this.mListener = mListener;
     }
 
     public View createView(@NonNull LayoutInflater inflater) {
@@ -58,14 +54,8 @@ public class ProfilesApps {
     public class AppsGridAdapter extends RecyclerView.Adapter<AppsGridAdapter.RecyclerViewHolder> {
 
         private final ArrayList<RecyclerData> appsDataArrayList = new ArrayList<>();
-        private int defaultColor;
-
-        private final int selectedColor;
-
-        private View selectedView;
 
         public AppsGridAdapter(Context context) {
-            selectedColor = context.getColor(com.google.android.material.R.color.material_on_surface_stroke);
             PackageManager pm = context.getPackageManager();
             Intent i = new Intent(Intent.ACTION_MAIN, null);
             i.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -77,8 +67,6 @@ public class ProfilesApps {
                         ri.activityInfo.packageName,
                         ri.loadLabel(pm),
                         ri.activityInfo.loadIcon(pm)));
-
-            binding.currentProfile.setText(packageName);
         }
 
         @NonNull
@@ -86,7 +74,6 @@ public class ProfilesApps {
         public RecyclerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             // Inflate Layout
             AppViewBinding itemBinding = AppViewBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
-            defaultColor = Color.TRANSPARENT;
             return new RecyclerViewHolder(itemBinding);
         }
 
@@ -96,12 +83,6 @@ public class ProfilesApps {
             RecyclerData recyclerData = appsDataArrayList.get(position);
             holder.binding.appName.setText(recyclerData.title);
             holder.binding.appIcon.setImageDrawable(recyclerData.icon);
-
-
-            if (recyclerData.packageName.equals(packageName ) && selectedView == null) {
-                selectedView = holder.binding.getRoot();
-                selectedView.setBackgroundColor(selectedColor);
-            }
         }
 
         @Override
@@ -124,12 +105,7 @@ public class ProfilesApps {
             @Override
             public void onClick (View view) {
                 int i = getAdapterPosition();
-                ProfilesApps.this.packageName = appsDataArrayList.get(i).packageName;
-                ProfilesApps.this.binding.currentProfile.setText(packageName);
-
-                if (selectedView != null) selectedView.setBackgroundColor(defaultColor);
-                view.setBackgroundColor(selectedColor);
-                selectedView = view;
+                mListener.onAppSelected(appsDataArrayList.get(i).packageName);
             }
         }
 

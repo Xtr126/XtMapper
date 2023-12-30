@@ -8,6 +8,7 @@ import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -105,16 +106,16 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
 
         // Show dialog for user to select app for a profile from a grid of apps
         viewHolder.binding.appIconButton.setOnClickListener(view -> {
-            ProfilesApps appsView = new ProfilesApps(view.getContext(), profileName);
+            ProfilesApps appsView = new ProfilesApps(view.getContext());
 
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-            builder.setPositiveButton(R.string.ok, (dialog, which) -> {
-                        keymapProfiles.setProfilePackageName(recyclerData.name.toString(), appsView.packageName);
-                        appsView.onDestroyView();
-                    })
-                    .setNegativeButton(R.string.cancel, (dialog, which) -> {})
-                    .setView(appsView.view)
-                    .show();
+            AlertDialog dialog = builder.setView(appsView.view).show();
+
+            appsView.setListener(packageName -> {
+                keymapProfiles.setProfilePackageName(recyclerData.name.toString(), packageName);
+                appsView.onDestroyView();
+                dialog.dismiss();
+            });
         });
 
         viewHolder.binding.switch1.setChecked(keymapProfiles.isProfileEnabled(recyclerData.name.toString()));

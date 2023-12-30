@@ -85,7 +85,7 @@ public class KeymapConfig implements Parcelable {
         ctrlMouseWheelZoom = sharedPref.getBoolean("ctrl_mouse_wheel_zoom", false);
         ctrlDragMouseGesture = sharedPref.getBoolean("ctrl_drag_mouse_gesture", true);
         mouseAimToggle = sharedPref.getBoolean("mouse_aim_shortcut_toggle", true);
-        disableAutoProfiling = sharedPref.getBoolean("disable_auto_profile", false);
+        disableAutoProfiling = sharedPref.getBoolean("disable_auto_profile", true);
 
         launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", -1);
         pauseResumeShortcutKey = sharedPref.getInt("pause_resume_shortcut", -1);

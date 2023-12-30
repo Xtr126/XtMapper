@@ -110,18 +110,21 @@ public class ProfileSelector {
         ProfilesApps appsView = new ProfilesApps(context);
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-        builder.setPositiveButton(R.string.ok, (dialog, which) -> {
-                    listener.onAppSelected(appsView.packageName);
-                    appsView.onDestroyView();
-                })
-                .setView(appsView.view);
-        showDialog(builder);
+        builder.setView(appsView.view);
+        AlertDialog dialog = showDialog(builder);
+
+        appsView.setListener(packageName -> {
+            listener.onAppSelected(packageName);
+            appsView.onDestroyView();
+            dialog.dismiss();
+        });
     }
 
-    private static void showDialog(MaterialAlertDialogBuilder builder) {
+    private static AlertDialog showDialog(MaterialAlertDialogBuilder builder) {
         AlertDialog dialog = builder.create();
         if (Settings.canDrawOverlays(dialog.getContext()))
             dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         dialog.show();
+        return dialog;
     }
 }
