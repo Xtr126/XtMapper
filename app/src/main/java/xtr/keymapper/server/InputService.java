@@ -25,7 +25,7 @@ public class InputService implements IInputInterface {
     private final boolean isWaylandClient;
     private final String touchpadInputMode;
 
-    public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight, boolean isWaylandClient){
+    public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight, boolean isWaylandClient) throws RemoteException {
         this.keymapProfile = profile;
         this.keymapConfig = keymapConfig;
         this.mCallback = mCallback;
@@ -43,6 +43,11 @@ public class InputService implements IInputInterface {
 
         keyEventHandler = new KeyEventHandler(this);
         keyEventHandler.init();
+
+        if (isWaylandClient) {
+            mCallback.cursorSetX(0);
+            mCallback.cursorSetY(0);
+        }
     }
 
     public void injectEvent(float x, float y, int action, int pointerId) {
@@ -95,19 +100,23 @@ public class InputService implements IInputInterface {
     }
 
     public void moveCursorX(float x) {
+        if (isWaylandClient) return;
         try {
             mCallback.cursorSetX((int) x);
         } catch (RemoteException ignored) {
         }
+        // To avoid conflict with touch input when moving virtual pointer
         if (input.pointerCount < 1) cursorSetX((int) x);
 	else if (input.pointerCount == 1 && pointerUp) cursorSetX((int) x);
     }
 
     public void moveCursorY(float y) {
+        if (isWaylandClient) return;
         try {
             mCallback.cursorSetY((int) y);
         } catch (RemoteException ignored) {
         }
+        // To avoid conflict with touch input when moving virtual pointer
         if (input.pointerCount < 1) cursorSetY((int) y);
 	else if (input.pointerCount == 1 && pointerUp) cursorSetY((int) y);
     }
