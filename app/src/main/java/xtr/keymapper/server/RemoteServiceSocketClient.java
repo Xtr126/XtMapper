@@ -29,8 +29,19 @@ public class RemoteServiceSocketClient implements IRemoteService {
     private boolean transactRemote(int code, Parcel data, Parcel reply, int flags) {
         try {
             byte[] b = data.marshall();
+            byte[] r = reply.marshall();
+            socket.getOutputStream().write(code);
             socket.getOutputStream().write(b.length);
             socket.getOutputStream().write(b);
+            socket.getOutputStream().write(r.length);
+            socket.getOutputStream().write(r);
+
+            int length = socket.getInputStream().read();
+            r = new byte[length];
+            socket.getInputStream().read(r);
+            reply.unmarshall(r, 0, length);
+            reply.setDataPosition(0);
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
