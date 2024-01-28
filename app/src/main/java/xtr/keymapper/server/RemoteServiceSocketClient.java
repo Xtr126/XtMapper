@@ -14,7 +14,16 @@ import xtr.keymapper.keymap.KeymapProfile;
 
 public class RemoteServiceSocketClient implements IRemoteService {
 
-    private LocalSocket socket;
+    private final LocalSocket socket;
+
+    public RemoteServiceSocketClient()  {
+        socket = new LocalSocket();
+        try {
+            socket.connect(new LocalSocketAddress("xtmapper-a3e11694"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     static private <T extends android.os.Parcelable> void writeTypedObject(
             android.os.Parcel parcel, T value, int parcelableFlags) {
@@ -46,10 +55,6 @@ public class RemoteServiceSocketClient implements IRemoteService {
             throw new RuntimeException(e);
         }
         return true;
-    }
-    public void init() throws IOException {
-        socket = new LocalSocket();
-        socket.connect(new LocalSocketAddress("xtmapper-a3e11694"));
     }
 
     @Override public boolean isRoot()

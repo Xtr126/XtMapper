@@ -38,14 +38,19 @@ public class RemoteService extends IRemoteService.Stub {
         super();
         Log.i("XtMapper", "starting server...");
         try {
-            ServiceManager.addService("xtmapper", this);
             System.out.println("Waiting for overlay...");
             for (String arg: args) {
                 if (arg.equals("--wayland-client")) {
                     isWaylandClient = true;
                     System.out.println("using wayland client");
                 }
+                if (arg.equals("--tcpip")) {
+                    start_getevent();
+                    System.out.println("using tcpip");
+                    new RemoteServiceSocketServer(this);
+                }
             }
+            ServiceManager.addService("xtmapper", this);
             start_getevent();
         } catch (Exception e) {
             e.printStackTrace(System.out);
@@ -177,7 +182,8 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     public static IRemoteService getInstance(){
-        return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
+//        return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
+        return new RemoteServiceSocketClient();
     }
 
 }
