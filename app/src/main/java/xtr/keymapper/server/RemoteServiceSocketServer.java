@@ -1,6 +1,5 @@
 package xtr.keymapper.server;
 
-import static android.os.IBinder.INTERFACE_TRANSACTION;
 import static xtr.keymapper.server.RemoteServiceSocketClient.*;
 
 import android.net.LocalServerSocket;
@@ -10,149 +9,161 @@ import android.os.RemoteException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
 
 public class RemoteServiceSocketServer {
-    private final LocalSocket socket;
+//    private final LocalSocket socket;
     private final RemoteService mService;
+    private final InputStream inputStream;
+    private final OutputStream outputStream;
 
-    static private <T> T readTypedObject(
-            android.os.Parcel parcel,
-            android.os.Parcelable.Creator<T> c) {
-        if (parcel.readInt() != 0) {
-            return c.createFromParcel(parcel);
-        } else {
-            return null;
+    private <T> T readTypedObject(android.os.Parcelable.Creator<T> c) {
+        Parcel parcel = Parcel.obtain();
+        try {
+            int length = inputStream.read();
+            byte[] bytes = new byte[length];
+            inputStream.read(bytes);
+            parcel.unmarshall(bytes, 0, length);
+            parcel.setDataPosition(0);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+        T obj = c.createFromParcel(parcel);
+        parcel.recycle();
+        return obj;
     }
 
     public RemoteServiceSocketServer(RemoteService mService) {
         this.mService = mService;
         try {
             LocalServerSocket serverSocket = new LocalServerSocket("xtmapper-a3e11694");
-            socket = serverSocket.accept();
+            LocalSocket socket = serverSocket.accept();
+            inputStream = socket.getInputStream();
+            outputStream = socket.getOutputStream();
             while (true) {
-                InputStream inputStream = socket.getInputStream();
                 int code = inputStream.read();
 
                 int length = inputStream.read();
                 byte[] b = new byte[length];
                 inputStream.read(b);
-                Parcel data = Parcel.obtain();
-                data.unmarshall(b, 0, length);
-                data.setDataPosition(0);
 
-                length = inputStream.read();
-                byte[] r = new byte[length];
-                inputStream.read(r);
-                Parcel reply = Parcel.obtain();
-                reply.unmarshall(r, 0, length);
-                reply.setDataPosition(0);
-
-                onTransact(code, data, reply);
-                r = reply.marshall();
-                socket.getOutputStream().write(r.length);
-                socket.getOutputStream().write(r);
+                onTransact(code);
             }
         } catch (IOException | RemoteException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public boolean onTransact(int code, android.os.Parcel data, android.os.Parcel reply) throws RemoteException {
-        java.lang.String descriptor = DESCRIPTOR;
-        if (code >= android.os.IBinder.FIRST_CALL_TRANSACTION && code <= android.os.IBinder.LAST_CALL_TRANSACTION) {
-            data.enforceInterface(descriptor);
-        }
-        switch (code)
-        {
-            case INTERFACE_TRANSACTION:
-            {
-                reply.writeString(descriptor);
-                return true;
-            }
-        }
+    public void onTransact(int code) throws RemoteException {
         switch (code)
         {
             case TRANSACTION_isRoot:
             {
                 boolean _result = mService.isRoot();
-                reply.writeNoException();
-                reply.writeInt(((_result)?(1):(0)));
+                writeNoException();
+                writeInt(((_result)?(1):(0)));
                 break;
             }
             case TRANSACTION_startServer:
             {
                 xtr.keymapper.keymap.KeymapProfile _arg0;
-                _arg0 = readTypedObject(data, xtr.keymapper.keymap.KeymapProfile.CREATOR);
+                _arg0 = readTypedObject(xtr.keymapper.keymap.KeymapProfile.CREATOR);
                 xtr.keymapper.keymap.KeymapConfig _arg1;
-                _arg1 = readTypedObject(data, xtr.keymapper.keymap.KeymapConfig.CREATOR);
+                _arg1 = readTypedObject(xtr.keymapper.keymap.KeymapConfig.CREATOR);
                 xtr.keymapper.IRemoteServiceCallback _arg2;
-                _arg2 = xtr.keymapper.IRemoteServiceCallback.Stub.asInterface(data.readStrongBinder());
+                _arg2 = null;
                 int _arg3;
-                _arg3 = data.readInt();
+                _arg3 = readInt();
                 int _arg4;
-                _arg4 = data.readInt();
+                _arg4 = readInt();
                 mService.startServer(_arg0, _arg1, _arg2, _arg3, _arg4);
-                reply.writeNoException();
+                writeNoException();
                 break;
             }
             case TRANSACTION_stopServer:
             {
                 mService.stopServer();
-                reply.writeNoException();
+                writeNoException();
                 break;
             }
             case TRANSACTION_registerOnKeyEventListener:
             {
                 xtr.keymapper.OnKeyEventListener _arg0;
-                _arg0 = xtr.keymapper.OnKeyEventListener.Stub.asInterface(data.readStrongBinder());
+                _arg0 = null;
                 mService.registerOnKeyEventListener(_arg0);
-                reply.writeNoException();
+                writeNoException();
                 break;
             }
             case TRANSACTION_unregisterOnKeyEventListener:
             {
                 xtr.keymapper.OnKeyEventListener _arg0;
-                _arg0 = xtr.keymapper.OnKeyEventListener.Stub.asInterface(data.readStrongBinder());
+                _arg0 = null;
                 mService.unregisterOnKeyEventListener(_arg0);
-                reply.writeNoException();
+                writeNoException();
                 break;
             }
             case TRANSACTION_registerActivityObserver:
             {
                 xtr.keymapper.ActivityObserver _arg0;
-                _arg0 = xtr.keymapper.ActivityObserver.Stub.asInterface(data.readStrongBinder());
+                _arg0 = null;
                 mService.registerActivityObserver(_arg0);
-                reply.writeNoException();
+                writeNoException();
                 break;
             }
             case TRANSACTION_unregisterActivityObserver:
             {
                 xtr.keymapper.ActivityObserver _arg0;
-                _arg0 = xtr.keymapper.ActivityObserver.Stub.asInterface(data.readStrongBinder());
+                _arg0 = null;
                 mService.unregisterActivityObserver(_arg0);
-                reply.writeNoException();
+                writeNoException();
                 break;
             }
             case TRANSACTION_resumeMouse:
             {
                 mService.resumeMouse();
-                reply.writeNoException();
+                writeNoException();
                 break;
             }
             case TRANSACTION_pauseMouse:
             {
                 mService.pauseMouse();
-                reply.writeNoException();
+                writeNoException();
                 break;
             }
             case TRANSACTION_reloadKeymap:
             {
                 mService.reloadKeymap();
-                reply.writeNoException();
+                writeNoException();
                 break;
             }
         }
-        return true;
+    }
+
+    public int readInt() {
+        int i;
+        try {
+            int length = inputStream.read();
+            byte[] b = new byte[length];
+            inputStream.read(b);
+            i = ByteBuffer.wrap(b).getInt();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return i;
+    }
+
+    public void writeNoException() {
+
+    }
+
+    public void writeInt(int x) {
+        byte[] bytes = ByteBuffer.allocate(4).putInt(x).array();
+        try {
+            outputStream.write(bytes.length);
+            outputStream.write(bytes);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
