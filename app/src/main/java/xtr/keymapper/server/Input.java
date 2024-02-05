@@ -1,6 +1,6 @@
 package xtr.keymapper.server;
 
-import android.hardware.input.InputManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
@@ -17,7 +17,7 @@ import java.lang.reflect.Method;
 public class Input {
 
     static Method injectInputEventMethod;
-    static InputManager im;
+    static Object inputManager;
     static int inputSource = InputDevice.SOURCE_TOUCHSCREEN;
 
     private final PointersState pointersState = new PointersState();
@@ -80,7 +80,7 @@ public class Input {
                 0, 0, 1f, 1f,
                 0, 0, inputSource, 0);
         try {
-            injectInputEventMethod.invoke(im, motionEvent, 0);
+            injectInputEventMethod.invoke(inputManager, motionEvent, 0);
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace(System.out);
         }
@@ -108,7 +108,7 @@ public class Input {
                         0, 0, 1f, 1f, 0, 0,
                         InputDevice.SOURCE_MOUSE, 0);
         try {
-            injectInputEventMethod.invoke(im, motionEvent, 0);
+            injectInputEventMethod.invoke(inputManager, motionEvent, 0);
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace(System.out);
         }
@@ -189,7 +189,14 @@ public class Input {
         String methodName = "getInstance";
         Object[] objArr = new Object[0];
          try {
-             im = (InputManager) InputManager.class.getDeclaredMethod(methodName)
+             Class<?> inputManagerClass;
+             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                inputManagerClass = Class.forName("android.hardware.input.InputManagerGlobal");
+             } else {
+                 inputManagerClass = android.hardware.input.InputManager.class;
+             }
+
+             inputManager = inputManagerClass.getDeclaredMethod(methodName)
                      .invoke(null, objArr);
              //Make MotionEvent.obtain() method accessible
              methodName = "obtain";
@@ -199,7 +206,7 @@ public class Input {
              //Get the reference to injectInputEvent method
              methodName = "injectInputEvent";
 
-             injectInputEventMethod = InputManager.class.getMethod(methodName, android.view.InputEvent.class, Integer.TYPE);
+             injectInputEventMethod = inputManagerClass.getMethod(methodName, android.view.InputEvent.class, Integer.TYPE);
 
          } catch (Exception e) {
             e.printStackTrace(System.out);
