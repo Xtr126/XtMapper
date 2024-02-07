@@ -182,8 +182,8 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     public static IRemoteService getInstance(){
-//        return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
-        return new RemoteServiceSocketClient();
+//        return new RemoteServiceSocketClient();
+        return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
     }
 
 }

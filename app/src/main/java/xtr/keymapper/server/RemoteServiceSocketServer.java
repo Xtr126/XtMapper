@@ -23,7 +23,9 @@ public class RemoteServiceSocketServer {
         try {
             int length = inputStream.read();
             byte[] bytes = new byte[length];
+            System.out.println(length);
             inputStream.read(bytes);
+            System.out.println(bytes.toString());
             parcel.unmarshall(bytes, 0, length);
             parcel.setDataPosition(0);
         } catch (IOException e) {
@@ -43,8 +45,10 @@ public class RemoteServiceSocketServer {
             outputStream = socket.getOutputStream();
             while (true) {
                 int code = inputStream.read();
+                if (code == -1) continue;
 
                 int length = inputStream.read();
+                if (length == -1) continue;
                 byte[] b = new byte[length];
                 inputStream.read(b);
 
