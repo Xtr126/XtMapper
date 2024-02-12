@@ -29,9 +29,8 @@ public class RemoteService extends IRemoteService.Stub {
 
     public static void main(String[] args) {
         loadLibraries();
-        Looper.prepare();
+        Looper.prepareMainLooper();
         new RemoteService(args);
-        Looper.loop();
     }
 
     public RemoteService(String[] args) {
@@ -182,8 +181,12 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     public static IRemoteService getInstance(){
-//        return new RemoteServiceSocketClient();
-        return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
+        try {
+            return new RemoteServiceSocketClient();
+        } catch (Throwable tr) {
+            Log.e(tr.toString(), tr.getMessage(), tr);
+            return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
+        }
     }
 
 }

@@ -36,6 +36,7 @@ public class RemoteServiceSocketServer {
         return obj;
     }
 
+    // blocking
     public RemoteServiceSocketServer(RemoteService mService) {
         this.mService = mService;
         try {

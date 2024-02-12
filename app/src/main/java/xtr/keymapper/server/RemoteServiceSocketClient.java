@@ -18,16 +18,12 @@ import xtr.keymapper.keymap.KeymapProfile;
 public class RemoteServiceSocketClient implements IRemoteService {
 
     // Socket should stay alive
-    private static LocalSocket socket;
+    public static LocalSocket socket;
 
-    public RemoteServiceSocketClient()  {
+    public RemoteServiceSocketClient() throws IOException {
         if (socket == null) {
             socket = new LocalSocket();
-            try {
-                socket.connect(new LocalSocketAddress("xtmapper-a3e11694"));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            socket.connect(new LocalSocketAddress("xtmapper-a3e11694"));
         }
     }
     public static class ParcelableByteArray {
