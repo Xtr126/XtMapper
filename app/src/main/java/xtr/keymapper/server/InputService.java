@@ -16,7 +16,7 @@ public class InputService implements IInputInterface {
     private final KeyEventHandler keyEventHandler;
     private KeymapConfig keymapConfig;
     private KeymapProfile keymapProfile;
-    private static final Input input = new Input();
+    private final Input input = new Input();
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final IRemoteServiceCallback mCallback;
     final int supportsUinput;
