@@ -6,6 +6,7 @@ import android.os.ServiceManager;
 import android.util.Log;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 
 import xtr.keymapper.ActivityObserver;
@@ -22,6 +23,7 @@ public class RemoteService extends IRemoteService.Stub {
     private OnKeyEventListener mOnKeyEventListener;
     private boolean isWaylandClient = false;
     private ActivityObserverService activityObserverService;
+    private static IRemoteService service = null;
 
     public RemoteService() {
 
@@ -31,6 +33,7 @@ public class RemoteService extends IRemoteService.Stub {
         loadLibraries();
         Looper.prepareMainLooper();
         new RemoteService(args);
+        Looper.loop();
     }
 
     public RemoteService(String[] args) {
@@ -181,12 +184,17 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     public static IRemoteService getInstance(){
-        try {
-            return new RemoteServiceSocketClient();
-        } catch (Throwable tr) {
-            Log.e(tr.toString(), tr.getMessage(), tr);
-            return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
+        if (service == null) {
+            try {
+                service = new RemoteServiceSocketClient();
+            } catch (IOException e) {
+                Log.e(e.toString(), e.getMessage(), e);
+                RemoteServiceSocketClient.socket = null;
+            }
+            if (RemoteServiceSocketClient.socket == null)
+                service = IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
         }
+        return service;
     }
 
 }

@@ -18,7 +18,7 @@ import xtr.keymapper.keymap.KeymapProfile;
 public class RemoteServiceSocketClient implements IRemoteService {
 
     // Socket should stay alive
-    public static LocalSocket socket;
+    public static LocalSocket socket = null;
 
     public RemoteServiceSocketClient() throws IOException {
         if (socket == null) {
