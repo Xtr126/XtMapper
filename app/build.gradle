@@ -14,9 +14,7 @@ android {
         versionName '2.1.1'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-         ndk {
-            abiFilter 'x86_64'
-         }
+
         aaptOptions {
             ignoreAssetsPattern ''
         }
@@ -43,6 +41,24 @@ android {
     }
     packagingOptions.jniLibs.useLegacyPackaging true
 
+    splits {
+
+        // Configures multiple APKs based on ABI.
+        abi {
+            // Enables building multiple APKs per ABI.
+            enable true
+
+            // Resets the list of ABIs for Gradle to create APKs for to none.
+            reset()
+
+            // Specifies a list of ABIs for Gradle to create APKs for.
+            include "x86_64", "x86", "armeabi-v7a", "arm64-v8a"
+
+            // Specifies that we don't want to also generate a universal APK that includes all ABIs.
+            universalApk false
+        }
+    }
+
     ndkVersion '26.1.10909125'
 }
 
@@ -53,9 +69,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation "com.leinardi.android:speed-dial:3.3.0"
     implementation 'androidx.webkit:webkit:1.10.0'
-    // The core module that provides APIs to a shell
     implementation "com.github.topjohnwu.libsu:core:5.2.1"
-    // Optional: APIs for creating root services. Depends on ":core"
     implementation "com.github.topjohnwu.libsu:service:5.2.1"
     compileOnly project(path: ':app:hidden-api')
 }
