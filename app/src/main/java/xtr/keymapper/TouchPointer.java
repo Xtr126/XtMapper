@@ -1,5 +1,7 @@
 package xtr.keymapper;
 
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -10,6 +12,7 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -102,7 +105,11 @@ public class TouchPointer extends Service {
                 .setSmallIcon(R.mipmap.ic_launcher_foreground)
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .build();
-        startForeground(2, notification);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(2, notification, FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else {
+            startForeground(2, notification);
+        }
 
         if (cursorView == null) showCursor();
 
