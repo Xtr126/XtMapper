@@ -84,11 +84,12 @@ https://youtube.com/watch?v=yvZD2E7kgG0
 Open source libraries used:
 - [Material Design Components](https://github.com/material-components/material-components-android) used for the app user interface.
 - [FloatingActionButtonSpeedDial](https://github.com/leinardi/FloatingActionButtonSpeedDial)
+- [libsu](https://github.com/topjohnwu/libsu)
 
 [Some code](./app/src/main/java/com/genymobile/scrcpy) from the [scrcpy](https://github.com/Genymobile/scrcpy) project was used for implementing multi-touch support in the keymapper. 
 
 ## Copyright and License
-This project is licensed under the GPL v3.  
+The source code is licensed under the GPL v3.  
 Do not publish unofficial APKs to the play store. 
 ```
 XtMapper

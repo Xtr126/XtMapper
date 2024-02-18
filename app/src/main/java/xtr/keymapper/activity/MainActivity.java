@@ -116,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
     private void startServer(boolean autorun){
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
-            if (autorun) new Thread(server::startServer).start();
+            if (autorun) server.startServer();
             else mCallback.updateCmdView1("run in adb shell:\n sh " + server.script.getPath());
         }
     }
