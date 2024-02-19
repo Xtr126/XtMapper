@@ -35,11 +35,6 @@ jobs:
 
     - name: Build with Gradle
       run: ./gradlew assembleRelease
-
-    - name: Upload APK 
-      uses: actions/upload-artifact@v4
-      with:
-        path: app/build/outputs/apk/release/*.apk
         
     - name: release
       uses: softprops/action-gh-release@v1
