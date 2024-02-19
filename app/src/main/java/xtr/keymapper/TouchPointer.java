@@ -113,26 +113,22 @@ public class TouchPointer extends Service {
 
         if (cursorView == null) showCursor();
 
-        KeymapConfig keymapConfig = new KeymapConfig(this);
+        // Launch default profile
+        this.selectedProfile = "Default";
+        KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(selectedProfile);
+        connectRemoteService(keymapProfile);
 
-        if(keymapConfig.disableAutoProfiling) {
-            // Select app
-            ProfileSelector.select(this, profile -> {
-                this.selectedProfile = profile;
-                KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
-                connectRemoteService(keymapProfile);
-                Intent launchIntent = getPackageManager().getLaunchIntentForPackage(keymapProfile.packageName);
-                if (launchIntent != null) startActivity(launchIntent);
-            });
-        } else {
-            // Launch default profile for current app
-            ProfileSelector.select(this, profile -> {
-                this.selectedProfile = profile;
-                KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
-                connectRemoteService(keymapProfile);
-            }, getPackageName());
-        }
         return super.onStartCommand(i, flags, startId);
+    }
+
+    public void launchApp() {
+        ProfileSelector.select(this, profile -> {
+            this.selectedProfile = profile;
+            KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
+            connectRemoteService(keymapProfile);
+            Intent launchIntent = getPackageManager().getLaunchIntentForPackage(keymapProfile.packageName);
+            if (launchIntent != null) startActivity(launchIntent);
+        });
     }
 
     private void connectRemoteService(KeymapProfile profile) {

@@ -2,7 +2,6 @@
     <string name="app_name">XtMapper</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
-    <string name="auto_activate">Auto-Activate</string>
     <string name="activation">Activation</string>
     <string name="activated">Activated</string>
     <string name="activation_successful">Keymapper is activated. Tap on Start button to start keymapper.</string>
@@ -70,5 +69,6 @@
     <string name="root_not_found_message">Root access is required for the keymapper to function. \n Please grant root access to XtMapper from KernelSU manager app:</string>
     <string name="disable_auto_profile">Disable auto profiling</string>
     <string name="touchpad_input">Touchpad Input</string>
+    <string name="launch_app">Launch App</string>
 
 </resources>

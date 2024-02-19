@@ -30,7 +30,7 @@
 
         <com.google.android.material.button.MaterialButton
             style="@style/Widget.Material3.Button.ElevatedButton"
-            android:id="@+id/start_in_terminal"
+            android:id="@+id/activate_button"
             android:layout_width="match_parent"
             android:layout_height="80dp"
             android:layout_marginVertical="4dp"
@@ -40,11 +40,11 @@
 
         <com.google.android.material.button.MaterialButton
             style="@style/Widget.Material3.Button.ElevatedButton"
-            android:id="@+id/start_server"
+            android:id="@+id/launch_app"
             android:layout_width="match_parent"
             android:layout_height="80dp"
             android:layout_marginVertical="4dp"
-            android:text="@string/auto_activate"
+            android:text="@string/launch_app"
             app:icon="@drawable/ic_start_button"
             app:iconSize="36dp" />
 

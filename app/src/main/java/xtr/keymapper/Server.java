@@ -64,7 +64,11 @@ public class Server {
 
     public void startServer() {
         mCallback.updateCmdView1("exec sh " + script.getPath() + "\n");
-
+        try {
+            if (Shell.getCachedShell() != null)
+                Shell.getCachedShell().close();
+        } catch (IOException ignored) {
+        }
         Shell.getShell(shell -> {
             if (!shell.isRoot()) mCallback.alertRootAccessNotFound();
             try {

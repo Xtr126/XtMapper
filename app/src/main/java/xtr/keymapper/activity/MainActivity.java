@@ -53,9 +53,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
-        defaultTint = binding.controls.startServer.getBackgroundTintList();
-        binding.controls.startServer.setOnClickListener(v -> startServer(true));
-        binding.controls.startInTerminal.setOnClickListener(v -> startServer(false));
+        defaultTint = binding.controls.activateButton.getBackgroundTintList();
+        binding.controls.activateButton.setOnClickListener(v -> startServer());
+        binding.controls.launchApp.setOnClickListener(v -> launchApp());
         binding.controls.startPointer.setOnClickListener(v -> startPointer());
         binding.controls.startEditor.setOnClickListener(v -> startEditor());
         binding.controls.configButton.setOnClickListener
@@ -64,8 +64,13 @@ public class MainActivity extends AppCompatActivity {
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
         if (RemoteService.getInstance() != null) {
             mCallback.alertActivation();
-            binding.controls.startServer.setEnabled(false);
+            binding.controls.activateButton.setEnabled(false);
         }
+    }
+
+    private void launchApp() {
+        if (!stopped) pointerOverlay.launchApp();
+        else startPointer();
     }
 
     public void startPointer(){
@@ -93,10 +98,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void stopPointer(){
-        stopped = false;
         unbindTouchPointer();
         stopService(intent);
         setButtonState(true);
+        stopped = true;
     }
 
     private void unbindTouchPointer() {
@@ -113,12 +118,10 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(this, EditorActivity.class));
     }
 
-    private void startServer(boolean autorun){
+    private void startServer(){
         checkOverlayPermission();
-        if(Settings.canDrawOverlays(this)) {
-            if (autorun) server.startServer();
-            else mCallback.updateCmdView1("run in adb shell:\n sh " + server.script.getPath());
-        }
+        if(Settings.canDrawOverlays(this))
+            server.startServer();
     }
 
     private void checkOverlayPermission(){
