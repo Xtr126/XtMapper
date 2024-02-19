@@ -19,9 +19,16 @@ android {
             ignoreAssetsPattern ''
         }
     }
-      externalNativeBuild {
+
+    externalNativeBuild {
         ndkBuild {
             path 'Android.mk'
+        }
+    }
+
+    applicationVariants.configureEach {
+        it.outputs.every {
+            it.outputFileName = "XtMapper-${it.name}-v${defaultConfig.versionName}.apk"
         }
     }
 
