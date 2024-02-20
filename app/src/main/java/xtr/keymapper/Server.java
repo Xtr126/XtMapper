@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.util.List;
 
 import xtr.keymapper.activity.MainActivity;
-import xtr.keymapper.server.RemoteService;
 
 public class Server {
 
@@ -33,7 +32,7 @@ public class Server {
     }
 
     private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
-        final String className = RemoteService.class.getName();
+        final String className = xtr.keymapper.server.RemoteServiceShell.class.getName();
 
         FileWriter linesToWrite = new FileWriter(script, false);
         linesToWrite.append("#!/system/bin/sh\n");

@@ -33,7 +33,7 @@ import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfiles;
 import xtr.keymapper.profiles.ProfileSelector;
-import xtr.keymapper.server.RemoteService;
+import xtr.keymapper.server.RemoteServiceHelper;
 
 
 public class TouchPointer extends Service {
@@ -133,7 +133,7 @@ public class TouchPointer extends Service {
 
     private void connectRemoteService(KeymapProfile profile) {
         if (activityCallback != null) activityCallback.updateCmdView1("\n connecting to server..");
-        mService = RemoteService.getInstance();
+        mService = RemoteServiceHelper.getInstance();
         if (mService == null) {
             if (activityCallback != null) {
                 activityCallback.updateCmdView1("\n connection failed\n Please retry activation \n");

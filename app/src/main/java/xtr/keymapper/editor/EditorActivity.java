@@ -22,7 +22,7 @@ import xtr.keymapper.IRemoteService;
 import xtr.keymapper.R;
 import xtr.keymapper.TouchPointer;
 import xtr.keymapper.profiles.ProfileSelector;
-import xtr.keymapper.server.RemoteService;
+import xtr.keymapper.server.RemoteServiceHelper;
 
 public class EditorActivity extends Activity implements EditorUI.OnHideListener {
     private EditorUI editor;
@@ -35,7 +35,7 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
         windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
 //        RemoteServiceHelper.pauseKeymap();
-        mService = RemoteService.getInstance();
+        mService = RemoteServiceHelper.getInstance();
 
         if (editor != null) editor.hideView();
         bindService(new Intent(this, TouchPointer.class), connection, Context.BIND_AUTO_CREATE);
