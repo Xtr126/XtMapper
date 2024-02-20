@@ -62,10 +62,6 @@ public class MainActivity extends AppCompatActivity {
                 (v -> new SettingsFragment(this).show(getSupportFragmentManager(), "dialog"));
         binding.controls.aboutButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
-        if (RemoteService.getInstance() != null) {
-            mCallback.alertActivation();
-            binding.controls.activateButton.setEnabled(false);
-        }
     }
 
     private void launchApp() {
