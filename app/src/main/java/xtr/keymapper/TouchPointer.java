@@ -175,7 +175,8 @@ public class TouchPointer extends Service {
     @Override
     public void onDestroy() {
         if (cursorView != null) {
-            mWindowManager.removeView(cursorView);
+            if (cursorView.isAttachedToWindow())
+                mWindowManager.removeView(cursorView);
             cursorView.invalidate();
         }
         if (mService != null) try {
