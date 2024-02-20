@@ -39,7 +39,7 @@ public class Server {
 
         FileWriter linesToWrite = new FileWriter(script, false);
         linesToWrite.append("#!/system/bin/sh\n");
-        linesToWrite.append("pgrep -f ").append(className).append(" && echo Waiting for overlay... && exit 1\n");
+        linesToWrite.append("pkill -f ").append(className).append("\n");
         linesToWrite.append("exec /system/bin/app_process");
         linesToWrite.append(" -Djava.library.path=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
                 .append("\" -Djava.class.path=\"").append(ai.publicSourceDir) // Absolute path to apk in /data/app
