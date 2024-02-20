@@ -5,6 +5,8 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.topjohnwu.superuser.CallbackList;
 import com.topjohnwu.superuser.Shell;
 
@@ -22,6 +24,15 @@ public class Server {
 
     public File script;
     public MainActivity.Callback mCallback;
+
+    static {
+        // Set settings before the main shell can be created
+        Shell.enableVerboseLogging = false;
+        Shell.setDefaultBuilder(Shell.Builder.create()
+                .setFlags(Shell.FLAG_REDIRECT_STDERR)
+                .setTimeout(10)
+        );
+    }
 
     private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
         final String className = RemoteService.class.getName();
@@ -64,15 +75,11 @@ public class Server {
 
     public void startServer() {
         mCallback.updateCmdView1("exec sh " + script.getPath() + "\n");
-        try {
-            if (Shell.getCachedShell() != null)
-                Shell.getCachedShell().close();
-        } catch (IOException ignored) {
-        }
         Shell.getShell(shell -> {
             if (!shell.isRoot()) mCallback.alertRootAccessNotFound();
-            try {
-                Shell.cmd(new FileInputStream(script)).to(callbackList).submit();
+            else try {
+                Shell.cmd(new FileInputStream(script)).to(callbackList)
+                        .submit(out -> System.exit(1));
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
             }

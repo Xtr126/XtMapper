@@ -178,6 +178,8 @@ public class MainActivity extends AppCompatActivity {
                     .setPositiveButton("OK", (dialog, which) -> {
                         Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("me.weishu.kernelsu");
                         if (launchIntent != null) startActivity(launchIntent);
+                        finishAffinity();
+                        System.exit(0);
                     });
             runOnUiThread(() -> builder.create().show());
         }
