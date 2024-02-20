@@ -96,7 +96,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation "com.leinardi.android:speed-dial:3.3.0"
     implementation 'androidx.webkit:webkit:1.10.0'
-    implementation "com.github.topjohnwu.libsu:core:5.2.1"
+    implementation "com.github.topjohnwu.libsu:core:5.2.2"
     implementation "com.github.topjohnwu.libsu:service:5.2.2"
     compileOnly project(path: ':app:hidden-api')
 }
