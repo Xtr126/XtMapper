@@ -19,6 +19,7 @@ public class RemoteService extends IRemoteService.Stub {
     private OnKeyEventListener mOnKeyEventListener;
     boolean isWaylandClient = false;
     private ActivityObserverService activityObserverService;
+    String nativeLibraryDir = System.getProperty("java.library.path");
 
     public static void loadLibraries() {
         System.loadLibrary("mouse_read");
@@ -34,7 +35,7 @@ public class RemoteService extends IRemoteService.Stub {
                 if (isWaylandClient) {
                     getevent = new BufferedReader(new InputStreamReader(System.in));
                 } else {
-                    getevent = Utils.geteventStream(System.getProperty("java.library.path"));
+                    getevent = Utils.geteventStream(nativeLibraryDir);
                 }
                 String line;
                 while ((line = getevent.readLine()) != null) {

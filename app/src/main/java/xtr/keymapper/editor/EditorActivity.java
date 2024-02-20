@@ -35,7 +35,7 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
         windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
 //        RemoteServiceHelper.pauseKeymap();
-        mService = RemoteServiceHelper.getInstance();
+        RemoteServiceHelper.getInstance(this, service -> mService = service);
 
         if (editor != null) editor.hideView();
         bindService(new Intent(this, TouchPointer.class), connection, Context.BIND_AUTO_CREATE);

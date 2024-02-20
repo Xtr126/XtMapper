@@ -133,43 +133,45 @@ public class TouchPointer extends Service {
 
     private void connectRemoteService(KeymapProfile profile) {
         if (activityCallback != null) activityCallback.updateCmdView1("\n connecting to server..");
-        mService = RemoteServiceHelper.getInstance();
-        if (mService == null) {
-            if (activityCallback != null) {
-                activityCallback.updateCmdView1("\n connection failed\n Please retry activation \n");
-                activityCallback.stopPointer();
-            } else {
-                onDestroy();
-                stopSelf();
-            }
-            return;
-        }
-        KeymapConfig keymapConfig = new KeymapConfig(this);
-        Display display = mWindowManager.getDefaultDisplay();
-        Point size = new Point();
-        display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
-        try {
-            if (keymapConfig.disableAutoProfiling) {
-                mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
-            } else {
-                if (!activityRemoteCallback) {
-                    mService.registerActivityObserver(mActivityObserverCallback);
-                    activityRemoteCallback = true;
+        RemoteServiceHelper.getInstance(this, service -> {
+            mService = service;
+            if (mService == null) {
+                if (activityCallback != null) {
+                    activityCallback.updateCmdView1("\n connection failed\n Please retry activation \n");
+                    activityCallback.stopPointer();
                 } else {
-                    if (!profile.disabled)
-                        mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+                    onDestroy();
+                    stopSelf();
                 }
+                return;
             }
-        } catch (Exception e) {
-            if(activityCallback != null) {
-                activityCallback.updateCmdView1(e.toString());
-                activityCallback.stopPointer();
-            } else {
-                onDestroy();
-                stopSelf();
+            KeymapConfig keymapConfig = new KeymapConfig(this);
+            Display display = mWindowManager.getDefaultDisplay();
+            Point size = new Point();
+            display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
+            try {
+                if (keymapConfig.disableAutoProfiling) {
+                    mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+                } else {
+                    if (!activityRemoteCallback) {
+                        mService.registerActivityObserver(mActivityObserverCallback);
+                        activityRemoteCallback = true;
+                    } else {
+                        if (!profile.disabled)
+                            mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+                    }
+                }
+            } catch (Exception e) {
+                if(activityCallback != null) {
+                    activityCallback.updateCmdView1(e.toString());
+                    activityCallback.stopPointer();
+                } else {
+                    onDestroy();
+                    stopSelf();
+                }
+                Log.e("startServer", e.toString(), e);
             }
-            Log.e("startServer", e.toString(), e);
-        }
+        });
     }
 
     @Override

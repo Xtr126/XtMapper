@@ -6,7 +6,6 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -111,11 +110,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
         });
     }
 
-    @Override
-    public IBinder asBinder() {
-        return this;
-    }
-
 
     public interface OnHideListener {
         void onHideView();
@@ -181,7 +175,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         profiles.saveProfile(profileName, linesToWrite, profile.packageName, !profile.disabled);
 
         // Reload keymap if service running
-        RemoteServiceHelper.reloadKeymap();
+        RemoteServiceHelper.reloadKeymap(context);
     }
 
     public void setupButtons() {
