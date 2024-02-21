@@ -2,12 +2,19 @@ name: Build and Release APK
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '**.yml'
 
 jobs:
+  build-docs:
+    uses: ./.github/workflows/build-docs.yml
+  
   build:
-
+    needs:
+      - build-docs
+      
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
 
@@ -33,11 +40,25 @@ jobs:
           echo '${{ secrets.KEYSTORE }}' | base64 -d > keystore.jks
         fi
 
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Move artifact to assets
+      run: |
+          cd ./github-pages
+          tar xvf artifact.tar && rm artifact.tar
+          cd ../
+          mkdir ./app/src/main/assets
+          mv ./github-pages ./app/src/main/assets/XtMapper-docs
+
     - name: Build with Gradle
       run: ./gradlew assembleRelease
         
-    - name: release
-      uses: softprops/action-gh-release@v1
+    - name: Release
+      uses: "marvinpinto/action-automatic-releases@latest"
       with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        prerelease: false
         files: |
           app/build/outputs/apk/release/*.apk
+         
