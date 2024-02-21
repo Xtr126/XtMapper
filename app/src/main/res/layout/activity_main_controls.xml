@@ -30,16 +30,6 @@
 
         <com.google.android.material.button.MaterialButton
             style="@style/Widget.Material3.Button.ElevatedButton"
-            android:id="@+id/activate_button"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:layout_marginVertical="4dp"
-            android:text="@string/activation"
-            app:icon="@drawable/ic_terminal"
-            app:iconSize="30dp" />
-
-        <com.google.android.material.button.MaterialButton
-            style="@style/Widget.Material3.Button.ElevatedButton"
             android:id="@+id/launch_app"
             android:layout_width="match_parent"
             android:layout_height="80dp"

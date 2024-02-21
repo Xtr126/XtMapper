@@ -17,6 +17,7 @@ import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.topjohnwu.superuser.Shell;
 
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
@@ -27,12 +28,20 @@ import xtr.keymapper.fragment.SettingsFragment;
 
 public class MainActivity extends AppCompatActivity {
     public TouchPointer pointerOverlay;
-    private final Server server = new Server();
 
     public ActivityMainBinding binding;
     private Intent intent;
     private ColorStateList defaultTint;
     private boolean stopped = true;
+
+    static {
+        // Set settings before the main shell can be created
+        Shell.enableVerboseLogging = false;
+        Shell.setDefaultBuilder(Shell.Builder.create()
+                .setFlags(Shell.FLAG_REDIRECT_STDERR)
+                .setTimeout(10)
+        );
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,19 +50,22 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        server.mCallback = this.mCallback;
-        server.setupServer(this);
-
-        setupButtons();
-
         Context context = getApplicationContext();
         intent = new Intent(context, TouchPointer.class);
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
+
+        Shell.getShell(shell -> {
+            Boolean rootAccess = Shell.isAppGrantedRoot();
+            if (rootAccess == null || !rootAccess) {
+                Server.setupServer(this, mCallback);
+                alertRootAccessNotFound();
+            }
+            setupButtons();
+        });
     }
 
     private void setupButtons() {
-        defaultTint = binding.controls.activateButton.getBackgroundTintList();
-        binding.controls.activateButton.setOnClickListener(v -> startServer());
+        defaultTint = binding.controls.launchApp.getBackgroundTintList();
         binding.controls.launchApp.setOnClickListener(v -> launchApp());
         binding.controls.startPointer.setOnClickListener(v -> startPointer());
         binding.controls.startEditor.setOnClickListener(v -> startEditor());
@@ -113,12 +125,6 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(this, EditorActivity.class));
     }
 
-    private void startServer(){
-        checkOverlayPermission();
-        if(Settings.canDrawOverlays(this))
-            server.startServer();
-    }
-
     private void checkOverlayPermission(){
         if (!Settings.canDrawOverlays(this)) {
             // send user to the device settings
@@ -134,6 +140,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void alertRootAccessNotFound() {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        builder.setTitle(R.string.root_not_found_title)
+                .setMessage(R.string.root_not_found_message)
+                .setPositiveButton("OK", (dialog, which) -> {
+                    Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("me.weishu.kernelsu");
+                    if (launchIntent != null) startActivity(launchIntent);
+                });
+        runOnUiThread(() -> builder.create().show());
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -143,8 +160,6 @@ public class MainActivity extends AppCompatActivity {
     public interface Callback {
         void updateCmdView1(String line);
         void stopPointer();
-        void alertRootAccessNotFound();
-        void alertActivation();
     }
 
     private final Callback mCallback = new Callback() {
@@ -163,28 +178,6 @@ public class MainActivity extends AppCompatActivity {
 
         public void stopPointer() {
             MainActivity.this.stopPointer();
-        }
-
-        @Override
-        public void alertRootAccessNotFound() {
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
-            builder.setTitle(R.string.root_not_found_title)
-            .setMessage(R.string.root_not_found_message)
-                    .setPositiveButton("OK", (dialog, which) -> {
-                        Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("me.weishu.kernelsu");
-                        if (launchIntent != null) startActivity(launchIntent);
-                        finishAffinity();
-                        System.exit(0);
-                    });
-            runOnUiThread(() -> builder.create().show());
-        }
-
-        @Override
-        public void alertActivation() {
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
-            builder.setTitle(R.string.activated)
-                    .setMessage(R.string.activation_successful);
-            runOnUiThread(() -> builder.create().show());
         }
     };
 

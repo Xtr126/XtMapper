@@ -19,19 +19,7 @@ import xtr.keymapper.activity.MainActivity;
 
 public class Server {
 
-    public File script;
-    public MainActivity.Callback mCallback;
-
-    static {
-        // Set settings before the main shell can be created
-        Shell.enableVerboseLogging = false;
-        Shell.setDefaultBuilder(Shell.Builder.create()
-                .setFlags(Shell.FLAG_REDIRECT_STDERR)
-                .setTimeout(10)
-        );
-    }
-
-    private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
+    private static void writeScript(ApplicationInfo ai, File script) throws IOException, InterruptedException {
         final String className = xtr.keymapper.server.RemoteServiceShell.class.getName();
 
         FileWriter linesToWrite = new FileWriter(script, false);
@@ -47,40 +35,18 @@ public class Server {
         linesToWrite.close();
     }
 
-    public void setupServer (Context context) {
+    public static void setupServer(Context context, MainActivity.Callback mCallback) {
+        File script = new File(context.getExternalFilesDir(null), "xtMapper.sh");
         try {
-            script = new File(context.getExternalFilesDir(null), "xtMapper.sh");
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
-            writeScript(ai);
+            writeScript(ai, script);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException ex) {
             Log.e("Server", ex.toString());
             mCallback.updateCmdView1("failed to write script: " + ex + "\n");
         }
         if (!script.exists()) mCallback.updateCmdView1("failed to write script: permission denied\n");
-    }
-
-    private final List<String> callbackList = new CallbackList<>() {
-        @Override
-        public void onAddElement(String line) {
-            mCallback.updateCmdView1("stdout: " + line + "\n");
-            if (line.equals("Waiting for overlay..."))
-                mCallback.alertActivation();
-        }
-    };
-
-    public void startServer() {
-        mCallback.updateCmdView1("exec sh " + script.getPath() + "\n");
-        Shell.getShell(shell -> {
-            if (!shell.isRoot()) mCallback.alertRootAccessNotFound();
-            else try {
-                Shell.cmd(new FileInputStream(script)).to(callbackList)
-                        .submit(out -> System.exit(1));
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            }
-        });
     }
 
 }

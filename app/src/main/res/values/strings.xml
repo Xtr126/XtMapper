@@ -2,7 +2,6 @@
     <string name="app_name">XtMapper</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
-    <string name="activation">Activation</string>
     <string name="activated">Activated</string>
     <string name="activation_successful">Keymapper is activated. Tap on Start button to start keymapper.</string>
     <string name="configure">Settings</string>
