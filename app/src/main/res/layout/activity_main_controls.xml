@@ -1,5 +1,4 @@
-<androidx.constraintlayout.widget.ConstraintLayout android:id="@+id/constrained"
-    android:layout_width="match_parent"
+<androidx.constraintlayout.widget.ConstraintLayout android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="20dp"
     app:layout_constraintBottom_toBottomOf="parent"

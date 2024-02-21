@@ -2,28 +2,12 @@
     <string name="app_name">XtMapper</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
-    <string name="activated">Activated</string>
-    <string name="activation_successful">Keymapper is activated. Tap on Start button to start keymapper.</string>
     <string name="configure">Settings</string>
     <string name="edit_keymap">Edit keymap</string>
     <string name="help">Help</string>
     <string name="package_name">package name: </string>
     <string name="mouse_sensitivity">Mouse Sensitivity</string>
     <string name="dpad_radius">Dpad Radius</string>
-    <string name="about_info">
-        \n XtMapper: Free and open source keymapper. \n\n
-
-        1. Activation \n\n
-        2. Tap on button to start/stop service \n\n
-        3. When service running, drag down notification panel and click on notification to launch editor \n\n
-        4. Setup keymap according to touch controls in your game and save \n\n
-        Touchpads are not supported, only mouse and keyboard. \n\n
-        Mouse right click or ~ key to aim with mouse for FPS games \n\n
-        Left-click drag mouse while holding ctrl key to simulate pinch-to-zoom gesture with two fingers. \n\n
-
-        \n License: GPL v3.0
-        \n GitHub: https://github.com/Xtr126/XtMapper \n\n
-    </string>
     <string name="mouse_aim_activated">
         Shooting mode activated Right click or ~ key to exit
     </string>
