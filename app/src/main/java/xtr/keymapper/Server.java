@@ -5,15 +5,9 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
-import com.topjohnwu.superuser.CallbackList;
-import com.topjohnwu.superuser.Shell;
-
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.List;
 
 import xtr.keymapper.activity.MainActivity;
 
