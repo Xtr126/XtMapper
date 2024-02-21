@@ -171,6 +171,7 @@ public class TouchPointer extends Service {
                 }
                 Log.e("startServer", e.toString(), e);
             }
+
         });
     }
 

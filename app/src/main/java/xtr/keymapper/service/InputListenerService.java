@@ -6,6 +6,7 @@ import android.view.inputmethod.EditorInfo;
 import xtr.keymapper.server.RemoteServiceHelper;
 
 public class InputListenerService extends InputMethodService {
+    // Input method to detect when user is inputting text
     @Override
     public void onDestroy() {
         super.onDestroy();

@@ -19,6 +19,7 @@ import xtr.keymapper.IRemoteService;
 public class RemoteServiceHelper {
 
     private static IRemoteService service = null;
+    public static boolean isRootService = true;
 
     public static void pauseKeymap(Context context){
         RemoteServiceHelper.getInstance(context, service -> {
@@ -92,7 +93,8 @@ public class RemoteServiceHelper {
         getInstance();
         if (service != null) cb.onConnection(service);
         else {
-            if (!Shell.isAppGrantedRoot()) System.exit(1);
+            Boolean hasRootAccess = Shell.isAppGrantedRoot();
+            if (hasRootAccess != null) isRootService = hasRootAccess;
             RemoteServiceConnection connection = new RemoteServiceConnection(cb);
             Intent intent = new Intent(context, RootRemoteService.class);
             RootService.bind(intent, connection);

@@ -25,6 +25,7 @@ import xtr.keymapper.TouchPointer;
 import xtr.keymapper.databinding.ActivityMainBinding;
 import xtr.keymapper.editor.EditorActivity;
 import xtr.keymapper.fragment.SettingsFragment;
+import xtr.keymapper.server.RemoteServiceHelper;
 
 public class MainActivity extends AppCompatActivity {
     public TouchPointer pointerOverlay;
@@ -89,6 +90,8 @@ public class MainActivity extends AppCompatActivity {
             setButtonState(false);
             requestNotificationPermission();
         }
+        if (!RemoteServiceHelper.isRootService)
+            alertRootAccessAndExit();
     }
 
     private void setButtonState(boolean start) {
@@ -144,12 +147,25 @@ public class MainActivity extends AppCompatActivity {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         builder.setTitle(R.string.root_not_found_title)
                 .setMessage(R.string.root_not_found_message)
-                .setPositiveButton("OK", (dialog, which) -> {
+                .setPositiveButton(R.string.ok, (dialog, which) -> {
                     Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("me.weishu.kernelsu");
                     if (launchIntent != null) startActivity(launchIntent);
                 });
         runOnUiThread(() -> builder.create().show());
     }
+
+    public void alertRootAccessAndExit() {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
+        builder.setTitle(R.string.root_no_privileges_title)
+                .setMessage(R.string.root_no_privileges_message)
+                .setPositiveButton(R.string.ok, (dialog, which) -> {
+                    finishAffinity();
+                    System.exit(0);
+                })
+                .setNegativeButton(R.string.cancel, (dialog, which) -> {});
+        runOnUiThread(() -> builder.create().show());
+    }
+
 
     @Override
     protected void onDestroy() {
