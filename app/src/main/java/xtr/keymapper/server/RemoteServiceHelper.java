@@ -9,6 +9,7 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 
+import com.topjohnwu.superuser.Shell;
 import com.topjohnwu.superuser.ipc.RootService;
 
 import java.io.IOException;
@@ -91,6 +92,7 @@ public class RemoteServiceHelper {
         getInstance();
         if (service != null) cb.onConnection(service);
         else {
+            if (!Shell.isAppGrantedRoot()) System.exit(1);
             RemoteServiceConnection connection = new RemoteServiceConnection(cb);
             Intent intent = new Intent(context, RootRemoteService.class);
             RootService.bind(intent, connection);
