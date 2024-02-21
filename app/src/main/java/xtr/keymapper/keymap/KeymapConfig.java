@@ -102,7 +102,7 @@ public class KeymapConfig implements Parcelable {
         swipeDelayMs = sharedPref.getInt("swipe_delay_ms", 0);
         dpadRadiusMultiplier = sharedPref.getFloat("dpad_radius", 1f);
 
-        touchpadInputMode = sharedPref.getString("touchpad_input_mode", TOUCHPAD_RELATIVE);
+        touchpadInputMode = sharedPref.getString("touchpad_input_mode", TOUCHPAD_DISABLED);
     }
 
     public void applySharedPrefs() {
