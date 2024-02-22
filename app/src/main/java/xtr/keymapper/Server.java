@@ -5,29 +5,20 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.concurrent.TimeUnit;
 
 import xtr.keymapper.activity.MainActivity;
-import xtr.keymapper.server.RemoteService;
 
 public class Server {
 
-    public File script;
-    public MainActivity.Callback mCallback;
-
-
-    private void writeScript(ApplicationInfo ai) throws IOException, InterruptedException {
-        final String className = RemoteService.class.getName();
+    private static void writeScript(ApplicationInfo ai, File script) throws IOException, InterruptedException {
+        final String className = xtr.keymapper.server.RemoteServiceShell.class.getName();
 
         FileWriter linesToWrite = new FileWriter(script, false);
         linesToWrite.append("#!/system/bin/sh\n");
-        linesToWrite.append("pgrep -f ").append(className).append(" && echo Waiting for overlay... && exit 1\n");
+        linesToWrite.append("pkill -f ").append(className).append("\n");
         linesToWrite.append("exec /system/bin/app_process");
         linesToWrite.append(" -Djava.library.path=\"").append(ai.nativeLibraryDir)  //path containing lib*.so
                 .append("\" -Djava.class.path=\"").append(ai.publicSourceDir) // Absolute path to apk in /data/app
@@ -38,40 +29,18 @@ public class Server {
         linesToWrite.close();
     }
 
-    public void setupServer (Context context) {
+    public static void setupServer(Context context, MainActivity.Callback mCallback) {
+        File script = new File(context.getExternalFilesDir(null), "xtMapper.sh");
         try {
-            script = new File(context.getExternalFilesDir(null), "xtMapper.sh");
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
-            writeScript(ai);
+            writeScript(ai, script);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException ex) {
             Log.e("Server", ex.toString());
             mCallback.updateCmdView1("failed to write script: " + ex + "\n");
         }
         if (!script.exists()) mCallback.updateCmdView1("failed to write script: permission denied\n");
-    }
-
-    public void startServer() {
-        mCallback.updateCmdView1("exec sh " + script.getPath() + "\n");
-        try {
-            Process sh = Utils.getRootAccess();
-            DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-            outputStream.writeBytes("/system/bin/sh " + script.getPath());
-            outputStream.close();
-
-            BufferedReader stdout = new BufferedReader(new InputStreamReader(sh.getInputStream()));
-            String line;
-            while ((line = stdout.readLine()) != null) {
-                mCallback.updateCmdView1("stdout: " + line + "\n");
-                if (line.equals("Waiting for overlay..."))
-                    mCallback.alertActivation();
-            }
-            if (sh.waitFor(5, TimeUnit.SECONDS)) mCallback.alertRootAccessNotFound();
-            sh.destroy();
-        } catch (IOException | InterruptedException ex) {
-            Log.e("Server", ex.toString());
-        }
     }
 
 }

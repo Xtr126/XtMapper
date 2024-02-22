@@ -2,6 +2,16 @@ plugins {
     id 'com.android.application'
 }
 
+// Create a variable called keystorePropertiesFile, and initialize it to your
+// keystore.properties file, in the rootProject folder.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+
+// Initialize a new Properties() object called keystoreProperties.
+def keystoreProperties = new Properties()
+
+// Load your keystore.properties file into the keystoreProperties object.
+keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+
 android {
     namespace 'xtr.keymapper'
     compileSdk 34
@@ -9,30 +19,45 @@ android {
     defaultConfig {
         applicationId "xtr.keymapper"
         minSdk 28
-        targetSdk 33
-        versionCode 10
-        versionName '2.1.0'
+        targetSdk 34
+        versionCode 11
+        versionName '2.1.1'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-         ndk {
-            abiFilter 'x86_64'
-         }
+
         aaptOptions {
             ignoreAssetsPattern ''
         }
     }
-      externalNativeBuild {
+
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+
+    externalNativeBuild {
         ndkBuild {
             path 'Android.mk'
         }
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    applicationVariants.configureEach {
+        it.outputs.every {
+            it.outputFileName = "XtMapper-${it.name}-v${defaultConfig.versionName}.apk"
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
@@ -43,19 +68,42 @@ android {
     }
     packagingOptions.jniLibs.useLegacyPackaging true
 
+    splits {
+
+        // Configures multiple APKs based on ABI.
+        abi {
+            // Enables building multiple APKs per ABI.
+            enable true
+
+            // Resets the list of ABIs for Gradle to create APKs for to none.
+            reset()
+
+            // Specifies a list of ABIs for Gradle to create APKs for.
+            include "x86_64", "x86", "armeabi-v7a", "arm64-v8a"
+
+            // Specifies that we don't want to also generate a universal APK that includes all ABIs.
+            universalApk false
+        }
+    }
+
     ndkVersion '26.1.10909125'
+    
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs.
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles.
+        includeInBundle = false
+    }
 }
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation "androidx.constraintlayout:constraintlayout:2.1.4"
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
-    implementation 'com.google.android.material:material:1.10.0'
+    implementation 'com.google.android.material:material:1.11.0'
     implementation "com.leinardi.android:speed-dial:3.3.0"
-    implementation 'androidx.webkit:webkit:1.8.0'
-    // The core module that provides APIs to a shell
-    implementation "com.github.topjohnwu.libsu:core:5.2.1"
-    // Optional: APIs for creating root services. Depends on ":core"
-    implementation "com.github.topjohnwu.libsu:service:5.2.1"
+    implementation 'androidx.webkit:webkit:1.10.0'
+    implementation "com.github.topjohnwu.libsu:core:5.2.2"
+    implementation "com.github.topjohnwu.libsu:service:5.2.2"
     compileOnly project(path: ':app:hidden-api')
 }

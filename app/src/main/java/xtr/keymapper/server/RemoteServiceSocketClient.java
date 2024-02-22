@@ -6,6 +6,9 @@ import android.os.IBinder;
 import android.os.Parcel;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.util.function.Consumer;
 
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
@@ -14,176 +17,133 @@ import xtr.keymapper.keymap.KeymapProfile;
 
 public class RemoteServiceSocketClient implements IRemoteService {
 
-    private LocalSocket socket;
+    // Socket should stay alive
+    public static LocalSocket socket = null;
 
-    static private <T extends android.os.Parcelable> void writeTypedObject(
-            android.os.Parcel parcel, T value, int parcelableFlags) {
-        if (value != null) {
-            parcel.writeInt(1);
-            value.writeToParcel(parcel, parcelableFlags);
-        } else {
-            parcel.writeInt(0);
+    public RemoteServiceSocketClient() throws IOException {
+        if (socket == null) {
+            socket = new LocalSocket();
+            socket.connect(new LocalSocketAddress("xtmapper-a3e11694"));
+        }
+    }
+    public static class ParcelableByteArray {
+        final byte[][] data;
+        int i = 0;
+
+        public ParcelableByteArray(int size) {
+            data = new byte[size][];
+        }
+
+        public void foreach(Consumer<byte []> action) {
+            for (byte[] bytes : data) action.accept(bytes);
+        }
+
+        private <T extends android.os.Parcelable> void writeTypedObject(T value) {
+            Parcel parcel = Parcel.obtain();
+            value.writeToParcel(parcel, 0);
+            data[i] = parcel.marshall();
+            parcel.recycle();
+            i++;
+        }
+
+        public void writeStrongInterface(Object o) {
+            data[i] = new byte[0];
+            i++;
+        }
+
+        public void writeInt(int x) {
+            data[i] = ByteBuffer.allocate(4).putInt(x).array();
+            i++;
         }
     }
 
-    private boolean transactRemote(int code, Parcel data, Parcel reply, int flags) {
+    public int readInt() {
+        int i;
         try {
-            byte[] b = data.marshall();
-            socket.getOutputStream().write(b.length);
-            socket.getOutputStream().write(b);
+            InputStream inputStream = socket.getInputStream();
+            int length = inputStream.read();
+            byte[] bytes = new byte[length];
+            inputStream.read(bytes);
+            i = ByteBuffer.wrap(bytes).getInt();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return i;
+    }
+
+    private boolean transactRemote(int code, ParcelableByteArray data) {
+        try {
+            socket.getOutputStream().write(code);
+
+            data.foreach(bytes -> {
+                try {
+                    socket.getOutputStream().write(bytes.length);
+                    socket.getOutputStream().write(bytes);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         return true;
     }
-    public void init() throws IOException {
-        socket = new LocalSocket();
-        socket.connect(new LocalSocketAddress("xtmapper-a3e11694"));
-    }
 
     @Override public boolean isRoot()
     {
-        android.os.Parcel _data = android.os.Parcel.obtain();
-        android.os.Parcel _reply = android.os.Parcel.obtain();
-        boolean _result;
-        try {
-            _data.writeInterfaceToken(DESCRIPTOR);
-            boolean _status = transactRemote(TRANSACTION_isRoot, _data, _reply, 0);
-            _reply.readException();
-            _result = (0!=_reply.readInt());
-        }
-        finally {
-            _reply.recycle();
-            _data.recycle();
-        }
+        ParcelableByteArray _data = new ParcelableByteArray(5);
+        boolean _status = transactRemote(TRANSACTION_isRoot, _data);
+
+        boolean _result = (0!=readInt());
+
         return _result;
     }
 
     @Override public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) {
-        Parcel _data = Parcel.obtain();
-        Parcel _reply = Parcel.obtain();
-        try {
-            _data.writeInterfaceToken(DESCRIPTOR);
-            writeTypedObject(_data, profile, 0);
-            writeTypedObject(_data, keymapConfig, 0);
-            _data.writeStrongInterface(cb);
-            _data.writeInt(screenWidth);
-            _data.writeInt(screenHeight);
-            boolean _status = transactRemote(TRANSACTION_startServer, _data, _reply, 0);
-            _reply.readException();
-        }
-        finally {
-            _reply.recycle();
-            _data.recycle();
-        }
+        ParcelableByteArray _data = new ParcelableByteArray(5);
+        _data.writeTypedObject(profile);
+        _data.writeTypedObject(keymapConfig);
+        _data.writeStrongInterface(null);
+        _data.writeInt(screenWidth);
+        _data.writeInt(screenHeight);
+        boolean _status = transactRemote(TRANSACTION_startServer, _data);
     }
     @Override public void stopServer() {
-        android.os.Parcel _data = android.os.Parcel.obtain();
-        android.os.Parcel _reply = android.os.Parcel.obtain();
-        try {
-            _data.writeInterfaceToken(DESCRIPTOR);
-            boolean _status = transactRemote(TRANSACTION_stopServer, _data, _reply, 0);
-            _reply.readException();
-        }
-        finally {
-            _reply.recycle();
-            _data.recycle();
-        }
+        ParcelableByteArray _data = new ParcelableByteArray(5);
+        boolean _status = transactRemote(TRANSACTION_stopServer, _data);
     }
     @Override public void registerOnKeyEventListener(xtr.keymapper.OnKeyEventListener l) {
-        android.os.Parcel _data = android.os.Parcel.obtain();
-        android.os.Parcel _reply = android.os.Parcel.obtain();
-        try {
-            _data.writeInterfaceToken(DESCRIPTOR);
-            _data.writeStrongInterface(l);
-            boolean _status = transactRemote(TRANSACTION_registerOnKeyEventListener, _data, _reply, 0);
-            _reply.readException();
-        }
-        finally {
-            _reply.recycle();
-            _data.recycle();
-        }
+        ParcelableByteArray _data = new ParcelableByteArray(5);
+        _data.writeStrongInterface(null);
+        boolean _status = transactRemote(TRANSACTION_registerOnKeyEventListener, _data);
+
     }
     @Override public void unregisterOnKeyEventListener(xtr.keymapper.OnKeyEventListener l) {
-        android.os.Parcel _data = android.os.Parcel.obtain();
-        android.os.Parcel _reply = android.os.Parcel.obtain();
-        try {
-            _data.writeInterfaceToken(DESCRIPTOR);
-            _data.writeStrongInterface(l);
-            boolean _status = transactRemote(TRANSACTION_unregisterOnKeyEventListener, _data, _reply, 0);
-            _reply.readException();
-        }
-        finally {
-            _reply.recycle();
-            _data.recycle();
-        }
+        ParcelableByteArray _data = new ParcelableByteArray(5);
+        _data.writeStrongInterface(null);
+        boolean _status = transactRemote(TRANSACTION_unregisterOnKeyEventListener, _data);
     }
     @Override public void registerActivityObserver(xtr.keymapper.ActivityObserver callback) {
-        android.os.Parcel _data = android.os.Parcel.obtain();
-        android.os.Parcel _reply = android.os.Parcel.obtain();
-        try {
-            _data.writeInterfaceToken(DESCRIPTOR);
-            _data.writeStrongInterface(callback);
-            boolean _status = transactRemote(TRANSACTION_registerActivityObserver, _data, _reply, 0);
-            _reply.readException();
-        }
-        finally {
-            _reply.recycle();
-            _data.recycle();
-        }
+        ParcelableByteArray _data = new ParcelableByteArray(5);
+        _data.writeStrongInterface(null);
+        boolean _status = transactRemote(TRANSACTION_registerActivityObserver, _data);
     }
     @Override public void unregisterActivityObserver(xtr.keymapper.ActivityObserver callback) {
-        android.os.Parcel _data = android.os.Parcel.obtain();
-        android.os.Parcel _reply = android.os.Parcel.obtain();
-        try {
-            _data.writeInterfaceToken(DESCRIPTOR);
-            _data.writeStrongInterface(callback);
-            boolean _status = transactRemote(TRANSACTION_unregisterActivityObserver, _data, _reply, 0);
-            _reply.readException();
-        }
-        finally {
-            _reply.recycle();
-            _data.recycle();
-        }
+        ParcelableByteArray _data = new ParcelableByteArray(5);
+        _data.writeStrongInterface(null);
+        boolean _status = transactRemote(TRANSACTION_unregisterActivityObserver, _data);
     }
     @Override public void resumeMouse() {
-        android.os.Parcel _data = android.os.Parcel.obtain();
-        android.os.Parcel _reply = android.os.Parcel.obtain();
-        try {
-            _data.writeInterfaceToken(DESCRIPTOR);
-            boolean _status = transactRemote(TRANSACTION_resumeMouse, _data, _reply, 0);
-            _reply.readException();
-        }
-        finally {
-            _reply.recycle();
-            _data.recycle();
-        }
+        ParcelableByteArray _data = new ParcelableByteArray(5);
+        boolean _status = transactRemote(TRANSACTION_resumeMouse, _data);
     }
     @Override public void pauseMouse() {
-        android.os.Parcel _data = android.os.Parcel.obtain();
-        android.os.Parcel _reply = android.os.Parcel.obtain();
-        try {
-            _data.writeInterfaceToken(DESCRIPTOR);
-            boolean _status = transactRemote(TRANSACTION_pauseMouse, _data, _reply, 0);
-            _reply.readException();
-        }
-        finally {
-            _reply.recycle();
-            _data.recycle();
-        }
+        ParcelableByteArray _data = new ParcelableByteArray(5);
+        boolean _status = transactRemote(TRANSACTION_pauseMouse, _data);
     }
     @Override public void reloadKeymap() {
-        android.os.Parcel _data = android.os.Parcel.obtain();
-        android.os.Parcel _reply = android.os.Parcel.obtain();
-        try {
-            _data.writeInterfaceToken(DESCRIPTOR);
-            boolean _status = transactRemote(TRANSACTION_reloadKeymap, _data, _reply, 0);
-            _reply.readException();
-        }
-        finally {
-            _reply.recycle();
-            _data.recycle();
-        }
+        ParcelableByteArray _data = new ParcelableByteArray(5);
+        boolean _status = transactRemote(TRANSACTION_reloadKeymap, _data);
     }
 
     static final int TRANSACTION_isRoot = (android.os.IBinder.FIRST_CALL_TRANSACTION + 0);

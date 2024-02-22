@@ -2,7 +2,6 @@ package xtr.keymapper;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
@@ -27,12 +26,4 @@ public class Utils {
         return new BufferedReader(new InputStreamReader(sh.getInputStream()));
     }
 
-    public static Process getRootAccess() throws IOException {
-        String[] paths = {"/sbin/su", "/system/sbin/su", "/system/bin/su", "/system/xbin/su", "/su/bin/su", "/magisk/.core/bin/su"};
-        for (String path : paths) {
-            if (new File(path).canExecute())
-                return Runtime.getRuntime().exec(path);
-        }
-        return Runtime.getRuntime().exec("echo root access not found!");
-    }
 }

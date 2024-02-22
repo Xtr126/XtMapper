@@ -6,3 +6,5 @@
 /build
 /app/build
 output*.json
+keystore.properties
+keystore.jks

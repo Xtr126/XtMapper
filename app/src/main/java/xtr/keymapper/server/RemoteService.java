@@ -1,9 +1,6 @@
 package xtr.keymapper.server;
 
-import android.os.Looper;
 import android.os.RemoteException;
-import android.os.ServiceManager;
-import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -20,47 +17,25 @@ public class RemoteService extends IRemoteService.Stub {
     private String currentDevice = "";
     private InputService inputService;
     private OnKeyEventListener mOnKeyEventListener;
-    private boolean isWaylandClient = false;
+    boolean isWaylandClient = false;
     private ActivityObserverService activityObserverService;
+    String nativeLibraryDir = System.getProperty("java.library.path");
 
-    public RemoteService() {
-
+    public static void loadLibraries() {
+        System.loadLibrary("mouse_read");
+        System.loadLibrary("mouse_cursor");
+        System.loadLibrary("touchpad_direct");
+        System.loadLibrary("touchpad_relative");
     }
 
-    public static void main(String[] args) {
-        loadLibraries();
-        Looper.prepare();
-        new RemoteService(args);
-        Looper.loop();
-    }
-
-    public RemoteService(String[] args) {
-        super();
-        Log.i("XtMapper", "starting server...");
-        try {
-            ServiceManager.addService("xtmapper", this);
-            System.out.println("Waiting for overlay...");
-            for (String arg: args) {
-                if (arg.equals("--wayland-client")) {
-                    isWaylandClient = true;
-                    System.out.println("using wayland client");
-                }
-            }
-            start_getevent();
-        } catch (Exception e) {
-            e.printStackTrace(System.out);
-            System.exit(1);
-        }
-    }
-
-    private void start_getevent() {
+    void start_getevent() {
         new Thread(() -> {
             try {
                 final BufferedReader getevent;
                 if (isWaylandClient) {
                     getevent = new BufferedReader(new InputStreamReader(System.in));
                 } else {
-                    getevent = Utils.geteventStream(System.getProperty("java.library.path"));
+                    getevent = Utils.geteventStream(nativeLibraryDir);
                 }
                 String line;
                 while ((line = getevent.readLine()) != null) {
@@ -107,6 +82,7 @@ public class RemoteService extends IRemoteService.Stub {
     @Override
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
         if (inputService != null) stopServer();
+        cb.asBinder().linkToDeath(this::stopServer, 0);
         inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight, isWaylandClient);
         if (!isWaylandClient) {
             inputService.setMouseLock(true);
@@ -154,11 +130,13 @@ public class RemoteService extends IRemoteService.Stub {
         activityObserverService = null;
     }
 
+    @Override
     public void pauseMouse(){
         if (inputService != null)
             if (!inputService.stopEvents) inputService.pauseResumeKeymap();
     }
 
+    @Override
     public void resumeMouse(){
         if (inputService != null)
             if (inputService.stopEvents) inputService.pauseResumeKeymap();
@@ -167,17 +145,6 @@ public class RemoteService extends IRemoteService.Stub {
     @Override
     public void reloadKeymap() {
         if (inputService != null) inputService.reloadKeymap();
-    }
-
-    public static void loadLibraries() {
-        System.loadLibrary("mouse_read");
-        System.loadLibrary("mouse_cursor");
-        System.loadLibrary("touchpad_direct");
-        System.loadLibrary("touchpad_relative");
-    }
-
-    public static IRemoteService getInstance(){
-        return IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
     }
 
 }

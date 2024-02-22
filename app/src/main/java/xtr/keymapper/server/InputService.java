@@ -1,6 +1,10 @@
 package xtr.keymapper.server;
 
-import static xtr.keymapper.InputEventCodes.*;
+import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
+import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
+import static xtr.keymapper.InputEventCodes.REL_WHEEL;
+import static xtr.keymapper.InputEventCodes.REL_X;
+import static xtr.keymapper.InputEventCodes.REL_Y;
 
 import android.os.RemoteException;
 import android.view.MotionEvent;
@@ -16,7 +20,7 @@ public class InputService implements IInputInterface {
     private final KeyEventHandler keyEventHandler;
     private KeymapConfig keymapConfig;
     private KeymapProfile keymapProfile;
-    private static final Input input = new Input();
+    private final Input input = new Input();
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final IRemoteServiceCallback mCallback;
     final int supportsUinput;

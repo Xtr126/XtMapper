@@ -1,5 +1,7 @@
 package xtr.keymapper;
 
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -10,6 +12,7 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -30,7 +33,7 @@ import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfiles;
 import xtr.keymapper.profiles.ProfileSelector;
-import xtr.keymapper.server.RemoteService;
+import xtr.keymapper.server.RemoteServiceHelper;
 
 
 public class TouchPointer extends Service {
@@ -102,77 +105,81 @@ public class TouchPointer extends Service {
                 .setSmallIcon(R.mipmap.ic_launcher_foreground)
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .build();
-        startForeground(2, notification);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(2, notification, FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else {
+            startForeground(2, notification);
+        }
 
         if (cursorView == null) showCursor();
 
-        KeymapConfig keymapConfig = new KeymapConfig(this);
+        // Launch default profile
+        this.selectedProfile = "Default";
+        KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(selectedProfile);
+        connectRemoteService(keymapProfile);
 
-        if(keymapConfig.disableAutoProfiling) {
-            // Select app
-            ProfileSelector.select(this, profile -> {
-                this.selectedProfile = profile;
-                KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
-                connectRemoteService(keymapProfile);
-                Intent launchIntent = getPackageManager().getLaunchIntentForPackage(keymapProfile.packageName);
-                if (launchIntent != null) startActivity(launchIntent);
-            });
-        } else {
-            // Launch default profile for current app
-            ProfileSelector.select(this, profile -> {
-                this.selectedProfile = profile;
-                KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
-                connectRemoteService(keymapProfile);
-            }, getPackageName());
-        }
         return super.onStartCommand(i, flags, startId);
+    }
+
+    public void launchApp() {
+        ProfileSelector.select(this, profile -> {
+            this.selectedProfile = profile;
+            KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
+            connectRemoteService(keymapProfile);
+            Intent launchIntent = getPackageManager().getLaunchIntentForPackage(keymapProfile.packageName);
+            if (launchIntent != null) startActivity(launchIntent);
+        });
     }
 
     private void connectRemoteService(KeymapProfile profile) {
         if (activityCallback != null) activityCallback.updateCmdView1("\n connecting to server..");
-        mService = RemoteService.getInstance();
-        if (mService == null) {
-            if (activityCallback != null) {
-                activityCallback.updateCmdView1("\n connection failed\n Please retry activation \n");
-                activityCallback.stopPointer();
-            } else {
-                onDestroy();
-                stopSelf();
-            }
-            return;
-        }
-        KeymapConfig keymapConfig = new KeymapConfig(this);
-        Display display = mWindowManager.getDefaultDisplay();
-        Point size = new Point();
-        display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
-        try {
-            if (keymapConfig.disableAutoProfiling) {
-                mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
-            } else {
-                if (!activityRemoteCallback) {
-                    mService.registerActivityObserver(mActivityObserverCallback);
-                    activityRemoteCallback = true;
+        RemoteServiceHelper.getInstance(this, service -> {
+            mService = service;
+            if (mService == null) {
+                if (activityCallback != null) {
+                    activityCallback.updateCmdView1("\n connection failed\n Please retry activation \n");
+                    activityCallback.stopPointer();
                 } else {
-                    if (!profile.disabled)
-                        mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+                    onDestroy();
+                    stopSelf();
                 }
+                return;
             }
-        } catch (Exception e) {
-            if(activityCallback != null) {
-                activityCallback.updateCmdView1(e.toString());
-                activityCallback.stopPointer();
-            } else {
-                onDestroy();
-                stopSelf();
+            KeymapConfig keymapConfig = new KeymapConfig(this);
+            Display display = mWindowManager.getDefaultDisplay();
+            Point size = new Point();
+            display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
+            try {
+                if (keymapConfig.disableAutoProfiling) {
+                    mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+                } else {
+                    if (!activityRemoteCallback) {
+                        mService.registerActivityObserver(mActivityObserverCallback);
+                        activityRemoteCallback = true;
+                    } else {
+                        if (!profile.disabled)
+                            mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+                    }
+                }
+            } catch (Exception e) {
+                if(activityCallback != null) {
+                    activityCallback.updateCmdView1(e.toString());
+                    activityCallback.stopPointer();
+                } else {
+                    onDestroy();
+                    stopSelf();
+                }
+                Log.e("startServer", e.toString(), e);
             }
-            Log.e("startServer", e.toString(), e);
-        }
+
+        });
     }
 
     @Override
     public void onDestroy() {
         if (cursorView != null) {
-            mWindowManager.removeView(cursorView);
+            if (cursorView.isAttachedToWindow())
+                mWindowManager.removeView(cursorView);
             cursorView.invalidate();
         }
         if (mService != null) try {

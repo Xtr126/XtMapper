@@ -74,6 +74,7 @@ public class ProfileSelector {
     }
 
     public static void showEnableProfileDialog(@UiContext Context context, String packageName, OnProfileEnabledListener listener){
+        context.setTheme(R.style.Theme_XtMapper);
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
         AppViewBinding binding = AppViewBinding.inflate(LayoutInflater.from(context));
         PackageManager pm = context.getPackageManager();

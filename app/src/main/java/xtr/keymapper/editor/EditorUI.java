@@ -3,10 +3,8 @@ package xtr.keymapper.editor;
 import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -14,6 +12,10 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+
+import androidx.appcompat.app.AlertDialog;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -111,11 +113,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
         });
     }
 
-    @Override
-    public IBinder asBinder() {
-        return this;
-    }
-
 
     public interface OnHideListener {
         void onHideView();
@@ -181,7 +178,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         profiles.saveProfile(profileName, linesToWrite, profile.packageName, !profile.disabled);
 
         // Reload keymap if service running
-        RemoteServiceHelper.reloadKeymap();
+        RemoteServiceHelper.reloadKeymap(context);
     }
 
     public void setupButtons() {
@@ -200,7 +197,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
             }
             else if (id == R.id.dpad) {
                 final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
-                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
                 builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
                     if (i == 0) addArrowKeysDpad(defaultX, defaultY);
                     else addWasdDpad(defaultX, defaultY);
