@@ -98,7 +98,7 @@ public class RemoteServiceHelper {
                     .daemon(false)
                     .processNameSuffix("service")
                     .debuggable(false)
-                    .version(11);
+                    .version(12);
         Shizuku.bindUserService(userServiceArgs, connection);
 }
 
