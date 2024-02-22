@@ -58,5 +58,6 @@
     <string name="disable_auto_profile">Disable auto profiling</string>
     <string name="touchpad_input">Touchpad Input</string>
     <string name="launch_app">Launch App</string>
+    <string name="use_shizuku">Use Shizuku</string>
 
 </resources>

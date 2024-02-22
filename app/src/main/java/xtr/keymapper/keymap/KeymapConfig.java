@@ -14,7 +14,7 @@ public class KeymapConfig implements Parcelable {
     public Float mouseSensitivity, scrollSpeed;
     public Float dpadRadiusMultiplier;
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
-    public boolean disableAutoProfiling;
+    public boolean disableAutoProfiling , useShizuku;
 
     public int pauseResumeShortcutKey, launchEditorShortcutKey, switchProfileShortcutKey;
     public int swipeDelayMs;
@@ -65,6 +65,7 @@ public class KeymapConfig implements Parcelable {
         mouseAimToggle = in.readByte() != 0;
         disableAutoProfiling = in.readByte() != 0;
         touchpadInputMode = in.readString();
+        useShizuku = in.readByte() != 0;
     }
 
     public static final Creator<KeymapConfig> CREATOR = new Creator<>() {
@@ -86,6 +87,7 @@ public class KeymapConfig implements Parcelable {
         ctrlDragMouseGesture = sharedPref.getBoolean("ctrl_drag_mouse_gesture", true);
         mouseAimToggle = sharedPref.getBoolean("mouse_aim_shortcut_toggle", true);
         disableAutoProfiling = sharedPref.getBoolean("disable_auto_profile", true);
+        useShizuku = sharedPref.getBoolean("use_shizuku", false);
 
         launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", -1);
         pauseResumeShortcutKey = sharedPref.getInt("pause_resume_shortcut", -1);
@@ -115,6 +117,7 @@ public class KeymapConfig implements Parcelable {
                 .putBoolean("right_click_mouse_aim", rightClickMouseAim)
                 .putBoolean("mouse_aim_shortcut_toggle", mouseAimToggle)
                 .putBoolean("disable_auto_profile", disableAutoProfiling)
+                .putBoolean("use_shizuku", useShizuku)
                 .putInt("pause_resume_shortcut", pauseResumeShortcutKey)
                 .putInt("launch_editor_shortcut", launchEditorShortcutKey)
                 .putInt("switch_profile_shortcut", switchProfileShortcutKey)
@@ -167,5 +170,6 @@ public class KeymapConfig implements Parcelable {
         dest.writeByte((byte) (mouseAimToggle ? 1 : 0));
         dest.writeByte((byte) (disableAutoProfiling ? 1 : 0));
         dest.writeString(touchpadInputMode);
+        dest.writeByte((byte) (useShizuku ? 1 : 0));
     }
 }

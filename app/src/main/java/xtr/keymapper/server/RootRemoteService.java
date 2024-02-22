@@ -1,8 +1,6 @@
 package xtr.keymapper.server;
 
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.os.IBinder;
 import android.os.Process;
 
@@ -20,19 +18,12 @@ class RootRemoteService extends RootService {
             RemoteService.loadLibraries();
     }
 
-    public final RemoteService mService = new RemoteService();
-
+    private RemoteService mService = null;
 
     @Override
     public IBinder onBind(@NonNull Intent intent) {
-        PackageManager pm = this.getPackageManager();
-        String packageName = this.getPackageName();
-        try {
-            ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
-            mService.nativeLibraryDir = ai.nativeLibraryDir;
-            mService.start_getevent();
-        } catch (PackageManager.NameNotFoundException e) {
-            throw new RuntimeException(e);
+        if (mService == null) {
+            mService = new RemoteService().init(this);
         }
         return mService;
     }

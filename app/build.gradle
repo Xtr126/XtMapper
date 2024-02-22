@@ -105,5 +105,7 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.10.0'
     implementation "com.github.topjohnwu.libsu:core:5.2.2"
     implementation "com.github.topjohnwu.libsu:service:5.2.2"
+    implementation "dev.rikka.shizuku:api:13.1.5"
+    implementation "dev.rikka.shizuku:provider:13.1.5"
     compileOnly project(path: ':app:hidden-api')
 }

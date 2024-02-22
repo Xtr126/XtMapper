@@ -1,5 +1,8 @@
 package xtr.keymapper.server;
 
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.RemoteException;
 
 import java.io.BufferedReader;
@@ -20,6 +23,29 @@ public class RemoteService extends IRemoteService.Stub {
     boolean isWaylandClient = false;
     private ActivityObserverService activityObserverService;
     String nativeLibraryDir = System.getProperty("java.library.path");
+
+    public RemoteService() {
+
+    }
+
+    /* For Shizuku UserService */
+    public RemoteService(Context context) {
+        loadLibraries();
+        init(context);
+    }
+
+    public RemoteService init(Context context) {
+        PackageManager pm = context.getPackageManager();
+        String packageName = context.getPackageName();
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
+            nativeLibraryDir = ai.nativeLibraryDir;
+            start_getevent();
+        } catch (PackageManager.NameNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+        return this;
+    }
 
     public static void loadLibraries() {
         System.loadLibrary("mouse_read");

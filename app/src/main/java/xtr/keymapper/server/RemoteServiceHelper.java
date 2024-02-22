@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.ServiceManager;
@@ -14,12 +15,14 @@ import com.topjohnwu.superuser.ipc.RootService;
 
 import java.io.IOException;
 
+import rikka.shizuku.Shizuku;
 import xtr.keymapper.IRemoteService;
 
 public class RemoteServiceHelper {
 
     private static IRemoteService service = null;
     public static boolean isRootService = true;
+    public static boolean useShizuku = false;
 
     public static void pauseKeymap(Context context){
         RemoteServiceHelper.getInstance(context, service -> {
@@ -89,15 +92,30 @@ public class RemoteServiceHelper {
         }
     }
 
-    public static void getInstance(Context context, RootRemoteServiceCallback cb){
+    private static void bindShizukuService(Context context, RemoteServiceConnection connection) {
+        Shizuku.UserServiceArgs userServiceArgs =
+            new Shizuku.UserServiceArgs(new ComponentName(context, RemoteService.class.getName()))
+                    .daemon(false)
+                    .processNameSuffix("service")
+                    .debuggable(false)
+                    .version(11);
+        Shizuku.bindUserService(userServiceArgs, connection);
+}
+
+    public static void getInstance(Context context, RootRemoteServiceCallback callback){
         getInstance();
-        if (service != null) cb.onConnection(service);
+        if (service != null) callback.onConnection(service);
         else {
-            Boolean hasRootAccess = Shell.isAppGrantedRoot();
-            if (hasRootAccess != null) isRootService = hasRootAccess;
-            RemoteServiceConnection connection = new RemoteServiceConnection(cb);
-            Intent intent = new Intent(context, RootRemoteService.class);
-            RootService.bind(intent, connection);
+            RemoteServiceConnection connection = new RemoteServiceConnection(callback);
+            if (useShizuku) {
+                if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED)
+                    bindShizukuService(context, connection);
+            } else {
+                Boolean hasRootAccess = Shell.isAppGrantedRoot();
+                if (hasRootAccess != null) isRootService = hasRootAccess;
+                Intent intent = new Intent(context, RootRemoteService.class);
+                RootService.bind(intent, connection);
+            }
         }
     }
 }

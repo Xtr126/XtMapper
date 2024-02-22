@@ -25,6 +25,7 @@ import xtr.keymapper.TouchPointer;
 import xtr.keymapper.databinding.ActivityMainBinding;
 import xtr.keymapper.editor.EditorActivity;
 import xtr.keymapper.fragment.SettingsFragment;
+import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.server.RemoteServiceHelper;
 
 public class MainActivity extends AppCompatActivity {
@@ -55,11 +56,13 @@ public class MainActivity extends AppCompatActivity {
         intent = new Intent(context, TouchPointer.class);
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
 
+        RemoteServiceHelper.useShizuku = new KeymapConfig(context).useShizuku;
+
         Shell.getShell(shell -> {
             Boolean rootAccess = Shell.isAppGrantedRoot();
             if (rootAccess == null || !rootAccess) {
                 Server.setupServer(this, mCallback);
-                alertRootAccessNotFound();
+                if(!RemoteServiceHelper.useShizuku) alertRootAccessNotFound();
             }
             setupButtons();
         });

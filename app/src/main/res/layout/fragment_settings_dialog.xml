@@ -347,6 +347,13 @@
 
         </LinearLayout>
 
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/use_shizuku"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:checked="false"
+            android:text="@string/use_shizuku" />
+
     </LinearLayout>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
