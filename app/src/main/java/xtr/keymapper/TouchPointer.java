@@ -39,8 +39,6 @@ import xtr.keymapper.server.RemoteServiceHelper;
 public class TouchPointer extends Service {
     private final IBinder binder = new TouchPointerBinder();
     public MainActivity.Callback activityCallback;
-    private WindowManager mWindowManager;
-    public View cursorView;
     private IRemoteService mService;
     public String selectedProfile = null;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -51,32 +49,6 @@ public class TouchPointer extends Service {
             // Return this instance of TouchPointer so clients can call public methods
             return TouchPointer.this;
         }
-    }
-
-    // set the layout parameters of the cursor
-    private final WindowManager.LayoutParams mParams = new WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            // Don't let the cursor grab the input focus
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
-                    WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-            // Make the underlying application window visible
-            // through the cursor
-            PixelFormat.TRANSLUCENT);
-
-    private void showCursor() {
-        super.onCreate();
-        LayoutInflater layoutInflater = getSystemService(LayoutInflater.class);
-        mWindowManager = getSystemService(WindowManager.class);
-        // Inflate the layout for the cursor
-        cursorView = CursorBinding.inflate(layoutInflater).getRoot();
-
-        if(cursorView.getWindowToken()==null)
-            if (cursorView.getParent() == null)
-                mWindowManager.addView(cursorView, mParams);
     }
 
     @Override
@@ -111,8 +83,6 @@ public class TouchPointer extends Service {
             startForeground(2, notification);
         }
 
-        if (cursorView == null) showCursor();
-
         // Launch default profile
         this.selectedProfile = "Default";
         KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(selectedProfile);
@@ -146,6 +116,7 @@ public class TouchPointer extends Service {
                 return;
             }
             KeymapConfig keymapConfig = new KeymapConfig(this);
+            WindowManager mWindowManager = getSystemService(WindowManager.class);
             Display display = mWindowManager.getDefaultDisplay();
             Point size = new Point();
             display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
@@ -177,18 +148,12 @@ public class TouchPointer extends Service {
 
     @Override
     public void onDestroy() {
-        if (cursorView != null) {
-            if (cursorView.isAttachedToWindow())
-                mWindowManager.removeView(cursorView);
-            cursorView.invalidate();
-        }
         if (mService != null) try {
             mService.unregisterActivityObserver(mActivityObserverCallback);
             mService.stopServer();
         } catch (Exception e) {
             Log.e("stopServer", e.toString(), e);
         }
-        cursorView = null;
         mService = null;
         activityCallback = null;
         super.onDestroy();
@@ -212,16 +177,6 @@ public class TouchPointer extends Service {
             // Notifying user that shooting mode was activated
             mHandler.post(() -> Toast.makeText(TouchPointer.this, R.string.mouse_aim_activated, Toast.LENGTH_SHORT
             ).show());
-        }
-
-        @Override
-        public void cursorSetX(int x) {
-            mHandler.post(() -> cursorView.setX(x));
-        }
-
-        @Override
-        public void cursorSetY(int y) {
-            mHandler.post(() -> cursorView.setY(y));
         }
 
         @Override
@@ -272,26 +227,22 @@ public class TouchPointer extends Service {
 
         @Override
         public void onForegroundActivitiesChanged(String packageName) {
-            if (packageName.equals(lastPackageName) || cursorView == null) return;
+            if (packageName.equals(lastPackageName)) return;
             lastPackageName = packageName;
-            mWindowManager.removeView(cursorView);
             Context context = TouchPointer.this;
             KeymapProfiles keymapProfiles = new KeymapProfiles(context);
             if (!keymapProfiles.profileExistsWithPackageName(packageName)) {
                 // No profile found, prompt user to create a new profile
                 mHandler.post(() -> {
-                    cursorView.setVisibility(View.VISIBLE);
                     ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
                             ProfileSelector.createNewProfileForApp(context, packageName, enabled, profile -> {
                                 TouchPointer.this.selectedProfile = profile;
                                 reloadKeymap();
                             }));
-                    mWindowManager.addView(cursorView, mParams);
                 });
             } else {
                 // App specific profiles selection dialog
                 mHandler.post(() -> {
-                    cursorView.setVisibility(View.VISIBLE);
                     ProfileSelector.select(context, profile -> {
                         // Reloading profile
                         TouchPointer.this.selectedProfile = profile;
@@ -302,13 +253,11 @@ public class TouchPointer extends Service {
                         } else {
                             try {
                                 mService.pauseMouse();
-                                cursorView.setVisibility(View.GONE);
                             } catch (RemoteException ignored) {
                             }
                             Toast.makeText(TouchPointer.this, "Keymapping disabled for " + packageName, Toast.LENGTH_SHORT).show();
                         }
                     }, packageName);
-                    mWindowManager.addView(cursorView, mParams);
                 });
             }
         }

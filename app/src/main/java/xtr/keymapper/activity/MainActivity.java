@@ -210,7 +210,6 @@ public class MainActivity extends AppCompatActivity {
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
             pointerOverlay.activityCallback = mCallback;
-            setButtonState(pointerOverlay.cursorView == null);
         }
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
