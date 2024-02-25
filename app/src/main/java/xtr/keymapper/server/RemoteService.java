@@ -5,7 +5,9 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -36,6 +38,9 @@ public class RemoteService extends IRemoteService.Stub {
     String nativeLibraryDir = System.getProperty("java.library.path");
     private View cursorView;
     private Context context;
+    private int TYPE_SECURE_SYSTEM_OVERLAY;
+    Handler mHandler = new Handler(Looper.getMainLooper());
+
 
     public RemoteService() {
 
@@ -69,19 +74,15 @@ public class RemoteService extends IRemoteService.Stub {
 
     @Override
     public void destroy() {
-        WindowManager windowManager = context.getSystemService(WindowManager.class);
-        windowManager.removeView(cursorView);
+        stopServer();
         System.exit(0);
     }
 
-    public void prepareCursorOverlayWindow() throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
-        LayoutInflater layoutInflater = context.getSystemService(LayoutInflater.class);
-        context.setTheme(R.style.Theme_XtMapper);
-        cursorView = CursorBinding.inflate(layoutInflater).getRoot();
-
+    private void addCursorView() {
+        WindowManager windowManager = context.getSystemService(WindowManager.class);
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.class.getField("TYPE_SECURE_SYSTEM_OVERLAY").getInt(null),
+                TYPE_SECURE_SYSTEM_OVERLAY,
                 // Don't let the cursor grab the input focus
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
                         WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
@@ -92,11 +93,23 @@ public class RemoteService extends IRemoteService.Stub {
                 // through the cursor
                 PixelFormat.TRANSLUCENT);
 
+        mHandler.post(() -> windowManager.addView(cursorView, params));
+    }
+
+    private void removeCursorView() {
+        WindowManager windowManager = context.getSystemService(WindowManager.class);
+        mHandler.post(() -> windowManager.removeView(cursorView));
+    }
+
+    public void prepareCursorOverlayWindow() throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
+        LayoutInflater layoutInflater = context.getSystemService(LayoutInflater.class);
+        context.setTheme(R.style.Theme_XtMapper);
+        cursorView = CursorBinding.inflate(layoutInflater).getRoot();
+        TYPE_SECURE_SYSTEM_OVERLAY = WindowManager.LayoutParams.class.getField("TYPE_SECURE_SYSTEM_OVERLAY").getInt(null);
         Binder sWindowToken = new Binder();
         WindowManager windowManager = context.getSystemService(WindowManager.class);
         Method setDefaultTokenMethod = windowManager.getClass().getMethod("setDefaultToken", IBinder.class);
         setDefaultTokenMethod.invoke(windowManager, sWindowToken);
-        windowManager.addView(cursorView, params);
     }
 
     public static void loadLibraries() {
@@ -157,6 +170,7 @@ public class RemoteService extends IRemoteService.Stub {
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
         if (inputService != null) stopServer();
         cb.asBinder().linkToDeath(this::stopServer, 0);
+        addCursorView();
         inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight, cursorView, isWaylandClient);
         if (!isWaylandClient) {
             inputService.setMouseLock(true);
@@ -174,6 +188,7 @@ public class RemoteService extends IRemoteService.Stub {
             inputService.destroyUinputDev();
             inputService = null;
         }
+        removeCursorView();
     }
 
     private final DeathRecipient mDeathRecipient = () -> mOnKeyEventListener = null;
