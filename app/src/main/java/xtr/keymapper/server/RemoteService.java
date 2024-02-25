@@ -37,7 +37,7 @@ public class RemoteService extends IRemoteService.Stub {
     private ActivityObserverService activityObserverService;
     String nativeLibraryDir = System.getProperty("java.library.path");
     private View cursorView;
-    private Context context;
+    private Context context = null;
     private int TYPE_SECURE_SYSTEM_OVERLAY;
     Handler mHandler = new Handler(Looper.getMainLooper());
 
@@ -170,7 +170,8 @@ public class RemoteService extends IRemoteService.Stub {
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
         if (inputService != null) stopServer();
         cb.asBinder().linkToDeath(this::stopServer, 0);
-        addCursorView();
+        if (cursorView != null && !keymapConfig.pointerMode.equals(KeymapConfig.POINTER_SYSTEM))
+            addCursorView();
         inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight, cursorView, isWaylandClient);
         if (!isWaylandClient) {
             inputService.setMouseLock(true);
@@ -188,7 +189,7 @@ public class RemoteService extends IRemoteService.Stub {
             inputService.destroyUinputDev();
             inputService = null;
         }
-        removeCursorView();
+        if (cursorView != null) removeCursorView();
     }
 
     private final DeathRecipient mDeathRecipient = () -> mOnKeyEventListener = null;
