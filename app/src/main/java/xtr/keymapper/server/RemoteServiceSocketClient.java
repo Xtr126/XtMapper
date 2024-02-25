@@ -108,6 +108,7 @@ public class RemoteServiceSocketClient implements IRemoteService {
         _data.writeInt(screenHeight);
         boolean _status = transactRemote(TRANSACTION_startServer, _data);
     }
+
     @Override public void stopServer() {
         ParcelableByteArray _data = new ParcelableByteArray(5);
         boolean _status = transactRemote(TRANSACTION_stopServer, _data);
@@ -145,8 +146,8 @@ public class RemoteServiceSocketClient implements IRemoteService {
         ParcelableByteArray _data = new ParcelableByteArray(5);
         boolean _status = transactRemote(TRANSACTION_reloadKeymap, _data);
     }
-
     static final int TRANSACTION_isRoot = (android.os.IBinder.FIRST_CALL_TRANSACTION + 0);
+
     static final int TRANSACTION_startServer = (android.os.IBinder.FIRST_CALL_TRANSACTION + 1);
     static final int TRANSACTION_stopServer = (android.os.IBinder.FIRST_CALL_TRANSACTION + 2);
     static final int TRANSACTION_registerOnKeyEventListener = (android.os.IBinder.FIRST_CALL_TRANSACTION + 3);
@@ -156,9 +157,12 @@ public class RemoteServiceSocketClient implements IRemoteService {
     static final int TRANSACTION_resumeMouse = (android.os.IBinder.FIRST_CALL_TRANSACTION + 7);
     static final int TRANSACTION_pauseMouse = (android.os.IBinder.FIRST_CALL_TRANSACTION + 8);
     static final int TRANSACTION_reloadKeymap = (android.os.IBinder.FIRST_CALL_TRANSACTION + 9);
-
     @Override
     public IBinder asBinder() {
         return null;
+    }
+
+    @Override
+    public void destroy() {
     }
 }

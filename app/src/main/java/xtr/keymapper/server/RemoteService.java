@@ -35,6 +35,7 @@ public class RemoteService extends IRemoteService.Stub {
     private ActivityObserverService activityObserverService;
     String nativeLibraryDir = System.getProperty("java.library.path");
     private View cursorView;
+    private Context context;
 
     public RemoteService() {
 
@@ -46,10 +47,37 @@ public class RemoteService extends IRemoteService.Stub {
         init(context);
     }
 
-    public void prepareCursorOverlayWindow(Context context) throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
+    public RemoteService init(Context context) {
+        PackageManager pm = context.getPackageManager();
+        String packageName = context.getPackageName();
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
+            nativeLibraryDir = ai.nativeLibraryDir;
+            start_getevent();
+        } catch (PackageManager.NameNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        this.context = context;
+        try {
+            prepareCursorOverlayWindow();
+        } catch (Exception e) {
+            Log.e("overlayWindow", e.getMessage(), e);
+        }
+        return this;
+    }
+
+    @Override
+    public void destroy() {
+        WindowManager windowManager = context.getSystemService(WindowManager.class);
+        windowManager.removeView(cursorView);
+        System.exit(0);
+    }
+
+    public void prepareCursorOverlayWindow() throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
         LayoutInflater layoutInflater = context.getSystemService(LayoutInflater.class);
         context.setTheme(R.style.Theme_XtMapper);
-        cursorView = CursorBinding.inflate(layoutInflater).getRoot();;
+        cursorView = CursorBinding.inflate(layoutInflater).getRoot();
 
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
@@ -69,24 +97,6 @@ public class RemoteService extends IRemoteService.Stub {
         Method setDefaultTokenMethod = windowManager.getClass().getMethod("setDefaultToken", IBinder.class);
         setDefaultTokenMethod.invoke(windowManager, sWindowToken);
         windowManager.addView(cursorView, params);
-    }
-
-    public RemoteService init(Context context) {
-        PackageManager pm = context.getPackageManager();
-        String packageName = context.getPackageName();
-        try {
-            ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
-            nativeLibraryDir = ai.nativeLibraryDir;
-            start_getevent();
-        } catch (PackageManager.NameNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-        try {
-            prepareCursorOverlayWindow(context);
-        } catch (Exception e) {
-            Log.e("overlayWindow", e.getMessage(), e);
-        }
-        return this;
     }
 
     public static void loadLibraries() {
