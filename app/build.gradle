@@ -65,6 +65,7 @@ android {
     buildFeatures {
         viewBinding true
         aidl true
+        buildConfig true
     }
     packagingOptions.jniLibs.useLegacyPackaging true
 

@@ -19,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.topjohnwu.superuser.Shell;
 
+import xtr.keymapper.BuildConfig;
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
 import xtr.keymapper.TouchPointer;
@@ -38,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
 
     static {
         // Set settings before the main shell can be created
-        Shell.enableVerboseLogging = false;
+        Shell.enableVerboseLogging = BuildConfig.DEBUG;
         Shell.setDefaultBuilder(Shell.Builder.create()
                 .setFlags(Shell.FLAG_REDIRECT_STDERR)
                 .setTimeout(10)

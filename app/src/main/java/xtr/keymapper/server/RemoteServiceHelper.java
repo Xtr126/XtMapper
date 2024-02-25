@@ -16,6 +16,7 @@ import com.topjohnwu.superuser.ipc.RootService;
 import java.io.IOException;
 
 import rikka.shizuku.Shizuku;
+import xtr.keymapper.BuildConfig;
 import xtr.keymapper.IRemoteService;
 
 public class RemoteServiceHelper {
@@ -97,8 +98,8 @@ public class RemoteServiceHelper {
             new Shizuku.UserServiceArgs(new ComponentName(context, RemoteService.class.getName()))
                     .daemon(false)
                     .processNameSuffix("service")
-                    .debuggable(false)
-                    .version(12);
+                    .debuggable(BuildConfig.DEBUG)
+                    .version(BuildConfig.VERSION_CODE);
         Shizuku.bindUserService(userServiceArgs, connection);
 }
 
