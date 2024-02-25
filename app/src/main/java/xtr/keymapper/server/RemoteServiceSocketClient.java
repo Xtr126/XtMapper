@@ -89,16 +89,6 @@ public class RemoteServiceSocketClient implements IRemoteService {
         return true;
     }
 
-    @Override public boolean isRoot()
-    {
-        ParcelableByteArray _data = new ParcelableByteArray(5);
-        boolean _status = transactRemote(TRANSACTION_isRoot, _data);
-
-        boolean _result = (0!=readInt());
-
-        return _result;
-    }
-
     @Override public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) {
         ParcelableByteArray _data = new ParcelableByteArray(5);
         _data.writeTypedObject(profile);
@@ -146,7 +136,6 @@ public class RemoteServiceSocketClient implements IRemoteService {
         ParcelableByteArray _data = new ParcelableByteArray(5);
         boolean _status = transactRemote(TRANSACTION_reloadKeymap, _data);
     }
-    static final int TRANSACTION_isRoot = (android.os.IBinder.FIRST_CALL_TRANSACTION + 0);
 
     static final int TRANSACTION_startServer = (android.os.IBinder.FIRST_CALL_TRANSACTION + 1);
     static final int TRANSACTION_stopServer = (android.os.IBinder.FIRST_CALL_TRANSACTION + 2);

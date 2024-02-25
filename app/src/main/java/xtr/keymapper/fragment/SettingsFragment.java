@@ -81,6 +81,11 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         });
         mouseAimActions();
         loadTouchpadInputSettings();
+
+        binding.pointerMode.setText(keymapConfig.pointerMode);
+        final String[] pointerModes = {KeymapConfig.POINTER_COMBINED, KeymapConfig.POINTER_OVERLAY, KeymapConfig.POINTER_SYSTEM};
+        ((MaterialAutoCompleteTextView)binding.pointerMode).setSimpleItems(pointerModes);
+
         setDefaultVisibilty();
         binding.sliders.setVisibility(View.VISIBLE);
     }
@@ -187,6 +192,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         saveKeyboardShortcuts();
         keymapConfig.mouseAimToggle = binding.mouseAimAction.getText().toString().equals(KeymapConfig.TOGGLE);
         keymapConfig.touchpadInputMode = binding.touchpadInputMode.getText().toString();
+        keymapConfig.pointerMode = binding.pointerMode.getText().toString();
 
         keymapConfig.mouseSensitivity = binding.sliderMouse.getValue();
         keymapConfig.scrollSpeed = binding.sliderScrollSpeed.getValue();

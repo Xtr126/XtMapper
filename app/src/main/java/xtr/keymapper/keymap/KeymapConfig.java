@@ -19,12 +19,18 @@ public class KeymapConfig implements Parcelable {
     public int pauseResumeShortcutKey, launchEditorShortcutKey, switchProfileShortcutKey;
     public int swipeDelayMs;
     public String pauseResumeShortcutKeyModifier, launchEditorShortcutKeyModifier, switchProfileShortcutKeyModifier;
+    public String pointerMode;
 
     public static final String KEY_CTRL = "Ctrl", KEY_ALT = "Alt";
     public static final String TOGGLE = "Toggle", HOLD = "Hold";
     public static final String TOUCHPAD_DIRECT = "Direct";
     public static final String TOUCHPAD_RELATIVE = "Relative";
     public static final String TOUCHPAD_DISABLED = "Disabled";
+
+    public static final String POINTER_SYSTEM = "System";
+    public static final String POINTER_OVERLAY = "Overlay";
+    public static final String POINTER_COMBINED = "Combined";
+
     public int mouseAimShortcutKey;
     public boolean mouseAimToggle;
     public String touchpadInputMode;
@@ -66,6 +72,7 @@ public class KeymapConfig implements Parcelable {
         disableAutoProfiling = in.readByte() != 0;
         touchpadInputMode = in.readString();
         useShizuku = in.readByte() != 0;
+        pointerMode = in.readString();
     }
 
     public static final Creator<KeymapConfig> CREATOR = new Creator<>() {
@@ -105,6 +112,7 @@ public class KeymapConfig implements Parcelable {
         dpadRadiusMultiplier = sharedPref.getFloat("dpad_radius", 1f);
 
         touchpadInputMode = sharedPref.getString("touchpad_input_mode", TOUCHPAD_DISABLED);
+        pointerMode = sharedPref.getString("pointer_mode", POINTER_COMBINED);
     }
 
     public void applySharedPrefs() {
@@ -127,6 +135,7 @@ public class KeymapConfig implements Parcelable {
                 .putString("switch_profile_shortcut_modifier", switchProfileShortcutKeyModifier)
                 .putString("touchpad_input_mode", touchpadInputMode)
                 .putInt("swipe_delay_ms", swipeDelayMs)
+                .putString("pointer_mode", pointerMode)
                 .apply();
     }
 
@@ -171,5 +180,6 @@ public class KeymapConfig implements Parcelable {
         dest.writeByte((byte) (disableAutoProfiling ? 1 : 0));
         dest.writeString(touchpadInputMode);
         dest.writeByte((byte) (useShizuku ? 1 : 0));
+        dest.writeString(pointerMode);
     }
 }

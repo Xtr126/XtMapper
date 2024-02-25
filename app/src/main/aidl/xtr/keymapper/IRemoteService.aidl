@@ -10,7 +10,6 @@ import xtr.keymapper.keymap.KeymapProfile;
 interface IRemoteService {
     void destroy() = 16777114; // Destroy method defined by Shizuku server
 
-    boolean isRoot() = 1;
 
     void startServer(in KeymapProfile profile, in KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) = 2;
     void stopServer() = 3;

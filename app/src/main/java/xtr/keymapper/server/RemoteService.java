@@ -153,10 +153,6 @@ public class RemoteService extends IRemoteService.Stub {
         return true;
     }
 
-    public boolean isRoot() {
-        return inputService.supportsUinput > 0;
-    }
-
     @Override
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
         if (inputService != null) stopServer();

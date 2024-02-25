@@ -26,7 +26,6 @@ public class InputService implements IInputInterface {
     private final Input input = new Input();
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final IRemoteServiceCallback mCallback;
-    int supportsUinput;
     boolean stopEvents = false;
     boolean pointerUp = false;
     private final boolean isWaylandClient;
@@ -41,7 +40,13 @@ public class InputService implements IInputInterface {
         this.mCallback = mCallback;
         this.isWaylandClient = isWaylandClient;
         this.cursorView = cursorView;
-        supportsUinput = initMouseCursor(screenWidth, screenHeight);
+
+        if (cursorView == null || !keymapConfig.pointerMode.equals(KeymapConfig.POINTER_OVERLAY)) {
+            initMouseCursor(screenWidth, screenHeight);
+            // Reduce visibility of system pointer
+            cursorSetX(0);
+            cursorSetY(0);
+        }
 
         this.touchpadInputMode = keymapConfig.touchpadInputMode;
         if (touchpadInputMode.equals(KeymapConfig.TOUCHPAD_DIRECT))
@@ -143,12 +148,12 @@ public class InputService implements IInputInterface {
             stopTouchpadRelative();
     }
 
-    public native void cursorSetX(int x);
-    public native void cursorSetY(int y);
     public native int openDevice(String device);
     public native void stopMouse();
-
+    
     // mouse cursor created with uinput in mouse_cursor.cpp
+    public native void cursorSetX(int x);
+    public native void cursorSetY(int y);
     private native int initMouseCursor(int width, int height);
     public native void destroyUinputDev();
 

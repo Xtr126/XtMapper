@@ -63,13 +63,6 @@ public class RemoteServiceSocketServer {
     public void onTransact(int code) throws RemoteException {
         switch (code)
         {
-            case TRANSACTION_isRoot:
-            {
-                boolean _result = mService.isRoot();
-                writeNoException();
-                writeInt(((_result)?(1):(0)));
-                break;
-            }
             case TRANSACTION_startServer:
             {
                 xtr.keymapper.keymap.KeymapProfile _arg0;
