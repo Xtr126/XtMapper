@@ -6,6 +6,8 @@ import static xtr.keymapper.InputEventCodes.REL_WHEEL;
 import static xtr.keymapper.InputEventCodes.REL_X;
 import static xtr.keymapper.InputEventCodes.REL_Y;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.os.RemoteException;
 import android.view.MotionEvent;
 import android.view.View;
@@ -30,6 +32,8 @@ public class InputService implements IInputInterface {
     private final boolean isWaylandClient;
     private final String touchpadInputMode;
     private final View cursorView;
+
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight, View cursorView, boolean isWaylandClient) throws RemoteException {
         this.keymapProfile = profile;
@@ -102,14 +106,14 @@ public class InputService implements IInputInterface {
     }
 
     public void moveCursorX(float x) {
-        if(cursorView != null) cursorView.setX(x);
+        if(cursorView != null) mHandler.post(() -> cursorView.setX(x));
         // To avoid conflict with touch input when moving virtual pointer
         if (input.pointerCount < 1) cursorSetX((int) x);
 	else if (input.pointerCount == 1 && pointerUp) cursorSetX((int) x);
     }
 
     public void moveCursorY(float y) {
-        if(cursorView != null) cursorView.setY(y);
+        if(cursorView != null) mHandler.post(() -> cursorView.setY(y));
         // To avoid conflict with touch input when moving virtual pointer
         if (input.pointerCount < 1) cursorSetY((int) y);
 	else if (input.pointerCount == 1 && pointerUp) cursorSetY((int) y);
