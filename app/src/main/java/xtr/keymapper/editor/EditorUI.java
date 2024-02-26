@@ -14,6 +14,7 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.view.ContextThemeWrapper;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -197,7 +198,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
             }
             else if (id == R.id.dpad) {
                 final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
-                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+                Context dialogContext = new ContextThemeWrapper(context, R.style.Theme_XtMapper);
+                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(dialogContext);
                 builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
                     if (i == 0) addArrowKeysDpad(defaultX, defaultY);
                     else addWasdDpad(defaultX, defaultY);

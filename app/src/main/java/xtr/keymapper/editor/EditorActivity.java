@@ -53,7 +53,8 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
                 Log.e("editorActivity", e.getMessage(), e);
             }
         else {
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(new ContextThemeWrapper(this, R.style.Theme_XtMapper));
+            Context dialogContext = new ContextThemeWrapper(this, R.style.Theme_XtMapper);
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(dialogContext);
 
             builder.setMessage(R.string.dialog_alert_editor)
                     .setPositiveButton(R.string.ok, (dialog, which) -> {})
