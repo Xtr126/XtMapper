@@ -41,7 +41,6 @@ public class RemoteService extends IRemoteService.Stub {
     private int TYPE_SECURE_SYSTEM_OVERLAY;
     Handler mHandler = new Handler(Looper.getMainLooper());
 
-
     public RemoteService() {
 
     }

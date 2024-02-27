@@ -7,8 +7,8 @@ import android.os.ServiceManager;
 public class RemoteServiceShell {
     public static void main(String[] args) {
         RemoteService.loadLibraries();
-        RemoteService mService = new RemoteService();
         Looper.prepareMainLooper();
+        RemoteService mService = new RemoteService();
         try {
             System.out.println("Waiting for overlay...");
             for (String arg: args) {
