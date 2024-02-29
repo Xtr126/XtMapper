@@ -15,8 +15,8 @@
   <a href="https://github.com/Xtr126/XtMapper/releases">
      <img src="https://img.shields.io/github/downloads/Xtr126/XtMapper/total.svg?style=for-the-badge&logo=android" height="30px"/>
   </a>
-  <a href="https://github.com/Xtr126/XtMapper/actions/workflows/android.yml">
-      <img src="https://github.com/Xtr126/XtMapper/actions/workflows/android.yml/badge.svg" height="20px" />
+  <a href="https://github.com/Xtr126/XtMapper/actions/workflows/release.yml">
+      <img src="https://github.com/Xtr126/XtMapper/actions/workflows/release.yml/badge.svg" height="20px" />
   </a>
  </p>
 
