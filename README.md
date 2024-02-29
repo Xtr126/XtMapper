@@ -28,9 +28,6 @@ https://xtr126.github.io/XtMapper-docs/guides/about
 ### Build
 - Run `./gradlew assembleDebug` or `./gradlew.bat assembleDebug` at the base directory of the project 
 
-- Touch emulation is handled by InputService.java and Input.java.  
-- RemoteService.java runs separately from the app as an elevated java process using app_process and adb shell/root. 
-
 ## Help and support
 Feel free to file an [issue](https://github.com/Xtr126/XtMapper/issues).  
 You can ask about XtMapper on Bliss OS in  
