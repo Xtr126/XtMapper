@@ -8,7 +8,6 @@
 <p align="center">
   XtMapper, a free and open source keymapper. <br>
   Play your Android games with keyboard and mouse on Bliss OS <br>
-  https://xtr126.github.io/XtMapper-docs
 </p>
 
 <p align="center">
