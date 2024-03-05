@@ -90,6 +90,8 @@ void* send_mouse_events(void* context) {
             case REL_WHEEL :
             case BTN_MOUSE :
             case BTN_RIGHT :
+            case BTN_EXTRA :
+            case BTN_SIDE :
                 if (mouse_lock) (*env)->CallVoidMethod(env, pctx->inputServiceObj, mouseEvent, ie.code, ie.value);
                 break;
         }

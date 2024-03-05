@@ -1,7 +1,9 @@
 package xtr.keymapper.touchpointer;
 
+import static xtr.keymapper.InputEventCodes.BTN_EXTRA;
 import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
 import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
+import static xtr.keymapper.InputEventCodes.BTN_SIDE;
 import static xtr.keymapper.InputEventCodes.REL_WHEEL;
 import static xtr.keymapper.InputEventCodes.REL_X;
 import static xtr.keymapper.InputEventCodes.REL_Y;
@@ -131,6 +133,10 @@ public class MouseEventHandler {
             case BTN_RIGHT:
                 handleRightClick(value);
                 break;
+
+            case BTN_EXTRA:
+            case BTN_SIDE:
+                if (value == 1 && mInput.getKeymapConfig().rightClickMouseAim) triggerMouseAim();
 
             case REL_WHEEL:
                 if (mInput.getKeyEventHandler().ctrlKeyPressed && keymapConfig.ctrlMouseWheelZoom)
