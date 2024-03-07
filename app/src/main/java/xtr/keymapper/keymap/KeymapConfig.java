@@ -108,7 +108,7 @@ public class KeymapConfig implements Parcelable {
         keyGraveMouseAim = sharedPref.getBoolean("key_grave_mouse_aim", true);
         rightClickMouseAim = sharedPref.getBoolean("right_click_mouse_aim", true);
 
-        swipeDelayMs = sharedPref.getInt("swipe_delay_ms", 0);
+        swipeDelayMs = sharedPref.getInt("swipe_delay_ms", 10);
         dpadRadiusMultiplier = sharedPref.getFloat("dpad_radius", 1f);
 
         touchpadInputMode = sharedPref.getString("touchpad_input_mode", TOUCHPAD_DISABLED);

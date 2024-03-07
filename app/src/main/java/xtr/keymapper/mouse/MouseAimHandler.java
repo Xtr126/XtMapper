@@ -9,6 +9,8 @@ import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
 
 import android.graphics.RectF;
+import android.os.Handler;
+import android.os.Looper;
 
 import xtr.keymapper.server.IInputInterface;
 import xtr.keymapper.touchpointer.PointerId;
@@ -21,11 +23,14 @@ public class MouseAimHandler {
     private IInputInterface service;
     private final int pointerIdMouse = PointerId.pid1.id;
     private final int pointerIdAim = PointerId.pid2.id;
+    private final Handler mHandler;
+
 
     public MouseAimHandler(MouseAimConfig config){
         currentX = config.xCenter;
         currentY = config.yCenter;
         this.config = config;
+        mHandler = new Handler(Looper.getMainLooper());
     }
 
     public void setInterface(IInputInterface input) {
@@ -47,10 +52,13 @@ public class MouseAimHandler {
     }
 
     public void resetPointer() {
-        currentY = config.yCenter;
-        currentX = config.xCenter;
         service.injectEvent(currentX, currentY, UP, pointerIdAim);
-        service.injectEvent(currentX, currentY, DOWN, pointerIdAim);
+        mHandler.postDelayed(() -> {
+                    currentY = config.yCenter;
+                    currentX = config.xCenter;
+                    service.injectEvent(currentX, currentY, DOWN, pointerIdAim);
+                },
+                service.getKeymapConfig().swipeDelayMs);
     }
 
     public void handleEvent(int code, int value, OnRightClick r) {
