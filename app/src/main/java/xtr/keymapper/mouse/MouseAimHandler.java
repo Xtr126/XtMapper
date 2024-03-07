@@ -19,8 +19,8 @@ public class MouseAimHandler {
     private float currentX, currentY;
     private final RectF area = new RectF();
     private IInputInterface service;
-    private final int pointerId1 = PointerId.pid1.id;
-    private final int pointerId2 = PointerId.pid2.id;
+    private final int pointerIdMouse = PointerId.pid1.id;
+    private final int pointerIdAim = PointerId.pid2.id;
 
     public MouseAimHandler(MouseAimConfig config){
         currentX = config.xCenter;
@@ -49,32 +49,35 @@ public class MouseAimHandler {
     public void resetPointer() {
         currentY = config.yCenter;
         currentX = config.xCenter;
-        service.injectEvent(currentX, currentY, UP, pointerId1);
-        service.injectEvent(currentX, currentY, DOWN, pointerId1);
+        service.injectEvent(currentX, currentY, UP, pointerIdAim);
+        service.injectEvent(currentX, currentY, DOWN, pointerIdAim);
     }
-
 
     public void handleEvent(int code, int value, OnRightClick r) {
         switch (code) {
             case REL_X:
                 currentX += value;
                 if ( currentX > area.right || currentX < area.left ) resetPointer();
-                service.injectEvent(currentX, currentY, MOVE, pointerId1);
+                service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
                 break;
             case REL_Y:
                 currentY += value;
                 if ( currentY > area.bottom || currentY < area.top ) resetPointer();
-                service.injectEvent(currentX, currentY, MOVE, pointerId1);
+                service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
                 break;
 
             case BTN_MOUSE:
-                service.injectEvent(config.xleftClick, config.yleftClick, value, pointerId2);
+                service.injectEvent(config.xleftClick, config.yleftClick, value, pointerIdMouse);
                 break;
 
             case BTN_RIGHT:
                 r.onRightClick(value);
                 break;
         }
+    }
+
+    public void stop() {
+        service.injectEvent(currentX, currentY, UP, pointerIdAim);
     }
 
     public interface OnRightClick {

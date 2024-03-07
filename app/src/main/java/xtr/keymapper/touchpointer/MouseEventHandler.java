@@ -43,11 +43,11 @@ public class MouseEventHandler {
                 mouseAimHandler.resetPointer();
                 // Notifying user that shooting mode was activated
                 try {
-                    mInput.getCallback().alertMouseAimActivated(); //post(() -> Toast.makeText(TouchPointer.this, R.string.mouse_aim_activated, Toast.LENGTH_LONG).show());
+                    mInput.getCallback().alertMouseAimActivated();
                 } catch (RemoteException e) {
                     e.printStackTrace(System.out);
                 }
-            }
+            } else mouseAimHandler.stop();
         }
     }
 
