@@ -4,6 +4,7 @@ import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
@@ -60,6 +61,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final String profileName;
     private KeymapProfile profile;
+    private boolean overlayOpen;
 
     public EditorUI (Context context, String profileName) {
         this.context = context;
@@ -76,15 +78,29 @@ public class EditorUI extends OnKeyEventListener.Stub {
         setupButtons();
     }
 
-    public void open() {
+    public void open(boolean overlayWindow) {
         loadKeymap();
         if (mainView.getWindowToken() == null && mainView.getParent() == null)
-            ((EditorActivity)context).setContentView(mainView);
+            if (overlayWindow) openOverlayWindow();
+            else ((EditorActivity)context).setContentView(mainView);
 
         if (!onHideListener.getEvent()) {
             mainView.setOnKeyListener(this::onKey);
             mainView.setFocusable(true);
         }
+    }
+
+    public void openOverlayWindow() {
+        if (overlayOpen) removeView(mainView);
+        WindowManager mWindowManager = context.getSystemService(WindowManager.class);
+        WindowManager.LayoutParams mParams = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN |
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT);
+        mWindowManager.addView(mainView, mParams);
+        overlayOpen = true;
     }
 
     public boolean onKey(View v, int keyCode, KeyEvent event) {
@@ -127,6 +143,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void removeView(ViewGroup view) {
+        if (overlayOpen) context.getSystemService(WindowManager.class).removeView(view);
         view.removeAllViews();
         view.invalidate();
     }

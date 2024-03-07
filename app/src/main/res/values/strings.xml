@@ -60,5 +60,6 @@
     <string name="launch_app">Launch App</string>
     <string name="use_shizuku">Use Shizuku</string>
     <string name="pointer">Pointer Mode</string>
+    <string name="open_editor_as_overlay">Open editor as overlay</string>
 
 </resources>

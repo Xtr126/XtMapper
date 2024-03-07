@@ -14,7 +14,7 @@ public class KeymapConfig implements Parcelable {
     public Float mouseSensitivity, scrollSpeed;
     public Float dpadRadiusMultiplier;
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
-    public boolean disableAutoProfiling , useShizuku;
+    public boolean disableAutoProfiling, useShizuku, editorOverlay;
 
     public int pauseResumeShortcutKey, launchEditorShortcutKey, switchProfileShortcutKey;
     public int swipeDelayMs;
@@ -72,6 +72,7 @@ public class KeymapConfig implements Parcelable {
         disableAutoProfiling = in.readByte() != 0;
         touchpadInputMode = in.readString();
         useShizuku = in.readByte() != 0;
+        editorOverlay = in.readByte() != 0;
         pointerMode = in.readString();
     }
 
@@ -95,6 +96,7 @@ public class KeymapConfig implements Parcelable {
         mouseAimToggle = sharedPref.getBoolean("mouse_aim_shortcut_toggle", true);
         disableAutoProfiling = sharedPref.getBoolean("disable_auto_profile", true);
         useShizuku = sharedPref.getBoolean("use_shizuku", false);
+        editorOverlay = sharedPref.getBoolean("editor_overlay", false);
 
         launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", -1);
         pauseResumeShortcutKey = sharedPref.getInt("pause_resume_shortcut", -1);
@@ -126,6 +128,7 @@ public class KeymapConfig implements Parcelable {
                 .putBoolean("mouse_aim_shortcut_toggle", mouseAimToggle)
                 .putBoolean("disable_auto_profile", disableAutoProfiling)
                 .putBoolean("use_shizuku", useShizuku)
+                .putBoolean("editor_overlay", editorOverlay)
                 .putInt("pause_resume_shortcut", pauseResumeShortcutKey)
                 .putInt("launch_editor_shortcut", launchEditorShortcutKey)
                 .putInt("switch_profile_shortcut", switchProfileShortcutKey)
@@ -180,6 +183,7 @@ public class KeymapConfig implements Parcelable {
         dest.writeByte((byte) (disableAutoProfiling ? 1 : 0));
         dest.writeString(touchpadInputMode);
         dest.writeByte((byte) (useShizuku ? 1 : 0));
+        dest.writeByte((byte) (editorOverlay ? 1 : 0));
         dest.writeString(pointerMode);
     }
 }

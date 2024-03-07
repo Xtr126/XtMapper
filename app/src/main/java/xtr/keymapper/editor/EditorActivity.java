@@ -21,6 +21,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.R;
 import xtr.keymapper.TouchPointer;
+import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.profiles.ProfileSelector;
 import xtr.keymapper.server.RemoteServiceHelper;
 
@@ -43,7 +44,8 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
 
     ProfileSelector.OnProfileSelectedListener listener = profile -> {
         editor = new EditorUI(this, profile);
-        editor.open();
+        KeymapConfig keymapConfig = new KeymapConfig(this);
+        editor.open(keymapConfig.editorOverlay);
 
         if (getEvent())
             // Can receive key events from remote service
@@ -77,7 +79,6 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
                 // service is active and a profile is selected
                 listener.onProfileSelected(pointerOverlay.selectedProfile);
             } else {
-                listener.onProfileSelected(null);
                 // service is not active, show profile selection dialog
                 ProfileSelector.select(EditorActivity.this, listener);
             }

@@ -57,6 +57,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.mouseAimRightClick.setChecked(keymapConfig.rightClickMouseAim);
         binding.autoProfileSwitch.setChecked(keymapConfig.disableAutoProfiling);
         binding.useShizuku.setChecked(keymapConfig.useShizuku);
+        binding.editorOverlay.setChecked(keymapConfig.editorOverlay);
 
         loadKeyboardShortcuts();
         binding.launchEditor.setOnKeyListener(this::onKey);
@@ -205,6 +206,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         keymapConfig.keyGraveMouseAim = binding.mouseAimKeyGrave.isChecked();
         keymapConfig.disableAutoProfiling = binding.autoProfileSwitch.isChecked();
         keymapConfig.useShizuku = binding.useShizuku.isChecked();
+        keymapConfig.editorOverlay = binding.editorOverlay.isChecked();
 
         keymapConfig.dpadRadiusMultiplier = binding.sliderDpad.getValue();
 
