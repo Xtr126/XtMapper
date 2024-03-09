@@ -37,14 +37,14 @@ public class SwipeKeyHandler {
         }
     }
 
-    public void handleEvent(KeyEvent event, IInputInterface service, Handler handler, PidProvider mPid, int swipeDelayMs) {
+    public void handleEvent(KeyEvent event, IInputInterface service, PidProvider pidProvider, Handler handler, int swipeDelayMs) {
         SwipeEvent swipeEvent;
         if (event.code.equals(keycode1))
             swipeEvent = swipeEvent1;
         else if (event.code.equals(keycode2))
             swipeEvent = swipeEvent2;
         else return;
-        int pid = mPid.getPid(event.code);
+        int pid = pidProvider.getPid(event.code);
 
         service.injectEvent(swipeEvent.startX, swipeEvent.startY, event.action, pid);
 

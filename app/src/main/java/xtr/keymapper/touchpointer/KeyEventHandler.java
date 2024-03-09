@@ -108,12 +108,13 @@ public class KeyEventHandler {
                     mInput.getMouseEventHandler().triggerMouseAim();
         }
 
-        for (KeymapProfileKey key : mInput.getKeymapProfile().keys)
+        ArrayList<KeymapProfileKey> keyList = mInput.getKeymapProfile().keys;
+        for (KeymapProfileKey key : keyList)
             if (event.code.equals(key.code))
-                mInput.injectEvent(key.x, key.y, event.action, pidProvider.getPid(key.code));
+                mInput.injectEvent(key.x, key.y, event.action, keyList.indexOf(key));
 
         for (SwipeKeyHandler swipeKeyHandler : swipeKeyHandlers)
-            swipeKeyHandler.handleEvent(event, mInput, eventHandler, pidProvider, keymapConfig.swipeDelayMs);
+            swipeKeyHandler.handleEvent(event, mInput, pidProvider, eventHandler, keymapConfig.swipeDelayMs);
     }
 
     private KeyEvent getEvent(String line){
