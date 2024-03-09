@@ -7,8 +7,6 @@ import static xtr.keymapper.InputEventCodes.BTN_SIDE;
 import static xtr.keymapper.InputEventCodes.REL_WHEEL;
 import static xtr.keymapper.InputEventCodes.REL_X;
 import static xtr.keymapper.InputEventCodes.REL_Y;
-import static xtr.keymapper.touchpointer.PointerId.pid1;
-import static xtr.keymapper.touchpointer.PointerId.pid2;
 import static xtr.keymapper.server.InputService.MOVE;
 
 import android.os.RemoteException;
@@ -26,8 +24,8 @@ public class MouseEventHandler {
     int scroll_speed_multiplier = 1;
     private MousePinchZoom pinchZoom;
     private MouseWheelZoom scrollZoomHandler;
-    private final int pointerId1 = pid1.id;
-    private final int pointerId2 = pid2.id;
+    private final int pointerId = PointerId.pid1.id;
+    private final int pointerIdRightClick = PointerId.pid3.id;
     private MouseAimHandler mouseAimHandler;
     private KeymapProfileKey rightClick;
     int x1 = 100, y1 = 100;
@@ -91,7 +89,8 @@ public class MouseEventHandler {
 
     private void handleRightClick(int value) {
         if (value == 1 && mInput.getKeymapConfig().rightClickMouseAim) triggerMouseAim();
-        if (rightClick != null) mInput.injectEvent(rightClick.x, rightClick.y, value, pointerId2);
+        else if (rightClick != null)
+            mInput.injectEvent(rightClick.x, rightClick.y, value, pointerIdRightClick);
     }
 
     public void handleEvent(int code, int value) {
@@ -111,7 +110,7 @@ public class MouseEventHandler {
                 value *= sensitivity;
                 x1 += value;
                 if (x1 > width || x1 < 0) x1 -= value;
-                if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId1);
+                if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
                 break;
             }
             case REL_Y: {
@@ -119,7 +118,7 @@ public class MouseEventHandler {
                 value *= sensitivity;
                 y1 += value;
                 if (y1 > height || y1 < 0) y1 -= value;
-                if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId1);
+                if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
                 break;
             }
             case BTN_MOUSE:
@@ -127,7 +126,7 @@ public class MouseEventHandler {
                 if (mInput.getKeyEventHandler().ctrlKeyPressed && keymapConfig.ctrlDragMouseGesture) {
                     pinchZoom = new MousePinchZoom(mInput, x1, y1);
                     pinchZoom.handleEvent(code, value);
-                } else mInput.injectEvent(x1, y1, value, pointerId1);
+                } else mInput.injectEvent(x1, y1, value, pointerId);
                 break;
 
             case BTN_RIGHT:
@@ -151,13 +150,13 @@ public class MouseEventHandler {
 
     public void evAbsY(int y) {
         this.y1 = y;
-        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId1);
+        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
         movePointerY();
     }
 
     public void evAbsX(int x) {
         this.x1 = x;
-        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId1);
+        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
         movePointerX();
     }
 
