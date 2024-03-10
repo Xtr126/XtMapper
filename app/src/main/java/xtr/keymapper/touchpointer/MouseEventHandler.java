@@ -94,11 +94,13 @@ public class MouseEventHandler {
     }
 
     public void handleEvent(int code, int value) {
-        KeymapConfig keymapConfig = mInput.getKeymapConfig();
         if (mouseAimHandler != null && mouseAimActive) {
-            mouseAimHandler.handleEvent(code, value, this::handleRightClick);
-            return;
-        }
+            mouseAimHandler.handleEvent(code, value, this::handleMouseEvent);
+        } else handleMouseEvent(code, value);
+    }
+
+    private void handleMouseEvent(int code, int value) {
+        KeymapConfig keymapConfig = mInput.getKeymapConfig();
         if (mInput.getKeyEventHandler().ctrlKeyPressed && pointer_down)
             if (keymapConfig.ctrlDragMouseGesture) {
                 pointer_down = pinchZoom.handleEvent(code, value);
@@ -135,7 +137,7 @@ public class MouseEventHandler {
 
             case BTN_EXTRA:
             case BTN_SIDE:
-                if (value == 1 && mInput.getKeymapConfig().rightClickMouseAim) triggerMouseAim();
+                if (value == 1) triggerMouseAim();
 
             case REL_WHEEL:
                 if (mInput.getKeyEventHandler().ctrlKeyPressed && keymapConfig.ctrlMouseWheelZoom)

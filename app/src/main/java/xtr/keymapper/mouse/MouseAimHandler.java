@@ -1,7 +1,9 @@
 package xtr.keymapper.mouse;
 
+import static xtr.keymapper.InputEventCodes.BTN_EXTRA;
 import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
 import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
+import static xtr.keymapper.InputEventCodes.BTN_SIDE;
 import static xtr.keymapper.InputEventCodes.REL_X;
 import static xtr.keymapper.InputEventCodes.REL_Y;
 import static xtr.keymapper.server.InputService.DOWN;
@@ -61,7 +63,7 @@ public class MouseAimHandler {
                 service.getKeymapConfig().swipeDelayMs);
     }
 
-    public void handleEvent(int code, int value, OnRightClick r) {
+    public void handleEvent(int code, int value, OnButtonClickListener listener) {
         switch (code) {
             case REL_X:
                 currentX += value;
@@ -78,8 +80,10 @@ public class MouseAimHandler {
                 service.injectEvent(config.xleftClick, config.yleftClick, value, pointerIdMouse);
                 break;
 
+            case BTN_SIDE:
+            case BTN_EXTRA:
             case BTN_RIGHT:
-                r.onRightClick(value);
+                listener.onButtonClick(code, value);
                 break;
         }
     }
@@ -88,7 +92,7 @@ public class MouseAimHandler {
         service.injectEvent(currentX, currentY, UP, pointerIdAim);
     }
 
-    public interface OnRightClick {
-        void onRightClick(int value);
+    public interface OnButtonClickListener {
+        void onButtonClick(int code, int value);
     }
 }
