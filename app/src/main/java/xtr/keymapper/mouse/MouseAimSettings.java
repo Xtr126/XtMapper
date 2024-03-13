@@ -1,15 +1,19 @@
 package xtr.keymapper.mouse;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.view.WindowManager;
+
+import androidx.appcompat.app.AlertDialog;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import xtr.keymapper.keymap.KeymapConfig;
 
 public class MouseAimSettings {
 
-    public Dialog getDialog(Context context) {
+    public static Dialog getKeyDialog(Context context) {
         KeymapConfig keymapConfig = new KeymapConfig(context);
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         CharSequence[] list = {"Mouse right click", "~ key"};

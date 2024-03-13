@@ -26,12 +26,14 @@ public class MouseAimHandler {
     private final int pointerIdMouse = PointerId.pid1.id;
     private final int pointerIdAim = PointerId.pid2.id;
     private final Handler mHandler;
+    private final boolean limitedBounds;
 
 
     public MouseAimHandler(MouseAimConfig config){
         currentX = config.xCenter;
         currentY = config.yCenter;
         this.config = config;
+        this.limitedBounds = config.limitedBounds;
         mHandler = new Handler(Looper.getMainLooper());
     }
 
@@ -40,7 +42,8 @@ public class MouseAimHandler {
     }
 
     public void setDimensions(int width, int height){
-        if (config.width == 0) {
+        if (config.width == 0 || config.height == 0) {
+            // Reset pointer if jumping out of screenspace
             area.left = area.top = 0;
             area.right = width;
             area.bottom = height;
@@ -67,12 +70,14 @@ public class MouseAimHandler {
         switch (code) {
             case REL_X:
                 currentX += value;
-                if ( currentX > area.right || currentX < area.left ) resetPointer();
+                if (limitedBounds && (currentX > area.right || currentX < area.left))
+                    resetPointer();
                 service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
                 break;
             case REL_Y:
                 currentY += value;
-                if ( currentY > area.bottom || currentY < area.top ) resetPointer();
+                if (limitedBounds && (currentY > area.bottom || currentY < area.top))
+                    resetPointer();
                 service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
                 break;
 

@@ -43,6 +43,7 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
     }
 
     ProfileSelector.OnProfileSelectedListener listener = profile -> {
+        setTheme(R.style.Theme_XtMapper);
         editor = new EditorUI(this, profile);
         KeymapConfig keymapConfig = new KeymapConfig(this);
         editor.open(keymapConfig.editorOverlay);
@@ -55,8 +56,7 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
                 Log.e("editorActivity", e.getMessage(), e);
             }
         else {
-            Context dialogContext = new ContextThemeWrapper(this, R.style.Theme_XtMapper);
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(dialogContext);
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
 
             builder.setMessage(R.string.dialog_alert_editor)
                     .setPositiveButton(R.string.ok, (dialog, which) -> {})
@@ -89,12 +89,6 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
     };
 
     @Override
-    public void onHideView() {
-       onDestroy();
-       finish();
-    }
-
-    @Override
     protected void onDestroy() {
         super.onDestroy();
         if (getEvent()) try {
@@ -103,6 +97,12 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
         }
         editor = null;
 //        RemoteServiceHelper.resumeKeymap();
+    }
+
+    @Override
+    public void onHideView() {
+        onDestroy();
+        finish();
     }
 
     @Override

@@ -11,7 +11,7 @@ import xtr.keymapper.floatingkeys.MovableFrameLayout;
 public class MouseAimConfig implements Parcelable {
     public float xCenter, yCenter, xleftClick, yleftClick;
     public float width, height;
-    char triggerKey = '~';
+    public boolean limitedBounds;
     private static final int initXY = 300;
 
     public MouseAimConfig() {
@@ -25,7 +25,7 @@ public class MouseAimConfig implements Parcelable {
         yleftClick = in.readFloat();
         width = in.readFloat();
         height = in.readFloat();
-        triggerKey = (char) in.readInt();
+        limitedBounds = in.readByte() != 0;
     }
 
     public static final Creator<MouseAimConfig> CREATOR = new Creator<>() {
@@ -43,7 +43,7 @@ public class MouseAimConfig implements Parcelable {
     public MouseAimConfig parse(String[] data){
         xCenter = Float.parseFloat(data[1]);
         yCenter = Float.parseFloat(data[2]);
-        triggerKey = data[3].charAt(0);
+        if (!data[3].equals("~")) limitedBounds = Integer.parseInt(data[3]) != 0;
         width = Float.parseFloat(data[4]);
         height = Float.parseFloat(data[5]);
         xleftClick = Float.parseFloat(data[6]);
@@ -53,7 +53,7 @@ public class MouseAimConfig implements Parcelable {
 
     public String getData() {
         return "MOUSE_AIM " + xCenter + " " + yCenter + " "
-                + triggerKey + " "
+                + (limitedBounds ? 1 : 0) + " "
                 + width + " " + height + " "
                 + xleftClick + " " + yleftClick;
     }
@@ -81,6 +81,6 @@ public class MouseAimConfig implements Parcelable {
         dest.writeFloat(yleftClick);
         dest.writeFloat(width);
         dest.writeFloat(height);
-        dest.writeInt((int) triggerKey);
+        dest.writeByte((byte) (limitedBounds ? 1 : 0));
     }
 }

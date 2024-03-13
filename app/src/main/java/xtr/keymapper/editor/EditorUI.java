@@ -4,6 +4,7 @@ import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
@@ -15,7 +16,6 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.view.ContextThemeWrapper;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -61,7 +61,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final String profileName;
     private KeymapProfile profile;
-    private boolean overlayOpen;
+    private boolean overlayOpen = false;
 
     public EditorUI (Context context, String profileName) {
         this.context = context;
@@ -215,14 +215,13 @@ public class EditorUI extends OnKeyEventListener.Stub {
             }
             else if (id == R.id.dpad) {
                 final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
-                Context dialogContext = new ContextThemeWrapper(context, R.style.Theme_XtMapper);
-                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(dialogContext);
+                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
                 builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
                     if (i == 0) addArrowKeysDpad(defaultX, defaultY);
                     else addWasdDpad(defaultX, defaultY);
                 });
                 AlertDialog dialog = builder.create();
-                dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                if(overlayOpen) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
                 dialog.show();
             }
             else if (id == R.id.crosshair) {
@@ -319,8 +318,26 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 mainView.removeView(crosshair);
                 crosshair = null;
             });
-            binding.expandButton.setOnClickListener(v -> new ResizableArea());
-            binding.editButton.setOnClickListener(v -> new MouseAimSettings().getDialog(context).show());
+            binding.expandButton.setOnClickListener(v -> {
+                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+                CharSequence[] list = {"Limit to specified area", "Allow moving pointer out of screen"};
+                // Set the dialog title
+                builder.setTitle("Adjust bounds")
+                        .setItems(list, (dialog, which) -> {
+                            if (which == 0) {
+                                profile.mouseAimConfig.limitedBounds = true;
+                                new ResizableArea();
+                            } else {
+                                profile.mouseAimConfig.width = 0;
+                                profile.mouseAimConfig.height = 0;
+                                profile.mouseAimConfig.limitedBounds = false;
+                            }
+                        });
+                AlertDialog dialog = builder.create();
+                if(overlayOpen) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                dialog.show();
+            });
+            binding.editButton.setOnClickListener(v -> MouseAimSettings.getKeyDialog(context).show());
         }
         crosshair.animate().x(x).y(y)
                 .setDuration(500)
