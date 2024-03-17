@@ -323,12 +323,12 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 // Set the dialog title
                 builder.setTitle("Adjust bounds")
                         .setItems(list, (dialog, which) -> {
+                            profile.mouseAimConfig.width = 0;
+                            profile.mouseAimConfig.height = 0;
                             if (which == 0) {
                                 profile.mouseAimConfig.limitedBounds = true;
                                 new ResizableArea();
                             } else {
-                                profile.mouseAimConfig.width = 0;
-                                profile.mouseAimConfig.height = 0;
                                 profile.mouseAimConfig.limitedBounds = false;
                             }
                         });

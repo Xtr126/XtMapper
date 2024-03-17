@@ -11,7 +11,7 @@ import xtr.keymapper.floatingkeys.MovableFrameLayout;
 public class MouseAimConfig implements Parcelable {
     public float xCenter, yCenter, xleftClick, yleftClick;
     public float width, height;
-    public boolean limitedBounds;
+    public boolean limitedBounds = true;
     private static final int initXY = 300;
 
     public MouseAimConfig() {
