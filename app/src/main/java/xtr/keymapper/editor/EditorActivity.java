@@ -11,7 +11,6 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.view.ContextThemeWrapper;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -44,7 +43,7 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
 
     ProfileSelector.OnProfileSelectedListener listener = profile -> {
         setTheme(R.style.Theme_XtMapper);
-        editor = new EditorUI(this, profile);
+        editor = new EditorUI(this, this, profile);
         KeymapConfig keymapConfig = new KeymapConfig(this);
         editor.open(keymapConfig.editorOverlay);
 
@@ -75,7 +74,19 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
             // We've bound to Service, cast the IBinder and get TouchPointer instance
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             TouchPointer pointerOverlay = binder.getService();
-            if (pointerOverlay.selectedProfile != null) {
+
+            Bundle bundle = getIntent().getExtras();
+            boolean launchedFromNotification = false;
+
+            if (bundle != null) launchedFromNotification = bundle.getBoolean("notification");
+
+            if (launchedFromNotification) {
+                try {
+                    pointerOverlay.mCallback.launchEditor();
+                    finish();
+                } catch (RemoteException ignored) {
+                }
+            } else if (pointerOverlay.selectedProfile != null) {
                 // service is active and a profile is selected
                 listener.onProfileSelected(pointerOverlay.selectedProfile);
             } else {

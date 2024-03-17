@@ -4,7 +4,6 @@ import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
@@ -63,9 +62,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private KeymapProfile profile;
     private boolean overlayOpen = false;
 
-    public EditorUI (Context context, String profileName) {
+    public EditorUI (Context context, OnHideListener onHideListener, String profileName) {
         this.context = context;
-        this.onHideListener = ((OnHideListener) context);
+        this.onHideListener = onHideListener;
         this.profileName = profileName;
 
         layoutInflater = context.getSystemService(LayoutInflater.class);

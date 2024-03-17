@@ -9,7 +9,6 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Binder;
 import android.os.Build;
@@ -19,16 +18,15 @@ import android.os.Looper;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.Display;
-import android.view.LayoutInflater;
-import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.annotation.UiThread;
+import androidx.appcompat.view.ContextThemeWrapper;
 
 import xtr.keymapper.activity.MainActivity;
-import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.editor.EditorActivity;
+import xtr.keymapper.editor.EditorUI;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfiles;
@@ -43,6 +41,8 @@ public class TouchPointer extends Service {
     public String selectedProfile = null;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private boolean activityRemoteCallback = false;
+    private EditorUI editor;
+
 
     public class TouchPointerBinder extends Binder {
         public TouchPointer getService() {
@@ -67,6 +67,7 @@ public class TouchPointer extends Service {
 
         Intent intent = new Intent(this, EditorActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+        intent.putExtra("notification", true);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
 
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
@@ -159,17 +160,44 @@ public class TouchPointer extends Service {
         super.onDestroy();
     }
 
+    private final EditorUI.OnHideListener onHideListener = new EditorUI.OnHideListener() {
+        @Override
+        public void onHideView() {
+            try {
+                mService.unregisterOnKeyEventListener(editor);
+                mService.resumeMouse();
+            } catch (RemoteException e) {
+            }
+            editor = null;
+        }
+
+        @Override
+        public boolean getEvent() {
+            return true;
+        }
+    };
+
     /**
      * This implementation is used to receive callbacks from the remote
      * service.
      */
-    private final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
+    public final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
 
         @Override
         public void launchEditor() {
-            Intent intent = new Intent(TouchPointer.this, EditorActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-            startActivity(intent);
+            mHandler.post(() -> {
+                Context context = new ContextThemeWrapper(TouchPointer.this, R.style.Theme_XtMapper);
+                editor = new EditorUI(context, onHideListener, selectedProfile);
+
+                try {
+                    mService.registerOnKeyEventListener(editor);
+                    mService.pauseMouse();
+                } catch (RemoteException e) {
+                    Log.e("editorActivity", e.getMessage(), e);
+                }
+
+                editor.open(true);
+            });
         }
 
         @Override
