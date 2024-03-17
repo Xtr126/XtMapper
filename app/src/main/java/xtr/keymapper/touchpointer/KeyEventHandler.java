@@ -23,8 +23,8 @@ import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyHandler;
 
 public class KeyEventHandler {
-    boolean ctrlKeyPressed = false;
-    boolean altKeyPressed = false;
+    public boolean ctrlKeyPressed = false;
+    public boolean altKeyPressed = false;
     private DpadHandler dpad1Handler, dpad2Handler;
     private ArrayList<SwipeKeyHandler> swipeKeyHandlers;
     private final PidProvider pidProvider = new PidProvider();
@@ -139,6 +139,7 @@ public class KeyEventHandler {
     }
 
     private void handleKeyboardShortcuts(int keycode) throws RemoteException {
+        if (!(altKeyPressed || ctrlKeyPressed)) return;
         final String modifier = ctrlKeyPressed ? KEY_CTRL : KEY_ALT;
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
 
