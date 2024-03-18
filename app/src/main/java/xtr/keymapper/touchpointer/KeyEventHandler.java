@@ -89,8 +89,7 @@ public class KeyEventHandler {
 
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
 
-        if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
-        if (event.code.contains("ALT")) altKeyPressed = event.action == DOWN;
+        detectCtrlAltKeys(event);
         int i = Utils.obtainIndex(event.code);
         if (i > 0) { // A-Z and 0-9 keys
             if (event.action == DOWN) handleKeyboardShortcuts(i);
@@ -115,6 +114,11 @@ public class KeyEventHandler {
 
         for (SwipeKeyHandler swipeKeyHandler : swipeKeyHandlers)
             swipeKeyHandler.handleEvent(event, mInput, pidProvider, eventHandler, keymapConfig.swipeDelayMs);
+    }
+
+    private void detectCtrlAltKeys(KeyEvent event) {
+        if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == DOWN;
+        if (event.code.contains("ALT")) altKeyPressed = event.action == DOWN;
     }
 
     private KeyEvent getEvent(String line){
@@ -159,6 +163,7 @@ public class KeyEventHandler {
     public void handleKeyboardShortcutEvent(String line) throws RemoteException {
         KeyEvent event = getEvent(line);
         if (event != null) {
+            detectCtrlAltKeys(event);
             int i = Utils.obtainIndex(event.code);
             if (event.action == DOWN) handleKeyboardShortcuts(i);
         }

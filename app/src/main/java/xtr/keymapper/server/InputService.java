@@ -86,8 +86,6 @@ public class InputService implements IInputInterface {
         if (!isWaylandClient) {
             stopEvents = !stopEvents;
             setMouseLock(!stopEvents);
-            keyEventHandler.ctrlKeyPressed = false;
-            keyEventHandler.altKeyPressed = false;
         }
     }
 

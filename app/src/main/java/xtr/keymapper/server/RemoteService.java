@@ -28,6 +28,7 @@ import xtr.keymapper.Utils;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
+import xtr.keymapper.touchpointer.KeyEventHandler;
 
 public class RemoteService extends IRemoteService.Stub {
     private String currentDevice = "";
@@ -126,15 +127,17 @@ public class RemoteService extends IRemoteService.Stub {
                 while ((line = getevent.readLine()) != null) {
                     String[] data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
                     if (addNewDevices(data)) {
-                        if (inputService != null)
+                        if (inputService != null) {
+                            KeyEventHandler k = inputService.getKeyEventHandler();
                             if (!inputService.stopEvents) {
                                 if (isWaylandClient && data[0].contains("wl_pointer"))
                                     inputService.sendWaylandMouseEvent(data[1]);
                                 else
-                                    inputService.getKeyEventHandler().handleEvent(data[1]);
+                                    k.handleEvent(data[1]);
                             } else {
-                                inputService.getKeyEventHandler().handleKeyboardShortcutEvent(data[1]);
+                                k.handleKeyboardShortcutEvent(data[1]);
                             }
+                        }
                         if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
                     }
                 }
