@@ -63,11 +63,6 @@ public class RemoteService extends IRemoteService.Stub {
         }
 
         this.context = context;
-        try {
-            prepareCursorOverlayWindow();
-        } catch (Exception e) {
-            Log.e("overlayWindow", e.getMessage(), e);
-        }
         return this;
     }
 
@@ -169,8 +164,16 @@ public class RemoteService extends IRemoteService.Stub {
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
         if (inputService != null) stopServer();
         cb.asBinder().linkToDeath(this::stopServer, 0);
-        if (cursorView != null && !keymapConfig.pointerMode.equals(KeymapConfig.POINTER_SYSTEM))
-            addCursorView();
+        if (!keymapConfig.pointerMode.equals(KeymapConfig.POINTER_SYSTEM)) {
+            try {
+                prepareCursorOverlayWindow();
+            } catch (Exception e) {
+                Log.e("overlayWindow", e.getMessage(), e);
+            }
+            if (cursorView != null) addCursorView();
+        } else {
+            cursorView = null;
+        }
         inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight, cursorView, isWaylandClient);
         if (!isWaylandClient) {
             inputService.setMouseLock(true);
