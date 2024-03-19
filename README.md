@@ -19,9 +19,9 @@
   </a>
  </p>
 
-## Preview 
-Video - https://www.youtube.com/watch?v=pDPAGKN7VbY  
-List of features - https://xtr126.github.io/XtMapper-docs/guides/about
+## About and features
+https://xtr126.github.io/XtMapper-docs/guides/about  
+[Watch video on YouTube](https://www.youtube.com/watch?v=pDPAGKN7VbY)  
 
 ## Development
 
