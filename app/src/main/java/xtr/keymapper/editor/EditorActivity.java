@@ -75,18 +75,7 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             TouchPointer pointerOverlay = binder.getService();
 
-            Bundle bundle = getIntent().getExtras();
-            boolean launchedFromNotification = false;
-
-            if (bundle != null) launchedFromNotification = bundle.getBoolean("notification");
-
-            if (launchedFromNotification) {
-                try {
-                    pointerOverlay.mCallback.launchEditor();
-                    finish();
-                } catch (RemoteException ignored) {
-                }
-            } else if (pointerOverlay.selectedProfile != null) {
+            if (pointerOverlay.selectedProfile != null) {
                 // service is active and a profile is selected
                 listener.onProfileSelected(pointerOverlay.selectedProfile);
             } else {
