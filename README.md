@@ -21,7 +21,7 @@
 
 ## About and features
 https://xtr126.github.io/XtMapper-docs/guides/about  
-[Watch video on YouTube](https://www.youtube.com/watch?v=pDPAGKN7VbY)  
+[Watch video on YouTube](https://www.youtube.com/watch?v=Slcu43xBV3M)  
 
 ## Development
 
