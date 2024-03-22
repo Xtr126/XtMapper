@@ -1,5 +1,5 @@
 <p align="center">
-<a href="#" target="_blank"><img src="https://github.com/Xtr126/XtMapper/assets/80520774/2093a10b-f63f-4687-a4c9-d803f66d4e82" width="400px" height="400px"/></a>
+<a href="#" target="_blank"><img src="https://github.com/Xtr126/XtMapper/assets/80520774/2093a10b-f63f-4687-a4c9-d803f66d4e82" width="300px" height="300px"/></a>
 </p>
 
 <h1 align="center">
@@ -13,9 +13,6 @@
 <p align="center">
   <a href="https://github.com/Xtr126/XtMapper/releases">
      <img src="https://img.shields.io/github/downloads/Xtr126/XtMapper/total.svg?style=for-the-badge&logo=android" height="30px"/>
-  </a>
-  <a href="https://github.com/Xtr126/XtMapper/actions/workflows/release.yml">
-      <img src="https://github.com/Xtr126/XtMapper/actions/workflows/release.yml/badge.svg" height="20px" />
   </a>
  </p>
 
@@ -47,8 +44,10 @@ Open source libraries used:
 - [libsu](https://github.com/topjohnwu/libsu) - RootService  
 - [Logo](https://github.com/Xtr126/XtMapper/assets/80520774/2093a10b-f63f-4687-a4c9-d803f66d4e82) - Made with [Blender](https://www.blender.org/)
 
-[Some code](./app/src/main/java/com/genymobile/scrcpy) from the [scrcpy](https://github.com/Genymobile/scrcpy) project was used for implementing multi-touch support in the keymapper. 
-
+[Some code](./app/src/main/java/com/genymobile/scrcpy) from the [scrcpy](https://github.com/Genymobile/scrcpy) project was used for implementing multi-touch support in the keymapper.  
+[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png"
+     alt="Get it on IzzyOnDroid"
+     height="80">](https://apt.izzysoft.de/fdroid/index/apk/xtr.keymapper)
 ## Copyright and License
 The source code is licensed under the GPL v3.  
 Do not publish unofficial APKs to the play store. 
