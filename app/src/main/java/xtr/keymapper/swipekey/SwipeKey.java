@@ -11,7 +11,7 @@ public class SwipeKey implements Parcelable {
     public KeymapProfileKey key1 = new KeymapProfileKey();
     public KeymapProfileKey key2 = new KeymapProfileKey();
 
-    public static final String type = "SWIPE_KEY";
+    public static final String TAG = "SWIPE_KEY";
 
     public SwipeKey (String[] data){
         key1.code = data[1];
@@ -51,7 +51,7 @@ public class SwipeKey implements Parcelable {
     };
 
     public String getData(){
-        return type + " " +
+        return TAG + " " +
                 key1.code + " " +
                 key1.x + " " +
                 key1.y + " " +

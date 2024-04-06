@@ -110,15 +110,16 @@ public class KeymapProfiles {
 
             String[] data = line.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
             switch (data[0]){
-                case Dpad.UDLR:
-                    if (data.length >= 8) profile.dpadUdlr = new Dpad(data);
+                case Dpad.TAG:
+                    if (data.length >= 12)
+                        for (int i = 0; i < profile.dpadArray.length; i++)
+                            if (profile.dpadArray[i] == null) {
+                                profile.dpadArray[i] = new Dpad(data);
+                                break;
+                            }
                     break;
 
-                case Dpad.WASD:
-                    if (data.length >= 8) profile.dpadWasd = new Dpad(data);
-                    break;
-
-                case "MOUSE_AIM":
+                case MouseAimConfig.TAG:
                     profile.mouseAimConfig = new MouseAimConfig().parse(data);
                     break;
 
@@ -136,7 +137,7 @@ public class KeymapProfiles {
                     profile.disabled = false;
                     break;
 
-                case SwipeKey.type:
+                case SwipeKey.TAG:
                     if (data.length > 6) profile.swipeKeys.add(new SwipeKey(data));
                     break;
 

@@ -17,11 +17,9 @@ public class DpadHandler {
 
     private final DpadEvent tapUp, tapDown;
 
-    private boolean KEY_UP;
-    private boolean KEY_DOWN;
-    private boolean KEY_LEFT;
-    private boolean KEY_RIGHT;
-    
+    private boolean KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT;
+    private final String KEY_UP_CODE, KEY_DOWN_CODE, KEY_LEFT_CODE, KEY_RIGHT_CODE;
+
     private IInputInterface input;
     private final int pointerId;
     private final Handler mHandler;
@@ -60,6 +58,11 @@ public class DpadHandler {
         
         tapUp = new DpadEvent(xOfCenter, yOfCenter, UP);
         tapDown = new DpadEvent(xOfCenter, yOfCenter, DOWN);
+
+        KEY_UP_CODE = dpad.keycodes.Up;
+        KEY_DOWN_CODE = dpad.keycodes.Down;
+        KEY_LEFT_CODE = dpad.keycodes.Left;
+        KEY_RIGHT_CODE = dpad.keycodes.Right;
     }
 
     public void setInterface(IInputInterface input){
@@ -86,100 +89,81 @@ public class DpadHandler {
     }
     
     private void sendEventDown(String key) {
-        switch (key){
-            case "KEY_UP":
-            case "KEY_W": {
-                KEY_UP = true;
-                if (!KEY_DOWN && !KEY_LEFT && !KEY_RIGHT) {
-                    sendDpadEvent(tapDown); // Send pointer down event only if no other keys are pressed
-                }
-                // For moving Dpad in 8 directions with 4 keys
-                if (KEY_LEFT)
-                    sendDpadEvent(moveUpLeft);  // If left key is already pressed then move dpad to north-west
-                else if (KEY_RIGHT)
-                    sendDpadEvent(moveUpRight); // If right key is already pressed then move dpad to north-east
-                else
-                    sendDpadEvent(moveUp); // If left or right keys are not pressed then move dpad straight up
-                break;
+        if (key.equals(KEY_UP_CODE)) {
+            KEY_UP = true;
+            if (!KEY_DOWN && !KEY_LEFT && !KEY_RIGHT) {
+                sendDpadEvent(tapDown); // Send pointer down event only if no other keys are pressed
             }
-            case "KEY_DOWN":
-            case "KEY_S":{
-                KEY_DOWN = true;
-                if (!KEY_LEFT && !KEY_RIGHT && !KEY_UP)
-                    sendDpadEvent(tapDown);
+            // For moving Dpad in 8 directions with 4 keys
+            if (KEY_LEFT)
+                sendDpadEvent(moveUpLeft);  // If left key is already pressed then move dpad to north-west
+            else if (KEY_RIGHT)
+                sendDpadEvent(moveUpRight); // If right key is already pressed then move dpad to north-east
+            else
+                sendDpadEvent(moveUp); // If left or right keys are not pressed then move dpad straight up
+        }
+        else if (key.equals(KEY_DOWN_CODE)) {
+            KEY_DOWN = true;
+            if (!KEY_LEFT && !KEY_RIGHT && !KEY_UP)
+                sendDpadEvent(tapDown);
 
-                if (KEY_LEFT) sendDpadEvent(moveDownLeft);
-                else if (KEY_RIGHT) sendDpadEvent(moveDownRight);
-                else sendDpadEvent(moveDown);
-                break;
-            }
-            case "KEY_LEFT":
-            case "KEY_A":{
-                KEY_LEFT = true;
-                if (!KEY_DOWN && !KEY_RIGHT && !KEY_UP)
-                    sendDpadEvent(tapDown);
+            if (KEY_LEFT) sendDpadEvent(moveDownLeft);
+            else if (KEY_RIGHT) sendDpadEvent(moveDownRight);
+            else sendDpadEvent(moveDown);
 
-                if (KEY_UP) sendDpadEvent(moveUpLeft);
-                else if (KEY_DOWN) sendDpadEvent(moveDownLeft);
-                else sendDpadEvent(moveLeft);
-                break;
-            }
-            case "KEY_RIGHT":
-            case "KEY_D":{
-                KEY_RIGHT = true;
-                if (!KEY_DOWN && !KEY_LEFT && !KEY_UP)
-                    sendDpadEvent(tapDown);
+        } else if (key.equals(KEY_LEFT_CODE)) {
+            KEY_LEFT = true;
+            if (!KEY_DOWN && !KEY_RIGHT && !KEY_UP)
+                sendDpadEvent(tapDown);
 
-                if (KEY_UP) sendDpadEvent(moveUpRight);
-                else if (KEY_DOWN) sendDpadEvent(moveDownRight);
-                else sendDpadEvent(moveRight);
-                break;
-            }
+            if (KEY_UP) sendDpadEvent(moveUpLeft);
+            else if (KEY_DOWN) sendDpadEvent(moveDownLeft);
+            else sendDpadEvent(moveLeft);
+
+        } else if (key.equals(KEY_RIGHT_CODE)) {
+            KEY_RIGHT = true;
+            if (!KEY_DOWN && !KEY_LEFT && !KEY_UP)
+                sendDpadEvent(tapDown);
+
+            if (KEY_UP) sendDpadEvent(moveUpRight);
+            else if (KEY_DOWN) sendDpadEvent(moveDownRight);
+            else sendDpadEvent(moveRight);
         }
     }
 
     private void sendEventUp(String key) {
-        switch (key){
-            case "KEY_UP":
-            case "KEY_W":{
-                KEY_UP = false;
-                if (!KEY_DOWN && !KEY_LEFT && !KEY_RIGHT)
-                    sendDpadEvent(tapUp);
+        if (key.equals(KEY_UP_CODE)) {
+            KEY_UP = false;
+            if (!KEY_DOWN && !KEY_LEFT && !KEY_RIGHT)
+                sendDpadEvent(tapUp);
 
-                if (KEY_LEFT) sendDpadEvent(moveLeft);
-                else if (KEY_RIGHT) sendDpadEvent(moveRight);
-                break;
-            }
-            case "KEY_DOWN":
-            case "KEY_S":{
-                KEY_DOWN = false;
-                if (!KEY_LEFT && !KEY_RIGHT && !KEY_UP)
-                    sendDpadEvent(tapUp);
+            if (KEY_LEFT) sendDpadEvent(moveLeft);
+            else if (KEY_RIGHT) sendDpadEvent(moveRight);
 
-                if (KEY_LEFT) sendDpadEvent(moveLeft);
-                else if (KEY_RIGHT) sendDpadEvent(moveRight);
-                break;
-            }
-            case "KEY_LEFT":
-            case "KEY_A":{
-                KEY_LEFT = false;
-                if (!KEY_DOWN && !KEY_RIGHT && !KEY_UP)
-                    sendDpadEvent(tapUp);
+        } else if (key.equals(KEY_DOWN_CODE)) {
+            KEY_DOWN = false;
+            if (!KEY_LEFT && !KEY_RIGHT && !KEY_UP)
+                sendDpadEvent(tapUp);
 
-                if (KEY_UP) sendDpadEvent(moveUp);
-                else if (KEY_DOWN) sendDpadEvent(moveDown);
-                break;
-            }
-            case "KEY_RIGHT":
-            case "KEY_D":{
-                KEY_RIGHT = false;
-                if (!KEY_DOWN && !KEY_LEFT && !KEY_UP)
-                    sendDpadEvent(tapUp);
+            if (KEY_LEFT) sendDpadEvent(moveLeft);
+            else if (KEY_RIGHT) sendDpadEvent(moveRight);
 
-                if (KEY_UP) sendDpadEvent(moveUp);
-                else if (KEY_DOWN) sendDpadEvent(moveDown);
-                break;
-            }
+        } else if (key.equals(KEY_LEFT_CODE)) {
+            KEY_LEFT = false;
+            if (!KEY_DOWN && !KEY_RIGHT && !KEY_UP)
+                sendDpadEvent(tapUp);
+
+            if (KEY_UP) sendDpadEvent(moveUp);
+            else if (KEY_DOWN) sendDpadEvent(moveDown);
+
+        } else if (key.equals(KEY_RIGHT_CODE)) {
+            KEY_RIGHT = false;
+            if (!KEY_DOWN && !KEY_LEFT && !KEY_UP)
+                sendDpadEvent(tapUp);
+
+            if (KEY_UP) sendDpadEvent(moveUp);
+            else if (KEY_DOWN) sendDpadEvent(moveDown);
+
         }
     }
 }

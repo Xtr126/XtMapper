@@ -1,5 +1,6 @@
 package xtr.keymapper.editor;
 
+import static xtr.keymapper.dpad.Dpad.MAX_DPADS;
 import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 
 import android.annotation.SuppressLint;
@@ -24,12 +25,11 @@ import java.util.List;
 import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.CrosshairBinding;
-import xtr.keymapper.databinding.DpadArrowsBinding;
 import xtr.keymapper.databinding.DpadWasdBinding;
 import xtr.keymapper.databinding.KeymapEditorBinding;
 import xtr.keymapper.databinding.ResizableBinding;
 import xtr.keymapper.dpad.Dpad;
-import xtr.keymapper.dpad.Dpad.DpadType;
+import xtr.keymapper.dpad.DpadKeyCodes;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 import xtr.keymapper.keymap.KeymapProfile;
@@ -52,7 +52,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final List<SwipeKeyView> swipeKeyList = new ArrayList<>();
     private MovableFloatingActionKey leftClick, rightClick;
 
-    private MovableFrameLayout dpadWasd, dpadUdlr, crosshair;
+    private MovableFrameLayout crosshair;
+    private final MovableFrameLayout[] dpadArray = new MovableFrameLayout[MAX_DPADS];
+    private final DpadWasdBinding[] dpadBindingArray = new DpadWasdBinding[MAX_DPADS];
     // Default position of new views added
     private final KeymapEditorBinding binding;
     private final Context context;
@@ -153,9 +155,10 @@ public class EditorUI extends OnKeyEventListener.Stub {
         profile.keys.forEach(this::addKey);
         profile.swipeKeys.forEach(swipeKey -> swipeKeyList.add(new SwipeKeyView(mainView, swipeKey, swipeKeyList::remove, this::onClick)));
 
-        if (profile.dpadUdlr != null) addArrowKeysDpad(profile.dpadUdlr.getX(), profile.dpadUdlr.getY());
 
-        if (profile.dpadWasd != null) addWasdDpad(profile.dpadWasd.getX(), profile.dpadWasd.getY());
+        for (int i = 0; i < profile.dpadArray.length; i++)
+            if (profile.dpadArray[i] != null)
+                addDpad(i, profile.dpadArray[i].getX(), profile.dpadArray[i].getY());
 
         if (profile.mouseAimConfig != null) addCrosshair(profile.mouseAimConfig.xCenter, profile.mouseAimConfig.yCenter);
         if (profile.rightClick != null) addRightClick(profile.rightClick.x, profile.rightClick.y);
@@ -164,15 +167,12 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private void saveKeymap() {
         ArrayList<String> linesToWrite = new ArrayList<>();
 
-        if (dpadWasd != null) {
-            Dpad dpad = new Dpad(dpadWasd, DpadType.WASD);
-            linesToWrite.add(dpad.getData());
-        }
 
-        if (dpadUdlr != null) {
-            Dpad dpad = new Dpad(dpadUdlr, DpadType.UDLR);
-            linesToWrite.add(dpad.getData());
-        }
+        for (int i = 0; i < dpadArray.length; i++)
+            if (dpadArray[i] != null) {
+                Dpad dpad = new Dpad(dpadArray[i], new DpadKeyCodes(dpadBindingArray[i]));
+                linesToWrite.add(dpad.getData());
+            }
 
         if (crosshair != null) {
             // Get x and y coordinates from view
@@ -198,6 +198,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         RemoteServiceHelper.reloadKeymap(context);
     }
 
+
     public void setupButtons() {
         binding.speedDial.setOnActionSelectedListener(actionItem -> {
             // X y coordinates of center of root view
@@ -213,14 +214,11 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 hideView();
             }
             else if (id == R.id.dpad) {
-                final CharSequence[] items = { "Arrow Keys", "WASD Keys"};
+                final CharSequence[] items = { "Dpad #1", "Dpad #2"};
                 MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-                builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
-                    if (i == 0) addArrowKeysDpad(defaultX, defaultY);
-                    else addWasdDpad(defaultX, defaultY);
-                });
+                builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> addDpad(i, defaultX, defaultY));
                 AlertDialog dialog = builder.create();
-                if(overlayOpen) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                if (overlayOpen) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
                 dialog.show();
             }
             else if (id == R.id.crosshair) {
@@ -240,32 +238,26 @@ public class EditorUI extends OnKeyEventListener.Stub {
         });
     }
 
-    private void addWasdDpad(float x, float y) {
-        if (dpadWasd == null) {
-            DpadWasdBinding binding = DpadWasdBinding.inflate(layoutInflater, mainView, true);
-            dpadWasd = binding.getRoot();
+    private void addDpad(int i, float x, float y) {
+        if (dpadArray[i] == null) {
+            dpadBindingArray[i] = DpadWasdBinding.inflate(layoutInflater, mainView, true);
+            dpadArray[i] = dpadBindingArray[i].getRoot();
 
-            binding.closeButton.setOnClickListener(v -> {
-                mainView.removeView(dpadWasd);
-                dpadWasd = null;
+            dpadBindingArray[i].closeButton.setOnClickListener(v -> {
+                mainView.removeView(dpadArray[i]);
+                dpadArray[i] = null;
             });
-            binding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpadWasd));
+            dpadBindingArray[i].resizeHandle.setOnTouchListener(new ResizeableDpadView(dpadArray[i]));
+            setDpadKeys(dpadBindingArray[i], profile.dpadArray[i]);
         }
-        moveResizeDpad(dpadWasd, profile.dpadWasd, x, y);
+        moveResizeDpad(dpadArray[i], profile.dpadArray[i], x, y);
     }
 
-    private void addArrowKeysDpad(float x, float y) {
-        if (dpadUdlr == null) {
-            DpadArrowsBinding binding = DpadArrowsBinding.inflate(layoutInflater, mainView, true);
-            dpadUdlr = binding.getRoot();
-
-            binding.closeButton.setOnClickListener(v -> {
-                mainView.removeView(dpadUdlr);
-                dpadUdlr = null;
-            });
-            binding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpadUdlr));
-        }
-        moveResizeDpad(dpadUdlr, profile.dpadUdlr, x, y);
+    private void setDpadKeys(DpadWasdBinding binding, Dpad dpad) {
+        binding.keyUp.setText(dpad.keycodes.Up);
+        binding.keyDown.setText(dpad.keycodes.Down);
+        binding.keyLeft.setText(dpad.keycodes.Left);
+        binding.keyRight.setText(dpad.keycodes.Right);
     }
 
     private void moveResizeDpad(ViewGroup dpadLayout, Dpad dpad, float x, float y) {
@@ -418,6 +410,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         public void onClick(View v) {
             float x = rootView.getX() + rootView.getPivotX();
             float y = rootView.getY() + rootView.getPivotY();
+            crosshair.setX(x);
             crosshair.setX(x);
             crosshair.setY(y);
             profile.mouseAimConfig.width = rootView.getPivotX();

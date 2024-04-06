@@ -13,6 +13,7 @@ public class MouseAimConfig implements Parcelable {
     public float width, height;
     public boolean limitedBounds = true;
     private static final int initXY = 300;
+    public static final String TAG = "MOUSE_AIM";
 
     public MouseAimConfig() {
         xCenter = xleftClick = yleftClick = yCenter = initXY;
@@ -43,7 +44,7 @@ public class MouseAimConfig implements Parcelable {
     public MouseAimConfig parse(String[] data){
         xCenter = Float.parseFloat(data[1]);
         yCenter = Float.parseFloat(data[2]);
-        if (!data[3].equals("~")) limitedBounds = Integer.parseInt(data[3]) != 0;
+        limitedBounds = Integer.parseInt(data[3]) != 0;
         width = Float.parseFloat(data[4]);
         height = Float.parseFloat(data[5]);
         xleftClick = Float.parseFloat(data[6]);
@@ -52,7 +53,7 @@ public class MouseAimConfig implements Parcelable {
     }
 
     public String getData() {
-        return "MOUSE_AIM " + xCenter + " " + yCenter + " "
+        return TAG + " " + xCenter + " " + yCenter + " "
                 + (limitedBounds ? 1 : 0) + " "
                 + width + " " + height + " "
                 + xleftClick + " " + yleftClick;

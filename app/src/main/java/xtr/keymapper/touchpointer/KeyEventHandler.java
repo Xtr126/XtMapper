@@ -4,8 +4,7 @@ import static xtr.keymapper.keymap.KeymapConfig.KEY_ALT;
 import static xtr.keymapper.keymap.KeymapConfig.KEY_CTRL;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.UP;
-import static xtr.keymapper.touchpointer.PointerId.dpad1pid;
-import static xtr.keymapper.touchpointer.PointerId.dpad2pid;
+import static xtr.keymapper.touchpointer.PointerId.dpadpid1;
 
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -14,6 +13,7 @@ import android.os.RemoteException;
 import java.util.ArrayList;
 
 import xtr.keymapper.Utils;
+import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
@@ -25,7 +25,7 @@ import xtr.keymapper.swipekey.SwipeKeyHandler;
 public class KeyEventHandler {
     public boolean ctrlKeyPressed = false;
     public boolean altKeyPressed = false;
-    private DpadHandler dpad1Handler, dpad2Handler;
+    private DpadHandler[] dpadHandlers = new DpadHandler[Dpad.MAX_DPADS];
     private ArrayList<SwipeKeyHandler> swipeKeyHandlers;
     private final PidProvider pidProvider = new PidProvider();
     private final IInputInterface mInput;
@@ -44,15 +44,15 @@ public class KeyEventHandler {
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
         KeymapProfile profile = mInput.getKeymapProfile();
 
-        if (profile.dpadUdlr != null) {
-            dpad1Handler = new DpadHandler(keymapConfig.dpadRadiusMultiplier, profile.dpadUdlr, dpad1pid.id, eventHandler, keymapConfig.swipeDelayMs);
-            dpad1Handler.setInterface(mInput);
+
+        for (int i = 0; i < dpadHandlers.length; i++) {
+            if (profile.dpadArray[i] != null) {
+                int pid = dpadpid1.id + i;
+                dpadHandlers[i] = new DpadHandler(keymapConfig.dpadRadiusMultiplier, profile.dpadArray[i], pid, eventHandler, keymapConfig.swipeDelayMs);
+                dpadHandlers[i].setInterface(mInput);
+            }
         }
 
-        if (profile.dpadWasd != null) {
-            dpad2Handler = new DpadHandler(keymapConfig.dpadRadiusMultiplier, profile.dpadWasd, dpad2pid.id, eventHandler, keymapConfig.swipeDelayMs);
-            dpad2Handler.setInterface(mInput);
-        }
 
         // Correction of x and y deviation from center
         for (KeymapProfileKey key: profile.keys) {
@@ -67,8 +67,7 @@ public class KeyEventHandler {
     }
 
     public void stop() {
-        dpad1Handler = null;
-        dpad2Handler = null;
+        dpadHandlers = null;
         swipeKeyHandlers = null;
         if (mHandlerThread != null)
             mHandlerThread.quit();
@@ -94,17 +93,15 @@ public class KeyEventHandler {
         if (i > 0) { // A-Z and 0-9 keys
             if (event.action == DOWN) handleKeyboardShortcuts(i);
             handleMouseAim(i, event.action);
-
-            if (dpad2Handler != null) // Dpad with WASD keys
-                dpad2Handler.handleEvent(event.code, event.action);
-
         } else { // CTRL, ALT, Arrow keys
-            if (dpad1Handler != null)  // Dpad with arrow keys
-                dpad1Handler.handleEvent(event.code, event.action);
-
             if (event.code.equals("KEY_GRAVE") && event.action == DOWN)
                 if (keymapConfig.keyGraveMouseAim)
                     mInput.getMouseEventHandler().triggerMouseAim();
+        }
+
+        for (DpadHandler dpadHandler: dpadHandlers) {
+            if (dpadHandler != null)
+                dpadHandler.handleEvent(event.code, event.action);
         }
 
         ArrayList<KeymapProfileKey> keyList = mInput.getKeymapProfile().keys;

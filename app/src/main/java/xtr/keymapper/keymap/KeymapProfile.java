@@ -1,5 +1,7 @@
 package xtr.keymapper.keymap;
 
+import static xtr.keymapper.dpad.Dpad.MAX_DPADS;
+
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -13,8 +15,7 @@ import xtr.keymapper.swipekey.SwipeKey;
 
 public class KeymapProfile implements Parcelable {
     public String packageName = "xtr.keymapper";
-    public Dpad dpadUdlr = null;
-    public Dpad dpadWasd = null;
+    public Dpad[] dpadArray = new Dpad[MAX_DPADS];
     public MouseAimConfig mouseAimConfig = null;
     public ArrayList<KeymapProfileKey> keys = new ArrayList<>();
     public ArrayList<SwipeKey> swipeKeys = new ArrayList<>();
@@ -27,8 +28,7 @@ public class KeymapProfile implements Parcelable {
 
     protected KeymapProfile(Parcel in) {
         packageName = in.readString();
-        dpadUdlr = in.readParcelable(Dpad.class.getClassLoader());
-        dpadWasd = in.readParcelable(Dpad.class.getClassLoader());
+        dpadArray = in.createTypedArray(Dpad.CREATOR);
         mouseAimConfig = in.readParcelable(MouseAimConfig.class.getClassLoader());
         keys = in.createTypedArrayList(KeymapProfileKey.CREATOR);
         swipeKeys = in.createTypedArrayList(SwipeKey.CREATOR);
@@ -56,8 +56,7 @@ public class KeymapProfile implements Parcelable {
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeString(packageName);
-        dest.writeParcelable(dpadUdlr, flags);
-        dest.writeParcelable(dpadWasd, flags);
+        dest.writeTypedArray(dpadArray, flags);
         dest.writeParcelable(mouseAimConfig, flags);
         dest.writeTypedList(keys);
         dest.writeTypedList(swipeKeys);
