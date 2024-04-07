@@ -119,6 +119,11 @@ public class KeymapProfiles {
                             }
                     break;
 
+                case Dpad.UDLR:
+                    if (data.length >= 12)
+                        profile.dpadUdlr = new Dpad(data);
+                    break;
+
                 case MouseAimConfig.TAG:
                     profile.mouseAimConfig = new MouseAimConfig().parse(data);
                     break;

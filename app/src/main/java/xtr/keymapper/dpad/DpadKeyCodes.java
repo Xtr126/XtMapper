@@ -5,19 +5,19 @@ import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
 
-import xtr.keymapper.databinding.DpadWasdBinding;
+import xtr.keymapper.databinding.DpadBinding;
 
 public class DpadKeyCodes implements Parcelable {
     public final String Up, Down, Left, Right;
 
-    DpadKeyCodes(String[] in){
+    public DpadKeyCodes(String[] in){
         Up = in[0];
         Down = in[1];
         Left = in[2];
         Right = in[3];
     }
 
-    public DpadKeyCodes(DpadWasdBinding binding){
+    public DpadKeyCodes(DpadBinding binding){
         Up = "KEY_" + binding.keyUp.getText();
         Down = "KEY_" + binding.keyDown.getText();
         Left = "KEY_" + binding.keyLeft.getText();

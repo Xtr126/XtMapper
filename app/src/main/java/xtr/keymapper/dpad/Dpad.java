@@ -15,9 +15,12 @@ public class Dpad implements Parcelable {
     public final DpadKeyCodes keycodes;
     public static final int MAX_DPADS = 2;
     public static final String TAG = "DPAD";
+    public static final String UDLR = "DPAD_UDLR";
+    private final String tag;
 
-    public Dpad (MovableFrameLayout dpad, DpadKeyCodes keycodes) {
+    public Dpad (MovableFrameLayout dpad, DpadKeyCodes keycodes, String tag) {
         this.keycodes = keycodes;
+        this.tag = tag;
         viewX = dpad.getX();
         viewY = dpad.getY();
         radius = dpad.getPivotX();
@@ -28,6 +31,7 @@ public class Dpad implements Parcelable {
     }
 
     public Dpad (String[] data){
+        this.tag = data[0];
         viewX = Float.parseFloat(data[1]); // x y coordinates for use in EditorUI
         viewY = Float.parseFloat(data[2]);
         radius = Float.parseFloat(data[3]); // radius of dpad
@@ -39,6 +43,7 @@ public class Dpad implements Parcelable {
     }
 
     protected Dpad(Parcel in) {
+        tag = in.readString();
         viewX = in.readFloat();
         viewY = in.readFloat();
         width = in.readInt();
@@ -62,7 +67,7 @@ public class Dpad implements Parcelable {
     };
 
     public String getData(){
-        return TAG + " " +
+        return tag + " " +
                 viewX + " " +
                 viewY + " " +
                 radius + " " +
@@ -96,6 +101,7 @@ public class Dpad implements Parcelable {
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
+        dest.writeString(tag);
         dest.writeFloat(viewX);
         dest.writeFloat(viewY);
         dest.writeInt(width);

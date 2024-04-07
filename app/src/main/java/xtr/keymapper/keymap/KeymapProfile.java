@@ -5,8 +5,6 @@ import static xtr.keymapper.dpad.Dpad.MAX_DPADS;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import androidx.annotation.NonNull;
-
 import java.util.ArrayList;
 
 import xtr.keymapper.dpad.Dpad;
@@ -15,15 +13,16 @@ import xtr.keymapper.swipekey.SwipeKey;
 
 public class KeymapProfile implements Parcelable {
     public String packageName = "xtr.keymapper";
-    public Dpad[] dpadArray = new Dpad[MAX_DPADS];
+    public final Dpad[] dpadArray;
     public MouseAimConfig mouseAimConfig = null;
     public ArrayList<KeymapProfileKey> keys = new ArrayList<>();
     public ArrayList<SwipeKey> swipeKeys = new ArrayList<>();
     public KeymapProfileKey rightClick;
     public boolean disabled = false;
+    public Dpad dpadUdlr;
 
     public KeymapProfile() {
-
+        dpadArray = new Dpad[MAX_DPADS];
     }
 
     protected KeymapProfile(Parcel in) {
@@ -34,6 +33,24 @@ public class KeymapProfile implements Parcelable {
         swipeKeys = in.createTypedArrayList(SwipeKey.CREATOR);
         rightClick = in.readParcelable(KeymapProfileKey.class.getClassLoader());
         disabled = in.readByte() != 0;
+        dpadUdlr = in.readParcelable(Dpad.class.getClassLoader());
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(packageName);
+        dest.writeTypedArray(dpadArray, flags);
+        dest.writeParcelable(mouseAimConfig, flags);
+        dest.writeTypedList(keys);
+        dest.writeTypedList(swipeKeys);
+        dest.writeParcelable(rightClick, flags);
+        dest.writeByte((byte) (disabled ? 1 : 0));
+        dest.writeParcelable(dpadUdlr, flags);
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
     }
 
     public static final Creator<KeymapProfile> CREATOR = new Creator<>() {
@@ -47,20 +64,4 @@ public class KeymapProfile implements Parcelable {
             return new KeymapProfile[size];
         }
     };
-
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(@NonNull Parcel dest, int flags) {
-        dest.writeString(packageName);
-        dest.writeTypedArray(dpadArray, flags);
-        dest.writeParcelable(mouseAimConfig, flags);
-        dest.writeTypedList(keys);
-        dest.writeTypedList(swipeKeys);
-        dest.writeParcelable(rightClick, flags);
-        dest.writeByte((byte) (disabled ? 1 : 0));
-    }
 }
