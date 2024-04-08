@@ -25,7 +25,7 @@ import xtr.keymapper.swipekey.SwipeKeyHandler;
 public class KeyEventHandler {
     public boolean ctrlKeyPressed = false;
     public boolean altKeyPressed = false;
-    private DpadHandler[] dpadHandlers = new DpadHandler[Dpad.MAX_DPADS];
+    private DpadHandler[] dpadHandlers;
     private ArrayList<SwipeKeyHandler> swipeKeyHandlers;
     private final PidProvider pidProvider = new PidProvider();
     private final IInputInterface mInput;
@@ -45,9 +45,15 @@ public class KeyEventHandler {
         KeymapProfile profile = mInput.getKeymapProfile();
 
 
+        dpadHandlers = new DpadHandler[Dpad.MAX_DPADS + 1];
         for (int i = 0; i < dpadHandlers.length; i++) {
-            if (profile.dpadArray[i] != null) {
-                int pid = dpadpid1.id + i;
+            int pid = dpadpid1.id + i;
+            if ( i >= 2 ) { // Arrow keys
+                if (profile.dpadUdlr != null) {
+                    dpadHandlers[i] = new DpadHandler(keymapConfig.dpadRadiusMultiplier, profile.dpadUdlr, pid, eventHandler, keymapConfig.swipeDelayMs);
+                    dpadHandlers[i].setInterface(mInput);
+                }
+            } else if (profile.dpadArray[i] != null) {
                 dpadHandlers[i] = new DpadHandler(keymapConfig.dpadRadiusMultiplier, profile.dpadArray[i], pid, eventHandler, keymapConfig.swipeDelayMs);
                 dpadHandlers[i].setInterface(mInput);
             }

@@ -9,6 +9,7 @@ import static xtr.keymapper.InputEventCodes.REL_Y;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.RemoteException;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -131,8 +132,8 @@ public class InputService implements IInputInterface {
             this.stop();
             keyEventHandler.init();
             mouseEventHandler.init();
-        } catch (RemoteException e) {
-            e.printStackTrace(System.out);
+        } catch (Exception e) {
+            Log.e("reload keymap", e.getMessage(), e);
         }
     }
 

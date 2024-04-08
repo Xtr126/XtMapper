@@ -50,7 +50,7 @@ public class RemoteServiceHelper {
             try {
                 service.reloadKeymap();
             } catch (RemoteException e) {
-                Log.i("RemoteService", e.toString());
+                Log.e("RemoteService", e.getMessage(), e);
             }
         });
     }
@@ -80,7 +80,7 @@ public class RemoteServiceHelper {
             try {
                 service = new RemoteServiceSocketClient();
             } catch (IOException e) {
-                Log.e(e.toString(), e.getMessage(), e);
+                // Log.e(e.toString(), e.getMessage(), e);
                 RemoteServiceSocketClient.socket = null;
             }
             if (RemoteServiceSocketClient.socket == null) {
