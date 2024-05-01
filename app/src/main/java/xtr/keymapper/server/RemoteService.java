@@ -32,7 +32,7 @@ import xtr.keymapper.touchpointer.KeyEventHandler;
 
 public class RemoteService extends IRemoteService.Stub {
     private String currentDevice = "";
-    private InputService inputService;
+    InputService inputService;
     private OnKeyEventListener mOnKeyEventListener;
     boolean isWaylandClient = false;
     private ActivityObserverService activityObserverService;

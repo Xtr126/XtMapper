@@ -11,7 +11,7 @@ import androidx.annotation.NonNull;
 
 public class KeymapConfig implements Parcelable {
     private SharedPreferences sharedPref;
-    public Float mouseSensitivity, scrollSpeed;
+    public Float mouseSensitivity = 1f, scrollSpeed = 1f;
     public Float dpadRadiusMultiplier;
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
     public boolean disableAutoProfiling, useShizuku, editorOverlay;
@@ -33,11 +33,13 @@ public class KeymapConfig implements Parcelable {
 
     public int mouseAimShortcutKey;
     public boolean mouseAimToggle;
-    public String touchpadInputMode;
+    public String touchpadInputMode = TOUCHPAD_DISABLED;
 
     public KeymapConfig(Context context) {
-        sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
-        loadSharedPrefs();
+        if (context != null) {
+            sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE);
+            loadSharedPrefs();
+        }
     }
 
     protected KeymapConfig(Parcel in) {
