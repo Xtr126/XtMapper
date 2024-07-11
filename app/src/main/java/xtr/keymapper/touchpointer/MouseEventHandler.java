@@ -1,6 +1,7 @@
 package xtr.keymapper.touchpointer;
 
 import static xtr.keymapper.InputEventCodes.BTN_EXTRA;
+import static xtr.keymapper.InputEventCodes.BTN_MIDDLE;
 import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
 import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
 import static xtr.keymapper.InputEventCodes.BTN_SIDE;
@@ -137,6 +138,7 @@ public class MouseEventHandler {
 
             case BTN_EXTRA:
             case BTN_SIDE:
+            case BTN_MIDDLE:
                 if (value == 1) triggerMouseAim();
 
             case REL_WHEEL:

@@ -1,6 +1,7 @@
 package xtr.keymapper.mouse;
 
 import static xtr.keymapper.InputEventCodes.BTN_EXTRA;
+import static xtr.keymapper.InputEventCodes.BTN_MIDDLE;
 import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
 import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
 import static xtr.keymapper.InputEventCodes.BTN_SIDE;
@@ -86,6 +87,7 @@ public class MouseAimHandler {
                 break;
 
             case BTN_SIDE:
+            case BTN_MIDDLE:
             case BTN_EXTRA:
             case BTN_RIGHT:
                 listener.onButtonClick(code, value);
