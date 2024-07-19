@@ -58,11 +58,11 @@ public class MainActivity extends AppCompatActivity {
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
 
         RemoteServiceHelper.useShizuku = new KeymapConfig(context).useShizuku;
+        Server.setupServer(this, mCallback);
 
         Shell.getShell(shell -> {
             Boolean rootAccess = Shell.isAppGrantedRoot();
             if (rootAccess == null || !rootAccess) {
-                Server.setupServer(this, mCallback);
                 if(!RemoteServiceHelper.useShizuku) alertRootAccessNotFound();
             }
             setupButtons();

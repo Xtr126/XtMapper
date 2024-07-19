@@ -5,18 +5,37 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.CharBuffer;
 
 import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.server.RemoteServiceShell;
 
 public class Server {
 
-    private static void writeScript(ApplicationInfo ai, File script) throws IOException, InterruptedException {
-        final String className = xtr.keymapper.server.RemoteServiceShell.class.getName();
+    private static void writeScript(StringBuffer linesToWrite, File scriptFile) throws IOException, InterruptedException {
+        FileWriter fileWriter = new FileWriter(scriptFile);
+        FileReader fileReader = new FileReader(scriptFile);
 
-        FileWriter linesToWrite = new FileWriter(script, false);
+        CharBuffer target = CharBuffer.allocate((int) scriptFile.length());
+        fileReader.read(target);
+
+        // Write script to disk only if file contents are not the same.
+        if (linesToWrite.compareTo(new StringBuffer(target)) != 0) {
+            fileWriter.write(linesToWrite.toString());
+        }
+        fileWriter.close();
+        fileReader.close();
+    }
+
+    private static @NonNull StringBuffer generateScript(ApplicationInfo ai) {
+        final String className = RemoteServiceShell.class.getName();
+        StringBuffer linesToWrite = new StringBuffer();
         linesToWrite.append("#!/system/bin/sh\n");
         linesToWrite.append("pkill -f ").append(className).append("\n");
         linesToWrite.append("exec /system/bin/app_process");
@@ -24,9 +43,7 @@ public class Server {
                 .append("\" -Djava.class.path=\"").append(ai.publicSourceDir) // Absolute path to apk in /data/app
                 .append("\" / ").append(className)
                 .append(" \"$@\" \n");
-
-        linesToWrite.flush();
-        linesToWrite.close();
+        return linesToWrite;
     }
 
     public static void setupServer(Context context, MainActivity.Callback mCallback) {
@@ -35,7 +52,7 @@ public class Server {
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
-            writeScript(ai, script);
+            writeScript(generateScript(ai), script);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException ex) {
             Log.e("Server", ex.toString());
             mCallback.updateCmdView1("failed to write script: " + ex + "\n");
