@@ -7,7 +7,7 @@
 </h1>
 <p align="center">
   XtMapper, a free and open source keymapper. <br>
-  Play your Android games with keyboard and mouse on Bliss OS <br>
+  Play your Android games with keyboard and mouse<br>
 </p>
 
 <p align="center">
