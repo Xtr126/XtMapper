@@ -25,11 +25,8 @@ https://xtr126.github.io/XtMapper-docs/guides/about
 ### Build
 - Run `./gradlew assembleDebug` or `./gradlew.bat assembleDebug` at the base directory of the project 
 
-## Help and support
-Feel free to file an [issue](https://github.com/Xtr126/XtMapper/issues).  
-You can ask about XtMapper on Bliss OS in  
-BlissLabs discord server: https://discord.com/invite/F9n5gbdNy2  
-Telegram: https://t.me/blissx86
+## Help and support 
+Join us on telegram: [t.me/xtmapper](https://t.me/xtmapper)
 
 ## Waydroid support
 Due to how XtMapper works by reading input events directly from the kernel, there are certain limitations in implementing support for Android containers. 
