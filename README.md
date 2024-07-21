@@ -20,6 +20,12 @@
 https://xtr126.github.io/XtMapper-docs/guides/about  
 [Watch video on YouTube](https://www.youtube.com/watch?v=Slcu43xBV3M)  
 
+ ## Screenshots
+
+|   |  |
+| ------------- | ------------- |
+| <img src="https://github.com/user-attachments/assets/73dd4e4a-c601-4dc9-a593-31fbf6491523"/>  |  <img src="https://github.com/user-attachments/assets/b1d69ba0-f859-4efe-b63c-604d8ee26448"/>  |
+
 ## Development
 
 ### Build
