@@ -34,10 +34,8 @@ https://xtr126.github.io/XtMapper-docs/guides/about
 ## Help and support 
 Join us on telegram: [t.me/xtmapper](https://t.me/xtmapper)
 
-## Waydroid support
-Due to how XtMapper works by reading input events directly from the kernel, there are certain limitations in implementing support for Android containers. 
-An experimental solution was developed: https://github.com/Xtr126/wayland-getevent 
-It is mostly a "hack" that we have to rely on due to how wayland/waydroid works.  
+## Using on waydroid
+Experimental: https://github.com/Xtr126/wayland-getevent 
 
 ## Credits
 Open source libraries used:
@@ -54,8 +52,7 @@ Open source libraries used:
      alt="Get it on IzzyOnDroid"
      height="80">](https://apt.izzysoft.de/fdroid/index/apk/xtr.keymapper)
 ## Copyright and License
-The source code is licensed under the GPL v3.  
-Do not publish unofficial APKs to the play store. 
+The source code is licensed under the GPL v3.   
 ```
 XtMapper
 Copyright (C) 2022 Xtr126
@@ -72,4 +69,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License 
 along with this program. If not, see https://www.gnu.org/licenses/.
 ```
-
+Do not publish unofficial APKs to the play store.
