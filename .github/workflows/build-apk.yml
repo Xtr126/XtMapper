@@ -1,4 +1,4 @@
-name: Build and Release APK
+name: Build and Upload APK
 
 on:
   workflow_dispatch:
@@ -7,12 +7,8 @@ on:
       - "v*"
 
 jobs:
-  build-docs:
-    uses: ./.github/workflows/build-docs.yml
-  
+
   build:
-    needs:
-      - build-docs
       
     runs-on: ubuntu-latest
     steps:
@@ -40,26 +36,11 @@ jobs:
           echo '${{ secrets.KEYSTORE }}' | base64 -d > keystore.jks
         fi
 
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-
-    - name: Move artifact to assets
-      run: |
-          cd ./github-pages
-          tar xvf artifact.tar && rm artifact.tar
-          cd ../
-          mkdir ./app/src/main/assets
-          mv ./github-pages ./app/src/main/assets/XtMapper-docs
-
     - name: Build with Gradle
-      run: ./gradlew assembleRelease
-        
-    - name: Release
-      uses: "marvinpinto/action-automatic-releases@latest"
+      run: ./gradlew app:assembleRelease
+    
+    - uses: actions/upload-artifact@v4
       with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        prerelease: false
-        draft: true
-        files: |
-          app/build/outputs/apk/release/*.apk
+        name: my-artifact
+        path: app/build/outputs/apk/release/XtMapper-universal-release-v2.1.5.apk
          
