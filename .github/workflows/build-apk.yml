@@ -41,6 +41,6 @@ jobs:
     
     - uses: actions/upload-artifact@v4
       with:
-        name: my-artifact
+        name: xtmapper-release
         path: app/build/outputs/apk/release/XtMapper-universal-release-v2.1.5.apk
          
