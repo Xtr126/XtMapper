@@ -69,4 +69,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License 
 along with this program. If not, see https://www.gnu.org/licenses/.
 ```
-Do not publish unofficial APKs to the play store.
+Do not publish unofficial APKs to the play store. It hurts open source projects like ours.
