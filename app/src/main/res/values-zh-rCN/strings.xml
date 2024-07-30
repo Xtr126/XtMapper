@@ -1,0 +1,64 @@
+<resources>
+    <string name="app_name">XtMapper</string>
+    <string name="start">开始</string>
+    <string name="stop">停止</string>
+    <string name="configure">设置</string>
+    <string name="edit_keymap">编辑键映射</string>
+    <string name="help">帮助</string>
+    <string name="package_name">包名：</string>
+    <string name="mouse_sensitivity">鼠标灵敏度</string>
+    <string name="dpad_radius">方向键半径</string>
+    <string name="mouse_aim_activated">
+    射击模式点击右键或~键退出
+    </string>
+    <string name="scroll_speed">滚动速度</string>
+    <string name="keyboard_shortcuts">键盘快捷键：</string>
+    <string name="dialog_alert_editor">
+    服务未运行。\n
+    您可能无法映射所有按键事件。\n
+    运行激活并重试。</string>
+    <string name="dialog_alert_editor_title">未激活</string>
+    <string name="dialog_alert_add_profile">输入新的配置名称：</string>
+    <string name="dialog_alert_select_profile">选择配置文件 \ </string>
+    <string name="dialog_alert_enable_profile">为此应用启用映射吗？</string>
+
+    <string name="key">键</string>
+
+    <string name="switch_profile">切换配置文件</string>
+    <string name="launch_editor">启动编辑器</string>
+    <string name="pause_resume">暂停/恢复</string>
+
+    <!-- bottom navigation in settings fragment -->
+    <string name="tuning">微调</string>
+    <string name="config">配置</string>
+    <string name="shortcuts">快捷</string>
+
+    <string name="trigger_mouse_aim_with">触发鼠标瞄准：</string>
+    <string name="right_click">右键点击</string>
+    <string name="key_grave">~波浪号键</string>
+
+    <string name="pinch_to_zoom_gesture_info">使用以下命令执行二指手势：</string>
+    <string name="drag_mouse">Ctrl + 拖动鼠标</string>
+    <string name="mouse_wheel">Ctrl + 鼠标滚轮</string>
+    <string name="mouse_aim">鼠标瞄准</string>
+    <string name="cancel">@android:string/cancel</string>
+    <string name="ok">@android:string/ok</string>
+    <string name="yes">@android:string/yes</string>
+    <string name="no">@android:string/no</string>
+    <string name="swipe_delay_ms">滑动延迟 %d 毫秒</string>
+    <string name="profile_name">配置名称</string>
+    <string name="root_not_found_title">未获取 root 权限</string>
+    <string name="root_not_found_message">键映射器需要获取root权限才能运行。\n请从 KernelSU 管理器应用向 XtMapper 授予权限：</string>
+    <string name="root_no_privileges_title">服务无法以 root 权限启动</string>
+    <string name="root_no_privileges_message">
+    无法获得权限。您想退出程序吗？\n
+    如果您已授予(root)超级用户权限，则退出并打开应用程序后可能会起作用。
+    </string>
+    <string name="disable_auto_profile">禁用自动分析</string>
+    <string name="touchpad_input">触摸板输入</string>
+    <string name="launch_app">启动应用</string>
+    <string name="use_shizuku">使用 Shizuku</string>
+    <string name="pointer">指针模式</string>
+    <string name="open_editor_as_overlay">以叠加方式打开编辑器</string>
+
+</resources>
