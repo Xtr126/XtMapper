@@ -3,6 +3,7 @@ package xtr.keymapper;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -26,8 +27,13 @@ public class Server {
         fileReader.read(target);
 
         // Write script to disk only if file contents are not the same.
-        if (linesToWrite.compareTo(new StringBuffer(target)) != 0) {
-            fileWriter.write(linesToWrite.toString());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            if (linesToWrite.compareTo(new StringBuffer(target)) != 0) {
+                fileWriter.write(linesToWrite.toString());
+            }
+        } else {
+            if (linesToWrite.toString().equals(target.toString()))
+                fileWriter.write(linesToWrite.toString());
         }
         fileWriter.close();
         fileReader.close();
