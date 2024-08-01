@@ -74,7 +74,7 @@ public class RemoteServiceHelper {
         }
     }
 
-    public static void getInstance(){
+    private static void getInstance(){
         if (service == null) {
             // Try tcpip connection first
             try {
