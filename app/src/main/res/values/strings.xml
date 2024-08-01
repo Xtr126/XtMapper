@@ -70,4 +70,20 @@
     <string name="add_key">Add Key</string>
     <string name="save">Save</string>
 
+    <!--  Mouse Aim  -->
+    <string name="toggle">Toggle</string>
+    <string name="hold">Hold</string>
+
+    <!--  Pointer Mode  -->
+    <string name="combined">Combined</string>
+    <string name="overlay">Overlay</string>
+    <string name="system">System</string>
+
+    <!--  Touchpad  -->
+    <string name="relative">Relative</string>
+    <string name="disabled">Disabled</string>
+    <string name="direct">Direct</string>
+
+
+
 </resources>
