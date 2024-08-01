@@ -49,7 +49,7 @@
     <string name="swipe_delay_ms">Swipe delay %d milliseconds</string>
     <string name="profile_name">Profile Name</string>
     <string name="root_not_found_title">Root access not found</string>
-    <string name="root_not_found_message">Root access is required for the keymapper to function. \n Please grant superuser to XtMapper from KernelSU manager app:</string>
+    <string name="root_not_found_message">Root access is required for the keymapper to function. \n Please grant superuser to XtMapper from KernelSU manager app</string>
     <string name="root_no_privileges_title">Service failed to start as root</string>
     <string name="root_no_privileges_message">
         Unable to obtain privileges. Do you want to exit the application?\n
@@ -61,5 +61,13 @@
     <string name="use_shizuku">Use Shizuku</string>
     <string name="pointer">Pointer Mode</string>
     <string name="open_editor_as_overlay">Open editor as overlay</string>
+
+    <!--  Keymap editor  -->
+    <string name="d_pad">D-Pad</string>
+    <string name="crosshair">CrossHair</string>
+    <string name="left_click">Left Click</string>
+    <string name="swipe_key">Swipe Key</string>
+    <string name="add_key">Add Key</string>
+    <string name="save">Save</string>
 
 </resources>

@@ -3,30 +3,30 @@
     <item
         android:id="@+id/dpad"
         android:icon="@drawable/dpad"
-        android:title="D-Pad" />
+        android:title="@string/d_pad" />
     <item
         android:id="@+id/crosshair"
         android:icon="@drawable/crosshair"
-        android:title="CrossHair" />
+        android:title="@string/crosshair" />
     <item
         android:id="@+id/mouse_left"
         android:icon="@drawable/ic_baseline_mouse_36"
-        android:title="Left Click" />
+        android:title="@string/left_click" />
     <item
         android:id="@+id/mouse_right"
         android:icon="@drawable/ic_baseline_mouse_36"
-        android:title="Right Click" />
+        android:title="@string/right_click" />
     <item
         android:id="@+id/swipe_key"
         android:icon="@drawable/ic_baseline_touch_app_24"
-        android:title="Swipe Key" />
+        android:title="@string/swipe_key" />
     <item
         android:id="@+id/add"
         android:icon="@drawable/newkey"
-        android:title="Add Key" />
+        android:title="@string/add_key" />
 
     <item
         android:id="@+id/save"
         android:icon="@drawable/ic_baseline_done_36"
-        android:title="Save" />
+        android:title="@string/save" />
 </menu>

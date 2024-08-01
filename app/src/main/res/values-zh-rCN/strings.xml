@@ -48,7 +48,7 @@
     <string name="swipe_delay_ms">滑动延迟 %d 毫秒</string>
     <string name="profile_name">配置名称</string>
     <string name="root_not_found_title">未获取 root 权限</string>
-    <string name="root_not_found_message">键映射器需要获取root权限才能运行。\n请从 KernelSU 管理器应用向 XtMapper 授予权限：</string>
+    <string name="root_not_found_message">键映射器需要获取root权限才能运行。\n请从 KernelSU 管理器应用向 XtMapper 授予权限</string>
     <string name="root_no_privileges_title">服务无法以 root 权限启动</string>
     <string name="root_no_privileges_message">
     无法获得权限。您想退出程序吗？\n
@@ -60,5 +60,13 @@
     <string name="use_shizuku">使用 Shizuku</string>
     <string name="pointer">指针模式</string>
     <string name="open_editor_as_overlay">以叠加方式打开编辑器</string>
+
+    <!--  Keymap editor  -->
+    <string name="d_pad">D-Pad</string>
+    <string name="crosshair">CrossHair</string>
+    <string name="left_click">Left Click</string>
+    <string name="swipe_key">Swipe Key</string>
+    <string name="add_key">Add Key</string>
+    <string name="save">Save</string>
 
 </resources>
