@@ -26,7 +26,7 @@ public class EditorService extends Service {
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             TouchPointer pointerOverlay = binder.getService();
             try {
-                pointerOverlay.mCallback.launchEditor();
+                if (pointerOverlay.mService != null) pointerOverlay.mCallback.launchEditor();
             } catch (RemoteException ignored) {
             }
         }

@@ -37,7 +37,7 @@ import xtr.keymapper.server.RemoteServiceHelper;
 public class TouchPointer extends Service {
     private final IBinder binder = new TouchPointerBinder();
     public MainActivity.Callback activityCallback;
-    private IRemoteService mService;
+    public IRemoteService mService;
     public String selectedProfile = null;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private boolean activityRemoteCallback = false;
