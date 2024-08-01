@@ -62,11 +62,11 @@
     <string name="open_editor_as_overlay">以叠加方式打开编辑器</string>
 
     <!--  Keymap editor  -->
-    <string name="d_pad">D-Pad</string>
-    <string name="crosshair">CrossHair</string>
-    <string name="left_click">Left Click</string>
-    <string name="swipe_key">Swipe Key</string>
-    <string name="add_key">Add Key</string>
-    <string name="save">Save</string>
+    <string name="d_pad">方向键</string>
+    <string name="crosshair">十字线</string>
+    <string name="left_click">左键单击</string>
+    <string name="swipe_key">滑动键</string>
+    <string name="add_key">添加键</string>
+    <string name="save">保存</string>
 
 </resources>
