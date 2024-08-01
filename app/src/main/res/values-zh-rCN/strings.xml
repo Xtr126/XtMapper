@@ -70,17 +70,17 @@
     <string name="save">保存</string>
 
     <!--  Mouse Aim  -->
-    <string name="toggle">Toggle</string>
-    <string name="hold">Hold</string>
+    <string name="toggle">切换</string>
+    <string name="hold">按住</string>
 
     <!--  Pointer Mode  -->
-    <string name="combined">Combined</string>
-    <string name="overlay">Overlay</string>
-    <string name="system">System</string>
+    <string name="combined">组合</string>
+    <string name="overlay">叠加</string>
+    <string name="system">跟随系统</string>
 
     <!--  Touchpad  -->
-    <string name="relative">Relative</string>
-    <string name="disabled">Disabled</string>
-    <string name="direct">Direct</string>
+    <string name="relative">相对模式</string>
+    <string name="disabled">禁用</string>
+    <string name="direct">直接模式</string>
 
 </resources>
