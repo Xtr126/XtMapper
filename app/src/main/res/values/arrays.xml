@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="pointer_modes">
+        <item>@string/combined</item>
+        <item>@string/overlay</item>
+        <item>@string/system</item>
+    </string-array>
+    <string-array name="touchpad_input_modes">
+        <item>@string/direct</item>
+        <item>@string/relative</item>
+        <item>@string/disabled</item>
+    </string-array>
+    <string-array name="mouse_aim_actions">
+        <item>@string/toggle</item>
+        <item>@string/hold</item>
+    </string-array>
+</resources>

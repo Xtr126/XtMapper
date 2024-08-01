@@ -167,7 +167,7 @@ public class RemoteService extends IRemoteService.Stub {
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
         if (inputService != null) stopServer();
         cb.asBinder().linkToDeath(this::stopServer, 0);
-        if (!keymapConfig.pointerMode.equals(KeymapConfig.POINTER_SYSTEM)) {
+        if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
             try {
                 prepareCursorOverlayWindow();
             } catch (Exception e) {

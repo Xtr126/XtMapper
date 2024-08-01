@@ -18,6 +18,10 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.R;
 import xtr.keymapper.Utils;
@@ -27,6 +31,9 @@ import xtr.keymapper.server.RemoteServiceHelper;
 public class SettingsFragment extends BottomSheetDialogFragment {
     private final KeymapConfig keymapConfig;
     private FragmentSettingsDialogBinding binding;
+    private Map<String, Integer> mouseAimActionsMap;
+    private Map<String, Integer> pointerModeMap;
+    private Map<String, Integer> touchpadInputModeMap;
 
     public SettingsFragment(Context context) {
         keymapConfig = new KeymapConfig(context);
@@ -83,9 +90,18 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         mouseAimActions();
         loadTouchpadInputSettings();
 
-        binding.pointerMode.setText(keymapConfig.pointerMode);
-        final String[] pointerModes = {KeymapConfig.POINTER_COMBINED, KeymapConfig.POINTER_OVERLAY, KeymapConfig.POINTER_SYSTEM};
-        ((MaterialAutoCompleteTextView)binding.pointerMode).setSimpleItems(pointerModes);
+        final int[] pointerModeCodes = {KeymapConfig.POINTER_COMBINED, KeymapConfig.POINTER_OVERLAY, KeymapConfig.POINTER_SYSTEM};
+        String[] pointerModeNames = getResources().getStringArray(R.array.pointer_modes);
+        pointerModeMap = IntStream.range(0, pointerModeCodes.length)
+                .boxed()
+                .collect(Collectors.toMap(k -> pointerModeNames[k], v -> pointerModeCodes[v]));
+
+        for (Map.Entry<String, Integer> entry : pointerModeMap.entrySet()) {
+            if (entry.getValue().equals(keymapConfig.pointerMode)) {
+                binding.pointerMode.setText(entry.getKey());
+            }
+        }
+        ((MaterialAutoCompleteTextView)binding.pointerMode).setSimpleItems(pointerModeNames);
 
         setDefaultVisibilty();
         binding.sliders.setVisibility(View.VISIBLE);
@@ -138,18 +154,26 @@ public class SettingsFragment extends BottomSheetDialogFragment {
     }
 
     private void mouseAimActions() {
-        if (keymapConfig.mouseAimToggle) binding.mouseAimAction.setText(KeymapConfig.TOGGLE);
-        else binding.mouseAimAction.setText(KeymapConfig.HOLD);
+        if (keymapConfig.mouseAimToggle) binding.mouseAimAction.setText(R.string.toggle);
+        else binding.mouseAimAction.setText(R.string.hold);
 
-        final String[] mouseAimActions = {KeymapConfig.HOLD, KeymapConfig.TOGGLE};
-        ((MaterialAutoCompleteTextView)binding.mouseAimAction).setSimpleItems(mouseAimActions);
+        String[] mouseAimActionNames = getResources().getStringArray(R.array.mouse_aim_actions);
+        ((MaterialAutoCompleteTextView)binding.mouseAimAction).setSimpleItems(mouseAimActionNames);
     }
 
     private void loadTouchpadInputSettings() {
-        binding.touchpadInputMode.setText(keymapConfig.touchpadInputMode);
+        final int[] touchpadInputModeCodes = {KeymapConfig.TOUCHPAD_DIRECT, KeymapConfig.TOUCHPAD_RELATIVE, KeymapConfig.TOUCHPAD_DISABLED};
+        String[] touchpadInputModeNames = getResources().getStringArray(R.array.touchpad_input_modes);
+        touchpadInputModeMap = IntStream.range(0, touchpadInputModeCodes.length)
+                .boxed()
+                .collect(Collectors.toMap(k -> touchpadInputModeNames[k], v -> touchpadInputModeCodes[v]));
 
-        final String[] touchpadInputModes = {KeymapConfig.TOUCHPAD_DIRECT, KeymapConfig.TOUCHPAD_RELATIVE, KeymapConfig.TOUCHPAD_DISABLED};
-        ((MaterialAutoCompleteTextView)binding.touchpadInputMode).setSimpleItems(touchpadInputModes);
+        for (Map.Entry<String, Integer> entry : touchpadInputModeMap.entrySet()) {
+            if (entry.getValue().equals(keymapConfig.touchpadInputMode)) {
+                binding.touchpadInputMode.setText(entry.getKey());
+            }
+        }
+        ((MaterialAutoCompleteTextView)binding.touchpadInputMode).setSimpleItems(touchpadInputModeNames);
     }
 
     public boolean onKey(View view, int keyCode, KeyEvent event) {
@@ -191,9 +215,9 @@ public class SettingsFragment extends BottomSheetDialogFragment {
     @Override
     public void onDestroyView() {
         saveKeyboardShortcuts();
-        keymapConfig.mouseAimToggle = binding.mouseAimAction.getText().toString().equals(KeymapConfig.TOGGLE);
-        keymapConfig.touchpadInputMode = binding.touchpadInputMode.getText().toString();
-        keymapConfig.pointerMode = binding.pointerMode.getText().toString();
+        keymapConfig.mouseAimToggle = binding.mouseAimAction.getText().toString().equals(getResources().getString(R.string.toggle));
+        keymapConfig.touchpadInputMode = touchpadInputModeMap.get(binding.touchpadInputMode.getText().toString());
+        keymapConfig.pointerMode = pointerModeMap.get(binding.pointerMode.getText().toString());
 
         keymapConfig.mouseSensitivity = binding.sliderMouse.getValue();
         keymapConfig.scrollSpeed = binding.sliderScrollSpeed.getValue();

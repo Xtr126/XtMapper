@@ -30,7 +30,7 @@ public class InputService implements IInputInterface {
     boolean stopEvents = false;
     boolean pointerUp = false;
     private final boolean isWaylandClient;
-    private final String touchpadInputMode;
+    private final int touchpadInputMode;
     private final View cursorView;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -42,7 +42,7 @@ public class InputService implements IInputInterface {
         this.isWaylandClient = isWaylandClient;
         this.cursorView = cursorView;
 
-        if (cursorView == null || !keymapConfig.pointerMode.equals(KeymapConfig.POINTER_OVERLAY)) {
+        if (cursorView == null || (keymapConfig.pointerMode != KeymapConfig.POINTER_OVERLAY)) {
             initMouseCursor(screenWidth, screenHeight);
             // Reduce visibility of system pointer
             cursorSetX(0);
@@ -50,9 +50,9 @@ public class InputService implements IInputInterface {
         }
 
         this.touchpadInputMode = keymapConfig.touchpadInputMode;
-        if (touchpadInputMode.equals(KeymapConfig.TOUCHPAD_DIRECT))
+        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DIRECT)
             startTouchpadDirect();
-        else if (touchpadInputMode.equals(KeymapConfig.TOUCHPAD_RELATIVE))
+        else if (touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
             startTouchpadRelative();
 
         mouseEventHandler = new MouseEventHandler(this);
@@ -143,9 +143,9 @@ public class InputService implements IInputInterface {
     }
 
     public void stopTouchpad() {
-        if (touchpadInputMode.equals(KeymapConfig.TOUCHPAD_DIRECT))
+        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DIRECT)
             stopTouchpadDirect();
-        else if (touchpadInputMode.equals(KeymapConfig.TOUCHPAD_RELATIVE))
+        else if (touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
             stopTouchpadRelative();
     }
 

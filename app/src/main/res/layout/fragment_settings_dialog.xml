@@ -317,7 +317,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/auto_profile_switch"
@@ -330,9 +330,16 @@
                 android:id="@+id/use_shizuku"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:layout_marginLeft="10dp"
                 android:checked="false"
                 android:text="@string/use_shizuku" />
+
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/editor_overlay"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:checked="false"
+                android:text="@string/open_editor_as_overlay" />
         </LinearLayout>
 
         <LinearLayout
@@ -340,17 +347,26 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="101dp"
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="10dp"
-                android:text="@string/touchpad_input" />
+                android:hint="@string/pointer">
+
+                <AutoCompleteTextView
+                    android:id="@+id/pointer_mode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+
+            </com.google.android.material.textfield.TextInputLayout>
 
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:hint="@string/touchpad_input">
 
                 <AutoCompleteTextView
                     android:id="@+id/touchpad_input_mode"
@@ -360,43 +376,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/editor_overlay"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_marginLeft="20dp"
-                android:gravity="end"
-                android:checked="false"
-                android:text="@string/open_editor_as_overlay" />
-
         </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-        <TextView
-            android:layout_width="100dp"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="10dp"
-            android:text="@string/pointer" />
-
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-
-            <AutoCompleteTextView
-                android:id="@+id/pointer_mode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="none" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        </LinearLayout>
-
 
     </LinearLayout>
 
