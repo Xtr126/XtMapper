@@ -83,4 +83,6 @@
     <string name="disabled">禁用</string>
     <string name="direct">直接模式</string>
 
+    <string name="shizuku_not_authorized_title">Shizuku not authorized</string>
+    <string name="shizuku_not_authorized_message">Authorize XtMapper from Shizuku manager app to continue</string>
 </resources>

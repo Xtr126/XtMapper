@@ -84,6 +84,6 @@
     <string name="disabled">Disabled</string>
     <string name="direct">Direct</string>
 
-
-
+    <string name="shizuku_not_authorized_title">Shizuku not authorized</string>
+    <string name="shizuku_not_authorized_message">Authorize XtMapper from Shizuku manager app to continue</string>
 </resources>

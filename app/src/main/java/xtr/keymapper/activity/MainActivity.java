@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.os.Build;
 import android.os.Bundle;
@@ -14,11 +15,14 @@ import android.os.IBinder;
 import android.provider.Settings;
 import android.widget.Button;
 
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.topjohnwu.superuser.Shell;
 
+import rikka.shizuku.Shizuku;
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
@@ -60,13 +64,17 @@ public class MainActivity extends AppCompatActivity {
         RemoteServiceHelper.useShizuku = new KeymapConfig(context).useShizuku;
         Server.setupServer(this, mCallback);
 
-        Shell.getShell(shell -> {
-            Boolean rootAccess = Shell.isAppGrantedRoot();
-            if (rootAccess == null || !rootAccess) {
-                if(!RemoteServiceHelper.useShizuku) alertRootAccessNotFound();
+        if(!RemoteServiceHelper.useShizuku)
+            Shell.getShell(shell -> {
+                Boolean rootAccess = Shell.isAppGrantedRoot();
+                if (rootAccess == null || !rootAccess) {
+                    alertRootAccessNotFound();
             }
-            setupButtons();
-        });
+            });
+        else if (!(Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED)) {
+             alertShizukuNotAuthorized();
+        }
+        setupButtons();
     }
 
     private void setupButtons() {
@@ -148,28 +156,34 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void alertRootAccessNotFound() {
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
-        builder.setTitle(R.string.root_not_found_title)
-                .setMessage(R.string.root_not_found_message)
-                .setPositiveButton(R.string.ok, (dialog, which) -> {
-                    Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("me.weishu.kernelsu");
-                    if (launchIntent != null) startActivity(launchIntent);
-                });
-        runOnUiThread(() -> builder.create().show());
+        showAlertDialog(R.string.root_not_found_title, R.string.root_not_found_message, (dialog, which) -> {
+            Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("me.weishu.kernelsu");
+            if (launchIntent != null) startActivity(launchIntent);
+        });
     }
 
     public void alertRootAccessAndExit() {
+        showAlertDialog(R.string.root_no_privileges_title, R.string.root_no_privileges_message, (dialog, which) -> {
+            finishAffinity();
+            System.exit(0);
+        });
+    }
+
+    private void alertShizukuNotAuthorized() {
+        showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, (dialog, which) -> {
+            Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api");
+            if (launchIntent != null) startActivity(launchIntent);
+        });
+    }
+
+    private void showAlertDialog(@StringRes int titleId, @StringRes int messageId, @Nullable android.content.DialogInterface.OnClickListener listener) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
-        builder.setTitle(R.string.root_no_privileges_title)
-                .setMessage(R.string.root_no_privileges_message)
-                .setPositiveButton(R.string.ok, (dialog, which) -> {
-                    finishAffinity();
-                    System.exit(0);
-                })
+        builder.setTitle(titleId)
+                .setMessage(messageId)
+                .setPositiveButton(R.string.ok, listener)
                 .setNegativeButton(R.string.cancel, (dialog, which) -> {});
         runOnUiThread(() -> builder.create().show());
     }
-
 
     @Override
     protected void onDestroy() {
