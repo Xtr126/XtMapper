@@ -41,6 +41,7 @@ public class RemoteService extends IRemoteService.Stub {
     private Context context = null;
     private int TYPE_SECURE_SYSTEM_OVERLAY;
     Handler mHandler = new Handler(Looper.getMainLooper());
+    private WindowManager windowManager;
 
     public RemoteService() {
 
@@ -53,6 +54,7 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     public RemoteService init(Context context) {
+        windowManager = context.getSystemService(WindowManager.class);
         PackageManager pm = context.getPackageManager();
         String packageName = context.getPackageName();
         try {
@@ -62,7 +64,6 @@ public class RemoteService extends IRemoteService.Stub {
         } catch (PackageManager.NameNotFoundException e) {
             throw new RuntimeException(e);
         }
-
         this.context = context;
         return this;
     }
@@ -74,7 +75,6 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     private void addCursorView() {
-        WindowManager windowManager = context.getSystemService(WindowManager.class);
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 TYPE_SECURE_SYSTEM_OVERLAY,
@@ -88,12 +88,18 @@ public class RemoteService extends IRemoteService.Stub {
                 // through the cursor
                 PixelFormat.TRANSLUCENT);
 
-        mHandler.post(() -> windowManager.addView(cursorView, params));
+        mHandler.post(() -> {
+            if(cursorView != null) windowManager.addView(cursorView, params);
+        });
     }
 
     private void removeCursorView() {
-        WindowManager windowManager = context.getSystemService(WindowManager.class);
-        mHandler.post(() -> windowManager.removeView(cursorView));
+        mHandler.post(() -> {
+            cursorView.setVisibility(View.GONE);
+            if (cursorView.isAttachedToWindow()) windowManager.removeView(cursorView);
+            cursorView.invalidate();
+            cursorView = null;
+        });
     }
 
     public void prepareCursorOverlayWindow() throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
@@ -102,7 +108,6 @@ public class RemoteService extends IRemoteService.Stub {
         cursorView = CursorBinding.inflate(layoutInflater).getRoot();
         TYPE_SECURE_SYSTEM_OVERLAY = WindowManager.LayoutParams.class.getField("TYPE_SECURE_SYSTEM_OVERLAY").getInt(null);
         Binder sWindowToken = new Binder();
-        WindowManager windowManager = context.getSystemService(WindowManager.class);
         Method setDefaultTokenMethod = windowManager.getClass().getMethod("setDefaultToken", IBinder.class);
         setDefaultTokenMethod.invoke(windowManager, sWindowToken);
     }
@@ -173,7 +178,7 @@ public class RemoteService extends IRemoteService.Stub {
             } catch (Exception e) {
                 Log.e("overlayWindow", e.getMessage(), e);
             }
-            if (cursorView != null) addCursorView();
+            addCursorView();
         } else {
             cursorView = null;
         }
