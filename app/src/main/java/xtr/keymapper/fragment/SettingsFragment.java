@@ -31,7 +31,6 @@ import xtr.keymapper.server.RemoteServiceHelper;
 public class SettingsFragment extends BottomSheetDialogFragment {
     private final KeymapConfig keymapConfig;
     private FragmentSettingsDialogBinding binding;
-    private Map<String, Integer> mouseAimActionsMap;
     private Map<String, Integer> pointerModeMap;
     private Map<String, Integer> touchpadInputModeMap;
 

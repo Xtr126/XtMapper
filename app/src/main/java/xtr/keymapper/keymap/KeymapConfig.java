@@ -22,7 +22,6 @@ public class KeymapConfig implements Parcelable {
     public int pointerMode;
 
     public static final String KEY_CTRL = "Ctrl", KEY_ALT = "Alt";
-    public static final int TOGGLE = 1, HOLD = 2;
     public static final int TOUCHPAD_DIRECT = 3;
     public static final int TOUCHPAD_RELATIVE = 4;
     public static final int TOUCHPAD_DISABLED = 5;
