@@ -120,7 +120,7 @@ public class KeymapConfig implements Parcelable {
         dpadRadiusMultiplier = sharedPref.getFloat("dpad_radius", 1f);
 
         touchpadInputMode = sharedPref.getInt("touchpad_input_mode", TOUCHPAD_DISABLED);
-        pointerMode = sharedPref.getInt("pointer_mode", POINTER_COMBINED);
+        pointerMode = sharedPref.getInt("pointer_mode", POINTER_OVERLAY);
     }
 
     public void applySharedPrefs() {
