@@ -62,8 +62,10 @@ public class EditorService extends Service {
 
             RemoteServiceHelper.getInstance(EditorService.this, remoteService -> {
                 try {
-                    remoteService.registerOnKeyEventListener(editor);
-                    remoteService.pauseMouse();
+                    if (editor != null) {
+                        remoteService.registerOnKeyEventListener(editor);
+                        remoteService.pauseMouse();
+                    }
                 } catch (RemoteException e) {
                     Log.e("editorActivity", e.getMessage(), e);
                 }
