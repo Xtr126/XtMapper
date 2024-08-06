@@ -102,8 +102,11 @@ public class MainActivity extends AppCompatActivity {
             setButtonState(false);
             requestNotificationPermission();
         }
-        if (!RemoteServiceHelper.isRootService)
+        if (RemoteServiceHelper.useShizuku) {
+            if (!Shizuku.pingBinder()) alertShizukuNotAuthorized();
+        } else if (!RemoteServiceHelper.isRootService) {
             alertRootAccessAndExit();
+        }
     }
 
     private void setButtonState(boolean start) {
