@@ -112,14 +112,14 @@ public class InputService implements IInputInterface {
     }
 
     public void moveCursorX(float x) {
-        if(cursorView != null) mHandler.post(() -> cursorView.setX(x));
+        mHandler.post(() -> cursorView.setX(x));
         // To avoid conflict with touch input when moving virtual pointer
         if (input.pointerCount < 1) cursorSetX((int) x);
 	else if (input.pointerCount == 1 && pointerUp) cursorSetX((int) x);
     }
 
     public void moveCursorY(float y) {
-        if(cursorView != null) mHandler.post(() -> cursorView.setY(y));
+        mHandler.post(() -> cursorView.setY(y));
         // To avoid conflict with touch input when moving virtual pointer
         if (input.pointerCount < 1) cursorSetY((int) y);
 	else if (input.pointerCount == 1 && pointerUp) cursorSetY((int) y);

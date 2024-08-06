@@ -23,7 +23,7 @@ class RootRemoteService extends RootService {
     @Override
     public IBinder onBind(@NonNull Intent intent) {
         if (mService == null) {
-            mService = new RemoteService().init(this);
+            mService = new RemoteService(this);
         }
         return mService;
     }

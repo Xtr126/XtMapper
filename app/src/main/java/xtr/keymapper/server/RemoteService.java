@@ -37,24 +37,33 @@ public class RemoteService extends IRemoteService.Stub {
     boolean isWaylandClient = false;
     private ActivityObserverService activityObserverService;
     String nativeLibraryDir = System.getProperty("java.library.path");
-    private View cursorView;
-    private Context context = null;
+    private final View cursorView;
     private int TYPE_SECURE_SYSTEM_OVERLAY;
     Handler mHandler = new Handler(Looper.getMainLooper());
-    private WindowManager windowManager;
+    private final WindowManager windowManager;
 
+    /* For shell script */
     public RemoteService() {
-
+        windowManager = null;
+        cursorView = null;
     }
 
     /* For Shizuku UserService */
     public RemoteService(Context context) {
         loadLibraries();
+        windowManager = context.getSystemService(WindowManager.class);
+        LayoutInflater layoutInflater = context.getSystemService(LayoutInflater.class);
+        context.setTheme(R.style.Theme_XtMapper);
+        cursorView = CursorBinding.inflate(layoutInflater).getRoot();
+        try {
+            prepareCursorOverlayWindow();
+        } catch (Exception e) {
+            Log.e("overlayWindow", e.getMessage(), e);
+        }
         init(context);
     }
 
-    public RemoteService init(Context context) {
-        windowManager = context.getSystemService(WindowManager.class);
+    public void init(Context context) {
         PackageManager pm = context.getPackageManager();
         String packageName = context.getPackageName();
         try {
@@ -64,8 +73,6 @@ public class RemoteService extends IRemoteService.Stub {
         } catch (PackageManager.NameNotFoundException e) {
             throw new RuntimeException(e);
         }
-        this.context = context;
-        return this;
     }
 
     @Override
@@ -75,37 +82,32 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     private void addCursorView() {
-        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                TYPE_SECURE_SYSTEM_OVERLAY,
-                // Don't let the cursor grab the input focus
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
-                        WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                        WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-                // Make the underlying application window visible
-                // through the cursor
-                PixelFormat.TRANSLUCENT);
-
         mHandler.post(() -> {
-            if(cursorView != null) windowManager.addView(cursorView, params);
+            if(cursorView.isAttachedToWindow()) {
+                cursorView.setVisibility(View.VISIBLE);
+            } else {
+                WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                        WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                        TYPE_SECURE_SYSTEM_OVERLAY,
+                        // Don't let the cursor grab the input focus
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
+                                WindowManager.LayoutParams.FLAG_FULLSCREEN |
+                                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                        // Make the underlying application window visible
+                        // through the cursor
+                        PixelFormat.TRANSLUCENT);
+                windowManager.addView(cursorView, params);
+            }
         });
     }
 
     private void removeCursorView() {
-        mHandler.post(() -> {
-            cursorView.setVisibility(View.GONE);
-            if (cursorView.isAttachedToWindow()) windowManager.removeView(cursorView);
-            cursorView.invalidate();
-            cursorView = null;
-        });
+        mHandler.post(() -> cursorView.setVisibility(View.GONE));
     }
 
     public void prepareCursorOverlayWindow() throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
-        LayoutInflater layoutInflater = context.getSystemService(LayoutInflater.class);
-        context.setTheme(R.style.Theme_XtMapper);
-        cursorView = CursorBinding.inflate(layoutInflater).getRoot();
         TYPE_SECURE_SYSTEM_OVERLAY = WindowManager.LayoutParams.class.getField("TYPE_SECURE_SYSTEM_OVERLAY").getInt(null);
         Binder sWindowToken = new Binder();
         Method setDefaultTokenMethod = windowManager.getClass().getMethod("setDefaultToken", IBinder.class);
@@ -173,14 +175,7 @@ public class RemoteService extends IRemoteService.Stub {
         if (inputService != null) stopServer();
         cb.asBinder().linkToDeath(this::stopServer, 0);
         if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
-            try {
-                prepareCursorOverlayWindow();
-            } catch (Exception e) {
-                Log.e("overlayWindow", e.getMessage(), e);
-            }
             addCursorView();
-        } else {
-            cursorView = null;
         }
         inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight, cursorView, isWaylandClient);
         if (!isWaylandClient) {
@@ -199,7 +194,7 @@ public class RemoteService extends IRemoteService.Stub {
             inputService.destroyUinputDev();
             inputService = null;
         }
-        if (cursorView != null) removeCursorView();
+        removeCursorView();
     }
 
     private final DeathRecipient mDeathRecipient = () -> mOnKeyEventListener = null;
