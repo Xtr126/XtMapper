@@ -32,7 +32,7 @@ public class Server {
                 fileWriter.write(linesToWrite.toString());
             }
         } else {
-            if (linesToWrite.toString().equals(target.toString()))
+            if (!linesToWrite.toString().equals(target.toString()))
                 fileWriter.write(linesToWrite.toString());
         }
         fileWriter.close();
