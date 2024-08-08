@@ -32,7 +32,8 @@ https://xtr126.github.io/XtMapper-docs/guides/about
 - Run `./gradlew assembleDebug` or `./gradlew.bat assembleDebug` at the base directory of the project 
 
 ## Help and support 
-Join us on telegram: [t.me/xtmapper](https://t.me/xtmapper)
+Report bugs here: https://github.com/Xtr126/XtMapper/issues  
+Discussion: [t.me/xtmapper](https://t.me/xtmapper)
 
 ## Using on waydroid
 Experimental: https://github.com/Xtr126/wayland-getevent 
