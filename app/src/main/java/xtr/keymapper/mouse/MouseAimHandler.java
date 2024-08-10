@@ -68,13 +68,13 @@ public class MouseAimHandler {
     public void handleEvent(int code, int value, OnButtonClickListener listener) {
         switch (code) {
             case REL_X:
-                currentX += calculateScaledX(value);
+                currentX += (float) calculateScaledX(value);
                 if (config.limitedBounds && (currentX > area.right || currentX < area.left))
                     resetPointer();
                 service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
                 break;
             case REL_Y:
-                currentY += calculateScaledY(value);;
+                currentY += calculateScaledY(value);
                 if (config.limitedBounds && (currentY > area.bottom || currentY < area.top))
                     resetPointer();
                 service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
@@ -111,7 +111,7 @@ public class MouseAimHandler {
         }
     }
 
-    private double calculateScaledY(int value) {
+    private float calculateScaledY(int value) {
         return value * config.ySensitivity;
     }
 

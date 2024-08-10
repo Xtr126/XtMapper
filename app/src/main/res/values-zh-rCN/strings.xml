@@ -85,4 +85,9 @@
 
     <string name="shizuku_not_authorized_title">Shizuku not authorized</string>
     <string name="shizuku_not_authorized_message">Authorize XtMapper from Shizuku manager app to continue</string>
+    <string name="activate_with">Activate with</string>
+    <string name="grave_key">~ key</string>
+    <string name="x_sensitivity">X-Sensitivity</string>
+    <string name="y_sensitivity">Y-Sensitivity</string>
+    <string name="apply_non_linear_scaling">Apply non linear scaling</string>
 </resources>

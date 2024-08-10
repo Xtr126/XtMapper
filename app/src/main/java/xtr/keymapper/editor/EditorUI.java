@@ -30,16 +30,17 @@ import xtr.keymapper.databinding.CrosshairBinding;
 import xtr.keymapper.databinding.DpadArrowsBinding;
 import xtr.keymapper.databinding.DpadBinding;
 import xtr.keymapper.databinding.KeymapEditorBinding;
+import xtr.keymapper.databinding.MouseAimConfigBinding;
 import xtr.keymapper.databinding.ResizableBinding;
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.dpad.DpadKeyCodes;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
+import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.keymap.KeymapProfiles;
 import xtr.keymapper.mouse.MouseAimConfig;
-import xtr.keymapper.mouse.MouseAimSettings;
 import xtr.keymapper.server.RemoteServiceHelper;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyView;
@@ -322,7 +323,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
             // resize dpad from saved profile configuration
             float x1 = dpad.getWidth() - dpadLayout.getLayoutParams().width;
             float y1 = dpad.getHeight() - dpadLayout.getLayoutParams().height;
-            resizeView(dpadLayout, x1, y1);
+            resizeView(dpadLayout, (int) x1, (int) y1);
         }
     }
 
@@ -353,6 +354,36 @@ public class EditorUI extends OnKeyEventListener.Stub {
         keyInFocus = key -> ((MovableFloatingActionKey)view).setText(key);
     }
 
+    public void showMouseAimSettingsDialog() {
+        KeymapConfig keymapConfig = new KeymapConfig(context);
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        MouseAimConfigBinding binding = MouseAimConfigBinding.inflate(layoutInflater, null, false);
+
+        // Load settings
+        binding.rightClickCheckbox.setChecked(keymapConfig.rightClickMouseAim);
+        binding.graveKeyCheckbox.setChecked(keymapConfig.keyGraveMouseAim);
+        binding.applyNonLinearScalingCheckbox.setChecked(profile.mouseAimConfig.applyNonLinearScaling);
+        binding.sliderXSensitivity.setValue(profile.mouseAimConfig.xSensitivity);
+        binding.sliderYSensitivity.setValue(profile.mouseAimConfig.ySensitivity);
+
+        View view = binding.getRoot();
+        builder.setView(view)
+                .setPositiveButton(R.string.ok, (dialog, which) -> {
+                    // Save settings
+                    keymapConfig.rightClickMouseAim = binding.rightClickCheckbox.isChecked();
+                    keymapConfig.keyGraveMouseAim = binding.graveKeyCheckbox.isChecked();
+                    keymapConfig.applySharedPrefs();
+
+                    profile.mouseAimConfig.applyNonLinearScaling = binding.applyNonLinearScalingCheckbox.isChecked();
+                    profile.mouseAimConfig.xSensitivity = binding.sliderXSensitivity.getValue();
+                    profile.mouseAimConfig.ySensitivity = binding.sliderYSensitivity.getValue();
+                })
+                .setNegativeButton(R.string.cancel, null);
+        AlertDialog dialog = builder.create();
+        dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        dialog.show();
+    }
+
     private void addCrosshair(float x, float y) {
         if (crosshair == null) {
             CrosshairBinding binding = CrosshairBinding.inflate(layoutInflater, mainView, true);
@@ -381,7 +412,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 if(overlayOpen) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
                 dialog.show();
             });
-            binding.editButton.setOnClickListener(v -> MouseAimSettings.getKeyDialog(context).show());
+            binding.editButton.setOnClickListener(v -> showMouseAimSettingsDialog());
         }
         crosshair.animate().x(x).y(y)
                 .setDuration(500)
@@ -418,7 +449,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         swipeKeyList.add(swipeKeyView);
     }
 
-    public static void resizeView(View view, float x, float y) {
+    public static void resizeView(View view, int x, int y) {
         ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
         layoutParams.width += x;
         layoutParams.height += y;
@@ -446,7 +477,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         @Override
         public boolean onTouch(View v, MotionEvent event) {
             if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                resizeView(rootView, event.getX(), event.getY());
+                resizeView(rootView, (int) event.getX(), (int) event.getY());
                 // Resize View from center point
                 if (defaultPivotX > 0) {
                     float newPivotX = rootView.getPivotX() - defaultPivotX;
