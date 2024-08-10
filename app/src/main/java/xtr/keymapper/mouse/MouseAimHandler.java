@@ -27,16 +27,11 @@ public class MouseAimHandler {
     private final int pointerIdMouse = PointerId.pid1.id;
     private final int pointerIdAim = PointerId.pid2.id;
     private final Handler mHandler;
-    private final boolean islimitedBounds;
-    private final boolean applyNonLinearScaling;
-
 
     public MouseAimHandler(MouseAimConfig config){
         currentX = config.xCenter;
         currentY = config.yCenter;
         this.config = config;
-        this.islimitedBounds = config.limitedBounds;
-        this.applyNonLinearScaling = true; // config.applyNonLinearScaling;
         mHandler = new Handler(Looper.getMainLooper());
     }
 
@@ -73,14 +68,14 @@ public class MouseAimHandler {
     public void handleEvent(int code, int value, OnButtonClickListener listener) {
         switch (code) {
             case REL_X:
-                currentX += (float) (value / calculateScaleX());
-                if (islimitedBounds && (currentX > area.right || currentX < area.left))
+                currentX += calculateScaledX(value);
+                if (config.limitedBounds && (currentX > area.right || currentX < area.left))
                     resetPointer();
                 service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
                 break;
             case REL_Y:
-                currentY += value;
-                if (islimitedBounds && (currentY > area.bottom || currentY < area.top))
+                currentY += calculateScaledY(value);;
+                if (config.limitedBounds && (currentY > area.bottom || currentY < area.top))
                     resetPointer();
                 service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
                 break;
@@ -98,8 +93,8 @@ public class MouseAimHandler {
         }
     }
 
-    public double calculateScaleX() {
-        if (applyNonLinearScaling) {
+    public double calculateScaledX(int value) {
+        if (config.applyNonLinearScaling) {
             double dx = Math.abs(config.xCenter - currentX);
             double dy = Math.abs(config.yCenter - currentY);
             double distance = Math.hypot(dx, dy);
@@ -107,13 +102,17 @@ public class MouseAimHandler {
             double maxWidth = area.right - area.left;
             double minDistanceToApplyScaling = maxWidth / 20;
             if (distance > minDistanceToApplyScaling) {
-                return Math.sqrt(2 * distance / minDistanceToApplyScaling);
+                return config.xSensitivity * value * Math.sqrt(minDistanceToApplyScaling / distance);
             } else {
                 return 1;
             }
         } else {
             return 1;
         }
+    }
+
+    private double calculateScaledY(int value) {
+        return value * config.ySensitivity;
     }
 
     public void stop() {

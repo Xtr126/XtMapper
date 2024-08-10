@@ -14,6 +14,8 @@ public class MouseAimConfig implements Parcelable {
     public boolean limitedBounds = true;
     private static final int initXY = 300;
     public static final String TAG = "MOUSE_AIM";
+    public float xSensitivity = 1, ySensitivity = 1;
+    public boolean applyNonLinearScaling = false;
 
     public MouseAimConfig() {
         xCenter = xleftClick = yleftClick = yCenter = initXY;
@@ -27,6 +29,9 @@ public class MouseAimConfig implements Parcelable {
         width = in.readFloat();
         height = in.readFloat();
         limitedBounds = in.readByte() != 0;
+        xSensitivity = in.readFloat();
+        ySensitivity = in.readFloat();
+        applyNonLinearScaling = in.readByte() != 0;
     }
 
     public static final Creator<MouseAimConfig> CREATOR = new Creator<>() {
@@ -49,6 +54,11 @@ public class MouseAimConfig implements Parcelable {
         height = Float.parseFloat(data[5]);
         xleftClick = Float.parseFloat(data[6]);
         yleftClick = Float.parseFloat(data[7]);
+        if (data.length == 11) {
+            xSensitivity = Float.parseFloat(data[8]);
+            ySensitivity = Float.parseFloat(data[9]);
+            applyNonLinearScaling = Integer.parseInt(data[10]) != 0;
+        }
         return this;
     }
 
@@ -56,7 +66,9 @@ public class MouseAimConfig implements Parcelable {
         return TAG + " " + xCenter + " " + yCenter + " "
                 + (limitedBounds ? 1 : 0) + " "
                 + width + " " + height + " "
-                + xleftClick + " " + yleftClick;
+                + xleftClick + " " + yleftClick + " "
+                + xSensitivity + " " + ySensitivity + " "
+                + (limitedBounds ? 1 : 0);
     }
 
     public void setCenterXY(MovableFrameLayout crosshair){
@@ -83,5 +95,8 @@ public class MouseAimConfig implements Parcelable {
         dest.writeFloat(width);
         dest.writeFloat(height);
         dest.writeByte((byte) (limitedBounds ? 1 : 0));
+        dest.writeFloat(xSensitivity);
+        dest.writeFloat(ySensitivity);
+        dest.writeByte((byte) (applyNonLinearScaling ? 1 : 0));
     }
 }
