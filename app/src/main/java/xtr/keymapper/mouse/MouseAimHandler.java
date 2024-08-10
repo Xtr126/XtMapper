@@ -27,14 +27,11 @@ public class MouseAimHandler {
     private final int pointerIdMouse = PointerId.pid1.id;
     private final int pointerIdAim = PointerId.pid2.id;
     private final Handler mHandler;
-    private final boolean limitedBounds;
-
 
     public MouseAimHandler(MouseAimConfig config){
         currentX = config.xCenter;
         currentY = config.yCenter;
         this.config = config;
-        this.limitedBounds = config.limitedBounds;
         mHandler = new Handler(Looper.getMainLooper());
     }
 
@@ -55,6 +52,7 @@ public class MouseAimHandler {
             area.top = currentY - config.height;
             area.bottom = currentY + config.height;
         }
+
     }
 
     public void resetPointer() {
@@ -70,14 +68,14 @@ public class MouseAimHandler {
     public void handleEvent(int code, int value, OnButtonClickListener listener) {
         switch (code) {
             case REL_X:
-                currentX += value;
-                if (limitedBounds && (currentX > area.right || currentX < area.left))
+                currentX += (float) calculateScaledX(value);
+                if (config.limitedBounds && (currentX > area.right || currentX < area.left))
                     resetPointer();
                 service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
                 break;
             case REL_Y:
-                currentY += value;
-                if (limitedBounds && (currentY > area.bottom || currentY < area.top))
+                currentY += calculateScaledY(value);
+                if (config.limitedBounds && (currentY > area.bottom || currentY < area.top))
                     resetPointer();
                 service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
                 break;
@@ -93,6 +91,28 @@ public class MouseAimHandler {
                 listener.onButtonClick(code, value);
                 break;
         }
+    }
+
+    public double calculateScaledX(int value) {
+        if (config.applyNonLinearScaling) {
+            double dx = Math.abs(config.xCenter - currentX);
+            double dy = Math.abs(config.yCenter - currentY);
+            double distance = Math.hypot(dx, dy);
+
+            double maxWidth = area.right - area.left;
+            double minDistanceToApplyScaling = maxWidth / 20;
+            if (distance > minDistanceToApplyScaling) {
+                return config.xSensitivity * value * Math.sqrt(minDistanceToApplyScaling / distance);
+            } else {
+                return 1;
+            }
+        } else {
+            return 1;
+        }
+    }
+
+    private float calculateScaledY(int value) {
+        return value * config.ySensitivity;
     }
 
     public void stop() {

@@ -22,7 +22,7 @@ class ResizeableDpadView implements View.OnTouchListener {
     public boolean onTouch(View v, MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_MOVE) {
             // Resize View in fixed ratio
-            float newSize = (event.getX() + event.getY()) / 2;
+            int newSize = ((int)event.getX() + (int)event.getY()) / 2;
             EditorUI.resizeView(rootView, newSize, newSize);
 
             // Resize View from center point
