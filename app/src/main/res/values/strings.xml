@@ -91,4 +91,5 @@
     <string name="x_sensitivity">X-Sensitivity</string>
     <string name="y_sensitivity">Y-Sensitivity</string>
     <string name="apply_non_linear_scaling">Apply non linear scaling</string>
+    <string name="import_export">Import/Export</string>
 </resources>

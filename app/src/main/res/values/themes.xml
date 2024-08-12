@@ -1,6 +1,8 @@
 <resources>
     <!-- Base application theme. -->
-    <style name="Theme.XtMapper" parent="Theme.Material3.DynamicColors.DayNight"> </style>
+    <style name="Theme.XtMapper" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">?android:colorBackground</item>
+    </style>
 
     <style name="Theme.XtMapper.EditorUI" parent="Theme.MaterialComponents">
         <item name="android:windowIsTranslucent">true</item>

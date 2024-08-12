@@ -19,6 +19,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.topjohnwu.superuser.Shell;
 
@@ -53,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        DynamicColors.applyToActivitiesIfAvailable(getApplication());
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -86,6 +87,8 @@ public class MainActivity extends AppCompatActivity {
                 (v -> new SettingsFragment(this).show(getSupportFragmentManager(), "dialog"));
         binding.controls.aboutButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
+        binding.controls.importExportButton.setOnClickListener
+                (v -> startActivity(new Intent(this, ImportExportActivity.class)));
     }
 
     private void launchApp() {
