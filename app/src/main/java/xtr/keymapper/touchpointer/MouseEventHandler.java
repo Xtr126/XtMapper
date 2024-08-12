@@ -104,7 +104,7 @@ public class MouseEventHandler {
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
         if (mInput.getKeyEventHandler().ctrlKeyPressed && pointer_down)
             if (keymapConfig.ctrlDragMouseGesture) {
-                pointer_down = pinchZoom.handleEvent(code, value);
+                if (pinchZoom != null) pointer_down = pinchZoom.handleEvent(code, value);
                 return;
             }
         switch (code) {
