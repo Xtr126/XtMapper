@@ -39,8 +39,9 @@ Discussion: [t.me/xtmapper](https://t.me/xtmapper)
 Experimental: https://github.com/Xtr126/wayland-getevent 
 
 ## Credits
-Open source libraries used:
+@guobao2333 - [Chinese translation](https://github.com/Xtr126/XtMapper/pull/101)  
 
+Open source libraries used:
 - [Starlight](https://github.com/withastro/starlight) - Documentation framework  
 - [Material Design Components](https://github.com/material-components/material-components-android) - User interface
 - [FloatingActionButtonSpeedDial](https://github.com/leinardi/FloatingActionButtonSpeedDial) - Controls in editor
