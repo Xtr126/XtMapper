@@ -1,6 +1,6 @@
 <resources>
     <!-- Base application theme. -->
-    <style name="Theme.XtMapper" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.XtMapper" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
         <item name="android:statusBarColor">?android:colorBackground</item>
     </style>
 
