@@ -42,12 +42,6 @@ public class RemoteService extends IRemoteService.Stub {
     Handler mHandler = new Handler(Looper.getMainLooper());
     private final WindowManager windowManager;
 
-    /* For shell script */
-    public RemoteService() {
-        windowManager = null;
-        cursorView = null;
-    }
-
     /* For Shizuku UserService */
     public RemoteService(Context context) {
         loadLibraries();
