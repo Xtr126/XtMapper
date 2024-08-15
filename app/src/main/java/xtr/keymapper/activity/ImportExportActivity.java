@@ -140,21 +140,27 @@ public class ImportExportActivity extends AppCompatActivity {
             while ((zipEntry = zipInputStream.getNextEntry()) != null) {
                 String profileName = zipEntry.getName();
                 Set<String> stringSet = new HashSet<>();
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(zipInputStream))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        stringSet.add(line);
-                    }
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(zipInputStream));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    stringSet.add(line);
                 }
                 new KeymapProfiles(this).sharedPref
                         .edit()
                         .putStringSet(profileName, stringSet)
                         .apply();
+                zipInputStream.closeEntry();
             }
+            zipInputStream.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        // Refresh RecyclerView
+
+        ProfilesViewAdapter profilesViewAdapter = new ProfilesViewAdapter(this);
+        RecyclerView recyclerView = findViewById(R.id.profiles);
+        recyclerView.setAdapter(profilesViewAdapter);
     }
 
     static class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapter.ViewHolder> {
