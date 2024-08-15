@@ -26,7 +26,7 @@
         android:theme="@style/Theme.XtMapper">
         <activity
             android:name=".activity.ImportExportActivity"
-            android:exported="false" />
+            android:exported="true" />
 
         <service
             android:name=".editor.EditorService"
@@ -35,7 +35,7 @@
 
         <activity
             android:name=".activity.InfoActivity"
-            android:exported="false"
+            android:exported="true"
             android:theme="@style/Theme.Design.NoActionBar" />
         <activity
             android:name=".activity.MainActivity"

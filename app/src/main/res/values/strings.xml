@@ -92,4 +92,11 @@
     <string name="y_sensitivity">Y-Sensitivity</string>
     <string name="apply_non_linear_scaling">Apply non linear scaling</string>
     <string name="import_export">Import/Export</string>
+    <string name="import_profiles">Import profiles</string>
+    <string name="import_previously_exported_profiles_from_storage">Import previously exported profiles from storage.</string>
+    <string name="export_profiles">Export profiles</string>
+    <string name="export_profiles_to_disk_for_restoring_later_or_sharing">Export profiles to disk for restoring later or sharing.</string>
+    <string name="export_selected">Export selected</string>
+    <string name="select_all">Select all</string>
+    <string name="import_button">Import</string>
 </resources>
