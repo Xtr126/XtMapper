@@ -7,15 +7,12 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.material.card.MaterialCardView;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -40,24 +37,20 @@ public class ImportExportActivity extends AppCompatActivity {
     private static final int WRITE_REQUEST_CODE = 101;
     private static final int READ_REQUEST_CODE = 102;
     private ByteArrayOutputStream byteArrayOutputStream = null;
+    private ActivityImportExportBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        ActivityImportExportBinding binding = ActivityImportExportBinding.inflate(getLayoutInflater());
+        binding = ActivityImportExportBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        ProfilesViewAdapter profilesViewAdapter = new ProfilesViewAdapter(this);
-        binding.profiles.setAdapter(profilesViewAdapter);
+        binding.profiles.setAdapter(new ProfilesViewAdapter(this, false));
 
-        binding.selectAllButton.setOnClickListener(v -> {
-            for (int i = 0; i < profilesViewAdapter.getItemCount(); i++)
-                ((ProfilesViewAdapter.ViewHolder) binding.profiles.findViewHolderForAdapterPosition(i)).binding.card.setChecked(true);
-        });
-        binding.exportButton.setOnClickListener(this::exportProfiles);
-        binding.importButton.setOnClickListener(this::openProfile);
+        binding.selectAllButton.setOnClickListener(v -> binding.profiles.setAdapter(new ProfilesViewAdapter(this, true)));
+        binding.importButton.setOnClickListener(view -> openZipFile());
     }
 
-    private void openProfile(View view) {
+    private void openZipFile() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.setType("application/zip");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -65,16 +58,8 @@ public class ImportExportActivity extends AppCompatActivity {
     }
 
 
-    private void exportProfiles(View view) {
-        RecyclerView recyclerView = findViewById(R.id.profiles);
-        ArrayList<String> profileNames = new ArrayList<>();
-        for (int i = 0; i < recyclerView.getAdapter().getItemCount(); i++) {
-            MaterialCardView card = ((ProfilesViewAdapter.ViewHolder) recyclerView.findViewHolderForAdapterPosition(i)).binding.card;
-            if (card.isChecked()) {
-                profileNames.add(((ProfilesViewAdapter)recyclerView.getAdapter()).recyclerDataArrayList.get(i).name);
-            }
-        }
-
+    private void exportProfiles(ArrayList<String> profileNames) {
+        if (profileNames.isEmpty()) return;
         KeymapProfiles keymapProfiles = new KeymapProfiles(this);
         try {
             byteArrayOutputStream = new ByteArrayOutputStream();
@@ -157,20 +142,20 @@ public class ImportExportActivity extends AppCompatActivity {
             throw new RuntimeException(e);
         }
         // Refresh RecyclerView
-
-        ProfilesViewAdapter profilesViewAdapter = new ProfilesViewAdapter(this);
-        RecyclerView recyclerView = findViewById(R.id.profiles);
-        recyclerView.setAdapter(profilesViewAdapter);
+        binding.profiles.setAdapter(new ProfilesViewAdapter(this, false));
     }
 
-    static class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapter.ViewHolder> {
+    class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapter.ViewHolder> {
 
         private final ArrayList<RecyclerData> recyclerDataArrayList = new ArrayList<>();
+        private final ArrayList<String> profileNames = new ArrayList<>();
+        private final boolean allCardsChecked;
+
 
         /**
          * Provide a reference to the type of views used
          */
-        public static class ViewHolder extends RecyclerView.ViewHolder {
+        public class ViewHolder extends RecyclerView.ViewHolder {
 
             private final ProfileRowItem2Binding binding;
 
@@ -183,15 +168,19 @@ public class ImportExportActivity extends AppCompatActivity {
         /**
          * Initialize the dataset of the Adapter.
          */
-        public ProfilesViewAdapter(Context context) {
-            if (context == null) return;
+        public ProfilesViewAdapter(Context context, boolean allCardsChecked) {
+            this.allCardsChecked = allCardsChecked;
             KeymapProfiles keymapProfiles = new KeymapProfiles(context);
 
             new KeymapProfiles(context).getAllProfiles().forEach((profileName, profile) -> {
-                if(profileName != null)
+                if(profileName != null) {
                     recyclerDataArrayList.add(new RecyclerData(profile, context, profileName));
-                else keymapProfiles.deleteProfile(null);
+                    if (allCardsChecked) profileNames.add(profileName);
+                } else {
+                    keymapProfiles.deleteProfile(null);
+                }
             });
+            binding.exportButton.setOnClickListener(view -> exportProfiles(profileNames));
         }
         // Create new views (invoked by the layout manager)
         @NonNull
@@ -210,7 +199,12 @@ public class ImportExportActivity extends AppCompatActivity {
             viewHolder.binding.appIcon.setImageDrawable(recyclerData.icon);
             viewHolder.binding.profileName.setText(recyclerData.name);
             viewHolder.binding.profileText.setText(recyclerData.description);
-            viewHolder.binding.card.setOnClickListener(v -> viewHolder.binding.card.setChecked(!viewHolder.binding.card.isChecked()));
+            viewHolder.binding.card.setChecked(allCardsChecked);
+            viewHolder.binding.card.setOnClickListener(v -> {
+                viewHolder.binding.card.setChecked(!viewHolder.binding.card.isChecked());
+                if (viewHolder.binding.card.isChecked()) profileNames.add(recyclerData.name);
+                else profileNames.remove(recyclerData.name);
+            });
         }
 
         // Return the size of dataset (invoked by the layout manager)
@@ -219,7 +213,7 @@ public class ImportExportActivity extends AppCompatActivity {
             return recyclerDataArrayList.size();
         }
 
-        private static class RecyclerData {
+        private class RecyclerData {
             public RecyclerData(KeymapProfile profile, Context context, String name) {
                 this.name = name;
                 this.description = new KeymapProfiles(context).sharedPref.getStringSet(name, new HashSet<>()).toString();
