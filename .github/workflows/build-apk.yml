@@ -2,10 +2,8 @@ name: Build and Upload APK
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
-
+  pull_request:
+  
 jobs:
 
   build:
@@ -42,5 +40,5 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: xtmapper-release
-        path: app/build/outputs/apk/release/XtMapper-universal-release-v2.1.5.apk
+        path: app/build/outputs/apk/release/XtMapper-universal-release-*.apk
          
