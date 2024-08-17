@@ -59,6 +59,7 @@ jobs:
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         prerelease: false
+        automatic_release_tag: "v2.2.1"
         draft: true
         files: |
           app/build/outputs/apk/release/*.apk
