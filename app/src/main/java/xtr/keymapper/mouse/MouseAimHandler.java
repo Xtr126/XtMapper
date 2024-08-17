@@ -68,7 +68,7 @@ public class MouseAimHandler {
     public void handleEvent(int code, int value, OnButtonClickListener listener) {
         switch (code) {
             case REL_X:
-                currentX += (float) calculateScaledX(value);
+                currentX += calculateScaledX(value);
                 if (config.limitedBounds && (currentX > area.right || currentX < area.left))
                     resetPointer();
                 service.injectEvent(currentX, currentY, MOVE, pointerIdAim);
@@ -93,21 +93,21 @@ public class MouseAimHandler {
         }
     }
 
-    public double calculateScaledX(int value) {
+    public float calculateScaledX(int value) {
         if (config.applyNonLinearScaling) {
-            double dx = Math.abs(config.xCenter - currentX);
-            double dy = Math.abs(config.yCenter - currentY);
+            double dx = config.xCenter - currentX;
+            double dy = config.yCenter - currentY;
             double distance = Math.hypot(dx, dy);
 
             double maxWidth = area.right - area.left;
             double minDistanceToApplyScaling = maxWidth / 20;
             if (distance > minDistanceToApplyScaling) {
-                return config.xSensitivity * value * Math.sqrt(minDistanceToApplyScaling / distance);
+                return config.xSensitivity * value * (float)Math.sqrt(minDistanceToApplyScaling / distance);
             } else {
-                return 1;
+                return value * config.xSensitivity;
             }
         } else {
-            return 1;
+            return value * config.xSensitivity;
         }
     }
 
