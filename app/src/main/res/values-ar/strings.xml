@@ -1,0 +1,103 @@
+<resources>
+    <string name="app_name">XtMapper</string>
+    <string name="start">ابدأ</string>
+    <string name="stop">أوقف</string>
+    <string name="configure">الإعدادات</string>
+    <string name="edit_keymap">تعديل خريطة المفاتيح</string>
+    <string name="help">مساعدة</string>
+    <string name="package_name">اسم الحزمة: </string>
+    <string name="mouse_sensitivity">حساسية الماوس</string>
+    <string name="dpad_radius">نصف قطر لوحة الاتجاه</string>
+    <string name="mouse_aim_activated">
+        تم تفعيل وضع التصويب. انقر بزر الماوس الأيمن أو اضغط على مفتاح ~ للخروج
+    </string>
+    <string name="scroll_speed">سرعة التمرير</string>
+    <string name="keyboard_shortcuts">اختصارات لوحة المفاتيح:</string>
+    <string name="dialog_alert_editor">
+        الخدمة غير قيد التشغيل. \n
+        قد لا تتمكن من تعيين جميع أحداث المفاتيح. \n
+        قم بتشغيل التفعيل وحاول مرة أخرى.
+    </string>
+
+    <string name="dialog_alert_editor_title">غير مفعل</string>
+    <string name="dialog_alert_add_profile">أدخل اسم ملف التعريف الجديد:</string>
+    <string name="dialog_alert_select_profile">اختر ملف التعريف لـ \ </string>
+    <string name="dialog_alert_enable_profile">تفعيل تعيين المفاتيح لهذا التطبيق؟</string>
+
+    <string name="key">مفتاح</string>
+
+    <string name="switch_profile">تبديل ملف التعريف</string>
+    <string name="launch_editor">فتح المحرر</string>
+    <string name="pause_resume">إيقاف/استئناف</string>
+
+    <!-- bottom navigation in settings fragment -->
+    <string name="tuning">ضبط</string>
+    <string name="config">تكوين</string>
+    <string name="shortcuts">اختصارات</string>
+
+    <string name="trigger_mouse_aim_with">تفعيل تصويب الماوس باستخدام:</string>
+    <string name="right_click">النقر بزر الماوس الأيمن</string>
+    <string name="key_grave">مفتاح ~</string>
+
+    <string name="pinch_to_zoom_gesture_info">قم بأداء إيماءة بإصبعين باستخدام:</string>
+    <string name="drag_mouse">Ctrl + سحب الماوس</string>
+    <string name="mouse_wheel">Ctrl + عجلة الماوس</string>
+    <string name="mouse_aim">تصويب الماوس</string>
+    <string name="cancel">@android:string/cancel</string>
+    <string name="ok">@android:string/ok</string>
+    <string name="yes">@android:string/yes</string>
+    <string name="no">@android:string/no</string>
+    <string name="swipe_delay_ms">تأخير السحب %d مللي ثانية</string>
+    <string name="profile_name">اسم ملف التعريف</string>
+    <string name="root_not_found_title">لم يتم العثور على وصول الروت</string>
+    <string name="root_not_found_message">يتطلب الوصول إلى الروت لكي يعمل برنامج تعيين المفاتيح. \n يرجى منح صلاحيات المستخدم الخارق لـ XtMapper من تطبيق KernelSU</string>
+    <string name="root_no_privileges_title">فشل الخدمة في البدء كروت</string>
+    <string name="root_no_privileges_message">
+        غير قادر على الحصول على الصلاحيات. هل تريد الخروج من التطبيق؟\n
+        إذا كنت قد منحت صلاحيات المستخدم الخارق بالفعل، فقد يعمل بعد الخروج وإعادة فتح التطبيق.
+    </string>
+    <string name="disable_auto_profile">تعطيل التوصيف التلقائي</string>
+    <string name="touchpad_input">مدخلات لوحة اللمس</string>
+    <string name="launch_app">فتح التطبيق</string>
+    <string name="use_shizuku">استخدام Shizuku</string>
+    <string name="pointer">وضع المؤشر</string>
+    <string name="open_editor_as_overlay">فتح المحرر كطبقة علوية</string>
+
+    <!--  Keymap editor  -->
+    <string name="d_pad">لوحة الاتجاه</string>
+    <string name="crosshair">هدف التصويب</string>
+    <string name="left_click">النقر بزر الماوس الأيسر</string>
+    <string name="swipe_key">مفتاح السحب</string>
+    <string name="add_key">إضافة مفتاح</string>
+    <string name="save">حفظ</string>
+
+    <!--  Mouse Aim  -->
+    <string name="toggle">تبديل</string>
+    <string name="hold">امسك</string>
+
+    <!--  Pointer Mode  -->
+    <string name="combined">مجموعة</string>
+    <string name="overlay">طبقة علوية</string>
+    <string name="system">نظام</string>
+
+    <!--  Touchpad  -->
+    <string name="relative">نسبي</string>
+    <string name="disabled">معطل</string>
+    <string name="direct">مباشر</string>
+
+    <string name="shizuku_not_authorized_title">Shizuku غير مصرح به</string>
+    <string name="shizuku_not_authorized_message">قم بتفويض XtMapper من تطبيق إدارة Shizuku للمتابعة</string>
+    <string name="activate_with">تفعيل باستخدام</string>
+    <string name="grave_key">مفتاح ~</string>
+    <string name="x_sensitivity">حساسية X</string>
+    <string name="y_sensitivity">حساسية Y</string>
+    <string name="apply_non_linear_scaling">تطبيق التحجيم غير الخطي</string>
+    <string name="import_export">استيراد/تصدير</string>
+    <string name="import_profiles">استيراد الملفات الشخصية</string>
+    <string name="import_previously_exported_profiles_from_storage">استيراد الملفات الشخصية التي تم تصديرها سابقًا من التخزين.</string>
+    <string name="export_profiles">تصدير الملفات الشخصية</string>
+    <string name="export_profiles_to_disk_for_restoring_later_or_sharing">تصدير الملفات الشخصية إلى القرص لاستعادتها لاحقًا أو لمشاركتها.</string>
+    <string name="export_selected">تصدير المحدد</string>
+    <string name="select_all">تحديد الكل</string>
+    <string name="import_button">استيراد</string>
+</resources>
