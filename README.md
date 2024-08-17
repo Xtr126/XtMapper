@@ -22,10 +22,9 @@ https://xtr126.github.io/XtMapper-docs/guides/about
 
  ## Screenshots
 
-|   |  |
-| ------------- | ------------- |
-| <img src="https://github.com/user-attachments/assets/73dd4e4a-c601-4dc9-a593-31fbf6491523"/>  |  <img src="https://github.com/user-attachments/assets/b1d69ba0-f859-4efe-b63c-604d8ee26448"/>  |
-
+|   |   |   |
+| ------------- | ------------- | ------------- |
+|  <img src="https://github.com/user-attachments/assets/827924ac-3e26-4bdf-a219-c427ad4c110c"/>  |  <img src="https://github.com/user-attachments/assets/9150aff0-3545-4d8d-b5dc-91ed7ff8864a"/>  |  <img src="https://github.com/user-attachments/assets/f8303664-5c9e-41e1-b7c7-0d80fd0ad3e9"/>  |
 ## Development
 
 ### Build
