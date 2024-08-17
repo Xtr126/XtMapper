@@ -46,7 +46,11 @@ public class MouseEventHandler {
                 } catch (RemoteException e) {
                     e.printStackTrace(System.out);
                 }
-            } else mouseAimHandler.stop();
+                mInput.hideCursor();
+            } else {
+                mouseAimHandler.stop();
+                mInput.showCursor();
+            }
         }
     }
 

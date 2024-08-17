@@ -125,6 +125,16 @@ public class InputService implements IInputInterface {
 	else if (input.pointerCount == 1 && pointerUp) cursorSetY((int) y);
     }
 
+    @Override
+    public void hideCursor() {
+        mHandler.post(() -> cursorView.setVisibility(View.INVISIBLE));
+    }
+
+    @Override
+    public void showCursor() {
+        mHandler.post(() -> cursorView.setVisibility(View.VISIBLE));
+    }
+
     public void reloadKeymap() {
         try {
             this.keymapProfile = mCallback.requestKeymapProfile();
