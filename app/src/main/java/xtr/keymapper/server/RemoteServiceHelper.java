@@ -74,22 +74,27 @@ public class RemoteServiceHelper {
         }
     }
 
+    public static boolean isServiceRunning(){
+        getInstance();
+        return service != null; 
+    }
+
     private static void getInstance(){
         if (service == null) {
             // Try tcpip connection first
-            try {
+            /*try {
                 service = new RemoteServiceSocketClient();
             } catch (IOException e) {
-                // Log.e(e.toString(), e.getMessage(), e);
+                Log.e(e.toString(), e.getMessage(), e);
                 RemoteServiceSocketClient.socket = null;
-            }
-            if (RemoteServiceSocketClient.socket == null) {
+            }*/
+            //if (RemoteServiceSocketClient.socket == null) {
                 service = IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"));
                 if (service != null) try {
                     service.asBinder().linkToDeath(() -> service = null, 0);
                 } catch (RemoteException ignored) {
                 }
-            }
+            //}
         }
     }
 

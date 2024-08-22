@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         if(!RemoteServiceHelper.useShizuku)
             Shell.getShell(shell -> {
                 Boolean rootAccess = Shell.isAppGrantedRoot();
-                if (rootAccess == null || !rootAccess) {
+                if ((rootAccess == null || !rootAccess) && !RemoteServiceHelper.isServiceRunning()) {
                     alertRootAccessNotFound();
             }
             });
