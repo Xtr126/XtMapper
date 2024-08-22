@@ -64,12 +64,17 @@ public class Input {
 
         int source = InputDevice.SOURCE_TOUCHSCREEN;
 
-        if (pointerCount == 1 || action == MotionEvent.ACTION_HOVER_MOVE) {
+         if (action == MotionEvent.ACTION_HOVER_MOVE) {
             if (action == MotionEvent.ACTION_DOWN) {
-                lastTouchDown = now;
-            } else if (action == MotionEvent.ACTION_HOVER_MOVE) { 
                 pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_MOUSE;
                 source = InputDevice.SOURCE_MOUSE;
+            }
+        }
+            
+
+        if (pointerCount == 1) {
+            if (action == MotionEvent.ACTION_DOWN) {
+                lastTouchDown = now;
             }
         } else {
             // secondary pointers must use ACTION_POINTER_* ORed with the pointerIndex
@@ -84,7 +89,7 @@ public class Input {
         MotionEvent motionEvent = MotionEvent.obtain(lastTouchDown, now, action, pointerCount,
                 pointerProperties, pointerCoords,
                 0, 0, 1f, 1f,
-                0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+                0, 0, source, 0);
         try {
             injectInputEventMethod.invoke(inputManager, motionEvent, 0);
         } catch (IllegalAccessException | InvocationTargetException e) {
