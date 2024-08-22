@@ -18,7 +18,6 @@ public class Input {
 
     static Method injectInputEventMethod;
     static Object inputManager;
-    static int inputSource = InputDevice.SOURCE_TOUCHSCREEN;
 
     private final PointersState pointersState = new PointersState();
     private final MotionEvent.PointerProperties[] pointerProperties = new MotionEvent.PointerProperties[PointersState.MAX_POINTERS];
@@ -58,12 +57,19 @@ public class Input {
         pointer.setPoint(point);
         pointer.setPressure(pressure);
         pointer.setUp(action == MotionEvent.ACTION_UP);
+        pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_FINGER;
 
         pointerCount = pointersState.update(pointerProperties, pointerCoords);
+        
 
-        if (pointerCount == 1) {
+        int source = InputDevice.SOURCE_TOUCHSCREEN;
+
+        if (pointerCount == 1 || action == MotionEvent.ACTION_HOVER_MOVE) {
             if (action == MotionEvent.ACTION_DOWN) {
                 lastTouchDown = now;
+            } else if (action == MotionEvent.ACTION_HOVER_MOVE) { 
+                pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_MOUSE;
+                source = InputDevice.SOURCE_MOUSE;
             }
         } else {
             // secondary pointers must use ACTION_POINTER_* ORed with the pointerIndex
@@ -78,7 +84,7 @@ public class Input {
         MotionEvent motionEvent = MotionEvent.obtain(lastTouchDown, now, action, pointerCount,
                 pointerProperties, pointerCoords,
                 0, 0, 1f, 1f,
-                0, 0, inputSource, 0);
+                0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
         try {
             injectInputEventMethod.invoke(inputManager, motionEvent, 0);
         } catch (IllegalAccessException | InvocationTargetException e) {

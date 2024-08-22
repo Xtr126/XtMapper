@@ -117,7 +117,7 @@ public class MouseEventHandler {
                 value *= sensitivity;
                 x1 += value;
                 if (x1 > width || x1 < 0) x1 -= value;
-                if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
+                mInput.injectEvent(x1, y1, MOVE, pointerId);
                 break;
             }
             case REL_Y: {
@@ -125,7 +125,7 @@ public class MouseEventHandler {
                 value *= sensitivity;
                 y1 += value;
                 if (y1 > height || y1 < 0) y1 -= value;
-                if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
+                mInput.injectEvent(x1, y1, MOVE, pointerId);
                 break;
             }
             case BTN_MOUSE:
@@ -158,13 +158,13 @@ public class MouseEventHandler {
 
     public void evAbsY(int y) {
         this.y1 = y;
-        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
+        mInput.injectEvent(x1, y1, MOVE, pointerId);
         movePointerY();
     }
 
     public void evAbsX(int x) {
         this.x1 = x;
-        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
+        mInput.injectEvent(x1, y1, MOVE, pointerId);
         movePointerX();
     }
 

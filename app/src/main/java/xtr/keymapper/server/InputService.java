@@ -28,7 +28,7 @@ public class InputService implements IInputInterface {
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final IRemoteServiceCallback mCallback;
     boolean stopEvents = false;
-    boolean pointerUp = false;
+    boolean pointerUp = true;
     private final boolean isWaylandClient;
     private final int touchpadInputMode;
     private final View cursorView;
@@ -65,15 +65,18 @@ public class InputService implements IInputInterface {
     public void injectEvent(float x, float y, int action, int pointerId) {
         switch (action) {
             case UP:
-		pointerUp = true;
+		        pointerUp = true;
                 input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
                 break;
             case DOWN:
-		pointerUp = false;
+		        pointerUp = false;
                 input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
                 break;
             case MOVE:
-                input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f, x, y);
+                if (pointerUp)
+                    input.injectTouch(MotionEvent.ACTION_HOVER_MOVE, pointerId, 1.0f, x, y);
+                else
+                    input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f, x, y);
                 break;
         }
     }
