@@ -56,21 +56,16 @@ public class Input {
         Pointer pointer = pointersState.get(pointerIndex);
         pointer.setPoint(point);
         pointer.setPressure(pressure);
-        pointer.setUp(action == MotionEvent.ACTION_UP);
+        pointer.setUp(action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_HOVER_MOVE);
         pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_FINGER;
-
-        pointerCount = pointersState.update(pointerProperties, pointerCoords);
-        
 
         int source = InputDevice.SOURCE_TOUCHSCREEN;
 
-         if (action == MotionEvent.ACTION_HOVER_MOVE) {
-            if (action == MotionEvent.ACTION_DOWN) {
-                pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_MOUSE;
-                source = InputDevice.SOURCE_MOUSE;
-            }
+        if (action == MotionEvent.ACTION_HOVER_MOVE) {
+            pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_MOUSE;
+            source = InputDevice.SOURCE_MOUSE;
         }
-            
+        pointerCount = pointersState.update(pointerProperties, pointerCoords);
 
         if (pointerCount == 1) {
             if (action == MotionEvent.ACTION_DOWN) {

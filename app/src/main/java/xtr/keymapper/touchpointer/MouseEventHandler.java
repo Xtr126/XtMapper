@@ -117,7 +117,8 @@ public class MouseEventHandler {
                 value *= sensitivity;
                 x1 += value;
                 if (x1 > width || x1 < 0) x1 -= value;
-                mInput.injectEvent(x1, y1, MOVE, pointerId);
+                if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
+                else mInput.injectHoverEvent(x1, y1, pointerId);
                 break;
             }
             case REL_Y: {
@@ -125,7 +126,8 @@ public class MouseEventHandler {
                 value *= sensitivity;
                 y1 += value;
                 if (y1 > height || y1 < 0) y1 -= value;
-                mInput.injectEvent(x1, y1, MOVE, pointerId);
+                if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
+                else mInput.injectHoverEvent(x1, y1, pointerId);
                 break;
             }
             case BTN_MOUSE:
