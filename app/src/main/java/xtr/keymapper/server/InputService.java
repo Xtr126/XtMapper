@@ -28,10 +28,10 @@ public class InputService implements IInputInterface {
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final IRemoteServiceCallback mCallback;
     boolean stopEvents = false;
-    boolean pointerUp = true;
     private final boolean isWaylandClient;
     private final int touchpadInputMode;
     private final View cursorView;
+    private final int currentPointerMode;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
@@ -41,8 +41,8 @@ public class InputService implements IInputInterface {
         this.mCallback = mCallback;
         this.isWaylandClient = isWaylandClient;
         this.cursorView = cursorView;
-
-        if (cursorView == null || (keymapConfig.pointerMode != KeymapConfig.POINTER_OVERLAY)) {
+        this.currentPointerMode = keymapConfig.pointerMode;
+        if (cursorView == null || (currentPointerMode != KeymapConfig.POINTER_OVERLAY)) {
             initMouseCursor(screenWidth, screenHeight);
             // Reduce visibility of system pointer
             cursorSetX(0);
@@ -65,25 +65,21 @@ public class InputService implements IInputInterface {
     public void injectEvent(float x, float y, int action, int pointerId) {
         switch (action) {
             case UP:
-		        pointerUp = true;
                 input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
                 break;
             case DOWN:
-		        pointerUp = false;
                 input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
                 break;
             case MOVE:
-                if (pointerUp)
-                    input.injectTouch(MotionEvent.ACTION_HOVER_MOVE, pointerId, 1.0f, x, y);
-                else
-                    input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f, x, y);
+                input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f, x, y);
                 break;
         }
     }
 
     @Override
     public void injectHoverEvent(float x, float y, int pointerId) {
-        input.injectTouch(MotionEvent.ACTION_HOVER_MOVE, pointerId, 1.0f, x, y);
+        if(!input.isAnyPointerDown() && currentPointerMode == KeymapConfig.POINTER_OVERLAY)
+            input.injectTouch(MotionEvent.ACTION_HOVER_MOVE, pointerId, 1.0f, x, y);
     }
 
     public void injectScroll(float x, float y, int value) {
@@ -121,16 +117,18 @@ public class InputService implements IInputInterface {
 
     public void moveCursorX(float x) {
         mHandler.post(() -> cursorView.setX(x));
-        // To avoid conflict with touch input when moving virtual pointer
-        if (input.pointerCount < 1) cursorSetX((int) x);
-	else if (input.pointerCount == 1 && pointerUp) cursorSetX((int) x);
+        if (currentPointerMode != KeymapConfig.POINTER_OVERLAY) {
+            // To avoid conflict with touch input when moving virtual pointer
+            if (!input.isAnyPointerDown()) cursorSetX((int) x);
+        }
     }
 
     public void moveCursorY(float y) {
         mHandler.post(() -> cursorView.setY(y));
-        // To avoid conflict with touch input when moving virtual pointer
-        if (input.pointerCount < 1) cursorSetY((int) y);
-	else if (input.pointerCount == 1 && pointerUp) cursorSetY((int) y);
+        if (currentPointerMode != KeymapConfig.POINTER_OVERLAY) {
+            // To avoid conflict with touch input when moving virtual pointer
+            if (!input.isAnyPointerDown()) cursorSetY((int) y);
+        }
     }
 
     @Override

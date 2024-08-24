@@ -25,7 +25,7 @@ public class Input {
     private long lastTouchDown;
     private final SmoothScroll scrollHandler = new SmoothScroll();
     private Handler mHandler;
-    public int pointerCount;
+    private int pointerCount = 0;
 
     private void initPointers() {
         for (int i = 0; i < PointersState.MAX_POINTERS; ++i) {
@@ -39,6 +39,16 @@ public class Input {
             pointerProperties[i] = props;
             pointerCoords[i] = coords;
         }
+    }
+
+    public boolean isAnyPointerDown() {
+        pointerCount = pointersState.update(pointerProperties, pointerCoords);
+        if (pointerCount > 0) for (int i = 0; i < pointerCount; i++) {
+            if (!pointersState.get(i).isUp()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public Input() {
@@ -56,15 +66,11 @@ public class Input {
         Pointer pointer = pointersState.get(pointerIndex);
         pointer.setPoint(point);
         pointer.setPressure(pressure);
-        pointer.setUp(action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_HOVER_MOVE);
-        pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_FINGER;
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_HOVER_MOVE) pointer.setUp(true);        
+        else if (action == MotionEvent.ACTION_DOWN) pointer.setUp(false);
 
         int source = InputDevice.SOURCE_TOUCHSCREEN;
 
-        if (action == MotionEvent.ACTION_HOVER_MOVE) {
-            pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_MOUSE;
-            source = InputDevice.SOURCE_MOUSE;
-        }
         pointerCount = pointersState.update(pointerProperties, pointerCoords);
 
         if (pointerCount == 1) {
