@@ -68,7 +68,7 @@ public class MouseAimConfig implements Parcelable {
                 + width + " " + height + " "
                 + xleftClick + " " + yleftClick + " "
                 + xSensitivity + " " + ySensitivity + " "
-                + (limitedBounds ? 1 : 0);
+                + (applyNonLinearScaling ? 1 : 0);
     }
 
     public void setCenterXY(MovableFrameLayout crosshair){

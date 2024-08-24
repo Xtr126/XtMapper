@@ -106,13 +106,19 @@ public class MouseAimHandler {
             } else {
                 return value * config.xSensitivity;
             }
-        } else {
+        } else if (config.xSensitivity != 1.0) {
             return value * config.xSensitivity;
+        } else {
+            return value;
         }
     }
 
     private float calculateScaledY(int value) {
-        return value * config.ySensitivity;
+        if (config.ySensitivity != 1.0) {
+            return value * config.ySensitivity;
+        } else {
+            return value;
+        }
     }
 
     public void stop() {
