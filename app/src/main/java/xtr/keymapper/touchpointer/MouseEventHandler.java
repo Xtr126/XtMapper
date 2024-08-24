@@ -160,13 +160,15 @@ public class MouseEventHandler {
 
     public void evAbsY(int y) {
         this.y1 = y;
-        mInput.injectEvent(x1, y1, MOVE, pointerId);
+        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
+        else mInput.injectHoverEvent(x1, y1, pointerId);
         movePointerY();
     }
 
     public void evAbsX(int x) {
         this.x1 = x;
-        mInput.injectEvent(x1, y1, MOVE, pointerId);
+        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
+        else mInput.injectHoverEvent(x1, y1, pointerId);
         movePointerX();
     }
 

@@ -24,6 +24,7 @@ public class RemoteServiceShell {
                 if (arg.equals("--wayland-client")) {
                     mService.isWaylandClient = true;
                     System.out.println("using wayland client");
+                    mService.start_getevent();
                 } else if (arg.equals("--tcpip")) {
                     mService.start_getevent();
                     System.out.println("using tcpip");
@@ -36,7 +37,7 @@ public class RemoteServiceShell {
                         height = Integer.parseInt(wh[1]);
                 }
             }
-            if (width > 0 && height > 0) mService.inputService = new InputService(new KeymapProfile(), new KeymapConfig(null), null, width, height, null, true);
+            if (width > 0 && height > 0) mService.startServer(new KeymapProfile(), new KeymapConfig(getContext()), null, width, height);
             ServiceManager.addService("xtmapper", mService);
         } catch (Exception e) {
             e.printStackTrace(System.out);

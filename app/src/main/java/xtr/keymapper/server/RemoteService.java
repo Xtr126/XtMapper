@@ -63,8 +63,9 @@ public class RemoteService extends IRemoteService.Stub {
         try {
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
             nativeLibraryDir = ai.nativeLibraryDir;
-            start_getevent();
+            if(!isWaylandClient) start_getevent();
         } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace(System.out);
             throw new RuntimeException(e);
         }
     }
@@ -167,8 +168,8 @@ public class RemoteService extends IRemoteService.Stub {
     @Override
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
         if (inputService != null) stopServer();
-        cb.asBinder().linkToDeath(this::stopServer, 0);
-        if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
+        if (cb != null) cb.asBinder().linkToDeath(this::stopServer, 0);
+        if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM && !isWaylandClient) {
             addCursorView();
         }
         inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight, cursorView, isWaylandClient);
