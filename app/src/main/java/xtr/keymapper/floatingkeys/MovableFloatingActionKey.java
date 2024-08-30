@@ -1,100 +1,77 @@
 package xtr.keymapper.floatingkeys;
 
 import android.content.Context;
-import android.util.AttributeSet;
-import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
+import android.widget.TextView;
 
-public class MovableFloatingActionKey extends FrameLayout implements View.OnTouchListener {
+import androidx.annotation.StringRes;
 
-    public FloatingActionKey key;
+import com.google.android.material.button.MaterialButton;
+
+import xtr.keymapper.databinding.FloatingKeyBinding;
+
+public class MovableFloatingActionKey implements View.OnTouchListener {
+
     private float dX, dY;
+    public final TextView textView;
+    public final FrameLayout frameView;
     private OnXyChangeListener xyChangeListener;
-    public FloatingActionKey closeButton;
+    public final MaterialButton closeButton;
+    public final FloatingKeyBinding binding;
     private OnKeyRemoved callback;
-    boolean isSwipeKey;
+    boolean isSwipeKey = false;
 
     public interface OnKeyRemoved {
 
         void onKeyRemoved(MovableFloatingActionKey key);
     }
-    public MovableFloatingActionKey(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init();
-    }
-
     public MovableFloatingActionKey(Context context) {
-        super(context);
-        init();
-    }
-    public MovableFloatingActionKey(Context context, OnKeyRemoved callback) {
-        this(context);
-        this.callback = callback;
-    }
 
-    public MovableFloatingActionKey(Context context, boolean isSwipeKey) {
-        this(context);
-        this.isSwipeKey = isSwipeKey;
-    }
+        binding = FloatingKeyBinding.inflate(LayoutInflater.from(context));
+        frameView = binding.getRoot();
+        frameView.setOnTouchListener(this);
 
-    public MovableFloatingActionKey(Context context, AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-        init();
-    }
+        closeButton = binding.closeButton;
+        textView = binding.textView;
 
-    private void init() {
-        setOnTouchListener(this);
-
-        LayoutParams mParams = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-
-        this.setLayoutParams(mParams);
-        key = new FloatingActionKey(getContext());
-        key.setClickable(false);
-        key.setLayoutParams(mParams);
-        key.setElevation(1);
-
-        closeButton = new FloatingActionKey(getContext());
-        closeButton.setImageResource(android.R.drawable.ic_delete);
-        closeButton.setElevation(2);
         closeButton.setOnClickListener(v -> {
             if (!isSwipeKey) {
-                removeAllViews();
-                key = null;
+                frameView.removeAllViews();
+                frameView.invalidate();
                 if (callback != null) callback.onKeyRemoved(this);
             } else {
                 setText(" ");
             }
         });
-        closeButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+    }
 
-        LayoutParams layoutParams = new LayoutParams(20, 20);
-        layoutParams.gravity = Gravity.BOTTOM | Gravity.END;
-        closeButton.setLayoutParams(layoutParams);
-
-        addView(key);
-        addView(closeButton);
+    public MovableFloatingActionKey(Context context, OnKeyRemoved callback) {
+        this(context);
+        this.callback = callback;
+    }
+    public MovableFloatingActionKey(Context context, boolean isSwipeKey) {
+        this(context);
+        this.isSwipeKey = isSwipeKey;
     }
 
     public String getData(){
-        return "KEY_" + getText() + " " + getX() + " " + getY() + " " + getPivotX();
+        return "KEY_" + getText() + " " + frameView.getX() + " " + frameView.getY() + " " + frameView.getPivotX();
     }
 
-    public void setText(String s) {
-        float scale = 1 + s.length() / 10f;
-        setScaleX(scale);
-        setScaleY(scale);
+    public void setText(CharSequence s) {
+        textView.setText(s);
+    }
 
-        if (s.length() > 3) {
-            key.setText(s, 20 - s.length());
-        } else key.setText(s, 30);
+    public void setText(@StringRes int resId) {
+        textView.setText(resId);
     }
 
     public String getText(){
-        return key.key.toUpperCase();
+        return textView.getText().toString().toUpperCase();
     }
 
     @Override
@@ -103,14 +80,12 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
         int action = motionEvent.getAction();
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
-                key.setButtonActive();
                 dX = view.getX() - motionEvent.getRawX();
                 dY = view.getY() - motionEvent.getRawY();
                 return true; // Consumed
             }
             case MotionEvent.ACTION_UP: {
-                key.setButtonInactive();
-                return performClick();
+                return frameView.performClick();
             }
             case MotionEvent.ACTION_MOVE: {
                 int viewWidth = view.getWidth();
@@ -136,15 +111,35 @@ public class MovableFloatingActionKey extends FrameLayout implements View.OnTouc
                 return true; // Consumed
             }
             default:
-                return super.onTouchEvent(motionEvent);
+                return frameView.onTouchEvent(motionEvent);
         }
     }
     public void setXyChangeListener(OnXyChangeListener xyChangeListener) {
         this.xyChangeListener = xyChangeListener;
-        xyChangeListener.onNewXY(getX(), getY());
+        xyChangeListener.onNewXY(frameView.getX(), frameView.getY());
     }
 
     public interface OnXyChangeListener {
         void onNewXY(float x, float y);
+    }
+
+    public void setX(float x) {
+        frameView.setX(x);
+    }
+
+    public void setY(float y) {
+        frameView.setY(y);
+    }
+
+    public float getX() {
+        return frameView.getX();
+    }
+
+    public float getY() {
+        return frameView.getY();
+    }
+
+    public void setOnClickListener(View.OnClickListener listener) {
+        frameView.setOnClickListener(listener);
     }
 }

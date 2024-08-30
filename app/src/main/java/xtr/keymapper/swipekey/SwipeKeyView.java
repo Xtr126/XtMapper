@@ -1,8 +1,6 @@
 package xtr.keymapper.swipekey;
 
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,7 +23,7 @@ public class SwipeKeyView {
     public SwipeKeyView(ViewGroup mainView, SwipeKey swipeKey, OnViewRemoved callback, View.OnClickListener onClickListener) {
         this(mainView, callback, onClickListener);
         button1.setText(swipeKey.key1.code);
-        button1.animate()
+        button1.frameView.animate()
                 .x(swipeKey.key1.x)
                 .y(swipeKey.key1.y)
                 .setDuration(500)
@@ -33,7 +31,7 @@ public class SwipeKeyView {
                 .start();
 
         button2.setText(swipeKey.key2.code);
-        button2.animate()
+        button2.frameView.animate()
                 .x(swipeKey.key2.x)
                 .y(swipeKey.key2.y)
                 .setDuration(500)
@@ -51,13 +49,13 @@ public class SwipeKeyView {
         overlay = new SwipeKeyOverlay(context);
         rootView.addView(overlay);
 
-        rootView.addView(button1);
-        rootView.addView(button2);
+        rootView.addView(button1.frameView);
+        rootView.addView(button2.frameView);
         rootView.addView(closeButton);
 
         closeButton.setOnClickListener(v -> {
-            rootView.removeView(button1);
-            rootView.removeView(button2);
+            rootView.removeView(button1.frameView);
+            rootView.removeView(button2.frameView);
             rootView.removeView(closeButton);
             rootView.removeView(overlay);
             callback.onViewRemoved(this);
@@ -77,7 +75,7 @@ public class SwipeKeyView {
     }
 
     private void onXyChange(float x, float y) {
-        overlay.setLineXyFrom(button1, button2);
+        overlay.setLineXyFrom(button1.frameView, button2.frameView);
         overlay.centerViewOnLine(closeButton);
     }
 }
