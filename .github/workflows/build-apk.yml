@@ -1,4 +1,4 @@
-name: Build and Upload APK
+name: Build and upload debug APK
 
 on:
   workflow_dispatch:
@@ -22,23 +22,11 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Write key
-      run: |
-        if [ ! -z "${{ secrets.KEYSTORE }}" ]; then
-          {
-            echo storePassword='${{ secrets.KEYSTORE_PASSWORD }}'
-            echo keyPassword='${{ secrets.KEY_PASSWORD }}'
-            echo keyAlias='${{ secrets.KEY_ALIAS }}'
-            echo storeFile='../keystore.jks'
-          } > keystore.properties
-          echo '${{ secrets.KEYSTORE }}' | base64 -d > keystore.jks
-        fi
-
     - name: Build with Gradle
-      run: ./gradlew app:assembleRelease
+      run: ./gradlew app:assembleDebug
     
     - uses: actions/upload-artifact@v4
       with:
         name: xtmapper-release
-        path: app/build/outputs/apk/release/XtMapper-universal-release-*.apk
+        path: app/build/outputs/apk/debug/*.apk
          
