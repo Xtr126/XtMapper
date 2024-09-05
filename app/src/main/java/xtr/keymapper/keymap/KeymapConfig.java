@@ -16,7 +16,9 @@ public class KeymapConfig implements Parcelable {
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
     public boolean disableAutoProfiling, useShizuku, editorOverlay;
 
-    public int pauseResumeShortcutKey, launchEditorShortcutKey, switchProfileShortcutKey;
+    public int pauseResumeShortcutKey = 25; // KEY_P
+    public int launchEditorShortcutKey = 14; // KEY_E
+    public int switchProfileShortcutKey = 28; // KEY_S
     public int swipeDelayMs;
     public String pauseResumeShortcutKeyModifier, launchEditorShortcutKeyModifier, switchProfileShortcutKeyModifier;
     public int pointerMode;
@@ -104,9 +106,9 @@ public class KeymapConfig implements Parcelable {
         useShizuku = sharedPref.getBoolean("use_shizuku", false);
         editorOverlay = sharedPref.getBoolean("editor_overlay", false);
 
-        launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", -1);
-        pauseResumeShortcutKey = sharedPref.getInt("pause_resume_shortcut", -1);
-        switchProfileShortcutKey = sharedPref.getInt("switch_profile_shortcut", -1);
+        launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", launchEditorShortcutKey);
+        pauseResumeShortcutKey = sharedPref.getInt("pause_resume_shortcut", pauseResumeShortcutKey);
+        switchProfileShortcutKey = sharedPref.getInt("switch_profile_shortcut", switchProfileShortcutKey);
         mouseAimShortcutKey = sharedPref.getInt("mouse_aim_shortcut", -1);
 
         launchEditorShortcutKeyModifier = sharedPref.getString("launch_editor_shortcut_modifier", KEY_CTRL);
