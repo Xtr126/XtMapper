@@ -9,16 +9,19 @@ import android.os.ServiceManager;
 
 import java.lang.reflect.Method;
 
+import xtr.keymapper.BuildConfig;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 
 public class RemoteServiceShell {
     public static void main(String[] args) {
-        RemoteService.loadLibraries();
-        Looper.prepareMainLooper();
-        RemoteService mService = new RemoteService(getContext());
         try {
             System.out.println("Waiting for overlay...");
+            new ProcessBuilder("logcat", "-v", "color", "--pid=" + android.os.Process.myPid()).inheritIO().start();
+            RemoteService.loadLibraries();
+            Looper.prepareMainLooper();
+            RemoteService mService = new RemoteService(getContext());
+
             int width = 0, height = 0;
             for (String arg: args) {
                 if (arg.equals("--wayland-client")) {
@@ -58,7 +61,7 @@ public class RemoteServiceShell {
         Context context = null;
         int flags = Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY;
         try {
-            context = systemContext.createPackageContext(xtr.keymapper.R.class.getPackage().getName(), flags);
+            context = systemContext.createPackageContext(BuildConfig.APPLICATION_ID, flags);
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace(System.err);
         }

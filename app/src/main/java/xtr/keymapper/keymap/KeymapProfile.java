@@ -7,12 +7,13 @@ import android.os.Parcelable;
 
 import java.util.ArrayList;
 
+import xtr.keymapper.BuildConfig;
 import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.swipekey.SwipeKey;
 
 public class KeymapProfile implements Parcelable {
-    public String packageName = "xtr.keymapper";
+    public String packageName = BuildConfig.APPLICATION_ID;
     public final Dpad[] dpadArray;
     public MouseAimConfig mouseAimConfig = null;
     public ArrayList<KeymapProfileKey> keys = new ArrayList<>();
