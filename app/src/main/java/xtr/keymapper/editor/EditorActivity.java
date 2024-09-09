@@ -34,7 +34,6 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
         WindowInsetsControllerCompat windowInsetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
-//        RemoteServiceHelper.pauseKeymap();
         RemoteServiceHelper.getInstance(this, service -> mService = service);
 
         if (editor != null) editor.hideView();
@@ -51,6 +50,7 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
             // Can receive key events from remote service
             try {
                 mService.registerOnKeyEventListener(editor);
+                mService.pauseMouse();
             } catch (RemoteException e) {
                 Log.e("editorActivity", e.getMessage(), e);
             }
@@ -93,15 +93,15 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
         super.onDestroy();
         if (getEvent()) try {
             mService.unregisterOnKeyEventListener(editor);
+            mService.resumeMouse();
+            mService.reloadKeymap();
         } catch (RemoteException ignored) {
         }
         editor = null;
-//        RemoteServiceHelper.resumeKeymap();
     }
 
     @Override
     public void onHideView() {
-        onDestroy();
         finish();
     }
 

@@ -97,12 +97,14 @@ public class KeyEventHandler {
         detectCtrlAltKeys(event);
         int i = Utils.obtainIndex(event.code);
         if (i > 0) { // A-Z and 0-9 keys
-            if (event.action == DOWN) handleKeyboardShortcuts(i);
+            if (event.action == DOWN) if (handleKeyboardShortcuts(i)) return;
             handleMouseAim(i, event.action);
         } else { // CTRL, ALT, Arrow keys
             if (event.code.equals("KEY_GRAVE") && event.action == DOWN)
-                if (keymapConfig.keyGraveMouseAim)
+                if (keymapConfig.keyGraveMouseAim) {
                     mInput.getMouseEventHandler().triggerMouseAim();
+                    return;
+                }
         }
 
         for (DpadHandler dpadHandler: dpadHandlers) {
@@ -145,22 +147,29 @@ public class KeyEventHandler {
         return event;
     }
 
-    private void handleKeyboardShortcuts(int keycode) throws RemoteException {
-        if (!(altKeyPressed || ctrlKeyPressed)) return;
+    private boolean handleKeyboardShortcuts(int keycode) throws RemoteException {
+        if (!(altKeyPressed || ctrlKeyPressed)) return false;
         final String modifier = ctrlKeyPressed ? KEY_CTRL : KEY_ALT;
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
 
         if (keymapConfig.launchEditorShortcutKeyModifier.equals(modifier))
-            if (keycode == keymapConfig.launchEditorShortcutKey)
+            if (keycode == keymapConfig.launchEditorShortcutKey) {
                 mInput.getCallback().launchEditor();
+                return true;
+            }
 
         if (keymapConfig.pauseResumeShortcutKeyModifier.equals(modifier))
-            if (keycode == keymapConfig.pauseResumeShortcutKey)
+            if (keycode == keymapConfig.pauseResumeShortcutKey) {
                 mInput.pauseResumeKeymap();
+                return true;
+            }
 
         if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
-            if (keycode == keymapConfig.switchProfileShortcutKey)
+            if (keycode == keymapConfig.switchProfileShortcutKey) {
                 mInput.getCallback().switchProfiles();
+                return true;
+            }
+        return false;
     }
 
     public void handleKeyboardShortcutEvent(String line) throws RemoteException {

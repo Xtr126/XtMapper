@@ -229,7 +229,8 @@ public class RemoteService extends IRemoteService.Stub {
     @Override
     public void resumeMouse(){
         if (inputService != null)
-            if (inputService.stopEvents) inputService.pauseResumeKeymap();
+            if (inputService.stopEvents)
+                inputService.pauseResumeKeymap();
     }
 
     @Override

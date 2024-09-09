@@ -1,10 +1,12 @@
 package xtr.keymapper.editor;
 
+ import android.app.ActivityOptions;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
@@ -13,6 +15,7 @@ import androidx.appcompat.view.ContextThemeWrapper;
 
 import xtr.keymapper.R;
 import xtr.keymapper.TouchPointer;
+import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.server.RemoteServiceHelper;
 
 public class EditorService extends Service {
@@ -25,6 +28,7 @@ public class EditorService extends Service {
                 try {
                     service.unregisterOnKeyEventListener(editor);
                     service.resumeMouse();
+                    service.reloadKeymap();
                 } catch (RemoteException e) {
                     throw new RuntimeException(e);
                 }
@@ -43,7 +47,14 @@ public class EditorService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(this.getClass().getName(), "Launching editor");
-        bindService(new Intent(this, TouchPointer.class), connection, Context.BIND_AUTO_CREATE);
+        KeymapConfig keymapConfig = new KeymapConfig(this);
+        if (keymapConfig.editorOverlay) {
+            bindService(new Intent(this, TouchPointer.class), connection, Context.BIND_AUTO_CREATE);
+        } else {
+            intent = new Intent(this, EditorActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        }
 
         return super.onStartCommand(intent, flags, startId);
     }

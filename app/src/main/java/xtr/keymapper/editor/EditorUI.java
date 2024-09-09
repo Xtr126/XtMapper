@@ -225,7 +225,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
         profiles.saveProfile(profileName, linesToWrite, profile.packageName, !profile.disabled);
 
         // Reload keymap if service running
-        RemoteServiceHelper.reloadKeymap(context);
     }
 
 

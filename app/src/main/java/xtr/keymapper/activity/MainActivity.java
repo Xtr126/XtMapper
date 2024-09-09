@@ -140,15 +140,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void startEditor(){
         checkOverlayPermission();
-        if(Settings.canDrawOverlays(this))
-            startActivity(new Intent(this, EditorActivity.class));
+        if(Settings.canDrawOverlays(this)) {
+            Intent intent = new Intent(this, EditorActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        }
     }
 
     private void checkOverlayPermission(){
         if (!Settings.canDrawOverlays(this)) {
             // send user to the device settings
-            Intent myIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
-            startActivity(myIntent);
+            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+            startActivity(intent);
         }
     }
 
