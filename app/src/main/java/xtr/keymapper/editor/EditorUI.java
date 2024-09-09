@@ -5,7 +5,6 @@ import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
@@ -45,7 +44,6 @@ import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.keymap.KeymapProfiles;
 import xtr.keymapper.mouse.MouseAimConfig;
-import xtr.keymapper.server.RemoteServiceHelper;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyView;
 
@@ -448,7 +446,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
             leftClick = new MovableFloatingActionKey(context);
             leftClick.frameView.setBackgroundResource(R.drawable.ic_baseline_mouse_36);
             leftClick.setText(R.string.left_click);
-            leftClick.textView.setTextColor(Color.BLACK);
             mainView.addView(leftClick.frameView);
         }
         leftClick.frameView.animate().x(x).y(y)
@@ -464,7 +461,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
             });
             rightClick.frameView.setBackgroundResource(R.drawable.ic_baseline_mouse_36);
             rightClick.setText(R.string.right_click);
-            rightClick.textView.setTextColor(Color.BLACK);
             mainView.addView(rightClick.frameView);
         }
         rightClick.frameView.animate().x(x).y(y)

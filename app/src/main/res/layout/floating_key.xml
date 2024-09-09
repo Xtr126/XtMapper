@@ -11,7 +11,7 @@
         android:layout_height="70dp"
         android:minHeight="70dp"
         android:layout_gravity="center"
-        app:srcCompat="@drawable/key" />
+        android:src="@drawable/key" />
 
     <TextView
         android:layout_width="wrap_content"
