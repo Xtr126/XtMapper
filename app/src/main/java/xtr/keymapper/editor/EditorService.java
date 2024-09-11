@@ -49,8 +49,9 @@ public class EditorService extends Service {
         if (keymapConfig.editorOverlay) {
             bindService(new Intent(this, TouchPointer.class), connection, Context.BIND_AUTO_CREATE);
         } else {
-            Intent newIntent = new Intent(getApplicationContext(), EditorActivity.class);
-            newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+            Intent newIntent = new Intent(this, EditorActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
             startActivity(newIntent);
         }
 
