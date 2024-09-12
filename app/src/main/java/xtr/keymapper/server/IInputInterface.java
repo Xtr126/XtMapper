@@ -16,8 +16,8 @@ public interface IInputInterface {
     MouseEventHandler getMouseEventHandler();
     KeymapProfile getKeymapProfile();
     IRemoteServiceCallback getCallback();
-    void moveCursorX(float x);
-    void moveCursorY(float y);
+    void moveCursorX(int x);
+    void moveCursorY(int y);
     void hideCursor();
     void showCursor();
 }

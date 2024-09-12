@@ -9,4 +9,9 @@ interface IRemoteServiceCallback {
     KeymapProfile requestKeymapProfile();
     KeymapConfig requestKeymapConfig();
     void switchProfiles();
+
+    void enablePointer();
+    void disablePointer();
+    void setCursorX(int x);
+    void setCursorY(int y);
 }

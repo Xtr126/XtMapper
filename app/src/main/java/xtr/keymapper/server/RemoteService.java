@@ -40,7 +40,7 @@ public class RemoteService extends IRemoteService.Stub {
     boolean isWaylandClient = false;
     private ActivityObserverService activityObserverService;
     String nativeLibraryDir = System.getProperty("java.library.path");
-    private final View cursorView;
+    private View cursorView;
     private int TYPE_SECURE_SYSTEM_OVERLAY;
     Handler mHandler = new Handler(Looper.getMainLooper());
     private final WindowManager windowManager;
@@ -106,7 +106,7 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     private void addCursorView() {
-        mHandler.post(() -> {
+         if (cursorView != null) mHandler.post(() -> {
             if(cursorView.isAttachedToWindow()) {
                 cursorView.setVisibility(View.VISIBLE);
             } else {
@@ -122,13 +122,13 @@ public class RemoteService extends IRemoteService.Stub {
                         // Make the underlying application window visible
                         // through the cursor
                         PixelFormat.TRANSLUCENT);
-                windowManager.addView(cursorView, params);
+                try {
+                    windowManager.addView(cursorView, params);
+                } catch (IllegalStateException e) {
+                    cursorView = null;
+                }
             }
         });
-    }
-
-    private void removeCursorView() {
-        mHandler.post(() -> cursorView.setVisibility(View.GONE));
     }
 
     public void prepareCursorOverlayWindow() throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
@@ -213,13 +213,13 @@ public class RemoteService extends IRemoteService.Stub {
     public void stopServer() {
         if (inputService != null && !isWaylandClient) {
             inputService.stopEvents = true;
+            inputService.hideCursor();
             inputService.stop();
             inputService.stopMouse();
             inputService.stopTouchpad();
             inputService.destroyUinputDev();
             inputService = null;
         }
-        removeCursorView();
     }
 
     private final DeathRecipient mDeathRecipient = () -> mOnKeyEventListener = null;

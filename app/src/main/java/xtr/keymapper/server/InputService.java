@@ -42,11 +42,13 @@ public class InputService implements IInputInterface {
         this.isWaylandClient = isWaylandClient;
         this.cursorView = cursorView;
         this.currentPointerMode = keymapConfig.pointerMode;
-        if (cursorView == null || (currentPointerMode != KeymapConfig.POINTER_OVERLAY)) {
+        if (currentPointerMode != KeymapConfig.POINTER_OVERLAY) {
             initMouseCursor(screenWidth, screenHeight);
             // Reduce visibility of system pointer
             cursorSetX(0);
             cursorSetY(0);
+        } else if (cursorView == null) {
+            showCursor();
         }
 
         this.touchpadInputMode = keymapConfig.touchpadInputMode;
@@ -115,30 +117,60 @@ public class InputService implements IInputInterface {
         return mCallback;
     }
 
-    public void moveCursorX(float x) {
-        mHandler.post(() -> cursorView.setX(x));
+    public void moveCursorX(int x) {
+        if (cursorView != null) {
+            mHandler.post(() -> cursorView.setX(x));
+        } else {
+            try {
+                mCallback.setCursorX(x);
+            } catch (RemoteException ignored) {
+            }
+        }
         if (currentPointerMode != KeymapConfig.POINTER_OVERLAY) {
             // To avoid conflict with touch input when moving virtual pointer
-            if (!input.isAnyPointerDown()) cursorSetX((int) x);
+            if (!input.isAnyPointerDown()) cursorSetX(x);
         }
     }
 
-    public void moveCursorY(float y) {
-        mHandler.post(() -> cursorView.setY(y));
+    public void moveCursorY(int y) {
+        if (cursorView != null) {
+            mHandler.post(() -> cursorView.setY(y));
+        } else {
+            try {
+                mCallback.setCursorY(y);
+            } catch (RemoteException ignored) {
+            }
+        }
         if (currentPointerMode != KeymapConfig.POINTER_OVERLAY) {
             // To avoid conflict with touch input when moving virtual pointer
-            if (!input.isAnyPointerDown()) cursorSetY((int) y);
+            if (!input.isAnyPointerDown()) cursorSetY(y);
         }
     }
 
     @Override
     public void hideCursor() {
-        mHandler.post(() -> cursorView.setVisibility(View.INVISIBLE));
+        if (cursorView != null) {
+            mHandler.post(() -> cursorView.setVisibility(View.GONE));
+        } else {
+            try {
+                mCallback.disablePointer();
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     @Override
     public void showCursor() {
-        mHandler.post(() -> cursorView.setVisibility(View.VISIBLE));
+        if (cursorView != null) {
+            mHandler.post(() -> cursorView.setVisibility(View.VISIBLE));
+        } else {
+            try {
+                mCallback.enablePointer();
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public void reloadKeymap() {

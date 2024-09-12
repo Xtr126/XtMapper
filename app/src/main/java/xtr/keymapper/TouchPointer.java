@@ -9,6 +9,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Binder;
 import android.os.Build;
@@ -17,13 +18,17 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
 import android.view.Display;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.annotation.UiThread;
 
 import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
@@ -39,6 +44,7 @@ public class TouchPointer extends Service {
     public String selectedProfile = null;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private boolean activityRemoteCallback = false;
+    private WindowManager mWindowManager;
 
 
     public class TouchPointerBinder extends Binder {
@@ -112,7 +118,7 @@ public class TouchPointer extends Service {
                 return;
             }
             KeymapConfig keymapConfig = new KeymapConfig(this);
-            WindowManager mWindowManager = getSystemService(WindowManager.class);
+            mWindowManager = getSystemService(WindowManager.class);
             Display display = mWindowManager.getDefaultDisplay();
             Point size = new Point();
             display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
@@ -161,6 +167,8 @@ public class TouchPointer extends Service {
      */
     public final IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
 
+        private View cursorView = null;
+
         @Override
         public void launchEditor() {
             startService(new Intent(TouchPointer.this, EditorService.class));
@@ -186,7 +194,6 @@ public class TouchPointer extends Service {
         @UiThread
         @Override
         public void switchProfiles() { mHandler.post(() -> {
-
             KeymapProfiles keymapProfiles = new KeymapProfiles(TouchPointer.this);
             KeymapProfile keymapProfile = keymapProfiles.getProfile(selectedProfile);
             String application = keymapProfile.packageName;
@@ -202,6 +209,52 @@ public class TouchPointer extends Service {
                 connectRemoteService(keymapProfiles.getProfile(profile));
             }, application);
         });
+        }
+
+        @Override
+        public void enablePointer()  {
+            mHandler.post(() -> {
+                if(cursorView == null) {
+                    cursorView = CursorBinding.inflate(LayoutInflater.from(
+                            new ContextThemeWrapper(TouchPointer.this, R.style.Theme_XtMapper)
+                    )).getRoot();
+                    WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                            // Don't let the cursor grab the input focus
+                            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
+                                    WindowManager.LayoutParams.FLAG_FULLSCREEN |
+                                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                            // Make the underlying application window visible
+                            // through the cursor
+                            PixelFormat.TRANSLUCENT);
+                    mWindowManager.addView(cursorView, params);
+                }
+                cursorView.setVisibility(View.VISIBLE);
+            });
+        }
+
+        @Override
+        public void disablePointer()  {
+            mHandler.post(() -> {
+                if (cursorView != null) cursorView.setVisibility(View.GONE);
+            });
+        }
+
+        @Override
+        public void setCursorX(int x)  {
+            mHandler.post(() -> {
+                if (cursorView != null) cursorView.setX(x);
+            });
+        }
+
+        @Override
+        public void setCursorY(int y)  {
+            mHandler.post(() -> {
+                if (cursorView != null) cursorView.setY(y);
+            });
         }
     };
 

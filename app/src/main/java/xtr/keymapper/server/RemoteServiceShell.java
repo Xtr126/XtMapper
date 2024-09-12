@@ -18,6 +18,7 @@ public class RemoteServiceShell {
         try {
             System.out.println("Waiting for overlay...");
             new ProcessBuilder("logcat", "-v", "color", "--pid=" + android.os.Process.myPid()).inheritIO().start();
+            new ProcessBuilder("setenforce", "0").inheritIO().start();
             RemoteService.loadLibraries();
             Looper.prepareMainLooper();
             RemoteService mService = new RemoteService(getContext());
