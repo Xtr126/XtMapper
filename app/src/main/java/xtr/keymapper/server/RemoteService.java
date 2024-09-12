@@ -1,5 +1,7 @@
 package xtr.keymapper.server;
 
+import android.app.ApplicationErrorReport;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -25,6 +27,7 @@ import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.R;
 import xtr.keymapper.Utils;
+import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
@@ -41,10 +44,13 @@ public class RemoteService extends IRemoteService.Stub {
     private int TYPE_SECURE_SYSTEM_OVERLAY;
     Handler mHandler = new Handler(Looper.getMainLooper());
     private final WindowManager windowManager;
+    private final Context context;
 
     /* For Shizuku UserService */
     public RemoteService(Context context) {
         loadLibraries();
+        this.context = context;
+
         windowManager = context.getSystemService(WindowManager.class);
         LayoutInflater layoutInflater = context.getSystemService(LayoutInflater.class);
         context.setTheme(R.style.Theme_XtMapper);
@@ -54,10 +60,11 @@ public class RemoteService extends IRemoteService.Stub {
         } catch (Exception e) {
             Log.e("overlayWindow", e.getMessage(), e);
         }
-        init(context);
+        init();
     }
 
-    public void init(Context context) {
+
+    public void init() {
         PackageManager pm = context.getPackageManager();
         String packageName = context.getPackageName();
         try {
@@ -68,6 +75,28 @@ public class RemoteService extends IRemoteService.Stub {
             e.printStackTrace(System.out);
             throw new RuntimeException(e);
         }
+
+        Looper.getMainLooper().getThread().setUncaughtExceptionHandler((t, e) -> {
+            try {
+                ApplicationErrorReport.CrashInfo crashInfo = new ApplicationErrorReport.CrashInfo(e);
+
+                new ProcessBuilder("am", "start", "-a", "android.intent.action.MAIN", "-n",
+                        new ComponentName(context, MainActivity.class).flattenToString(),
+                        "--es", "data",
+                        crashInfo.exceptionMessage + "\n" +
+                                crashInfo.exceptionClassName + "\n" +
+                                crashInfo.stackTrace + "\n" +
+                                crashInfo.throwClassName + "\n" +
+                                crashInfo.throwFileName + "\n" +
+                                crashInfo.throwLineNumber + "\n" +
+                                crashInfo.throwMethodName).inheritIO().start();
+
+            } catch (Exception ex) {
+                e.printStackTrace(System.out);
+                ex.printStackTrace(System.out);
+            }
+            System.exit(1);
+        });
     }
 
     @Override
@@ -167,6 +196,7 @@ public class RemoteService extends IRemoteService.Stub {
 
     @Override
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
+
         if (inputService != null) stopServer();
         if (cb != null) cb.asBinder().linkToDeath(this::stopServer, 0);
         if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM && !isWaylandClient) {

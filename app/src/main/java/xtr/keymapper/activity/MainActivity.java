@@ -74,6 +74,9 @@ public class MainActivity extends AppCompatActivity {
              alertShizukuNotAuthorized();
         }
         setupButtons();
+
+        String data = getIntent().getStringExtra("data");
+        if (data != null) mCallback.updateCmdView1(data);
     }
 
     private void setupButtons() {
