@@ -1,0 +1,102 @@
+<resources>
+    <string name="app_name">XtMapper</string>
+    <string name="start">ਚਲਾਓੁ</string>
+    <string name="stop">ਰੋਕੋ</string>
+    <string name="configure">ਸੈਟਿਗ</string>
+    <string name="edit_keymap">ਕੀ ਮੈਪ ਵਿਚ ਬਦਲਾਵ</string>
+    <string name="help">ਮਦਦ</string>
+    <string name="package_name">ਪੈਕੇਜ ਦਾ ਨਾਮ: </string>
+    <string name="mouse_sensitivity">ਮਾਊਸ ਸੰਵੇਦਨਸ਼ੀਲਤਾ</string>
+    <string name="dpad_radius">ਡੀ ਘੇਰਾ</string>
+    <string name="mouse_aim_activated">
+       ਸ਼ੂਟਿੰਗ ਮੋਡ ਚਲਾ ਦਿੱਤਾ ਗਿਆ ਹੈ ਬਾਹਰ ਜਾਣ ਲਈ ਸੱਜਾ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ~ ਕੁੰਜੀ
+    </string>
+    <string name="scroll_speed">ਸਕ੍ਰੌਲ ਸਪੀਡ</string>
+    <string name="keyboard_shortcuts">ਕੀਬੋਰਡ ਸ਼ਾਰਟਕੱਟ:</string>
+    <string name="dialog_alert_editor">
+       ਸੇਵਾ ਨਹੀਂ ਚੱਲ ਰਹੀ ਹੈ। \n
+        ਹੋ ਸਕਦਾ ਹੈ ਕਿ ਤੁਸੀਂ ਸਾਰੀਆਂ ਮੁੱਖ ਇਵੇਟਾ ਨੂੰ ਮੈਪ ਕਰਨ ਦੇ ਯੋਗ ਨਾ ਹੋਵੋ। \n
+        ਐਕਟੀਵੇਸ਼ਨ ਚਲਾਓ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+
+    <string name="dialog_alert_editor_title">ਚਾਲੂ ਨਹੀ</string>
+    <string name="dialog_alert_add_profile">ਨਵਾਂ ਪ੍ਰੋਫਾਈਲ ਨਾਮ ਦਾਖਲ ਕਰੋ:</string>
+    <string name="dialog_alert_select_profile">ਲਈ ਪ੍ਰੋਫਾਈਲ ਚੁਣੋ \ </string>
+    <string name="dialog_alert_enable_profile">ਕੀ ਇਸ ਐਪ ਲਈ ਕੀਮੈਪਿੰਗ ਚਾਲੂ ਕਰਨੀ ਹੈ?</string>
+
+    <string name="key">ਬਟਨ</string>
+
+    <string name="switch_profile">ਪ੍ਰੋਫਾਈਲ ਬਦਲੋ</string>
+    <string name="launch_editor">ਏਡੀਟਰ ਲਾਂਚ ਕਰੋ</string>
+    <string name="pause_resume">ਰੋਕੋ/ਮੁੜ ਸ਼ੁਰੂ ਕਰੋ</string>
+
+    <!-- bottom navigation in settings fragment -->
+    <string name="tuning">ਟਿਊਨਿੰਗ</string>
+    <string name="config">ਕੋਨਫਿਗ</string>
+    <string name="shortcuts">ਸ਼ਾਰਟਕੱਟ</string>
+
+    <string name="trigger_mouse_aim_with">ਇਸ ਨਾਲ ਮਾਊਸ ਏਮ ਨੂੰ ਟਰਿੱਗਰ ਕਰੋ:</string>
+    <string name="right_click">ਸੱਜਾ ਕਲਿੱਕ</string>
+    <string name="key_grave">~ ਬਟਨ</string>
+
+    <string name="pinch_to_zoom_gesture_info">ਦੋ ਉਂਗਲਾਂ ਦੇ ਇਸ਼ਾਰੇ ਨਾਲ ਕਰੋ:</string>
+    <string name="drag_mouse">ਕੰਟਰੋਲ + ਮਾਊਸ ਹਿੱਲਣਾ</string>
+    <string name="mouse_wheel">ਕੰਟਰੋਲ + ਮਾਊਸ ਵ੍ਹੀਲ</string>
+    <string name="mouse_aim">ਮਾਊਸ ਦਾ ਨਿਸ਼ਾਨਾ</string>
+    <string name="cancel">@android:string/cancel</string>
+    <string name="ok">@android:string/ok</string>
+    <string name="yes">@android:string/yes</string>
+    <string name="no">@android:string/no</string>
+    <string name="swipe_delay_ms">ਸਵਾਈਪ ਦੇਰੀ %d ਮਿਲੀਸਕਿੰਟ</string>
+    <string name="profile_name">ਪ੍ਰੋਫਾਈਲ ਨਾਮ</string>
+    <string name="root_not_found_title">ਰੂਟ ਨਹੀਂ ਮਿਲੀ</string>
+    <string name="root_not_found_message">ਕੀਮੈਪਰ ਨੂੰ ਕੰਮ ਕਰਨ ਲਈ ਰੂਟ ਦੀ ਲੋੜ ਹੈ। \n ਕਿਰਪਾ ਕਰਕੇ KernelSU ਪ੍ਰਬੰਧਕ ਐਪ ਤੋਂ XtMapper ਨੂੰ ਸੁਪਰਯੂਜ਼ਰ ਦਿਓ</string>
+    <string name="root_no_privileges_title">ਸੇਵਾ ਰੂਟ ਵਜੋਂ ਸ਼ੁਰੂ ਕਰਨ ਵਿੱਚ ਅਸਫਲ ਰਹੀ</string>
+    <string name="root_no_privileges_message">
+        ਵਿਸ਼ੇਸ਼ ਅਧਿਕਾਰ ਪ੍ਰਾਪਤ ਕਰਨ ਵਿੱਚ ਅਸਮਰੱਥ ਹਾ। ਕੀ ਤੁਸੀਂ ਐਪਲੀਕੇਸ਼ਨ ਤੋਂ ਬਾਹਰ ਜਾਣਾ ਚਾਹੁੰਦੇ ਹੋ?\n
+        ਜੇਕਰ ਤੁਸੀਂ ਪਹਿਲਾਂ ਹੀ ਸੁਪਰਯੂਜ਼ਰ ਵਿਸ਼ੇਸ਼ ਅਧਿਕਾਰ ਦਿੱਤੇ ਹਨ, ਤਾਂ ਇਹ ਐਪ ਨੂੰ ਬੰਦ ਕਰਨ ਅਤੇ ਖੋਲ੍ਹਣ ਤੋਂ ਬਾਅਦ ਕੰਮ ਕਰ ਸਕਦਾ ਹੈ।
+    </string>
+    <string name="disable_auto_profile">ਆਟੋ ਪ੍ਰੋਫਾਈਲਿੰਗ ਨੂੰ ਬੰਦ ਕਰੋ</string>
+    <string name="touchpad_input">ਟੱਚਪੈਡ ਇਨਪੁਟ</string>
+    <string name="launch_app">ਐਪ ਖੋਲੋ</string>
+    <string name="use_shizuku">Shizuku ਵਰਤੋ</string>
+    <string name="pointer">ਪੁਆਇੰਟਰ ਮੋਡ</string>
+    <string name="open_editor_as_overlay">ਓਵਰਲੇਅ ਵਜੋਂ ਏਡੀਟਰ ਖੋਲ੍ਹੋ</string>
+
+    <!--  Keymap editor  -->
+    <string name="d_pad">ਡੀ-ਪੈਡ</string>
+    <string name="crosshair">ਕਰਾਸ ਹੇਅਰ</string>
+    <string name="left_click">ਖੱਬਾ ਕਲਿਕ</string>
+    <string name="swipe_key">ਸਵਾਈਪ ਬਟਨ</string>
+    <string name="add_key">ਸ਼ਾਮਲ ਕਰੋ ਬਟਨ</string>
+    <string name="save">ਸੇਵ ਕਰੋ</string>
+
+    <!--  Mouse Aim  -->
+    <string name="toggle">ਟੌਗਲ</string>
+    <string name="hold">ਦਬਾਕੇ ਰੱਖਣਾ</string>
+
+    <!--  Pointer Mode  -->
+    <string name="combined">ਜੋੜਣਾ</string>
+    <string name="overlay">ਓਵਰਲੇ</string>
+    <string name="system">ਸਿਸਟਮ</string>
+
+    <!--  Touchpad  -->
+    <string name="relative">ਨਾਲਦਾ</string>
+    <string name="disabled">ਬੰਦ ਕਰਨਾ</string>
+    <string name="direct">ਡਾਇਰੈਕਟ</string>
+
+    <string name="shizuku_not_authorized_title">Shizuku ਅਧਿਕਾਰਤ ਨਹੀ ਹੈ</string>
+    <string name="shizuku_not_authorized_message">ਜਾਰੀ ਰੱਖਣ ਲਈ Shizuku ਮੈਨੇਜਰ ਐਪ ਤੋਂ XtMapper ਨੂੰ ਅਧਿਕਾਰਤ ਕਰੋ</string>
+    <string name="activate_with">ਨਾਲ ਚਾਲੂ</string>
+    <string name="grave_key">~ ਬਟਨ</string>
+    <string name="x_sensitivity">X-ਸੰਵੇਦਨਸ਼ੀਲਤਾ</string>
+    <string name="y_sensitivity">Y-ਸੰਵੇਦਨਸ਼ੀਲਤਾ</string>
+    <string name="apply_non_linear_scaling">ਗੈਰ-ਲੀਨੀਅਰ ਸਕੇਲਿੰਗ ਲਾਗੂ ਕਰੋ</string>
+    <string name="import_export">ਇੰਪੋਰਟ/ਐਕਸਪੋਰਟ</string>
+    <string name="import_profiles">ਇੰਪੋਰਟ ਪ੍ਰੋਫਾਈਲ </string>
+    <string name="import_previously_exported_profiles_from_storage">ਸਟਰੋਏਜ ਵਿੱਚ ਪਿੱਛੇ ਐਕਸਪੋਰਟ ਕੀਤੀ ਪ੍ਰੋਫਾਈਲ ਇੰਪੋਰਟ ਕਰੋ</string>
+    <string name="export_profiles">ਐਕਸਪੋਰਟ ਪ੍ਰੋਫਾਈਲ</string>
+    <string name="export_profiles_to_disk_for_restoring_later_or_sharing">ਪ੍ਰੋਫਾਈਲ ਨੂੰ ਐਕਸਪੋਰਟ ਕਰੋ ਤਾਂ ਕਿ ਬਾਅਦ ਵਿੱਚ ਰੀਸਟੋਰ ਜਾ ਸ਼ੇਅਰ ਕੀਤੀ ਜਾ ਸਕੇ</string>
+    <string name="export_selected">ਐਕਸਪੋਰਟ ਚੁਣਿਆ ਗਿਆ</string>
+    <string name="select_all">ਚੁਣੋ</string>
+    <string name="import_button">ਇੰਪੋਰਟ</string>
+</resources>
