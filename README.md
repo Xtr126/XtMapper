@@ -40,6 +40,8 @@ Experimental: https://github.com/Xtr126/wayland-getevent
 ## Credits
 @guobao2333 - [Chinese translation](https://github.com/Xtr126/XtMapper/pull/101)  
 @muhammadbahaa2001 - [Arabic translation](https://github.com/Xtr126/XtMapper/pull/106)  
+@KSMaan45 - [Punjabi translation](https://github.com/Xtr126/XtMapper/pull/109)  
+I would like to thank everyone not mentioned here who took their time reporting bugs in time and making suggestions.
 
 Open source libraries used:
 - [Starlight](https://github.com/withastro/starlight) - Documentation framework  
