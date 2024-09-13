@@ -1,6 +1,7 @@
 package xtr.keymapper.server;
 
 import android.annotation.SuppressLint;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.pm.PackageManager;
@@ -10,6 +11,7 @@ import android.os.ServiceManager;
 import java.lang.reflect.Method;
 
 import xtr.keymapper.BuildConfig;
+import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 
@@ -24,6 +26,7 @@ public class RemoteServiceShell {
             RemoteService mService = new RemoteService(getContext());
 
             int width = 0, height = 0;
+            boolean launchApp = true;
             for (String arg: args) {
                 if (arg.equals("--wayland-client")) {
                     mService.isWaylandClient = true;
@@ -33,16 +36,30 @@ public class RemoteServiceShell {
                     mService.start_getevent();
                     System.out.println("using tcpip");
                     new RemoteServiceSocketServer(mService);
+                } else if (arg.equals("--no-auto-launch")) {
+                    launchApp = false;
                 } else if (mService.isWaylandClient) {
                     String[] wh = arg.split("=");
                     if (arg.startsWith("--width"))
                         width = Integer.parseInt(wh[1]);
                     else if (arg.startsWith("--height"))
                         height = Integer.parseInt(wh[1]);
+                    else 
+                        System.out.println("Invalid argument: " + arg);
                 }
             }
             if (width > 0 && height > 0) mService.startServer(new KeymapProfile(), new KeymapConfig(getContext()), null, width, height);
+
             ServiceManager.addService("xtmapper", mService);
+            new ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start();
+            new ProcessBuilder("settings put system alert_window_bypass_low_ram 1".split("\\s+")).inheritIO().start();
+
+            if (launchApp) new ProcessBuilder("am", "start", "-a", "android.intent.action.MAIN", "-n",
+                    new ComponentName(mService.context, MainActivity.class).flattenToString(),
+                    "--es", "data",
+                    MainActivity.SHELL_INIT).inheritIO().start();
+
+
         } catch (Exception e) {
             e.printStackTrace(System.out);
             System.exit(1);

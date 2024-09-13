@@ -34,6 +34,7 @@ import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.server.RemoteServiceHelper;
 
 public class MainActivity extends AppCompatActivity {
+    public static final String SHELL_INIT = "shell";
     public TouchPointer pointerOverlay;
 
     public ActivityMainBinding binding;
@@ -65,10 +66,10 @@ public class MainActivity extends AppCompatActivity {
 
         if(!RemoteServiceHelper.useShizuku)
             Shell.getShell(shell -> {
-                Boolean rootAccess = Shell.isAppGrantedRoot();
-                if ((rootAccess == null || !rootAccess) && !RemoteServiceHelper.isServiceRunning()) {
+                RemoteServiceHelper.getInstance(this, null);
+                if (!RemoteServiceHelper.isRootService) {
                     alertRootAccessNotFound();
-            }
+                }
             });
         else if (!(Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED)) {
              alertShizukuNotAuthorized();
@@ -76,7 +77,13 @@ public class MainActivity extends AppCompatActivity {
         setupButtons();
 
         String data = getIntent().getStringExtra("data");
-        if (data != null) mCallback.updateCmdView1(data);
+        if (data != null) {
+            if (data.equals(SHELL_INIT)) {
+                startPointer();
+            } else {
+                mCallback.updateCmdView1(data);
+            }
+        }
     }
 
     private void setupButtons() {

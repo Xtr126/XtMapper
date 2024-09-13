@@ -13,8 +13,6 @@ import android.util.Log;
 import com.topjohnwu.superuser.Shell;
 import com.topjohnwu.superuser.ipc.RootService;
 
-import java.io.IOException;
-
 import rikka.shizuku.Shizuku;
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.IRemoteService;
@@ -74,11 +72,6 @@ public class RemoteServiceHelper {
         }
     }
 
-    public static boolean isServiceRunning(){
-        getInstance();
-        return service != null; 
-    }
-
     private static void getInstance(){
         if (service == null) {
             // Try tcpip connection first
@@ -110,17 +103,18 @@ public class RemoteServiceHelper {
 
     public static void getInstance(Context context, RootRemoteServiceCallback callback){
         getInstance();
-        if (service != null) callback.onConnection(service);
-        else {
+        if (service != null) {
+            if (callback != null) callback.onConnection(service);
+        } else {
             RemoteServiceConnection connection = new RemoteServiceConnection(callback);
             if (useShizuku) {
                 if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED)
-                    bindShizukuService(context, connection);
+                    if (callback != null) bindShizukuService(context, connection);
             } else {
                 Boolean hasRootAccess = Shell.isAppGrantedRoot();
                 if (hasRootAccess != null) isRootService = hasRootAccess;
                 Intent intent = new Intent(context, RootRemoteService.class);
-                RootService.bind(intent, connection);
+                if (callback != null) RootService.bind(intent, connection);
             }
         }
     }

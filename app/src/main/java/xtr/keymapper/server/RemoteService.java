@@ -44,7 +44,7 @@ public class RemoteService extends IRemoteService.Stub {
     private int TYPE_SECURE_SYSTEM_OVERLAY;
     Handler mHandler = new Handler(Looper.getMainLooper());
     private final WindowManager windowManager;
-    private final Context context;
+    final Context context;
 
     /* For Shizuku UserService */
     public RemoteService(Context context) {
