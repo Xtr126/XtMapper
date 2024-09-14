@@ -90,8 +90,8 @@ public class InputService implements IInputInterface {
 
     @Override
     public void pauseResumeKeymap() {
+        stopEvents = !stopEvents;
         if (!isWaylandClient) {
-            stopEvents = !stopEvents;
             setMouseLock(!stopEvents);
         }
     }

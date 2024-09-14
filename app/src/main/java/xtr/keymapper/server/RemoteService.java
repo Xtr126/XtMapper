@@ -159,12 +159,12 @@ public class RemoteService extends IRemoteService.Stub {
                     String[] data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
                     if (addNewDevices(data)) {
                         if (inputService != null) {
+                            if (isWaylandClient && data[0].contains("wl_pointer"))
+                                inputService.sendWaylandMouseEvent(data[1]);
+
                             KeyEventHandler k = inputService.getKeyEventHandler();
                             if (!inputService.stopEvents) {
-                                if (isWaylandClient && data[0].contains("wl_pointer"))
-                                    inputService.sendWaylandMouseEvent(data[1]);
-                                else
-                                    k.handleEvent(data[1]);
+                                k.handleEvent(data[1]);
                             } else {
                                 k.handleKeyboardShortcutEvent(data[1]);
                             }
@@ -178,6 +178,10 @@ public class RemoteService extends IRemoteService.Stub {
         }).start();
     }
 
+    /**
+     * @param data split output of getevent command
+     * @return true if output is valid for processing
+     */
     private boolean addNewDevices(String[] data) {
         String[] input_event;
         if (data.length != 2) return false;
@@ -194,6 +198,15 @@ public class RemoteService extends IRemoteService.Stub {
         return true;
     }
 
+    /**
+     * Called by client to start the remote server.
+     *
+     * @param profile  The keymap profile
+     * @param keymapConfig Some configurations
+     * @param cb  The instance used to callback to remote service
+     * @param screenHeight Screen resolution (vertical)
+     * @param screenWidth  Screen resolution (horizontal)
+     */
     @Override
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
 
@@ -250,6 +263,9 @@ public class RemoteService extends IRemoteService.Stub {
         activityObserverService = null;
     }
 
+    /**
+     * Used to temporary stop the keymapping.
+     */
     @Override
     public void pauseMouse(){
         if (inputService != null)
@@ -263,6 +279,9 @@ public class RemoteService extends IRemoteService.Stub {
                 inputService.pauseResumeKeymap();
     }
 
+    /**
+     * Used to refresh by requesting new keymap from the user app
+     */
     @Override
     public void reloadKeymap() {
         if (inputService != null) inputService.reloadKeymap();
