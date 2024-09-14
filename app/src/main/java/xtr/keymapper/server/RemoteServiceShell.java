@@ -25,7 +25,6 @@ public class RemoteServiceShell {
             Looper.prepareMainLooper();
             RemoteService mService = new RemoteService(getContext());
 
-            int width = 0, height = 0;
             boolean launchApp = true;
             for (String arg: args) {
                 if (arg.equals("--wayland-client")) {
@@ -38,17 +37,10 @@ public class RemoteServiceShell {
                     new RemoteServiceSocketServer(mService);
                 } else if (arg.equals("--no-auto-launch")) {
                     launchApp = false;
-                } else if (mService.isWaylandClient) {
-                    String[] wh = arg.split("=");
-                    if (arg.startsWith("--width"))
-                        width = Integer.parseInt(wh[1]);
-                    else if (arg.startsWith("--height"))
-                        height = Integer.parseInt(wh[1]);
-                    else 
-                        System.out.println("Invalid argument: " + arg);
+                } else {
+	            System.out.println("Invalid argument: " + arg);
                 }
             }
-            if (width > 0 && height > 0) mService.startServer(new KeymapProfile(), new KeymapConfig(getContext()), null, width, height);
 
             ServiceManager.addService("xtmapper", mService);
             new ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start();
