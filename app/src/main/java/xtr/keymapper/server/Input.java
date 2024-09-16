@@ -4,6 +4,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.InputDevice;
 import android.view.MotionEvent;
 
@@ -41,14 +42,14 @@ public class Input {
         }
     }
 
-    public boolean isAnyPointerDown() {
-        pointerCount = pointersState.update(pointerProperties, pointerCoords);
-        if (pointerCount > 0) for (int i = 0; i < pointerCount; i++) {
-            if (!pointersState.get(i).isUp()) {
-                return true;
+    public boolean noPointersDown() {
+        if (pointerCount > 0) {
+            pointerCount = pointersState.update(pointerProperties, pointerCoords);
+            for (int i = 0; i < pointerCount; i++) {
+                if (!pointersState.get(i).isUp()) return false;
             }
         }
-        return false;
+        return true;
     }
 
     public Input() {
@@ -61,7 +62,7 @@ public class Input {
 
         int pointerIndex = pointersState.getPointerIndex(pointerId);
         if (pointerIndex == -1) {
-            System.out.println("Too many pointers for touch event");
+            Log.e(RemoteService.TAG, "Too many pointers for touch event");
         }
         Pointer pointer = pointersState.get(pointerIndex);
         pointer.setPoint(point);
@@ -94,7 +95,7 @@ public class Input {
         try {
             injectInputEventMethod.invoke(inputManager, motionEvent, 0);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace(System.out);
+            Log.e(RemoteService.TAG, e.getMessage(), e);
         }
     }
 
@@ -122,7 +123,7 @@ public class Input {
         try {
             injectInputEventMethod.invoke(inputManager, motionEvent, 0);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace(System.out);
+            Log.e(RemoteService.TAG, e.getMessage(), e);
         }
     }
 
@@ -192,7 +193,7 @@ public class Input {
 
                 injectScroll(event, ivalue);
             } catch (InterruptedException e) {
-                e.printStackTrace(System.out);
+                Log.e(RemoteService.TAG, e.getMessage(), e);
             }
         }
     }
@@ -221,7 +222,7 @@ public class Input {
              injectInputEventMethod = inputManagerClass.getMethod(methodName, android.view.InputEvent.class, Integer.TYPE);
 
          } catch (Exception e) {
-            e.printStackTrace(System.out);
+             Log.e(RemoteService.TAG, e.getMessage(), e);
          }
     }
 }

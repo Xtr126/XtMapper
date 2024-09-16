@@ -28,7 +28,7 @@ public class RemoteServiceHelper {
             try {
                 service.pauseMouse();
             } catch (RemoteException e) {
-                Log.i("RemoteService", e.toString());
+                Log.i(RemoteService.TAG, e.getMessage(), e);
             }
         });
     }
@@ -38,7 +38,7 @@ public class RemoteServiceHelper {
             try {
                 service.resumeMouse();
             } catch (RemoteException e) {
-                Log.i("RemoteService", e.toString());
+                Log.i(RemoteService.TAG, e.getMessage(), e);
             }
         });
     }
@@ -48,7 +48,7 @@ public class RemoteServiceHelper {
             try {
                 service.reloadKeymap();
             } catch (RemoteException e) {
-                Log.e("RemoteService", e.getMessage(), e);
+                Log.i(RemoteService.TAG, e.getMessage(), e);
             }
         });
     }

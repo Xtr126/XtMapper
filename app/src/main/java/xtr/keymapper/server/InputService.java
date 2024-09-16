@@ -80,7 +80,7 @@ public class InputService implements IInputInterface {
 
     @Override
     public void injectHoverEvent(float x, float y, int pointerId) {
-        if(!input.isAnyPointerDown() && currentPointerMode == KeymapConfig.POINTER_OVERLAY)
+        if(input.noPointersDown() && currentPointerMode == KeymapConfig.POINTER_OVERLAY)
             input.injectTouch(MotionEvent.ACTION_HOVER_MOVE, pointerId, 1.0f, x, y);
     }
 
@@ -128,7 +128,7 @@ public class InputService implements IInputInterface {
         }
         if (currentPointerMode != KeymapConfig.POINTER_OVERLAY) {
             // To avoid conflict with touch input when moving virtual pointer
-            if (!input.isAnyPointerDown()) cursorSetX(x);
+            if (input.noPointersDown()) cursorSetX(x);
         }
     }
 
@@ -143,7 +143,7 @@ public class InputService implements IInputInterface {
         }
         if (currentPointerMode != KeymapConfig.POINTER_OVERLAY) {
             // To avoid conflict with touch input when moving virtual pointer
-            if (!input.isAnyPointerDown()) cursorSetY(y);
+            if (input.noPointersDown()) cursorSetY(y);
         }
     }
 
@@ -181,7 +181,7 @@ public class InputService implements IInputInterface {
             keyEventHandler.init();
             mouseEventHandler.init();
         } catch (Exception e) {
-            Log.e("reload keymap", e.getMessage(), e);
+            Log.e(RemoteService.TAG, e.getMessage(), e);
         }
     }
 

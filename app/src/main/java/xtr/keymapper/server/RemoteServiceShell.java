@@ -7,13 +7,12 @@ import android.content.ContextWrapper;
 import android.content.pm.PackageManager;
 import android.os.Looper;
 import android.os.ServiceManager;
+import android.util.Log;
 
 import java.lang.reflect.Method;
 
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.activity.MainActivity;
-import xtr.keymapper.keymap.KeymapConfig;
-import xtr.keymapper.keymap.KeymapProfile;
 
 public class RemoteServiceShell {
     public static void main(String[] args) {
@@ -27,18 +26,23 @@ public class RemoteServiceShell {
 
             boolean launchApp = true;
             for (String arg: args) {
-                if (arg.equals("--wayland-client")) {
-                    mService.isWaylandClient = true;
-                    System.out.println("using wayland client");
-                    mService.start_getevent();
-                } else if (arg.equals("--tcpip")) {
-                    mService.start_getevent();
-                    System.out.println("using tcpip");
-                    new RemoteServiceSocketServer(mService);
-                } else if (arg.equals("--no-auto-launch")) {
-                    launchApp = false;
-                } else {
-	            System.out.println("Invalid argument: " + arg);
+                switch (arg) {
+                    case "--wayland-client":
+                        mService.isWaylandClient = true;
+                        System.out.println("using wayland client");
+                        mService.start_getevent();
+                        break;
+                    case "--tcpip":
+                        mService.start_getevent();
+                        System.out.println("using tcpip");
+                        new RemoteServiceSocketServer(mService);
+                        break;
+                    case "--no-auto-launch":
+                        launchApp = false;
+                        break;
+                    default:
+                        System.out.println("Invalid argument: " + arg);
+                        break;
                 }
             }
 
@@ -53,7 +57,7 @@ public class RemoteServiceShell {
 
 
         } catch (Exception e) {
-            e.printStackTrace(System.out);
+            Log.e(RemoteService.TAG, e.getMessage(), e);
             System.exit(1);
         }
         Looper.loop();
@@ -73,7 +77,7 @@ public class RemoteServiceShell {
         try {
             context = systemContext.createPackageContext(BuildConfig.APPLICATION_ID, flags);
         } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace(System.err);
+            Log.e(RemoteService.TAG, e.getMessage(), e);
         }
         return getContextImpl(context);
     }

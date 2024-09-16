@@ -8,6 +8,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.util.Log;
 
 import java.util.List;
 
@@ -41,7 +42,7 @@ public class ActivityObserverService implements Runnable {
                 stop();
             }
         } catch (RemoteException e) {
-            e.printStackTrace(System.out);
+            Log.e(RemoteService.TAG, e.getMessage(), e);
         }
     }
 

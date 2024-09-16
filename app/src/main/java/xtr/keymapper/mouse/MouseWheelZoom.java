@@ -9,8 +9,10 @@ import static xtr.keymapper.server.InputService.UP;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.RemoteException;
+import android.util.Log;
 
 import xtr.keymapper.server.IInputInterface;
+import xtr.keymapper.server.RemoteService;
 
 public class MouseWheelZoom extends HandlerThread {
     private final Handler mHandler;
@@ -50,7 +52,8 @@ public class MouseWheelZoom extends HandlerThread {
                 sleep(10);
             }
             releasePointers(x, y);
-        } catch (RemoteException | InterruptedException ignored) {
+        } catch (RemoteException | InterruptedException e) {
+            Log.e(RemoteService.TAG, e.getMessage(), e);
         }
     });
     }

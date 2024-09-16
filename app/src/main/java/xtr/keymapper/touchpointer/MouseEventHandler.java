@@ -11,6 +11,7 @@ import static xtr.keymapper.InputEventCodes.REL_Y;
 import static xtr.keymapper.server.InputService.MOVE;
 
 import android.os.RemoteException;
+import android.util.Log;
 
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.mouse.MouseAimHandler;
@@ -19,6 +20,7 @@ import xtr.keymapper.mouse.MouseWheelZoom;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.server.IInputInterface;
+import xtr.keymapper.server.RemoteService;
 
 public class MouseEventHandler {
     int sensitivity = 1;
@@ -44,7 +46,7 @@ public class MouseEventHandler {
                 try {
                     mInput.getCallback().alertMouseAimActivated();
                 } catch (RemoteException e) {
-                    e.printStackTrace(System.out);
+                    Log.e(RemoteService.TAG, e.getMessage(), e);
                 }
                 mInput.hideCursor();
             } else {

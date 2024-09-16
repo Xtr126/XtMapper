@@ -45,6 +45,7 @@ public class RemoteService extends IRemoteService.Stub {
     Handler mHandler = new Handler(Looper.getMainLooper());
     private final WindowManager windowManager;
     final Context context;
+    public static final String TAG = "xtmapper-server";
 
     /* For Shizuku UserService */
     public RemoteService(Context context) {
@@ -58,7 +59,7 @@ public class RemoteService extends IRemoteService.Stub {
         try {
             prepareCursorOverlayWindow();
         } catch (Exception e) {
-            Log.e("overlayWindow", e.getMessage(), e);
+            Log.e(TAG, e.getMessage(), e);
         }
         init();
     }
@@ -72,7 +73,7 @@ public class RemoteService extends IRemoteService.Stub {
             nativeLibraryDir = ai.nativeLibraryDir;
             if(!isWaylandClient) start_getevent();
         } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace(System.out);
+            Log.e(TAG, e.getMessage(), e);
             throw new RuntimeException(e);
         }
 
@@ -92,8 +93,8 @@ public class RemoteService extends IRemoteService.Stub {
                                 crashInfo.throwMethodName).inheritIO().start();
 
             } catch (Exception ex) {
-                e.printStackTrace(System.out);
-                ex.printStackTrace(System.out);
+                Log.e(TAG, ex.getMessage(), ex);
+                Log.e(TAG, e.getMessage(), e);
             }
             System.exit(1);
         });
@@ -125,6 +126,7 @@ public class RemoteService extends IRemoteService.Stub {
                 try {
                     windowManager.addView(cursorView, params);
                 } catch (IllegalStateException e) {
+                    Log.e(TAG, e.getMessage(), e);
                     cursorView = null;
                 }
             }
@@ -173,7 +175,7 @@ public class RemoteService extends IRemoteService.Stub {
                     }
                 }
             } catch (Exception e){
-                e.printStackTrace(System.out);
+                Log.e(TAG, e.getMessage(), e);
             }
         }).start();
     }
@@ -212,7 +214,7 @@ public class RemoteService extends IRemoteService.Stub {
 
         if (inputService != null) stopServer();
         if (cb != null) cb.asBinder().linkToDeath(this::stopServer, 0);
-        if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM && !isWaylandClient) {
+        if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
             addCursorView();
         }
         inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight, cursorView, isWaylandClient);
