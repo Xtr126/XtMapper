@@ -99,4 +99,7 @@
     <string name="export_selected">ਐਕਸਪੋਰਟ ਚੁਣਿਆ ਗਿਆ</string>
     <string name="select_all">ਚੁਣੋ</string>
     <string name="import_button">ਇੰਪੋਰਟ</string>
+    <string name="rename">Rename</string>
+    <string name="delete">Delete</string>
+    <string name="enabled">Enabled</string>
 </resources>

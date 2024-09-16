@@ -98,4 +98,7 @@
     <string name="export_selected">Export selected</string>
     <string name="select_all">Select all</string>
     <string name="import_button">Import</string>
+    <string name="rename">Rename</string>
+    <string name="delete">Delete</string>
+    <string name="enabled">Enabled</string>
 </resources>

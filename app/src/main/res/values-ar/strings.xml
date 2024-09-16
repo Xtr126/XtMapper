@@ -100,4 +100,7 @@
     <string name="export_selected">تصدير المحدد</string>
     <string name="select_all">تحديد الكل</string>
     <string name="import_button">استيراد</string>
+    <string name="rename">Rename</string>
+    <string name="delete">Delete</string>
+    <string name="enabled">Enabled</string>
 </resources>

@@ -3,50 +3,27 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/linearLayout2"
-    android:layout_width="wrap_content"
-    android:layout_height="240dp"
-    android:translationZ="1dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintTop_toTopOf="parent">
 
-    <LinearLayout
-        android:id="@+id/profiles_view"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/profiles"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:animateLayoutChanges="true"
-        android:orientation="horizontal"
-        >
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/profiles"
-            android:layout_width="380dp"
-            android:layout_height="match_parent"
-            android:scrollbars="vertical"
-            android:scrollIndicators="bottom"
-            app:fastScrollEnabled="false"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            tools:listitem="@layout/profile_row_item" />
-
-        <ImageButton
-            android:id="@+id/profiles_button"
-            android:layout_width="20dp"
-            android:layout_height="160dp"
-            android:layout_gravity="top"
-            android:background="#00FFFFFF"
-            android:foreground="@drawable/ic_profiles_2"
-            android:foregroundTint="?attr/colorOnSurface"
-            android:translationZ="0dp" />
-    </LinearLayout>
-
+        android:scrollIndicators="bottom"
+        android:scrollbars="vertical"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        tools:listitem="@layout/profile_row_item" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/add_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:clickable="true"
-        app:layout_constraintBottom_toBottomOf="@id/profiles_view"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:shapeAppearance="@style/Widget.Material3.Button.IconButton.Outlined"
         app:srcCompat="@drawable/ic_baseline_add_24" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>

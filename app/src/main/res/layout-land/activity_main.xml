@@ -11,12 +11,14 @@
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/profilesView"
         android:name="xtr.keymapper.profiles.ProfilesViewFragment"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="32dp"
+        android:layout_marginTop="16dp"
         android:orientation="vertical"
         android:translationZ="1dp"
+        app:layout_constraintLeft_toRightOf="@+id/controls"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
         tools:layout="@layout/fragment_profiles_view" />
 
     <com.google.android.material.card.MaterialCardView
@@ -29,7 +31,8 @@
         app:cardCornerRadius="60dp"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintLeft_toRightOf="@id/controls">
+        app:layout_constraintLeft_toRightOf="@id/controls"
+        android:id="@+id/cardView">
         <include
             android:id="@+id/cmdview"
             layout="@layout/activity_main_cmdview"

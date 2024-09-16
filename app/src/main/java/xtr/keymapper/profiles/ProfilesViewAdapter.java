@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.ProfileRowItemBinding;
@@ -82,17 +83,18 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
     public void onBindViewHolder(ViewHolder viewHolder, final int position) {
         // Get element from dataset at this position and set the contents of the view
         RecyclerData recyclerData = recyclerDataArrayList.get(position);
-        viewHolder.binding.switch1.setText(recyclerData.name);
+        viewHolder.binding.profileName.setText(recyclerData.name);
+        viewHolder.binding.profileText.setText(recyclerData.description);
         viewHolder.binding.appIcon.setImageDrawable(recyclerData.icon);
 
-        final String profileName = recyclerData.name.toString();
+        final String profileName = recyclerData.name;
 
         Context context = viewHolder.itemView.getContext();
         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
 
         viewHolder.binding.deleteButton.setOnClickListener(v -> keymapProfiles.deleteProfile(profileName));
 
-        viewHolder.binding.editButton.setOnClickListener(view -> {
+        viewHolder.binding.renameButton.setOnClickListener(view -> {
             TextFieldNewProfileBinding binding = TextFieldNewProfileBinding.inflate(LayoutInflater.from(context));
             binding.editText.setText(profileName);
 
@@ -105,21 +107,21 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         });
 
         // Show dialog for user to select app for a profile from a grid of apps
-        viewHolder.binding.appIconButton.setOnClickListener(view -> {
+        viewHolder.binding.appIcon.setOnClickListener(view -> {
             ProfilesApps appsView = new ProfilesApps(view.getContext());
 
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
             AlertDialog dialog = builder.setView(appsView.view).show();
 
             appsView.setListener(packageName -> {
-                keymapProfiles.setProfilePackageName(recyclerData.name.toString(), packageName);
+                keymapProfiles.setProfilePackageName(recyclerData.name, packageName);
                 appsView.onDestroyView();
                 dialog.dismiss();
             });
         });
 
-        viewHolder.binding.switch1.setChecked(keymapProfiles.isProfileEnabled(recyclerData.name.toString()));
-        viewHolder.binding.switch1.setOnCheckedChangeListener((buttonView, isChecked) -> keymapProfiles.setProfileEnabled(recyclerData.name.toString(), isChecked));
+        viewHolder.binding.enableSwitch.setChecked(keymapProfiles.isProfileEnabled(recyclerData.name));
+        viewHolder.binding.enableSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> keymapProfiles.setProfileEnabled(recyclerData.name, isChecked));
     }
 
     // Return the size of dataset (invoked by the layout manager)
@@ -129,8 +131,8 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
     }
 
     private static class RecyclerData {
-        public RecyclerData(String packageName, Context context, CharSequence name) {
-            this.packageName = packageName;
+        public RecyclerData(String packageName, Context context, String name) {
+            this.description = packageName + "\n" + new KeymapProfiles(context).sharedPref.getStringSet(name, new HashSet<>());
             this.name = name;
             try {
                 this.icon = context.getPackageManager().getApplicationIcon(packageName);
@@ -139,8 +141,8 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
             }
         }
 
-        String packageName;
-        CharSequence name;
+        String description;
+        String name;
         Drawable icon;
     }
 }
