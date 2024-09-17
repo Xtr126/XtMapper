@@ -132,7 +132,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
 
     private static class RecyclerData {
         public RecyclerData(String packageName, Context context, String name) {
-            this.description = packageName + "\n" + new KeymapProfiles(context).sharedPref.getStringSet(name, new HashSet<>());
+            this.description = new KeymapProfiles(context).sharedPref.getStringSet(name, new HashSet<>()).toString();
             this.name = name;
             try {
                 this.icon = context.getPackageManager().getApplicationIcon(packageName);
