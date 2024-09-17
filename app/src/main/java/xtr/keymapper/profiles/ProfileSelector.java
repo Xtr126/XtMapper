@@ -31,11 +31,6 @@ public class ProfileSelector {
         void onEnabled(boolean enabled);
     }
 
-    public static void select(Context context, OnProfileSelectedListener listener){
-        context.setTheme(R.style.Theme_XtMapper);
-        showAppSelectionDialog(context, packageName -> select(context, listener, packageName));
-    }
-
     public static void select(Context context, OnProfileSelectedListener listener, String packageName) {
         context.setTheme(R.style.Theme_XtMapper);
         ArrayList<String> allProfiles = new ArrayList<>(new KeymapProfiles(context).getAllProfilesForApp(packageName).keySet());

@@ -12,6 +12,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
@@ -29,6 +30,12 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
 
     private final ArrayList<RecyclerData> recyclerDataArrayList = new ArrayList<>();
     private final OnItemRemovedListener callback;
+    private final ProfileSelectedCallback profileSelectedCallback;
+    private MaterialCardView lastCheckedCard = null;
+
+    public interface ProfileSelectedCallback {
+        void onProfileSelected(String profileName);
+    }
 
     /**
      * Provide a reference to the type of views used
@@ -50,8 +57,9 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
     /**
      * Initialize the dataset of the Adapter.
      */
-    public ProfilesViewAdapter(Context context, OnItemRemovedListener l) {
+    public ProfilesViewAdapter(Context context, OnItemRemovedListener l, ProfileSelectedCallback cb) {
         this.callback = l;
+        this.profileSelectedCallback = cb;
         if (context == null) return;
         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
         keymapProfiles.sharedPref.registerOnSharedPreferenceChangeListener(this);
@@ -83,11 +91,11 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
     public void onBindViewHolder(ViewHolder viewHolder, final int position) {
         // Get element from dataset at this position and set the contents of the view
         RecyclerData recyclerData = recyclerDataArrayList.get(position);
-        viewHolder.binding.profileName.setText(recyclerData.name);
+        viewHolder.binding.profileName.setText(recyclerData.profileName);
         viewHolder.binding.profileText.setText(recyclerData.description);
         viewHolder.binding.appIcon.setImageDrawable(recyclerData.icon);
 
-        final String profileName = recyclerData.name;
+        final String profileName = recyclerData.profileName;
 
         Context context = viewHolder.itemView.getContext();
         KeymapProfiles keymapProfiles = new KeymapProfiles(context);
@@ -114,14 +122,20 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
             AlertDialog dialog = builder.setView(appsView.view).show();
 
             appsView.setListener(packageName -> {
-                keymapProfiles.setProfilePackageName(recyclerData.name, packageName);
+                keymapProfiles.setProfilePackageName(recyclerData.profileName, packageName);
                 appsView.onDestroyView();
                 dialog.dismiss();
             });
         });
 
-        viewHolder.binding.enableSwitch.setChecked(keymapProfiles.isProfileEnabled(recyclerData.name));
-        viewHolder.binding.enableSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> keymapProfiles.setProfileEnabled(recyclerData.name, isChecked));
+        viewHolder.binding.enableSwitch.setChecked(keymapProfiles.isProfileEnabled(recyclerData.profileName));
+        viewHolder.binding.enableSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> keymapProfiles.setProfileEnabled(recyclerData.profileName, isChecked));
+        viewHolder.binding.card.setOnClickListener(v -> {
+            if (lastCheckedCard != null) lastCheckedCard.setChecked(false);
+            viewHolder.binding.card.setChecked(true);
+            lastCheckedCard = viewHolder.binding.card;
+            profileSelectedCallback.onProfileSelected(profileName);
+        });
     }
 
     // Return the size of dataset (invoked by the layout manager)
@@ -131,9 +145,9 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
     }
 
     private static class RecyclerData {
-        public RecyclerData(String packageName, Context context, String name) {
-            this.description = new KeymapProfiles(context).sharedPref.getStringSet(name, new HashSet<>()).toString();
-            this.name = name;
+        public RecyclerData(String packageName, Context context, String profileName) {
+            this.description = new KeymapProfiles(context).sharedPref.getStringSet(profileName, new HashSet<>()).toString();
+            this.profileName = profileName;
             try {
                 this.icon = context.getPackageManager().getApplicationIcon(packageName);
             } catch (PackageManager.NameNotFoundException e) {
@@ -142,7 +156,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         }
 
         String description;
-        String name;
+        String profileName;
         Drawable icon;
     }
 }

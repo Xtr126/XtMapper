@@ -30,8 +30,9 @@
 
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
             android:orientation="horizontal">
 
             <!-- Media -->
@@ -40,40 +41,45 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:clickable="true"
-                app:srcCompat="@mipmap/ic_launcher_foreground" />
+                tools:src="@drawable/key" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="18dp">
 
-                <!-- Title, secondary and supporting text -->
-                <TextView
-                    android:id="@+id/profile_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    tools:text="title"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
 
-                <TextView
-                    android:id="@+id/profile_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    tools:text="supporting_text supporting_text supporting_text supporting_text"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
-                    android:textColor="?android:attr/textColorSecondary" />
-
-            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/enable_switch"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="@string/enabled"/>
 
         </LinearLayout>
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/enable_switch"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="@string/enabled"/>
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <!-- Title, secondary and supporting text -->
+            <TextView
+                android:id="@+id/profile_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="title"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+            <TextView
+                android:id="@+id/profile_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="supporting_text supporting_text supporting_text supporting_text"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?android:attr/textColorSecondary" />
+
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"

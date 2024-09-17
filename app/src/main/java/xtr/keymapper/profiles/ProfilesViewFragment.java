@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.FragmentProfilesViewBinding;
 
 public class ProfilesViewFragment extends Fragment {
@@ -36,7 +37,11 @@ public class ProfilesViewFragment extends Fragment {
 
     private void setAdapter() {
         if (binding != null) {
-            profilesViewAdapter = new ProfilesViewAdapter(getContext(), this::setAdapter);
+            profilesViewAdapter = new ProfilesViewAdapter(getContext(), this::setAdapter,
+                    profileName -> {
+                        if (getActivity() instanceof MainActivity)
+                            ((MainActivity) getActivity()).onProfileSelected(profileName);
+                    });
             binding.profiles.setAdapter(profilesViewAdapter);
         }
     }

@@ -1,10 +1,8 @@
 package xtr.keymapper.editor;
 
  import android.app.Service;
-import android.content.ComponentName;
-import android.content.Context;
+ import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
  import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
@@ -12,8 +10,7 @@ import android.util.Log;
 import androidx.appcompat.view.ContextThemeWrapper;
 
 import xtr.keymapper.R;
-import xtr.keymapper.TouchPointer;
-import xtr.keymapper.keymap.KeymapConfig;
+ import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.server.RemoteServiceHelper;
 
 public class EditorService extends Service {
@@ -44,31 +41,16 @@ public class EditorService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.i(this.getClass().getName(), "Launching editor");
-        KeymapConfig keymapConfig = new KeymapConfig(this);
-        if (keymapConfig.editorOverlay) {
-            bindService(new Intent(this, TouchPointer.class), connection, Context.BIND_AUTO_CREATE);
-        } else {
-            Intent newIntent = new Intent(this, EditorActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-            startActivity(newIntent);
+        String selectedProfile = intent.getStringExtra(EditorActivity.PROFILE_NAME);
+        if (selectedProfile == null) {
+            stopSelf();
+            return super.onStartCommand(intent, flags, startId);
         }
 
-        return super.onStartCommand(intent, flags, startId);
-    }
-
-    private final ServiceConnection connection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to Service, cast the IBinder and get TouchPointer instance
-            TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
-            TouchPointer pointerOverlay = binder.getService();
-
+        KeymapConfig keymapConfig = new KeymapConfig(this);
+        if (keymapConfig.editorOverlay) {
             Context context = new ContextThemeWrapper(EditorService.this, R.style.Theme_XtMapper);
-            editor = new EditorUI(context, onHideListener, pointerOverlay.selectedProfile);
+            editor = new EditorUI(context, onHideListener, selectedProfile);
 
             RemoteServiceHelper.getInstance(EditorService.this, remoteService -> {
                 try {
@@ -82,11 +64,16 @@ public class EditorService extends Service {
             });
 
             editor.open(true);
+        } else {
+            Intent newIntent = new Intent(this, EditorActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+            newIntent.putExtra(EditorActivity.PROFILE_NAME, selectedProfile);
+            startActivity(newIntent);
         }
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-        }
-    };
+
+        return super.onStartCommand(intent, flags, startId);
+    }
 
     @Override
     public IBinder onBind(Intent intent) {

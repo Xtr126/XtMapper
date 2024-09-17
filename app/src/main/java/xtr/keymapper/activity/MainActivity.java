@@ -31,16 +31,17 @@ import xtr.keymapper.databinding.ActivityMainBinding;
 import xtr.keymapper.editor.EditorActivity;
 import xtr.keymapper.fragment.SettingsFragment;
 import xtr.keymapper.keymap.KeymapConfig;
+import xtr.keymapper.profiles.ProfilesViewAdapter;
 import xtr.keymapper.server.RemoteServiceHelper;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ProfilesViewAdapter.ProfileSelectedCallback {
     public static final String SHELL_INIT = "shell";
     public TouchPointer pointerOverlay;
 
     public ActivityMainBinding binding;
-    private Intent intent;
     private ColorStateList defaultTint;
     private boolean stopped = true;
+    private String selectedProfileName = null;
 
     static {
         // Set settings before the main shell can be created
@@ -57,11 +58,7 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        Context context = getApplicationContext();
-        intent = new Intent(context, TouchPointer.class);
-        bindService(intent, connection, Context.BIND_AUTO_CREATE);
-
-        RemoteServiceHelper.useShizuku = new KeymapConfig(context).useShizuku;
+        RemoteServiceHelper.useShizuku = new KeymapConfig(this).useShizuku;
         Server.setupServer(this, mCallback);
 
         if(!RemoteServiceHelper.useShizuku)
@@ -100,14 +97,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void launchApp() {
-        if (!stopped) pointerOverlay.launchApp();
-        else startPointer();
+        if (selectedProfileName == null) {
+            showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null);
+        } else {
+            if (!stopped) pointerOverlay.launchProfile(selectedProfileName);
+            else startPointer();
+        }
     }
 
     public void startPointer(){
         stopped = false;
         checkOverlayPermission();
         if(Settings.canDrawOverlays(this)) {
+            Intent intent = new Intent(this, TouchPointer.class);
+            intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName);
             bindService(intent, connection, Context.BIND_AUTO_CREATE);
             startForegroundService(intent);
             setButtonState(false);
@@ -135,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void stopPointer(){
         unbindTouchPointer();
+        Intent intent = new Intent(this, TouchPointer.class);
         stopService(intent);
         setButtonState(true);
         stopped = true;
@@ -149,12 +153,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startEditor(){
-        checkOverlayPermission();
-        if(Settings.canDrawOverlays(this)) {
-            Intent intent = new Intent(this, EditorActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-            startActivity(intent);
+        if (selectedProfileName == null) {
+            showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null);
+        } else {
+            checkOverlayPermission();
+            if (Settings.canDrawOverlays(this)) {
+                Intent intent = new Intent(this, EditorActivity.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+                intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName);
+                startActivity(intent);
+            }
         }
     }
 
@@ -207,6 +216,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if (!stopped) unbindTouchPointer();
+    }
+
+    @Override
+    public void onProfileSelected(String profileName) {
+        this.selectedProfileName = profileName;
     }
 
     public interface Callback {

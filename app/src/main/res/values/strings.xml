@@ -102,4 +102,6 @@
     <string name="rename">Rename</string>
     <string name="delete">Delete</string>
     <string name="enabled">Enabled</string>
+    <string name="no_profile_selected">No profile selected</string>
+    <string name="select_profile_from_below">Tap on a profile from the list below to select it</string>
 </resources>

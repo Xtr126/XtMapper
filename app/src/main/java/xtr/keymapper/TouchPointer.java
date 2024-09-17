@@ -29,6 +29,7 @@ import androidx.annotation.UiThread;
 
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CursorBinding;
+import xtr.keymapper.editor.EditorActivity;
 import xtr.keymapper.editor.EditorService;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
@@ -86,21 +87,24 @@ public class TouchPointer extends Service {
         }
 
         // Launch default profile
-        this.selectedProfile = "Default";
+
+        this.selectedProfile = i.getStringExtra(EditorActivity.PROFILE_NAME);
+        if (this.selectedProfile == null) {
+            this.selectedProfile = "Default";
+        }
+
         KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(selectedProfile);
         connectRemoteService(keymapProfile);
 
         return super.onStartCommand(i, flags, startId);
     }
 
-    public void launchApp() {
-        ProfileSelector.select(this, profile -> {
-            this.selectedProfile = profile;
-            KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(profile);
-            connectRemoteService(keymapProfile);
-            Intent launchIntent = getPackageManager().getLaunchIntentForPackage(keymapProfile.packageName);
-            if (launchIntent != null) startActivity(launchIntent);
-        });
+    public void launchProfile(String profileName) {
+        this.selectedProfile = profileName;
+        KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(selectedProfile);
+        connectRemoteService(keymapProfile);
+        Intent launchIntent = getPackageManager().getLaunchIntentForPackage(keymapProfile.packageName);
+        if (launchIntent != null) startActivity(launchIntent);
     }
 
     private void connectRemoteService(KeymapProfile profile) {
@@ -171,7 +175,9 @@ public class TouchPointer extends Service {
 
         @Override
         public void launchEditor() {
-            startService(new Intent(TouchPointer.this, EditorService.class));
+            Intent intent = new Intent(TouchPointer.this, EditorService.class);
+            intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfile);
+            startService(intent);
         }
 
         @Override
