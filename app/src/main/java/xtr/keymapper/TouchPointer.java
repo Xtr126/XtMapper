@@ -108,12 +108,12 @@ public class TouchPointer extends Service {
     }
 
     private void connectRemoteService(KeymapProfile profile) {
-        if (activityCallback != null) activityCallback.updateCmdView1("\n connecting to server..");
+        if (activityCallback != null) activityCallback.updateCmdView1("connecting to server..");
         RemoteServiceHelper.getInstance(this, service -> {
             mService = service;
             if (mService == null) {
                 if (activityCallback != null) {
-                    activityCallback.updateCmdView1("\n connection failed\n Please retry activation \n");
+                    activityCallback.updateCmdView1("connection failed\n Please retry activation");
                     activityCallback.stopPointer();
                 } else {
                     onDestroy();

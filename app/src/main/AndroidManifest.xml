@@ -39,7 +39,8 @@
             android:theme="@style/Theme.Design.NoActionBar" />
         <activity
             android:name=".activity.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.XtMapper.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -50,9 +51,6 @@
             android:name=".editor.EditorActivity"
             android:exported="true"
             android:theme="@style/Theme.XtMapper.EditorUI">
-            <intent-filter>
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
 
         <service

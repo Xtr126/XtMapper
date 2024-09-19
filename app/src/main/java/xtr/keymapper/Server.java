@@ -61,9 +61,9 @@ public class Server {
             writeScript(generateScript(ai), script);
         } catch (IOException | InterruptedException | PackageManager.NameNotFoundException ex) {
             Log.e("Server", ex.toString());
-            mCallback.updateCmdView1("failed to write script: " + ex + "\n");
+            mCallback.updateCmdView1("failed to write script: " + ex);
         }
-        if (!script.exists()) mCallback.updateCmdView1("failed to write script: permission denied\n");
+        if (!script.exists()) mCallback.updateCmdView1("failed to write script: permission denied");
     }
 
 }

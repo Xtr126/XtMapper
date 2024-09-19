@@ -4,6 +4,10 @@
         <item name="android:statusBarColor">?android:colorBackground</item>
     </style>
 
+    <style name="Theme.XtMapper.MainActivity" parent="Theme.XtMapper">
+        <item name="android:colorBackground">@color/black</item>
+    </style>
+
     <style name="Theme.XtMapper.EditorUI" parent="Theme.MaterialComponents">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowIsFloating">false</item>

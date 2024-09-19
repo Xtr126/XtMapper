@@ -5,21 +5,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".activity.MainActivity"
+    tools:background="@color/black"
     tools:ignore="ContentDescription,SpUsage">
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/profilesView"
-        android:name="xtr.keymapper.profiles.ProfilesViewFragment"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginEnd="16dp"
-        android:translationZ="1dp"
-        android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toTopOf="@id/cardView"
-        tools:layout="@layout/fragment_profiles_view" />
     
 
     <com.google.android.material.card.MaterialCardView
@@ -27,18 +15,21 @@
         android:id="@+id/cardView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:translationY="20dp"
-        android:translationZ="-1dp"
-        app:cardElevation="0dp"
         app:cardCornerRadius="60dp"
+        app:contentPadding="12dp"
+        app:contentPaddingBottom="52dp"
+        android:translationY="16dp"
+        android:layout_marginBottom="-36dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/controls">
-        <include
-            android:id="@+id/cmdview"
-            android:layout_margin="10dp"
-            android:layout_height="match_parent"
+
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/profilesView"
+            android:name="xtr.keymapper.profiles.ProfilesViewFragment"
             android:layout_width="match_parent"
-            layout="@layout/activity_main_cmdview" />
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            tools:layout="@layout/fragment_profiles_view" />
     </com.google.android.material.card.MaterialCardView>
 
     <include layout="@layout/activity_main_controls"

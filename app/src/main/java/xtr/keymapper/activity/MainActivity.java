@@ -14,6 +14,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.widget.Button;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
@@ -78,7 +79,11 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             if (data.equals(SHELL_INIT)) {
                 startPointer();
             } else {
-                mCallback.updateCmdView1(data);
+                // Crash report
+                new MaterialAlertDialogBuilder(MainActivity.this).setTitle("Server crashed")
+                        .setMessage(data)
+                        .setPositiveButton(R.string.ok, null)
+                        .show();
             }
         }
     }
@@ -201,6 +206,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api");
             if (launchIntent != null) startActivity(launchIntent);
         });
+        if(Shizuku.pingBinder()) Shizuku.requestPermission(0);
     }
 
     private void showAlertDialog(@StringRes int titleId, @StringRes int messageId, @Nullable android.content.DialogInterface.OnClickListener listener) {
@@ -208,7 +214,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         builder.setTitle(titleId)
                 .setMessage(messageId)
                 .setPositiveButton(R.string.ok, listener)
-                .setNegativeButton(R.string.cancel, (dialog, which) -> {});
+                .setNegativeButton(R.string.cancel, null);
         runOnUiThread(() -> builder.create().show());
     }
 
@@ -229,17 +235,9 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     }
 
     private final Callback mCallback = new Callback() {
-        public static final int MAX_LINES = 16;
-        private int counter1 = 0;
-        private final StringBuilder c1 = new StringBuilder();
 
         public void updateCmdView1(String line) {
-            c1.append(line);
-
-            if (counter1 < MAX_LINES) counter1++;
-            else c1.delete(0, c1.indexOf("\n") + 1);
-
-            runOnUiThread(() -> binding.cmdview.view1.setText(c1));
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, line, Toast.LENGTH_SHORT).show());
         }
 
         public void stopPointer() {
