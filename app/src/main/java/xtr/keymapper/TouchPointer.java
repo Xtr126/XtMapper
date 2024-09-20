@@ -62,6 +62,10 @@ public class TouchPointer extends Service {
 
     @Override
     public int onStartCommand(Intent i, int flags, int startId) {
+        if (i == null) {
+            stopSelf();
+            return super.onStartCommand(null, flags, startId);
+        }
         String CHANNEL_ID = "pointer_service";
         String name = "Overlay";
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW);
