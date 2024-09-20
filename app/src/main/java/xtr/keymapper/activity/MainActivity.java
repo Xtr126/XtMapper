@@ -5,6 +5,7 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
@@ -59,12 +60,19 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        RemoteServiceHelper.useShizuku = new KeymapConfig(this).useShizuku;
+        KeymapConfig keymapConfig = new KeymapConfig(this);
+        RemoteServiceHelper.useShizuku = keymapConfig.useShizuku;
         Server.setupServer(this, mCallback);
 
         if(!RemoteServiceHelper.useShizuku)
             Shell.getShell(shell -> {
                 RemoteServiceHelper.getInstance(this, null);
+                if (Shizuku.pingBinder() || getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api") != null)
+                    showAlertDialog(R.string.detected_shizuku, R.string.use_shizuku_for_activation, (dialog, which) -> {
+                        keymapConfig.useShizuku = true;
+                        alertShizukuNotAuthorized();
+                    });
+                    else
                 if (!RemoteServiceHelper.isRootService) {
                     alertRootAccessNotFound();
                 }
