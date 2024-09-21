@@ -46,8 +46,8 @@ public class RemoteService extends IRemoteService.Stub {
     private final WindowManager windowManager;
     final Context context;
     public static final String TAG = "xtmapper-server";
+    boolean startedFromShell = false;
 
-    /* For Shizuku UserService */
     public RemoteService(Context context) {
         loadLibraries();
         this.context = context;
@@ -226,7 +226,9 @@ public class RemoteService extends IRemoteService.Stub {
 
     @Override
     public void stopServer() {
-        if (inputService != null && !isWaylandClient) {
+        if (!startedFromShell) {
+            System.exit(0);
+        } else if (inputService != null && !isWaylandClient) {
             inputService.stopEvents = true;
             inputService.hideCursor();
             inputService.stop();

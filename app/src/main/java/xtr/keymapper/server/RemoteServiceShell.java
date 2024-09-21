@@ -23,6 +23,7 @@ public class RemoteServiceShell {
             RemoteService.loadLibraries();
             Looper.prepareMainLooper();
             RemoteService mService = new RemoteService(getContext());
+            mService.startedFromShell = true;
 
             boolean launchApp = true;
             for (String arg: args) {
