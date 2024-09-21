@@ -198,7 +198,10 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     public void alertRootAccessNotFound() {
         showAlertDialog(R.string.root_not_found_title, R.string.root_not_found_message, (dialog, which) -> {
             Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("me.weishu.kernelsu");
-            if (launchIntent != null) startActivity(launchIntent);
+            if (launchIntent != null) {
+                startActivity(launchIntent);
+                System.exit(0);
+            }
         });
     }
 
