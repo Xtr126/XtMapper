@@ -25,6 +25,7 @@
         android:translationX="20dp"
         app:cardCornerRadius="60dp"
         app:contentPadding="16dp"
+        app:contentPaddingBottom="0dp"
         android:layout_marginRight="40dp"
         android:layout_marginVertical="40dp"
         app:layout_constraintLeft_toRightOf="@id/controls"
