@@ -129,7 +129,8 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             requestNotificationPermission();
         }
         if (RemoteServiceHelper.useShizuku) {
-            if (!Shizuku.pingBinder()) alertShizukuNotAuthorized();
+            if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED)
+                alertShizukuNotAuthorized();
         } else if (!RemoteServiceHelper.isRootService) {
             alertRootAccessAndExit();
         }
