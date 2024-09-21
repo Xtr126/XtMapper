@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             requestNotificationPermission();
         }
         if (RemoteServiceHelper.useShizuku) {
-            if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED)
+            if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED)
                 alertShizukuNotAuthorized();
         } else if (!RemoteServiceHelper.isRootService) {
             alertRootAccessAndExit();
@@ -213,11 +213,12 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     }
 
     private void alertShizukuNotAuthorized() {
+        if(Shizuku.pingBinder()) Shizuku.requestPermission(0);
         showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, (dialog, which) -> {
             Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api");
             if (launchIntent != null) startActivity(launchIntent);
+            System.exit(0);
         });
-        if(Shizuku.pingBinder()) Shizuku.requestPermission(0);
     }
 
     private void showAlertDialog(@StringRes int titleId, @StringRes int messageId, @Nullable android.content.DialogInterface.OnClickListener listener) {
