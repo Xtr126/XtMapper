@@ -54,13 +54,13 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew app:assembleRelease
         
-    - name: Release
-      uses: "marvinpinto/action-automatic-releases@latest"
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
       with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        prerelease: false
-        automatic_release_tag: "v2.2.1"
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: 'app/build/outputs/apk/release/*.apk'
+        asset_name: app-release.zip
+        tag: v2.3.0
+        overwrite: true
+        file_glob: true          
         draft: true
-        files: |
-          app/build/outputs/apk/release/*.apk
-         
