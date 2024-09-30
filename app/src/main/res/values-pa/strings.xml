@@ -106,4 +106,5 @@
     <string name="select_profile_from_below">Tap on a profile from the list below to select it</string>
     <string name="detected_shizuku">Detected Shizuku</string>
     <string name="use_shizuku_for_activation">Use Shizuku for activation?</string>
+    <string name="add_games">Add Games</string>
 </resources>

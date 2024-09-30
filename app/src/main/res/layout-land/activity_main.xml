@@ -11,12 +11,24 @@
     <include layout="@layout/activity_main_controls"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-
         android:id="@+id/controls"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toLeftOf="@id/cardView"
         android:layout_margin="40dp"
         app:layout_constraintTop_toTopOf="parent"/>
+
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:layout_width="180dp"
+        android:layout_height="60dp"
+        android:id="@+id/add_button"
+        android:paddingHorizontal="20dp"
+        android:text="@string/add_games"
+        style="?attr/materialIconButtonOutlinedStyle"
+        app:icon="@drawable/ic_baseline_add_24"
+        app:layout_constraintRight_toLeftOf="@id/cardView"
+        android:layout_marginBottom="40dp"
+        android:layout_marginRight="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
     <com.google.android.material.card.MaterialCardView
         style="@style/Widget.Material3.CardView.Elevated"

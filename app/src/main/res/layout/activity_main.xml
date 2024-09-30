@@ -39,4 +39,12 @@
         android:id="@+id/controls"
         app:layout_constraintTop_toTopOf="parent"/>
 
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/add_button"
+        android:text="@string/add_games"
+        app:icon="@drawable/ic_baseline_add_24"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

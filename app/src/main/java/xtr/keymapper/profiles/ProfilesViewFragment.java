@@ -32,7 +32,8 @@ public class ProfilesViewFragment extends Fragment {
         Context context = view.getContext();
         setAdapter();
 
-        binding.addButton.setOnClickListener(v -> ProfileSelector.createNewProfile(context, p -> setAdapter()));
+        if (getActivity() instanceof MainActivity)
+            ((MainActivity) getActivity()).binding.addButton.setOnClickListener(v -> ProfileSelector.createNewProfile(context, p -> setAdapter()));
     }
 
     private void setAdapter() {
