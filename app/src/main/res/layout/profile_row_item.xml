@@ -35,14 +35,15 @@
             android:paddingHorizontal="16dp"
             android:orientation="horizontal">
 
-            <!-- Media -->
-            <ImageView
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/app_icon"
+                style="?attr/materialIconButtonOutlinedStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:clickable="true"
-                tools:src="@drawable/key" />
-
+                tools:icon="@mipmap/ic_launcher"
+                app:iconSize="36dp"
+                app:iconTint="@null" />
 
             <Space
                 android:layout_width="0dp"
@@ -54,6 +55,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:text="@string/enabled"/>
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
 
         </LinearLayout>
 

@@ -93,7 +93,7 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         RecyclerData recyclerData = recyclerDataArrayList.get(position);
         viewHolder.binding.profileName.setText(recyclerData.profileName);
         viewHolder.binding.profileText.setText(recyclerData.description);
-        viewHolder.binding.appIcon.setImageDrawable(recyclerData.icon);
+        viewHolder.binding.appIcon.setIcon(recyclerData.icon);
 
         final String profileName = recyclerData.profileName;
 
