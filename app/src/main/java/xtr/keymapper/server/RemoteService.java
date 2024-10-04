@@ -227,6 +227,11 @@ public class RemoteService extends IRemoteService.Stub {
     @Override
     public void stopServer() {
         if (!startedFromShell) {
+            try {
+                inputService.getCallback().disablePointer();
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
             System.exit(0);
         } else if (inputService != null && !isWaylandClient) {
             inputService.stopEvents = true;

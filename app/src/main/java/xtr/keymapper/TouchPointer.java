@@ -242,14 +242,16 @@ public class TouchPointer extends Service {
                             PixelFormat.TRANSLUCENT);
                     mWindowManager.addView(cursorView, params);
                 }
-                cursorView.setVisibility(View.VISIBLE);
             });
         }
 
         @Override
         public void disablePointer()  {
             mHandler.post(() -> {
-                if (cursorView != null) cursorView.setVisibility(View.GONE);
+                if (cursorView != null) {
+                    mWindowManager.removeView(cursorView);
+                    cursorView = null;
+                }
             });
         }
 
