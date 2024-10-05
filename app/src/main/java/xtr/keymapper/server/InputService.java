@@ -47,9 +47,8 @@ public class InputService implements IInputInterface {
             // Reduce visibility of system pointer
             cursorSetX(0);
             cursorSetY(0);
-        } else if (cursorView == null) {
-            showCursor();
         }
+        if (currentPointerMode != KeymapConfig.POINTER_SYSTEM) showCursor();
 
         this.touchpadInputMode = keymapConfig.touchpadInputMode;
         if (touchpadInputMode == KeymapConfig.TOUCHPAD_DIRECT)

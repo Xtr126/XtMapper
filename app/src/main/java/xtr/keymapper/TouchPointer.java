@@ -223,6 +223,20 @@ public class TouchPointer extends Service {
 
         @Override
         public void enablePointer()  {
+            KeymapConfig keymapConfig = requestKeymapConfig();
+
+            // Set combined pointer mode automatically for 14 QPR3 and above
+            if (keymapConfig.pointerMode == KeymapConfig.POINTER_OVERLAY) {
+                keymapConfig.pointerMode = KeymapConfig.POINTER_COMBINED;
+                keymapConfig.applySharedPrefs();
+                activityCallback.stopPointer();
+                try {
+                    mService.stopServer();
+                } catch (RemoteException ignored) {
+                }
+                return;
+            }
+
             mHandler.post(() -> {
                 if(cursorView == null) {
                     cursorView = CursorBinding.inflate(LayoutInflater.from(

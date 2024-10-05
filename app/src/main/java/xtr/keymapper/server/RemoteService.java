@@ -237,7 +237,7 @@ public class RemoteService extends IRemoteService.Stub {
     @Override
     public void stopServer() {
         if (!startedFromShell) {
-            try {
+            if (inputService != null) try {
                 inputService.getCallback().disablePointer();
             } catch (RemoteException e) {
                 throw new RuntimeException(e);
