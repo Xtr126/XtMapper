@@ -3,6 +3,7 @@ package xtr.keymapper.server;
 import android.app.ApplicationErrorReport;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
@@ -17,11 +18,13 @@ import android.view.View;
 import android.view.WindowManager;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import xtr.keymapper.ActivityObserver;
+import xtr.keymapper.BuildConfig;
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.OnKeyEventListener;
@@ -214,7 +217,7 @@ public class RemoteService extends IRemoteService.Stub {
      */
     @Override
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
-        if (inputService != null) stopServer();
+        if (inputService != null) stopServer(false);
         if (cb != null) cb.asBinder().linkToDeath(this::stopServer, 0);
         mHandler.post(() -> {
             if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
@@ -231,17 +234,32 @@ public class RemoteService extends IRemoteService.Stub {
             } catch (RemoteException e) {
                 throw new RuntimeException(e);
             }
+            // Launch app/game
+            if (!profile.packageName.equals(BuildConfig.APPLICATION_ID)) {
+                Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(profile.packageName);
+                if (launchIntent != null && launchIntent.getComponent() != null) try {
+                    new ProcessBuilder("am", "start", "-a", "android.intent.action.MAIN", "-n",
+                            launchIntent.getComponent().flattenToString()).inheritIO().start();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         });
     }
 
     @Override
     public void stopServer() {
-        if (!startedFromShell) {
-            if (inputService != null) try {
-                inputService.getCallback().disablePointer();
-            } catch (RemoteException e) {
-                throw new RuntimeException(e);
-            }
+        stopServer(true);
+    }
+
+    private void stopServer(boolean exitProcess) {
+        if (inputService != null) try {
+            inputService.getCallback().disablePointer();
+        } catch (RemoteException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (!startedFromShell && exitProcess) {
             System.exit(0);
         } else if (inputService != null && !isWaylandClient) {
             inputService.stopEvents = true;
