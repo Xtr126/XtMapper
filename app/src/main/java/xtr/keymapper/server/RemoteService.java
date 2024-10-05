@@ -107,30 +107,30 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     private void addCursorView() {
-         if (cursorView != null) mHandler.post(() -> {
-            if(cursorView.isAttachedToWindow()) {
-                cursorView.setVisibility(View.VISIBLE);
-            } else {
-                WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                        WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                        TYPE_SECURE_SYSTEM_OVERLAY,
-                        // Don't let the cursor grab the input focus
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
-                                WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-                        // Make the underlying application window visible
-                        // through the cursor
-                        PixelFormat.TRANSLUCENT);
-                try {
-                    windowManager.addView(cursorView, params);
-                } catch (IllegalStateException e) { // A14 QPR3 https://gist.github.com/RikkaW/be3fe4178903702c54ec73b2fc1187fe
-                    Log.e(TAG, e.getMessage(), e);
-                    cursorView = null;
-                }
+        if (cursorView == null) return;
+
+        if(cursorView.isAttachedToWindow()) {
+            cursorView.setVisibility(View.VISIBLE);
+        } else {
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                    TYPE_SECURE_SYSTEM_OVERLAY,
+                    // Don't let the cursor grab the input focus
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
+                            WindowManager.LayoutParams.FLAG_FULLSCREEN |
+                            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                    // Make the underlying application window visible
+                    // through the cursor
+                    PixelFormat.TRANSLUCENT);
+            try {
+                windowManager.addView(cursorView, params);
+            } catch (IllegalStateException e) { // A14 QPR3 issue https://gist.github.com/RikkaW/be3fe4178903702c54ec73b2fc1187fe
+                cursorView = null;
+                Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }
     }
 
     public void prepareCursorOverlayWindow() throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
@@ -214,17 +214,24 @@ public class RemoteService extends IRemoteService.Stub {
      */
     @Override
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
-
         if (inputService != null) stopServer();
         if (cb != null) cb.asBinder().linkToDeath(this::stopServer, 0);
-        if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
-            addCursorView();
-        }
-        inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight, cursorView, isWaylandClient);
-        if (!isWaylandClient) {
-            inputService.setMouseLock(true);
-            inputService.openDevice(currentDevice);
-        }
+        mHandler.post(() -> {
+            if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
+                addCursorView();
+            } else {
+                cursorView = null;
+            }
+            try {
+                inputService = new InputService(profile, keymapConfig, cb, screenWidth, screenHeight, cursorView, isWaylandClient);
+                if (!isWaylandClient) {
+                    inputService.setMouseLock(true);
+                    inputService.openDevice(currentDevice);
+                }
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @Override
