@@ -60,7 +60,7 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: 'app/build/outputs/apk/release/*.apk'
         asset_name: app-release.zip
-        tag: v2.3.0
+        tag: v2.3.1
         overwrite: true
         file_glob: true          
         draft: true
