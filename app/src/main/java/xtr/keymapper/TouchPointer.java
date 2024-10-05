@@ -236,6 +236,7 @@ public class TouchPointer extends Service {
                                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
                                     WindowManager.LayoutParams.FLAG_FULLSCREEN |
                                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                                    WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
                                     WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                             // Make the underlying application window visible
                             // through the cursor

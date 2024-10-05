@@ -125,7 +125,7 @@ public class RemoteService extends IRemoteService.Stub {
                         PixelFormat.TRANSLUCENT);
                 try {
                     windowManager.addView(cursorView, params);
-                } catch (IllegalStateException e) {
+                } catch (IllegalStateException e) { // A14 QPR3 https://gist.github.com/RikkaW/be3fe4178903702c54ec73b2fc1187fe
                     Log.e(TAG, e.getMessage(), e);
                     cursorView = null;
                 }
@@ -147,6 +147,9 @@ public class RemoteService extends IRemoteService.Stub {
         System.loadLibrary("touchpad_relative");
     }
 
+    /**
+     * Executes getevent command and processes the output
+     */
     void start_getevent() {
         new Thread(() -> {
             try {
