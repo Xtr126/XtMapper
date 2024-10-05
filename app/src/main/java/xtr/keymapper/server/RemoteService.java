@@ -235,7 +235,7 @@ public class RemoteService extends IRemoteService.Stub {
                 throw new RuntimeException(e);
             }
             // Launch app/game
-            if (!profile.packageName.equals(BuildConfig.APPLICATION_ID)) {
+            if (!profile.packageName.equals(BuildConfig.APPLICATION_ID) && keymapConfig.disableAutoProfiling) {
                 Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(profile.packageName);
                 if (launchIntent != null && launchIntent.getComponent() != null) try {
                     new ProcessBuilder("am", "start", "-a", "android.intent.action.MAIN", "-n",

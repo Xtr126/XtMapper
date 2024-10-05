@@ -288,13 +288,6 @@ public class TouchPointer extends Service {
      * service.
      */
     private final ActivityObserver mActivityObserverCallback = new ActivityObserver.Stub() {
-        private void reloadKeymap() {
-            try {
-                mService.resumeMouse();
-                mService.reloadKeymap();
-            } catch (RemoteException ignored) {
-            }
-        }
         private String lastPackageName = null;
 
         @Override
@@ -308,8 +301,7 @@ public class TouchPointer extends Service {
                 mHandler.post(() -> {
                     ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
                             ProfileSelector.createNewProfileForApp(context, packageName, enabled, profile -> {
-                                TouchPointer.this.selectedProfile = profile;
-                                reloadKeymap();
+                                launchProfile(profile);
                             }));
                 });
             } else {
