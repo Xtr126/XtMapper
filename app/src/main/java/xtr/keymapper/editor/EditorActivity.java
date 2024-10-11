@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.util.Log;
+import android.view.WindowManager;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.view.WindowCompat;
@@ -59,6 +60,7 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
                     .setPositiveButton(R.string.ok, (dialog, which) -> {})
                     .setTitle(R.string.dialog_alert_editor_title);
             AlertDialog dialog = builder.create();
+            if (keymapConfig.editorOverlay) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
             dialog.show();
         }
     }

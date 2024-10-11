@@ -1,10 +1,6 @@
-package xtr.keymapper.fragment;
+package xtr.keymapper.editor;
 
-import static com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED;
-
-import android.app.Dialog;
 import android.content.Context;
-import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,49 +8,59 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
-import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.R;
 import xtr.keymapper.Utils;
-import xtr.keymapper.databinding.FragmentSettingsDialogBinding;
+import xtr.keymapper.databinding.KeymapEditorLayoutBinding;
+import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.server.RemoteServiceHelper;
 
-public class SettingsFragment extends BottomSheetDialogFragment {
+public class SettingsFragment {
     private final KeymapConfig keymapConfig;
-    private FragmentSettingsDialogBinding binding;
+    private KeymapEditorLayoutBinding binding;
     private Map<String, Integer> pointerModeMap;
     private Map<String, Integer> touchpadInputModeMap;
-
+    private final Context context;
     public SettingsFragment(Context context) {
+        this.context = context;
         keymapConfig = new KeymapConfig(context);
     }
 
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
+    public ViewGroup createView(@NonNull LayoutInflater inflater) {
         // Inflate the layout for this fragment
-        binding = FragmentSettingsDialogBinding.inflate(inflater, container, false);
+        binding = KeymapEditorLayoutBinding.inflate(inflater);
+        init();
         return binding.getRoot();
     }
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+
+    private final MaterialButtonToggleGroup.OnButtonCheckedListener ON_BUTTON_CHECKED_LISTENER = new MaterialButtonToggleGroup.OnButtonCheckedListener() {
+        @Override
+        public void onButtonChecked(MaterialButtonToggleGroup group, int checkedId, boolean isChecked) {
+            if (checkedId == R.id.button_sliders) {
+                binding.sliders.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            } else if (checkedId == R.id.button_shortcuts) {
+                binding.shortcuts.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            } else if (checkedId == R.id.button_misc) {
+                binding.misc.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            }
+        }
+    };
+
+    public void init() {
         binding.sliderDpad.setValue(keymapConfig.dpadRadiusMultiplier);
         binding.sliderMouse.setValue(keymapConfig.mouseSensitivity);
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
         binding.sliderSwipeDelay.setValue(keymapConfig.swipeDelayMs);
 
-        binding.swipeDelayText.setText(getString(R.string.swipe_delay_ms, keymapConfig.swipeDelayMs));
-        binding.sliderSwipeDelay.addOnChangeListener((slider, value, fromUser) -> binding.swipeDelayText.setText(getString(R.string.swipe_delay_ms, (int)value)));
+        binding.swipeDelayText.setText(context.getString(R.string.swipe_delay_ms, keymapConfig.swipeDelayMs));
+        binding.sliderSwipeDelay.addOnChangeListener((slider, value, fromUser) -> binding.swipeDelayText.setText(context.getString(R.string.swipe_delay_ms, (int)value)));
 
         binding.mouseDragToggle.setChecked(keymapConfig.ctrlDragMouseGesture);
         binding.mouseWheelToggle.setChecked(keymapConfig.ctrlMouseWheelZoom);
@@ -71,26 +77,13 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.switchProfile.setOnKeyListener(this::onKey);
         binding.mouseAimKey.setOnKeyListener(this::onKey);
 
-        binding.bottomNavigation.setOnItemSelectedListener(item -> {
-            setDefaultVisibilty();
-            int itemId = item.getItemId();
-            if (itemId == R.id.sliders) {
-                binding.sliders.setVisibility(View.VISIBLE);
-                return true;
-            } else if (itemId == R.id.shortcuts) {
-                binding.shortcuts.setVisibility(View.VISIBLE);
-                return true;
-            } else if (itemId == R.id.misc) {
-                binding.misc.setVisibility(View.VISIBLE);
-                return true;
-            }
-            return false;
-        });
+        binding.toggleButtonGroup.addOnButtonCheckedListener(ON_BUTTON_CHECKED_LISTENER);
+
         mouseAimActions();
         loadTouchpadInputSettings();
 
         final int[] pointerModeCodes = {KeymapConfig.POINTER_COMBINED, KeymapConfig.POINTER_OVERLAY, KeymapConfig.POINTER_SYSTEM};
-        String[] pointerModeNames = getResources().getStringArray(R.array.pointer_modes);
+        String[] pointerModeNames = context.getResources().getStringArray(R.array.pointer_modes);
         pointerModeMap = IntStream.range(0, pointerModeCodes.length)
                 .boxed()
                 .collect(Collectors.toMap(k -> pointerModeNames[k], v -> pointerModeCodes[v]));
@@ -100,17 +93,9 @@ public class SettingsFragment extends BottomSheetDialogFragment {
                 binding.pointerMode.setText(entry.getKey());
             }
         }
-        ((MaterialAutoCompleteTextView)binding.pointerMode).setSimpleItems(pointerModeNames);
-
-        setDefaultVisibilty();
-        binding.sliders.setVisibility(View.VISIBLE);
+        binding.pointerMode.setSimpleItems(pointerModeNames);
     }
 
-    private void setDefaultVisibilty() {
-        binding.sliders.setVisibility(View.GONE);
-        binding.misc.setVisibility(View.GONE);
-        binding.shortcuts.setVisibility(View.GONE);
-    }
 
     private void loadKeyboardShortcuts(){
         int pause_resume = keymapConfig.pauseResumeShortcutKey;
@@ -147,22 +132,22 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         binding.switchProfileModifier.setText(keymapConfig.switchProfileShortcutKeyModifier);
 
         final String[] modifierKeys = {KeymapConfig.KEY_CTRL, KeymapConfig.KEY_ALT};
-        ((MaterialAutoCompleteTextView)binding.launchEditorModifier).setSimpleItems(modifierKeys);
-        ((MaterialAutoCompleteTextView)binding.pauseResumeModifier).setSimpleItems(modifierKeys);
-        ((MaterialAutoCompleteTextView)binding.switchProfileModifier).setSimpleItems(modifierKeys);
+        binding.launchEditorModifier.setSimpleItems(modifierKeys);
+        binding.pauseResumeModifier.setSimpleItems(modifierKeys);
+        binding.switchProfileModifier.setSimpleItems(modifierKeys);
     }
 
     private void mouseAimActions() {
         if (keymapConfig.mouseAimToggle) binding.mouseAimAction.setText(R.string.toggle);
         else binding.mouseAimAction.setText(R.string.hold);
 
-        String[] mouseAimActionNames = getResources().getStringArray(R.array.mouse_aim_actions);
-        ((MaterialAutoCompleteTextView)binding.mouseAimAction).setSimpleItems(mouseAimActionNames);
+        String[] mouseAimActionNames = context.getResources().getStringArray(R.array.mouse_aim_actions);
+        binding.mouseAimAction.setSimpleItems(mouseAimActionNames);
     }
 
     private void loadTouchpadInputSettings() {
         final int[] touchpadInputModeCodes = {KeymapConfig.TOUCHPAD_DIRECT, KeymapConfig.TOUCHPAD_RELATIVE, KeymapConfig.TOUCHPAD_DISABLED};
-        String[] touchpadInputModeNames = getResources().getStringArray(R.array.touchpad_input_modes);
+        String[] touchpadInputModeNames = context.getResources().getStringArray(R.array.touchpad_input_modes);
         touchpadInputModeMap = IntStream.range(0, touchpadInputModeCodes.length)
                 .boxed()
                 .collect(Collectors.toMap(k -> touchpadInputModeNames[k], v -> touchpadInputModeCodes[v]));
@@ -172,7 +157,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
                 binding.touchpadInputMode.setText(entry.getKey());
             }
         }
-        ((MaterialAutoCompleteTextView)binding.touchpadInputMode).setSimpleItems(touchpadInputModeNames);
+        binding.touchpadInputMode.setSimpleItems(touchpadInputModeNames);
     }
 
     public boolean onKey(View view, int keyCode, KeyEvent event) {
@@ -182,13 +167,6 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         return true;
     }
 
-    @NonNull @Override
-    public Dialog onCreateDialog(Bundle savedInstanceState) {
-        BottomSheetDialog dialog = (BottomSheetDialog) super.onCreateDialog(savedInstanceState);
-        // Expanded bottom sheet dialog by default
-        dialog.setOnShowListener(d -> ((BottomSheetDialog) d).getBehavior().setState(STATE_EXPANDED));
-        return dialog;
-    }
 
     private void saveKeyboardShortcuts() {
         if(binding.launchEditor.getText().toString().isEmpty()) binding.launchEditor.setText(" ");
@@ -211,10 +189,9 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         keymapConfig.switchProfileShortcutKeyModifier = binding.switchProfileModifier.getText().toString();
     }
 
-    @Override
     public void onDestroyView() {
         saveKeyboardShortcuts();
-        keymapConfig.mouseAimToggle = binding.mouseAimAction.getText().toString().equals(getResources().getString(R.string.toggle));
+        keymapConfig.mouseAimToggle = binding.mouseAimAction.getText().toString().equals(context.getResources().getString(R.string.toggle));
         keymapConfig.touchpadInputMode = touchpadInputModeMap.get(binding.touchpadInputMode.getText().toString());
         keymapConfig.pointerMode = pointerModeMap.get(binding.pointerMode.getText().toString());
 
@@ -234,8 +211,7 @@ public class SettingsFragment extends BottomSheetDialogFragment {
         keymapConfig.dpadRadiusMultiplier = binding.sliderDpad.getValue();
 
         keymapConfig.applySharedPrefs();
-        RemoteServiceHelper.reloadKeymap(getContext());
+        RemoteServiceHelper.reloadKeymap(context);
         binding = null;
-        super.onDestroyView();
     }
 }

@@ -71,6 +71,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private KeymapProfile profile;
     private boolean overlayOpen = false;
     private MovableFrameLayout dpadUdlr;
+    private final SettingsFragment settingsFragment;
+    private final ViewGroup settingsView;
 
     interface KeyInFocus {
         void setText(String key);
@@ -86,6 +88,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
         binding = KeymapEditorBinding.inflate(layoutInflater);
         mainView = binding.getRoot();
 
+        settingsFragment = new SettingsFragment(context);
+        settingsView = settingsFragment.createView(layoutInflater);
+
         binding.speedDial.inflate(R.menu.keymap_editor_menu);
         binding.speedDial.open();
         setupButtons();
@@ -95,7 +100,10 @@ public class EditorUI extends OnKeyEventListener.Stub {
         loadKeymap();
         if (mainView.getWindowToken() == null && mainView.getParent() == null)
             if (overlayWindow) openOverlayWindow();
-            else ((EditorActivity)context).setContentView(mainView);
+            else {
+                ((EditorActivity)context).setContentView(mainView);
+                mainView.addView(settingsView,new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            }
 
         if (!onHideListener.getEvent()) {
             mainView.setOnKeyListener(this::onKey);
@@ -104,7 +112,10 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     public void openOverlayWindow() {
-        if (overlayOpen) removeView(mainView);
+        if (overlayOpen) {
+            removeView(mainView);
+            removeView(settingsView);
+        }
         WindowManager mWindowManager = context.getSystemService(WindowManager.class);
         WindowManager.LayoutParams mParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
@@ -114,6 +125,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
                         WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
                 PixelFormat.TRANSLUCENT);
         mWindowManager.addView(mainView, mParams);
+        mainView.addView(settingsView, mParams);
+        mainView.bringChildToFront(settingsView);
         overlayOpen = true;
     }
 
@@ -152,12 +165,14 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     public void hideView() {
         saveKeymap();
+        settingsFragment.onDestroyView();
         removeView(mainView);
+        removeView(settingsView);
         onHideListener.onHideView();
     }
 
     private void removeView(ViewGroup view) {
-        if (overlayOpen) context.getSystemService(WindowManager.class).removeView(view);
+        if (overlayOpen && view.isAttachedToWindow()) context.getSystemService(WindowManager.class).removeView(view);
         view.removeAllViews();
         view.invalidate();
     }
