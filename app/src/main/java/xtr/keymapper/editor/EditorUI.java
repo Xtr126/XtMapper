@@ -92,6 +92,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
         settingsView = settingsFragment.createView(layoutInflater);
 
         binding.speedDial.inflate(R.menu.keymap_editor_menu);
+        settingsFragment.inflate(R.menu.keymap_editor_menu);
+
         binding.speedDial.open();
         setupButtons();
     }

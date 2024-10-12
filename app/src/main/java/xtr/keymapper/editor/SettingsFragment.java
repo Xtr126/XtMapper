@@ -3,13 +3,19 @@ package xtr.keymapper.editor;
 import android.content.Context;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 
+import androidx.annotation.MenuRes;
 import androidx.annotation.NonNull;
 
 import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.shape.ShapeAppearanceModel;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,6 +23,7 @@ import java.util.stream.IntStream;
 
 import xtr.keymapper.R;
 import xtr.keymapper.Utils;
+import xtr.keymapper.databinding.KeymapEditorItemBinding;
 import xtr.keymapper.databinding.KeymapEditorLayoutBinding;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.server.RemoteServiceHelper;
@@ -49,6 +56,8 @@ public class SettingsFragment {
                 binding.shortcuts.setVisibility(isChecked ? View.VISIBLE : View.GONE);
             } else if (checkedId == R.id.button_misc) {
                 binding.misc.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            } else if (checkedId == R.id.button_add) {
+                binding.catalog.setVisibility(isChecked ? View.VISIBLE : View.GONE);
             }
         }
     };
@@ -78,6 +87,10 @@ public class SettingsFragment {
         binding.mouseAimKey.setOnKeyListener(this::onKey);
 
         binding.toggleButtonGroup.addOnButtonCheckedListener(ON_BUTTON_CHECKED_LISTENER);
+        binding.buttonMisc.setChecked(binding.misc.getVisibility() == View.VISIBLE);
+        binding.buttonShortcuts.setChecked(binding.shortcuts.getVisibility() == View.VISIBLE);
+        binding.buttonSliders.setChecked(binding.sliders.getVisibility() == View.VISIBLE);
+        binding.buttonAdd.setChecked(binding.catalog.getVisibility() == View.VISIBLE);
 
         mouseAimActions();
         loadTouchpadInputSettings();
@@ -213,5 +226,33 @@ public class SettingsFragment {
         keymapConfig.applySharedPrefs();
         RemoteServiceHelper.reloadKeymap(context);
         binding = null;
+    }
+
+    public void inflate(@MenuRes int menuRes) {
+        PopupMenu popupMenu = new PopupMenu(context, new View(context));
+        popupMenu.inflate(menuRes);
+        Menu menu = popupMenu.getMenu();
+
+        for (int n = 1; n <= 3; n++) { // n = { 1,2,3 } For dividing between three columns
+            for (int i = menu.size()*(n-1)/3; i < menu.size()*n/3; i++) { // i = { 0,1,2.. }
+                MenuItem menuItem = menu.getItem(i);
+
+                LinearLayout parentView;
+                if ( n == 1 ) {
+                    parentView = binding.L1;
+                } else if ( n == 2 ) {
+                    parentView = binding.L2;
+                } else {
+                    parentView = binding.L3;
+                }
+
+                KeymapEditorItemBinding itemBinding = KeymapEditorItemBinding.inflate(context.getSystemService(LayoutInflater.class), parentView, true);
+                itemBinding.imageView.setShapeAppearanceModel(ShapeAppearanceModel.builder().setAllCornerSizes(ShapeAppearanceModel.PILL).build());
+                itemBinding.imageView.setImageDrawable(menuItem.getIcon());
+                itemBinding.title.setText(menuItem.getTitle());
+                itemBinding.description.setText(menuItem.getContentDescription());
+            }
+        }
+
     }
 }
