@@ -41,9 +41,13 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
         if (editor != null) editor.hideView();
 
         setTheme(R.style.Theme_XtMapper);
-        editor = new EditorUI(this, this, selectedProfile);
-        KeymapConfig keymapConfig = new KeymapConfig(this);
-        editor.open(keymapConfig.editorOverlay);
+        MainActivity.checkOverlayPermission(this);
+
+        if (Settings.canDrawOverlays(this)) {
+            editor = new EditorUI(this, this, selectedProfile);
+            editor.open(keymapConfig.editorOverlay);
+            KeymapConfig keymapConfig = new KeymapConfig(this);
+        }
 
         if (getEvent())
             // Can receive key events from remote service

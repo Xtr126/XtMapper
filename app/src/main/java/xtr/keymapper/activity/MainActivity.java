@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         if(!RemoteServiceHelper.useShizuku) {
             Shell.getShell(shell -> {
                 RemoteServiceHelper.getInstance(this, null);
-                if (Shizuku.pingBinder() || getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api") != null) {
+                if (Shizuku.pingBinder() || getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api") != null) { // Ask user to enable shizuku if shizuku app detected
                     showAlertDialog(R.string.detected_shizuku, R.string.use_shizuku_for_activation, (dialog, which) -> {
                         RemoteServiceHelper.useShizuku = keymapConfig.useShizuku = true;
                         keymapConfig.applySharedPrefs();
@@ -118,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
 
     public void startPointer(){
         stopped = false;
-        checkOverlayPermission();
+        checkOverlayPermission(this);
         if(Settings.canDrawOverlays(this)) {
             Intent intent = new Intent(this, TouchPointer.class);
             intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName);
@@ -168,22 +168,19 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         if (selectedProfileName == null) {
             showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null);
         } else {
-            checkOverlayPermission();
-            if (Settings.canDrawOverlays(this)) {
-                Intent intent = new Intent(this, EditorActivity.class)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-                intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName);
-                startActivity(intent);
-            }
+            Intent intent = new Intent(this, EditorActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+            intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName);
+            startActivity(intent);
         }
     }
 
-    private void checkOverlayPermission(){
-        if (!Settings.canDrawOverlays(this)) {
+    public static void checkOverlayPermission(Context context){
+        if (!Settings.canDrawOverlays(context)) {
             // send user to the device settings
             Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
-            startActivity(intent);
+            context.startActivity(intent);
         }
     }
 
