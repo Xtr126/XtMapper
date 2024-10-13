@@ -7,7 +7,6 @@
     <string name="help">帮助</string>
     <string name="package_name">包名：</string>
     <string name="mouse_sensitivity">鼠标灵敏度</string>
-    <string name="dpad_radius">方向键半径</string>
     <string name="mouse_aim_activated">
     射击模式点击右键或~键退出
     </string>

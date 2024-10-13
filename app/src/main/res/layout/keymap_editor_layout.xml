@@ -144,19 +144,6 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/dpad_radius" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/slider_dpad"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:valueFrom="0.5"
-                android:valueTo="2.0"
-                app:trackHeight="10dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
                 android:id="@+id/swipe_delay_text"
                 android:text="@string/swipe_delay_ms" />
 

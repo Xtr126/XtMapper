@@ -7,7 +7,6 @@
     <string name="help">Help</string>
     <string name="package_name">package name: </string>
     <string name="mouse_sensitivity">Mouse Sensitivity</string>
-    <string name="dpad_radius">Dpad Radius</string>
     <string name="mouse_aim_activated">
         Shooting mode activated Right click or ~ key to exit
     </string>

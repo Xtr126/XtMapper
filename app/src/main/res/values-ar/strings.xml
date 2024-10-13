@@ -7,7 +7,6 @@
     <string name="help">مساعدة</string>
     <string name="package_name">اسم الحزمة: </string>
     <string name="mouse_sensitivity">حساسية الماوس</string>
-    <string name="dpad_radius">نصف قطر لوحة الاتجاه</string>
     <string name="mouse_aim_activated">
         تم تفعيل وضع التصويب. انقر بزر الماوس الأيمن أو اضغط على مفتاح ~ للخروج
     </string>

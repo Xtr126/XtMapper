@@ -12,7 +12,6 @@ import androidx.annotation.NonNull;
 public class KeymapConfig implements Parcelable {
     private SharedPreferences sharedPref;
     public Float mouseSensitivity = 1f, scrollSpeed = 1f;
-    public Float dpadRadiusMultiplier;
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
     public boolean disableAutoProfiling, useShizuku, editorOverlay;
 
@@ -58,11 +57,6 @@ public class KeymapConfig implements Parcelable {
             scrollSpeed = null;
         } else {
             scrollSpeed = in.readFloat();
-        }
-        if (in.readByte() == 0) {
-            dpadRadiusMultiplier = null;
-        } else {
-            dpadRadiusMultiplier = in.readFloat();
         }
         ctrlMouseWheelZoom = in.readByte() != 0;
         ctrlDragMouseGesture = in.readByte() != 0;
@@ -119,7 +113,6 @@ public class KeymapConfig implements Parcelable {
         rightClickMouseAim = sharedPref.getBoolean("right_click_mouse_aim", true);
 
         swipeDelayMs = sharedPref.getInt("swipe_delay_ms", 10);
-        dpadRadiusMultiplier = sharedPref.getFloat("dpad_radius", 1f);
 
         touchpadInputMode = sharedPref.getInt("touchpad_input_mode", TOUCHPAD_DISABLED);
         pointerMode = sharedPref.getInt("pointer_mode", POINTER_OVERLAY);
@@ -128,7 +121,6 @@ public class KeymapConfig implements Parcelable {
     public void applySharedPrefs() {
         sharedPref.edit().putFloat("mouse_sensitivity_multiplier", mouseSensitivity)
                 .putFloat("scroll_speed_multiplier", scrollSpeed)
-                .putFloat("dpad_radius", dpadRadiusMultiplier)
                 .putBoolean("ctrl_mouse_wheel_zoom", ctrlMouseWheelZoom)
                 .putBoolean("ctrl_drag_mouse_gesture", ctrlDragMouseGesture)
                 .putBoolean("key_grave_mouse_aim", keyGraveMouseAim)
@@ -168,12 +160,6 @@ public class KeymapConfig implements Parcelable {
         } else {
             dest.writeByte((byte) 1);
             dest.writeFloat(scrollSpeed);
-        }
-        if (dpadRadiusMultiplier == null) {
-            dest.writeByte((byte) 0);
-        } else {
-            dest.writeByte((byte) 1);
-            dest.writeFloat(dpadRadiusMultiplier);
         }
         dest.writeByte((byte) (ctrlMouseWheelZoom ? 1 : 0));
         dest.writeByte((byte) (ctrlDragMouseGesture ? 1 : 0));

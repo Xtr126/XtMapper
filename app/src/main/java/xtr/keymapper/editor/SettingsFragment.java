@@ -63,7 +63,6 @@ public class SettingsFragment {
     };
 
     public void init() {
-        binding.sliderDpad.setValue(keymapConfig.dpadRadiusMultiplier);
         binding.sliderMouse.setValue(keymapConfig.mouseSensitivity);
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
         binding.sliderSwipeDelay.setValue(keymapConfig.swipeDelayMs);
@@ -220,8 +219,6 @@ public class SettingsFragment {
         keymapConfig.disableAutoProfiling = binding.autoProfileSwitch.isChecked();
         keymapConfig.useShizuku = binding.useShizuku.isChecked();
         keymapConfig.editorOverlay = binding.editorOverlay.isChecked();
-
-        keymapConfig.dpadRadiusMultiplier = binding.sliderDpad.getValue();
 
         keymapConfig.applySharedPrefs();
         RemoteServiceHelper.reloadKeymap(context);

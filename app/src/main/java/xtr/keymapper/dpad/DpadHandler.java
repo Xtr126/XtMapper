@@ -37,12 +37,12 @@ public class DpadHandler {
         }
     }
 
-    public DpadHandler(float dpadRadiusMultiplier, Dpad dpad, int pointerId, Handler handler, int delayMillis){
+    public DpadHandler(Dpad dpad, int pointerId, Handler handler, int delayMillis){
         this.pointerId = pointerId;
         this.mHandler = handler;
         this.delayMillis = delayMillis;
 
-        float radius = dpad.radius * dpadRadiusMultiplier;
+        float radius = dpad.radius;
         float xOfCenter = dpad.xOfCenter;
         float yOfCenter = dpad.yOfCenter;
         
