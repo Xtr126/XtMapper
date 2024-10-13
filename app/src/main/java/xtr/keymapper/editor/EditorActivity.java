@@ -3,6 +3,7 @@ package xtr.keymapper.editor;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.WindowManager;
 
@@ -15,6 +16,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import xtr.keymapper.IRemoteService;
 import xtr.keymapper.R;
+import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.server.RemoteServiceHelper;
 
@@ -41,12 +43,15 @@ public class EditorActivity extends Activity implements EditorUI.OnHideListener 
         if (editor != null) editor.hideView();
 
         setTheme(R.style.Theme_XtMapper);
-        MainActivity.checkOverlayPermission(this);
 
+        editor = new EditorUI(this, this, selectedProfile, EditorUI.START_EDITOR);
+
+        KeymapConfig keymapConfig = new KeymapConfig(this);
         if (Settings.canDrawOverlays(this)) {
-            editor = new EditorUI(this, this, selectedProfile);
             editor.open(keymapConfig.editorOverlay);
-            KeymapConfig keymapConfig = new KeymapConfig(this);
+        } else {
+            editor.open(false);
+            MainActivity.checkOverlayPermission(this);
         }
 
         if (getEvent())

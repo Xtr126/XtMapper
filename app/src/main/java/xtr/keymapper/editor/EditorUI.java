@@ -4,6 +4,7 @@ import static xtr.keymapper.dpad.Dpad.MAX_DPADS;
 import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.os.Handler;
@@ -44,6 +45,8 @@ import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.keymap.KeymapProfiles;
 import xtr.keymapper.mouse.MouseAimConfig;
+import xtr.keymapper.server.RemoteService;
+import xtr.keymapper.server.RemoteServiceHelper;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyView;
 
@@ -73,12 +76,14 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private MovableFrameLayout dpadUdlr;
     private final SettingsFragment settingsFragment;
     private final ViewGroup settingsView;
+    public static final int START_SETTINGS = 0;
+    public static final int START_EDITOR = 1;
 
     interface KeyInFocus {
         void setText(String key);
     }
 
-    public EditorUI (Context context, OnHideListener onHideListener, String profileName) {
+    public EditorUI (Context context, OnHideListener onHideListener, String profileName, int startMode) {
         this.context = context;
         this.onHideListener = onHideListener;
         this.profileName = profileName;
@@ -90,9 +95,10 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         settingsFragment = new SettingsFragment(context);
         settingsView = settingsFragment.createView(layoutInflater);
+        settingsFragment.init(startMode);
 
         binding.speedDial.inflate(R.menu.keymap_editor_menu);
-        settingsFragment.inflate(R.menu.keymap_editor_menu);
+        settingsFragment.inflate(R.menu.keymap_editor_menu, startMode, layoutInflater);
 
         binding.speedDial.open();
         setupButtons();
@@ -103,11 +109,15 @@ public class EditorUI extends OnKeyEventListener.Stub {
         if (mainView.getWindowToken() == null && mainView.getParent() == null)
             if (overlayWindow) openOverlayWindow();
             else {
-                ((EditorActivity)context).setContentView(mainView);
+                if (context instanceof EditorActivity)
+                    ((Activity)context).setContentView(mainView);
+                else
+                    ((Activity)context).addContentView(mainView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
                 mainView.addView(settingsView,new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             }
 
-        if (!onHideListener.getEvent()) {
+        if (onHideListener != null && !onHideListener.getEvent()) {
             mainView.setOnKeyListener(this::onKey);
             mainView.setFocusable(true);
         }
@@ -170,7 +180,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
         settingsFragment.onDestroyView();
         removeView(mainView);
         removeView(settingsView);
-        onHideListener.onHideView();
+        if (onHideListener != null) onHideListener.onHideView();
+        else RemoteServiceHelper.reloadKeymap(context);
     }
 
     private void removeView(ViewGroup view) {

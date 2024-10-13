@@ -50,7 +50,7 @@ public class EditorService extends Service {
         KeymapConfig keymapConfig = new KeymapConfig(this);
         if (keymapConfig.editorOverlay) {
             Context context = new ContextThemeWrapper(EditorService.this, R.style.Theme_XtMapper);
-            editor = new EditorUI(context, onHideListener, selectedProfile);
+            editor = new EditorUI(context, onHideListener, selectedProfile, EditorUI.START_EDITOR);
 
             RemoteServiceHelper.getInstance(EditorService.this, remoteService -> {
                 try {

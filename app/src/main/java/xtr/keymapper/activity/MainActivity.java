@@ -30,6 +30,7 @@ import xtr.keymapper.Server;
 import xtr.keymapper.TouchPointer;
 import xtr.keymapper.databinding.ActivityMainBinding;
 import xtr.keymapper.editor.EditorActivity;
+import xtr.keymapper.editor.EditorUI;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.profiles.ProfilesViewAdapter;
 import xtr.keymapper.server.RemoteServiceHelper;
@@ -99,12 +100,17 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         binding.controls.launchApp.setOnClickListener(v -> launchApp());
         binding.controls.startPointer.setOnClickListener(v -> startPointer());
         binding.controls.startEditor.setOnClickListener(v -> startEditor());
-//        binding.controls.configButton.setOnClickListener
-//                (v -> new SettingsFragment(this).show(getSupportFragmentManager(), "dialog"));
+        binding.controls.configButton.setOnClickListener
+                (v -> launchSettings());
         binding.controls.aboutButton.setOnClickListener
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
         binding.controls.importExportButton.setOnClickListener
                 (v -> startActivity(new Intent(this, ImportExportActivity.class)));
+    }
+
+    private void launchSettings() {
+        EditorUI editorUI = new EditorUI(this, null, null, EditorUI.START_SETTINGS);
+        editorUI.open(false);
     }
 
     private void launchApp() {

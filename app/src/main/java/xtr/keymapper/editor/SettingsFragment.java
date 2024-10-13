@@ -15,7 +15,6 @@ import androidx.annotation.MenuRes;
 import androidx.annotation.NonNull;
 
 import com.google.android.material.button.MaterialButtonToggleGroup;
-import com.google.android.material.shape.ShapeAppearanceModel;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -42,7 +41,6 @@ public class SettingsFragment {
     public ViewGroup createView(@NonNull LayoutInflater inflater) {
         // Inflate the layout for this fragment
         binding = KeymapEditorLayoutBinding.inflate(inflater);
-        init();
         return binding.getRoot();
     }
 
@@ -62,7 +60,7 @@ public class SettingsFragment {
         }
     };
 
-    public void init() {
+    public void init(int startMode) {
         binding.sliderMouse.setValue(keymapConfig.mouseSensitivity);
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
         binding.sliderSwipeDelay.setValue(keymapConfig.swipeDelayMs);
@@ -85,11 +83,7 @@ public class SettingsFragment {
         binding.switchProfile.setOnKeyListener(this::onKey);
         binding.mouseAimKey.setOnKeyListener(this::onKey);
 
-        binding.toggleButtonGroup.addOnButtonCheckedListener(ON_BUTTON_CHECKED_LISTENER);
-        binding.buttonMisc.setChecked(binding.misc.getVisibility() == View.VISIBLE);
-        binding.buttonShortcuts.setChecked(binding.shortcuts.getVisibility() == View.VISIBLE);
-        binding.buttonSliders.setChecked(binding.sliders.getVisibility() == View.VISIBLE);
-        binding.buttonAdd.setChecked(binding.catalog.getVisibility() == View.VISIBLE);
+
 
         mouseAimActions();
         loadTouchpadInputSettings();
@@ -106,6 +100,19 @@ public class SettingsFragment {
             }
         }
         binding.pointerMode.setSimpleItems(pointerModeNames);
+
+        binding.toggleButtonGroup.addOnButtonCheckedListener(ON_BUTTON_CHECKED_LISTENER);
+
+        if (startMode == EditorUI.START_EDITOR) {
+            binding.sliders.setVisibility(View.GONE);
+            binding.shortcuts.setVisibility(View.GONE);
+            binding.misc.setVisibility(View.GONE);
+            binding.catalog.setVisibility(View.VISIBLE);
+        }
+        binding.buttonMisc.setChecked(binding.misc.getVisibility() == View.VISIBLE);
+        binding.buttonShortcuts.setChecked(binding.shortcuts.getVisibility() == View.VISIBLE);
+        binding.buttonSliders.setChecked(binding.sliders.getVisibility() == View.VISIBLE);
+        binding.buttonAdd.setChecked(binding.catalog.getVisibility() == View.VISIBLE);
     }
 
 
@@ -221,16 +228,15 @@ public class SettingsFragment {
         keymapConfig.editorOverlay = binding.editorOverlay.isChecked();
 
         keymapConfig.applySharedPrefs();
-        RemoteServiceHelper.reloadKeymap(context);
         binding = null;
     }
 
-    public void inflate(@MenuRes int menuRes) {
+    public void inflate(@MenuRes int menuRes, int startMode, LayoutInflater layoutInflater) {
         PopupMenu popupMenu = new PopupMenu(context, new View(context));
         popupMenu.inflate(menuRes);
         Menu menu = popupMenu.getMenu();
 
-        for (int n = 1; n <= 3; n++) { // n = { 1,2,3 } For dividing between three columns
+        if (startMode == EditorUI.START_EDITOR) for (int n = 1; n <= 3; n++) { // n = { 1,2,3 } For dividing between three columns
             for (int i = menu.size()*(n-1)/3; i < menu.size()*n/3; i++) { // i = { 0,1,2.. }
                 MenuItem menuItem = menu.getItem(i);
 
@@ -243,12 +249,15 @@ public class SettingsFragment {
                     parentView = binding.L3;
                 }
 
-                KeymapEditorItemBinding itemBinding = KeymapEditorItemBinding.inflate(context.getSystemService(LayoutInflater.class), parentView, true);
-                itemBinding.imageView.setShapeAppearanceModel(ShapeAppearanceModel.builder().setAllCornerSizes(ShapeAppearanceModel.PILL).build());
+                KeymapEditorItemBinding itemBinding = KeymapEditorItemBinding.inflate(layoutInflater, parentView, true);
                 itemBinding.imageView.setImageDrawable(menuItem.getIcon());
                 itemBinding.title.setText(menuItem.getTitle());
                 itemBinding.description.setText(menuItem.getContentDescription());
             }
+        } else if (startMode == EditorUI.START_SETTINGS) {
+            KeymapEditorItemBinding itemBinding = KeymapEditorItemBinding.inflate(layoutInflater, binding.L1, true);
+            itemBinding.imageView.setImageResource(R.drawable.ic_baseline_done_36);
+            itemBinding.title.setText(R.string.save);
         }
 
     }
