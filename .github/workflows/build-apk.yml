@@ -41,7 +41,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: Debug APK
-        path: app/build/outputs/apk/debug/XtMapper-universal*.apk
+        path: app/build/outputs/apk/debug/*.apk
          
     - name: Build with Gradle
       run: ./gradlew app:assembleRelease
@@ -49,5 +49,5 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: Release APK
-        path: app/build/outputs/apk/release/XtMapper-universal*.apk
+        path: app/build/outputs/apk/release/*.apk
          

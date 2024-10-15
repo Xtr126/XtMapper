@@ -74,24 +74,6 @@ android {
     }
     packagingOptions.jniLibs.useLegacyPackaging true
 
-    splits {
-
-        // Configures multiple APKs based on ABI.
-        abi {
-            // Enables building multiple APKs per ABI.
-            enable true
-
-            // Resets the list of ABIs for Gradle to create APKs for to none.
-            reset()
-
-            // Specifies a list of ABIs for Gradle to create APKs for.
-            include "x86_64", "x86", "armeabi-v7a", "arm64-v8a"
-
-            // Specifies that we want to also generate a universal APK that includes all ABIs.
-            universalApk true
-        }
-    }
-
     ndkVersion '26.1.10909125'
     
     dependenciesInfo {
