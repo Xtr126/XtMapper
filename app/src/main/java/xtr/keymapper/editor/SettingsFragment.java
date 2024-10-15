@@ -11,7 +11,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 
-import androidx.annotation.MenuRes;
+import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 
 import com.google.android.material.button.MaterialButtonToggleGroup;
@@ -25,7 +25,6 @@ import xtr.keymapper.Utils;
 import xtr.keymapper.databinding.KeymapEditorItemBinding;
 import xtr.keymapper.databinding.KeymapEditorLayoutBinding;
 import xtr.keymapper.keymap.KeymapConfig;
-import xtr.keymapper.server.RemoteServiceHelper;
 
 public class SettingsFragment {
     private final KeymapConfig keymapConfig;
@@ -33,6 +32,8 @@ public class SettingsFragment {
     private Map<String, Integer> pointerModeMap;
     private Map<String, Integer> touchpadInputModeMap;
     private final Context context;
+    private OnCardItemSelectedListener onCardItemSelectedListener;
+
     public SettingsFragment(Context context) {
         this.context = context;
         keymapConfig = new KeymapConfig(context);
@@ -231,9 +232,9 @@ public class SettingsFragment {
         binding = null;
     }
 
-    public void inflate(@MenuRes int menuRes, int startMode, LayoutInflater layoutInflater) {
+    public void inflateMenuResource(int startMode, LayoutInflater layoutInflater) {
         PopupMenu popupMenu = new PopupMenu(context, new View(context));
-        popupMenu.inflate(menuRes);
+        popupMenu.inflate(R.menu.keymap_editor_menu);
         Menu menu = popupMenu.getMenu();
 
         if (startMode == EditorUI.START_EDITOR) for (int n = 1; n <= 3; n++) { // n = { 1,2,3 } For dividing between three columns
@@ -253,12 +254,32 @@ public class SettingsFragment {
                 itemBinding.imageView.setImageDrawable(menuItem.getIcon());
                 itemBinding.title.setText(menuItem.getTitle());
                 itemBinding.description.setText(menuItem.getContentDescription());
+                itemBinding.getRoot().setOnClickListener(v -> onCardItemSelected(menuItem.getItemId()));
             }
         } else if (startMode == EditorUI.START_SETTINGS) {
             KeymapEditorItemBinding itemBinding = KeymapEditorItemBinding.inflate(layoutInflater, binding.L1, true);
             itemBinding.imageView.setImageResource(R.drawable.ic_baseline_done_36);
             itemBinding.title.setText(R.string.save);
+            itemBinding.getRoot().setOnClickListener(v -> onCardItemSelected(R.id.save));
         }
 
+    }
+
+    private void onCardItemSelected(int itemId) {
+        if (onCardItemSelectedListener != null)
+            onCardItemSelectedListener.onActionSelected(itemId);
+    }
+
+    public void setOnActionSelectedListener(OnCardItemSelectedListener l) {
+        this.onCardItemSelectedListener = l;
+    }
+
+    public interface OnCardItemSelectedListener {
+        /**
+         * Called when a CardView has been clicked.
+         *
+         * @param menuItemId the relevant id of the menu item for the card.
+         */
+        void onActionSelected(@IdRes int menuItemId);
     }
 }

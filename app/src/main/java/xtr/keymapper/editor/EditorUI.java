@@ -33,7 +33,6 @@ import xtr.keymapper.R;
 import xtr.keymapper.databinding.CrosshairBinding;
 import xtr.keymapper.databinding.DpadArrowsBinding;
 import xtr.keymapper.databinding.DpadBinding;
-import xtr.keymapper.databinding.KeymapEditorBinding;
 import xtr.keymapper.databinding.MouseAimConfigBinding;
 import xtr.keymapper.databinding.ResizableBinding;
 import xtr.keymapper.dpad.Dpad;
@@ -45,7 +44,6 @@ import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.keymap.KeymapProfiles;
 import xtr.keymapper.mouse.MouseAimConfig;
-import xtr.keymapper.server.RemoteService;
 import xtr.keymapper.server.RemoteServiceHelper;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyView;
@@ -53,7 +51,6 @@ import xtr.keymapper.swipekey.SwipeKeyView;
 public class EditorUI extends OnKeyEventListener.Stub {
 
     private final LayoutInflater layoutInflater;
-    private final ViewGroup mainView;
 
     private KeyInFocus keyInFocus;
     // Keyboard keys
@@ -65,8 +62,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private MovableFrameLayout crosshair;
     private final MovableFrameLayout[] dpadArray = new MovableFrameLayout[MAX_DPADS];
     private final DpadBinding[] dpadBindingArray = new DpadBinding[MAX_DPADS];
-    // Default position of new views added
-    private final KeymapEditorBinding binding;
     private final Context context;
     private final OnHideListener onHideListener;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -75,7 +70,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private boolean overlayOpen = false;
     private MovableFrameLayout dpadUdlr;
     private final SettingsFragment settingsFragment;
-    private final ViewGroup settingsView;
+    private final ViewGroup mainView;
     public static final int START_SETTINGS = 0;
     public static final int START_EDITOR = 1;
 
@@ -90,18 +85,13 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         layoutInflater = context.getSystemService(LayoutInflater.class);
 
-        binding = KeymapEditorBinding.inflate(layoutInflater);
-        mainView = binding.getRoot();
 
         settingsFragment = new SettingsFragment(context);
-        settingsView = settingsFragment.createView(layoutInflater);
+        mainView = settingsFragment.createView(layoutInflater);
+
         settingsFragment.init(startMode);
-
-        binding.speedDial.inflate(R.menu.keymap_editor_menu);
-        settingsFragment.inflate(R.menu.keymap_editor_menu, startMode, layoutInflater);
-
-        binding.speedDial.open();
-        setupButtons();
+        settingsFragment.inflateMenuResource(startMode, layoutInflater);
+        settingsFragment.setOnActionSelectedListener(this::onActionSelected);
     }
 
     public void open(boolean overlayWindow) {
@@ -111,10 +101,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
             else {
                 if (context instanceof EditorActivity)
                     ((Activity)context).setContentView(mainView);
-                else
+                else // For MainActivity
                     ((Activity)context).addContentView(mainView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-                mainView.addView(settingsView,new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             }
 
         if (onHideListener != null && !onHideListener.getEvent()) {
@@ -126,7 +114,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
     public void openOverlayWindow() {
         if (overlayOpen) {
             removeView(mainView);
-            removeView(settingsView);
         }
         WindowManager mWindowManager = context.getSystemService(WindowManager.class);
         WindowManager.LayoutParams mParams = new WindowManager.LayoutParams(
@@ -137,8 +124,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
                         WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
                 PixelFormat.TRANSLUCENT);
         mWindowManager.addView(mainView, mParams);
-        mainView.addView(settingsView, mParams);
-        mainView.bringChildToFront(settingsView);
         overlayOpen = true;
     }
 
@@ -170,16 +155,58 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
 
+    /**
+     * Called when a CardView has been clicked.
+     *
+     * @param id the relevant id of the menu item for the card.
+     */
+    public void onActionSelected(int id) {
+        // X y coordinates of center of root view
+        float defaultX = mainView.getPivotX();
+        float defaultY = mainView.getPivotY();
+
+        if (id == R.id.add) {
+            addKey(defaultX, defaultY);
+        }
+        else if (id == R.id.save) {
+            hideView();
+        }
+        else if (id == R.id.dpad) {
+            final CharSequence[] items = { "Arrow keys", "WASD Keys", "Custom"};
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+            builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
+                if (i == 0) addArrowKeysDpad(defaultX, defaultY);
+                else if (i == 1) addWasdDpad(defaultX, defaultY);
+                else addDpad(getNextDpadId(), defaultX, defaultY);
+            });
+            AlertDialog dialog = builder.create();
+            if (overlayOpen) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+            dialog.show();
+        }
+        else if (id == R.id.crosshair) {
+            profile.mouseAimConfig = new MouseAimConfig();
+            addCrosshair(defaultX, defaultY);
+        }
+        else if (id == R.id.mouse_left) {
+            addLeftClick(defaultX, defaultY);
+        }
+        else if (id == R.id.swipe_key) {
+            addSwipeKey();
+        }
+        else if (id == R.id.mouse_right) {
+            addRightClick(defaultX, defaultY);
+        }
+    }
     public interface OnHideListener {
         void onHideView();
         boolean getEvent();
+
     }
 
     public void hideView() {
         saveKeymap();
         settingsFragment.onDestroyView();
         removeView(mainView);
-        removeView(settingsView);
         if (onHideListener != null) onHideListener.onHideView();
         else RemoteServiceHelper.reloadKeymap(context);
     }
@@ -242,7 +269,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         if (rightClick != null) {
             linesToWrite.add(MOUSE_RIGHT + " " + rightClick.getX() + " " + rightClick.getY());
         }
-        
+
         // Keyboard keys
         floatingKeysMap.forEach((frameLayout, movableFloatingActionKey) -> linesToWrite.add(movableFloatingActionKey.getData()));
         swipeKeyList.stream().map(swipeKeyView -> new SwipeKey(swipeKeyView).getData()).forEach(linesToWrite::add);
@@ -252,50 +279,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
         profiles.saveProfile(profileName, linesToWrite, profile.packageName, !profile.disabled);
 
         // Reload keymap if service running
-    }
-
-
-    public void setupButtons() {
-        binding.speedDial.setOnActionSelectedListener(actionItem -> {
-            // X y coordinates of center of root view
-            float defaultX = mainView.getPivotX();
-            float defaultY = mainView.getPivotY();
-
-            int id = actionItem.getId();
-
-            if (id == R.id.add) {
-                addKey(defaultX, defaultY);
-            }
-            else if (id == R.id.save) {
-                hideView();
-            }
-            else if (id == R.id.dpad) {
-                final CharSequence[] items = { "Arrow keys", "WASD Keys", "Custom"};
-                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-                builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
-                    if (i == 0) addArrowKeysDpad(defaultX, defaultY);
-                    else if (i == 1) addWasdDpad(defaultX, defaultY);
-                    else addDpad(getNextDpadId(), defaultX, defaultY);
-                });
-                AlertDialog dialog = builder.create();
-                if (overlayOpen) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
-                dialog.show();
-            }
-            else if (id == R.id.crosshair) {
-                profile.mouseAimConfig = new MouseAimConfig();
-                addCrosshair(defaultX, defaultY);
-            }
-            else if (id == R.id.mouse_left) {
-                addLeftClick(defaultX, defaultY);
-            }
-            else if (id == R.id.swipe_key) {
-                addSwipeKey();
-            }
-            else if (id == R.id.mouse_right) {
-                addRightClick(defaultX, defaultY);
-            }
-            return true;
-        });
     }
 
     private void addWasdDpad(float defaultX, float defaultY) {
