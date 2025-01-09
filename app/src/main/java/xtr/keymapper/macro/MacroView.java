@@ -55,8 +55,7 @@ public class MacroView extends View {
 
     public boolean onKey(KeyEvent event) {
         if (event.getSource() == InputDevice.SOURCE_KEYBOARD) {
-            clearCanvas();
-            onFinishListener.onFinishMacro(this, stringBuilder.toString());
+            clearCanvasAndFinish();
             return true;
         }
         return false;
@@ -93,9 +92,10 @@ public class MacroView extends View {
     }
 
 
-    private void clearCanvas() {
+    public void clearCanvasAndFinish() {
         path.reset();
         invalidate();  // Request redraw
+        onFinishListener.onFinishMacro(this, stringBuilder.toString());
     }
 
 

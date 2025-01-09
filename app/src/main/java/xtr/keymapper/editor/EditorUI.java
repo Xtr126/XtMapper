@@ -250,6 +250,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
         keysContainerView.addView(macroView);
         // Redirect keyboard input
         mainView.setOnKeyListener((v, keyCode, event) -> macroView.onKey(event));
+
+        settingsFragment.binding.catalog.setOnClickListener(v -> macroView.clearCanvasAndFinish());
     }
 
     public void hideView() {
