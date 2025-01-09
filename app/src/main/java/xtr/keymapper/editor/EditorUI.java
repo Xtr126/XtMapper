@@ -30,6 +30,7 @@ import java.util.Map;
 import xtr.keymapper.InputEventCodes;
 import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.R;
+import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CrosshairBinding;
 import xtr.keymapper.databinding.DpadArrowsBinding;
 import xtr.keymapper.databinding.DpadBinding;
@@ -76,6 +77,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final ViewGroup keysContainerView;
     public static final int START_SETTINGS = 0;
     public static final int START_EDITOR = 1;
+    private final int startMode;
 
     interface KeyInFocus {
         void setText(String key);
@@ -85,6 +87,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         this.context = context;
         this.editorCallback = editorCallback;
         this.profileName = profileName;
+        this.startMode = startMode;
 
         layoutInflater = context.getSystemService(LayoutInflater.class);
 
@@ -101,6 +104,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         if (mainView.getWindowToken() == null && mainView.getParent() == null)
             if (overlayWindow) openOverlayWindow();
             else {
+                overlayOpen = false;
                 if (context instanceof EditorActivity)
                     ((Activity)context).setContentView(mainView);
                 else // For MainActivity
@@ -111,6 +115,10 @@ public class EditorUI extends OnKeyEventListener.Stub {
             mainView.setOnKeyListener(this::onKey);
             mainView.setFocusable(true);
         }
+    }
+
+    public void openSettings() {
+        ((MainActivity)context).addContentView(mainView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
     public void openOverlayWindow() {
@@ -244,9 +252,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     public void hideView() {
-        saveKeymap();
+        if (startMode != EditorUI.START_SETTINGS) saveKeymap();
         settingsFragment.onDestroyView();
-        removeView(keysContainerView);
+        removeView(mainView);
         if (editorCallback != null) editorCallback.onHideView();
         else RemoteServiceHelper.reloadKeymap(context);
     }
@@ -454,7 +462,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 })
                 .setNegativeButton(R.string.cancel, null);
         AlertDialog dialog = builder.create();
-        dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        if (overlayOpen) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         dialog.show();
     }
 

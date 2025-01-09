@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
 
     private void launchSettings() {
         EditorUI editorUI = new EditorUI(this, null, null, EditorUI.START_SETTINGS);
-        editorUI.open(false);
+        editorUI.openSettings();
     }
 
     private void launchApp() {
