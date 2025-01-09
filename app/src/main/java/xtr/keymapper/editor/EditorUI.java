@@ -19,6 +19,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -233,7 +234,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
             // Stop counting time in stopwatch
             macroStatus.stop();
 
-            // Remove the macro view with visualization
+            // Remove the macro view
             keysContainerView.removeView(macroView1);
             macroView1.invalidate();
 
@@ -242,7 +243,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
             settingsFragment.unHideButtons();
             if (editorCallback != null && !editorCallback.getEvent()) mainView.setFocusable(false);
         });
-        // Hide existing buttons in catalog and show after finish
+        // Hide existing buttons in catalog till macro finish
         settingsFragment.hideButtons();
         macroStatus.start();
 
@@ -406,7 +407,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(context, key1 -> {
             floatingKeysMap.remove(key1.frameView);
             keysContainerView.removeView(key1.frameView);
-        });
+        }, keysContainerView);
 
         floatingKey.setText(key.code.substring(4));
         floatingKey.frameView.animate()
@@ -416,7 +417,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .start();
         floatingKey.setOnClickListener(this::onFloatingKeyClick);
 
-        keysContainerView.addView(floatingKey.frameView);
         floatingKeysMap.put(floatingKey.frameView, floatingKey);
     }
 
@@ -506,10 +506,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     private void addLeftClick(float x, float y) {
         if (leftClick == null) {
-            leftClick = new MovableFloatingActionKey(context);
+            leftClick = new MovableFloatingActionKey(context, keysContainerView);
             leftClick.frameView.setBackgroundResource(R.drawable.ic_baseline_mouse_36);
             leftClick.setText(R.string.left_click);
-            keysContainerView.addView(leftClick.frameView);
         }
         leftClick.frameView.animate().x(x).y(y)
                 .setDuration(500)
@@ -521,10 +520,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
             rightClick = new MovableFloatingActionKey(context, key -> {
                 keysContainerView.removeView(rightClick.frameView);
                 rightClick = null;
-            });
+            }, keysContainerView);
             rightClick.frameView.setBackgroundResource(R.drawable.ic_baseline_mouse_36);
             rightClick.setText(R.string.right_click);
-            keysContainerView.addView(rightClick.frameView);
         }
         rightClick.frameView.animate().x(x).y(y)
                 .setDuration(500)

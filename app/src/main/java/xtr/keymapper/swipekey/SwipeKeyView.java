@@ -41,17 +41,13 @@ public class SwipeKeyView {
 
     public SwipeKeyView(ViewGroup rootView, OnViewRemoved callback, View.OnClickListener onClickListener){
         Context context = rootView.getContext();
-        button1 = new MovableFloatingActionKey(context, true);
-        button2 = new MovableFloatingActionKey(context, true);
+        button1 = new MovableFloatingActionKey(context, true, rootView);
+        button2 = new MovableFloatingActionKey(context, true, rootView);
 
-        closeButton = SwipeKeyBinding.inflate(LayoutInflater.from(context)).getRoot();
+        closeButton = SwipeKeyBinding.inflate(LayoutInflater.from(context), rootView, true).getRoot();
 
         overlay = new SwipeKeyOverlay(context);
         rootView.addView(overlay);
-
-        rootView.addView(button1.frameView);
-        rootView.addView(button2.frameView);
-        rootView.addView(closeButton);
 
         closeButton.setOnClickListener(v -> {
             rootView.removeView(button1.frameView);

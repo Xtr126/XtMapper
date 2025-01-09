@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 
 import com.google.android.material.button.MaterialButton;
@@ -29,9 +30,9 @@ public class MovableFloatingActionKey implements View.OnTouchListener {
 
         void onKeyRemoved(MovableFloatingActionKey key);
     }
-    public MovableFloatingActionKey(Context context) {
+    public MovableFloatingActionKey(Context context, @Nullable android.view.ViewGroup parent) {
 
-        binding = FloatingKeyBinding.inflate(LayoutInflater.from(context));
+        binding = FloatingKeyBinding.inflate(LayoutInflater.from(context), parent, true);
         frameView = binding.getRoot();
         frameView.setOnTouchListener(this);
 
@@ -49,12 +50,12 @@ public class MovableFloatingActionKey implements View.OnTouchListener {
         });
     }
 
-    public MovableFloatingActionKey(Context context, OnKeyRemoved callback) {
-        this(context);
+    public MovableFloatingActionKey(Context context, OnKeyRemoved callback, ViewGroup parent) {
+        this(context, parent);
         this.callback = callback;
     }
-    public MovableFloatingActionKey(Context context, boolean isSwipeKey) {
-        this(context);
+    public MovableFloatingActionKey(Context context, boolean isSwipeKey, ViewGroup parent) {
+        this(context, parent);
         this.isSwipeKey = isSwipeKey;
     }
 
