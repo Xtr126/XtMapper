@@ -115,19 +115,7 @@ public class RemoteService extends IRemoteService.Stub {
         if(cursorView.isAttachedToWindow()) {
             cursorView.setVisibility(View.VISIBLE);
         } else {
-            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                    TYPE_SECURE_SYSTEM_OVERLAY,
-                    // Don't let the cursor grab the input focus
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
-                            WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                            WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
-                            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-                    // Make the underlying application window visible
-                    // through the cursor
-                    PixelFormat.TRANSLUCENT);
+            WindowManager.LayoutParams params = Utils.getPointerLayoutParams(TYPE_SECURE_SYSTEM_OVERLAY);
             try {
                 windowManager.addView(cursorView, params);
             } catch (IllegalStateException e) { // A14 QPR3 issue https://gist.github.com/RikkaW/be3fe4178903702c54ec73b2fc1187fe
@@ -136,6 +124,7 @@ public class RemoteService extends IRemoteService.Stub {
             }
         }
     }
+
 
     public void prepareCursorOverlayWindow() throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
         TYPE_SECURE_SYSTEM_OVERLAY = WindowManager.LayoutParams.class.getField("TYPE_SECURE_SYSTEM_OVERLAY").getInt(null);

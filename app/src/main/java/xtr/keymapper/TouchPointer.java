@@ -9,7 +9,6 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Binder;
 import android.os.Build;
@@ -240,20 +239,8 @@ public class TouchPointer extends Service {
                     cursorView = CursorBinding.inflate(LayoutInflater.from(
                             new ContextThemeWrapper(TouchPointer.this, R.style.Theme_XtMapper)
                     )).getRoot();
-                    WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                            // Don't let the cursor grab the input focus
-                            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
-                                    WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                                    WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
-                                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-                            // Make the underlying application window visible
-                            // through the cursor
-                            PixelFormat.TRANSLUCENT);
-                    mWindowManager.addView(cursorView, params);
+                    WindowManager.LayoutParams mParams = Utils.getPointerLayoutParams(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                    mWindowManager.addView(cursorView, mParams);
                 }
             });
         }
