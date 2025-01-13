@@ -5,7 +5,8 @@
     android:layout_height="wrap_content"
     android:paddingHorizontal="10dp"
     android:orientation="vertical"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:theme="@style/Theme.Material3.Dark">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
