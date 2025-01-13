@@ -7,6 +7,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.PixelFormat;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
@@ -14,6 +15,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.TextView;
@@ -136,6 +138,17 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 PixelFormat.TRANSLUCENT);
         mWindowManager.addView(mainView, mParams);
         overlayOpen = true;
+        hideSystemBars();
+    }
+
+    private void hideSystemBars() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController windowInsetsController = mainView.getWindowInsetsController();
+            if (windowInsetsController != null) {
+                windowInsetsController.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
+            }
+        }
     }
 
     /**
