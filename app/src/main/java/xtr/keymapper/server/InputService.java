@@ -72,7 +72,7 @@ public class InputService implements IInputInterface {
                 input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
                 break;
             case MOVE:
-                input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 1.0f, x, y);
+                input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 0.0f, x, y);
                 break;
         }
     }
