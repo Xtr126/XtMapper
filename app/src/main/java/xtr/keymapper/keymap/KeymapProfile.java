@@ -21,9 +21,57 @@ public class KeymapProfile implements Parcelable {
     public KeymapProfileKey rightClick;
     public boolean disabled = false;
     public Dpad dpadUdlr;
+    public int xRes, yRes;
 
     public KeymapProfile() {
         dpadArray = new Dpad[MAX_DPADS];
+    }
+
+    public void scale(float newWidth, float newHeight) {
+        float scaleX = 1, scaleY = 1;
+
+        if (xRes > 0)
+            scaleX = newWidth / xRes;
+
+        if (yRes > 0)
+            scaleY = newHeight / yRes;
+
+        if (xRes > 0 && yRes > 0) {
+            scaleKeys(scaleX, scaleY);
+        }
+    }
+
+    private void scaleKeys(float scaleX, float scaleY) {
+        dpadUdlr.scale(scaleX, scaleY);
+
+        rightClick.x *= scaleX;
+        rightClick.y *= scaleY;
+
+        for (SwipeKey swipeKey : swipeKeys) {
+            swipeKey.key1.x *= scaleX;
+            swipeKey.key1.y *= scaleY;
+
+            swipeKey.key2.x *= scaleX;
+            swipeKey.key2.y *= scaleY;
+        }
+
+        for (KeymapProfileKey key : keys) {
+            key.x *= scaleX;
+            key.y *= scaleY;
+        }
+
+        for (Dpad dpad : dpadArray) {
+            dpad.scale(scaleX, scaleY);
+        }
+
+        mouseAimConfig.xCenter *= scaleX;
+        mouseAimConfig.yCenter *= scaleY;
+
+        mouseAimConfig.xleftClick *= scaleX;
+        mouseAimConfig.yleftClick *= scaleY;
+
+        mouseAimConfig.width *= scaleX;
+        mouseAimConfig.height *= scaleY;
     }
 
     protected KeymapProfile(Parcel in) {
@@ -35,6 +83,8 @@ public class KeymapProfile implements Parcelable {
         rightClick = in.readParcelable(KeymapProfileKey.class.getClassLoader());
         disabled = in.readByte() != 0;
         dpadUdlr = in.readParcelable(Dpad.class.getClassLoader());
+        xRes = in.readInt();
+        yRes = in.readInt();
     }
 
     @Override
@@ -47,6 +97,8 @@ public class KeymapProfile implements Parcelable {
         dest.writeParcelable(rightClick, flags);
         dest.writeByte((byte) (disabled ? 1 : 0));
         dest.writeParcelable(dpadUdlr, flags);
+        dest.writeInt(xRes);
+        dest.writeInt(yRes);
     }
 
     @Override

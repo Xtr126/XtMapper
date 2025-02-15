@@ -51,7 +51,7 @@ public class KeymapProfiles {
 
     public void setProfilePackageName(String profileName, String packageName) {
         Set<String> stringSet = sharedPref.getStringSet(profileName, null);
-        saveProfile(profileName, new ArrayList<>(stringSet), packageName, stringSet.contains("ENABLED"));
+        saveProfile(profileName, new ArrayList<>(stringSet), packageName, stringSet.contains("ENABLED"), 0, 0);
     }
 
     public boolean isProfileEnabled(String profileName) {
@@ -78,14 +78,20 @@ public class KeymapProfiles {
             KeymapProfile profile = getProfile((Set<String>) entry.getValue());
             if(profile.packageName.equals(packageName)) {
                 Set<String> lines = sharedPref.getStringSet(entry.getKey(), null);
-                saveProfile(entry.getKey(), new ArrayList<>(lines), packageName, enabled);
+                saveProfile(entry.getKey(), new ArrayList<>(lines), packageName, enabled, profile.xRes, profile.yRes);
             }
         }
     }
 
-    public void saveProfile(String profileName, ArrayList<String> lines, String packageName, boolean enabled) {
+    public void saveProfile(String profileName, ArrayList<String> lines, String packageName, boolean enabled, int xRes, int yRes) {
         lines.removeIf(line -> line.contains("APPLICATION"));
         lines.add("APPLICATION " + packageName);
+
+        if (xRes > 0 && yRes > 0) {
+            lines.removeIf(line -> line.contains("SCREENSIZE"));
+            lines.add("SCREENSIZE " + xRes + " " + yRes);
+        }
+
         lines.removeIf(line -> line.contains("ENABLED"));
         if (enabled) lines.add("ENABLED");
         Set<String> stringSet = new HashSet<>(lines);
@@ -99,8 +105,8 @@ public class KeymapProfiles {
     }
 
     public KeymapProfile getProfile(String profileName) {
-        Set<String> stream = sharedPref.getStringSet(profileName, null);
-        return getProfile(stream);
+        Set<String> stringSet = sharedPref.getStringSet(profileName, null);
+        return getProfile(stringSet);
     }
 
     public KeymapProfile getProfile(Set<String> lines) {
@@ -140,6 +146,11 @@ public class KeymapProfiles {
 
                 case "ENABLED":
                     profile.disabled = false;
+                    break;
+
+                case "SCREENSIZE":
+                    profile.xRes = Integer.parseInt(data[1]);
+                    profile.yRes = Integer.parseInt(data[2]);
                     break;
 
                 case SwipeKey.TAG:

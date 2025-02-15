@@ -8,7 +8,7 @@ import androidx.annotation.NonNull;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 
 public class Dpad implements Parcelable {
-    private final float viewX, viewY;
+    private float viewX, viewY;
     private final int width, height;
     final float xOfCenter, yOfCenter;
     final float radius;
@@ -84,12 +84,20 @@ public class Dpad implements Parcelable {
     public float getX() {
         return viewX;
     }
+
     public float getY() {
         return viewY;
     }
+
     public int getWidth() {
         return width;
     }
+
+    public void scale(float scaleX, float scaleY) {
+        viewX *= scaleX;
+        viewY *= scaleY;
+    }
+
     public int getHeight() {
         return height;
     }

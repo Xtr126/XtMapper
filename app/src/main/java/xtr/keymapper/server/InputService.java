@@ -36,6 +36,7 @@ public class InputService implements IInputInterface {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight, View cursorView, boolean isWaylandClient) throws RemoteException {
+        profile.scale(screenWidth, screenHeight);
         this.keymapProfile = profile;
         this.keymapConfig = keymapConfig;
         this.mCallback = mCallback;

@@ -103,7 +103,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     public void open(boolean overlayWindow) {
-        loadKeymap();
         if (mainView.getWindowToken() == null && mainView.getParent() == null)
             if (overlayWindow) openOverlayWindow();
             else {
@@ -118,6 +117,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
             mainView.setOnKeyListener(this::onKey);
             mainView.setFocusable(true);
         }
+
+        keysContainerView.post(this::loadKeymap);
     }
 
     public void openSettings() {
@@ -283,6 +284,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     private void loadKeymap() {
         profile = new KeymapProfiles(context).getProfile(profileName);
+
+        profile.scale(keysContainerView.getWidth(), keysContainerView.getHeight());
+
         // Add Keyboard keys as Views
         profile.keys.forEach(this::addKey);
         profile.swipeKeys.forEach(swipeKey -> {
@@ -343,7 +347,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         // Save Config
         KeymapProfiles profiles = new KeymapProfiles(context);
-        profiles.saveProfile(profileName, linesToWrite, profile.packageName, !profile.disabled);
+        profiles.saveProfile(profileName, linesToWrite, profile.packageName, !profile.disabled,
+                keysContainerView.getWidth(), keysContainerView.getHeight());
 
         // Reload keymap if service running
     }
