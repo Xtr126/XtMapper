@@ -42,10 +42,11 @@ public class EditorService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String selectedProfile = intent.getStringExtra(EditorActivity.PROFILE_NAME);
+
         if (selectedProfile == null) {
-            stopSelf();
-            return super.onStartCommand(intent, flags, startId);
+            selectedProfile = "Default";
         }
+
 
         KeymapConfig keymapConfig = new KeymapConfig(this);
         if (keymapConfig.editorOverlay) {
