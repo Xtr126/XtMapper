@@ -1,6 +1,7 @@
 package xtr.keymapper;
 
 import android.graphics.PixelFormat;
+import android.os.Build;
 import android.view.WindowManager;
 
 import java.io.BufferedReader;
@@ -40,7 +41,9 @@ public class Utils {
                 WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
                 // Make the underlying application window visible through the cursor
                 PixelFormat.TRANSLUCENT);
-        mParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            mParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        }
         return mParams;
     }
 
