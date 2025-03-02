@@ -103,6 +103,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     public void open(boolean overlayWindow) {
+        settingsFragment.overlayWindow = overlayWindow;
         if (mainView.getWindowToken() == null && mainView.getParent() == null)
             if (overlayWindow) openOverlayWindow();
             else {

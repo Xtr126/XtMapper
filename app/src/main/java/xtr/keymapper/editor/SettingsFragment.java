@@ -1,21 +1,25 @@
 package xtr.keymapper.editor;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,6 +29,7 @@ import xtr.keymapper.R;
 import xtr.keymapper.Utils;
 import xtr.keymapper.databinding.KeymapEditorItemBinding;
 import xtr.keymapper.databinding.KeymapEditorLayoutBinding;
+import xtr.keymapper.databinding.SettingsBinding;
 import xtr.keymapper.keymap.KeymapConfig;
 
 public class SettingsFragment {
@@ -35,6 +40,7 @@ public class SettingsFragment {
     private final Context context;
     private OnCardItemSelectedListener onCardItemSelectedListener;
     private final int startMode;
+    boolean overlayWindow;
 
     public SettingsFragment(Context context, int startMode) {
         this.context = context;
@@ -80,9 +86,6 @@ public class SettingsFragment {
 
         binding.mouseAimKeyGrave.setChecked(keymapConfig.keyGraveMouseAim);
         binding.mouseAimRightClick.setChecked(keymapConfig.rightClickMouseAim);
-        binding.autoProfileSwitch.setChecked(keymapConfig.disableAutoProfiling);
-        binding.useShizuku.setChecked(keymapConfig.useShizuku);
-        binding.editorOverlay.setChecked(keymapConfig.editorOverlay);
 
         loadKeyboardShortcuts();
         binding.launchEditor.setOnKeyListener(this::onKey);
@@ -120,6 +123,31 @@ public class SettingsFragment {
         binding.buttonShortcuts.setChecked(binding.shortcuts.getVisibility() == View.VISIBLE);
         binding.buttonSliders.setChecked(binding.sliders.getVisibility() == View.VISIBLE);
         binding.buttonAdd.setChecked(binding.catalog.getVisibility() == View.VISIBLE);
+
+        binding.advanced.setOnClickListener(v -> showSettingsDialog());
+    }
+
+    private void showSettingsDialog() {
+
+        SettingsBinding settingsBinding = SettingsBinding.inflate(LayoutInflater.from(context));
+
+        settingsBinding.autoProfileSwitch.setChecked(keymapConfig.disableAutoProfiling);
+        settingsBinding.useShizuku.setChecked(keymapConfig.useShizuku);
+        settingsBinding.editorOverlay.setChecked(keymapConfig.editorOverlay);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context, R.style.MaterialAlertDialog_Centered)
+                .setView(settingsBinding.getRoot())
+                .setTitle(R.string.advanced)
+                .setIcon(R.drawable.ic_baseline_settings_24)
+                .setCancelable(true)
+                .setOnCancelListener(d -> {
+                    keymapConfig.disableAutoProfiling = settingsBinding.autoProfileSwitch.isChecked();
+                    keymapConfig.useShizuku = settingsBinding.useShizuku.isChecked();
+                    keymapConfig.editorOverlay = settingsBinding.editorOverlay.isChecked();
+                })
+                .create();
+        if(overlayWindow) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        dialog.show();
     }
 
 
@@ -230,9 +258,6 @@ public class SettingsFragment {
 
         keymapConfig.rightClickMouseAim = binding.mouseAimRightClick.isChecked();
         keymapConfig.keyGraveMouseAim = binding.mouseAimKeyGrave.isChecked();
-        keymapConfig.disableAutoProfiling = binding.autoProfileSwitch.isChecked();
-        keymapConfig.useShizuku = binding.useShizuku.isChecked();
-        keymapConfig.editorOverlay = binding.editorOverlay.isChecked();
 
         keymapConfig.applySharedPrefs();
         binding = null;

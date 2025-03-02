@@ -111,4 +111,5 @@
     <string name="loading">"جارٍ التحميل…"</string>
     <string name="camera">Camera</string>
     <string name="press_any_key_to_stop_recording">Press any key to stop recording…</string>
+    <string name="advanced">Advanced</string>
 </resources>

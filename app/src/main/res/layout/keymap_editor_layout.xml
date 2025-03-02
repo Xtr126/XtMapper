@@ -234,35 +234,6 @@
             </com.google.android.material.button.MaterialButtonToggleGroup>
         </LinearLayout>
 
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
-
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/auto_profile_switch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="@string/disable_auto_profile" />
-
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/use_shizuku"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="false"
-                android:text="@string/use_shizuku" />
-
-
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/editor_overlay"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="false"
-                android:text="@string/open_editor_as_overlay" />
-        </LinearLayout>
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -298,6 +269,13 @@
             </com.google.android.material.textfield.TextInputLayout>
 
         </LinearLayout>
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:id="@+id/advanced"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:text="@string/advanced"/>
         </LinearLayout>
 
 

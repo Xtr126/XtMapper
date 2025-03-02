@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp"
+    >
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/auto_profile_switch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/disable_auto_profile" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/use_shizuku"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/use_shizuku" />
+
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/editor_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/open_editor_as_overlay" />
+
+</LinearLayout>
