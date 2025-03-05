@@ -42,10 +42,12 @@ public class KeymapProfile implements Parcelable {
     }
 
     private void scaleKeys(float scaleX, float scaleY) {
-        dpadUdlr.scale(scaleX, scaleY);
+        if (dpadUdlr != null) dpadUdlr.scale(scaleX, scaleY);
 
-        rightClick.x *= scaleX;
-        rightClick.y *= scaleY;
+        if (rightClick != null) {
+            rightClick.x *= scaleX;
+            rightClick.y *= scaleY;
+        }
 
         for (SwipeKey swipeKey : swipeKeys) {
             swipeKey.key1.x *= scaleX;
@@ -61,17 +63,18 @@ public class KeymapProfile implements Parcelable {
         }
 
         for (Dpad dpad : dpadArray) {
-            dpad.scale(scaleX, scaleY);
+            if (dpad != null) dpad.scale(scaleX, scaleY);
         }
+        if (mouseAimConfig != null) {
+	        mouseAimConfig.xCenter *= scaleX;
+	        mouseAimConfig.yCenter *= scaleY;
 
-        mouseAimConfig.xCenter *= scaleX;
-        mouseAimConfig.yCenter *= scaleY;
+	        mouseAimConfig.xleftClick *= scaleX;
+	        mouseAimConfig.yleftClick *= scaleY;
 
-        mouseAimConfig.xleftClick *= scaleX;
-        mouseAimConfig.yleftClick *= scaleY;
-
-        mouseAimConfig.width *= scaleX;
-        mouseAimConfig.height *= scaleY;
+	        mouseAimConfig.width *= scaleX;
+	        mouseAimConfig.height *= scaleY;
+       }
     }
 
     protected KeymapProfile(Parcel in) {
