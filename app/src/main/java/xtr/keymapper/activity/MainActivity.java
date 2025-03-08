@@ -84,8 +84,10 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
                     alertRootAccessNotFound();
                 }
             });
-        } else if (!(Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED)) {
-             alertShizukuNotAuthorized();
+        } else if (!Shizuku.pingBinder()) {
+            alertShizukuNotRunning();
+        } else if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+            alertShizukuNotAuthorized();
         }
 
         setupButtons();
@@ -227,12 +229,21 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
 
     private void alertShizukuNotAuthorized() {
         if(Shizuku.pingBinder()) Shizuku.requestPermission(0);
-        showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, (dialog, which) -> {
-            Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api");
-            if (launchIntent != null) startActivity(launchIntent);
-            System.exit(0);
-        });
+        showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, (dialog, which) -> launchShizukuAndExit());
     }
+
+    private void alertShizukuNotRunning() {
+        showAlertDialog(R.string.shizuku_not_running_title, R.string.shizuku_not_running_message, (dialog, which) -> launchShizukuAndExit());
+    }
+
+    private void launchShizukuAndExit() {
+        Intent launchIntent = MainActivity.this.getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api");
+        if (launchIntent != null) {
+            startActivity(launchIntent);
+            System.exit(0);
+        }
+    }
+
 
     private void showAlertDialog(@StringRes int titleId, @StringRes int messageId, @Nullable android.content.DialogInterface.OnClickListener listener) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);

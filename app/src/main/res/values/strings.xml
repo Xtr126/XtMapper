@@ -111,4 +111,6 @@
     <string name="camera">Camera</string>
     <string name="press_any_key_to_stop_recording">Press any key to stop recording…</string>
     <string name="advanced">Advanced</string>
+    <string name="shizuku_not_running_title">Shizuku is not started</string>
+    <string name="shizuku_not_running_message" />
 </resources>
