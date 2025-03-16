@@ -1,0 +1,28 @@
+{
+    "name": "Android DevContainer",
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "features": {
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+        "ghcr.io/nordcominc/devcontainer-features/android-sdk:1": {}
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // "ms-vscode.vscode-typescript-tslint-plugin",
+                "ms-python.python",
+                "eamodio.gitlens",
+                "redhat.vscode-yaml",
+                "vscjava.vscode-java-pack"
+            ]
+        }
+    },
+    // "mounts": [
+    //     "source=/dev/kvm,target=/dev/kvm,type=bind"
+    // ],
+    // "containerEnv": {
+    //     "ANDROID_HOME": "/usr/local/android-sdk",
+    //     "ANDROID_SDK_ROOT": "/usr/local/android-sdk"
+    // },
+    // "remoteUser": "vscode",
+    // "postCreateCommand": "bash .devcontainer/setup.sh"
+}

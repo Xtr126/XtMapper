@@ -32,6 +32,7 @@ public class InputService implements IInputInterface {
     private final int touchpadInputMode;
     private final View cursorView;
     private final int currentPointerMode;
+    private int displayId = 2; // Default to external display (display 2)
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
@@ -67,13 +68,13 @@ public class InputService implements IInputInterface {
     public void injectEvent(float x, float y, int action, int pointerId) {
         switch (action) {
             case UP:
-                input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y);
+                input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y, displayId);
                 break;
             case DOWN:
-                input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y);
+                input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y, displayId);
                 break;
             case MOVE:
-                input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 0.0f, x, y);
+                input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 0.0f, x, y, displayId);
                 break;
         }
     }
@@ -81,7 +82,7 @@ public class InputService implements IInputInterface {
     @Override
     public void injectHoverEvent(float x, float y, int pointerId) {
         if(input.noPointersDown() && currentPointerMode == KeymapConfig.POINTER_OVERLAY)
-            input.injectTouch(MotionEvent.ACTION_HOVER_MOVE, pointerId, 1.0f, x, y);
+            input.injectTouch(MotionEvent.ACTION_HOVER_MOVE, pointerId, 1.0f, x, y, displayId);
     }
 
     public void injectScroll(float x, float y, int value) {
