@@ -6,7 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.graphics.PixelFormat;
+import android.hardware.display.DisplayManager;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -53,9 +53,11 @@ public class RemoteService extends IRemoteService.Stub {
 
     public RemoteService(Context context) {
         loadLibraries();
-        this.context = context;
 
-        windowManager = context.getSystemService(WindowManager.class);
+        DisplayManager displayManager = context.getSystemService(DisplayManager.class);
+        this.context = context.createDisplayContext(displayManager.getDisplay(InputService.displayId));
+        windowManager = this.context.getSystemService(WindowManager.class);
+
         LayoutInflater layoutInflater = context.getSystemService(LayoutInflater.class);
         context.setTheme(R.style.Theme_XtMapper);
         cursorView = CursorBinding.inflate(layoutInflater).getRoot();
