@@ -20,7 +20,7 @@ import java.util.HashSet;
 
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.ProfileRowItemBinding;
-import xtr.keymapper.databinding.TextFieldNewProfileBinding;
+import xtr.keymapper.databinding.TextFieldBinding;
 import xtr.keymapper.keymap.KeymapProfiles;
 
 /**
@@ -112,7 +112,8 @@ public class ProfilesViewAdapter extends RecyclerView.Adapter<ProfilesViewAdapte
         viewHolder.binding.deleteButton.setOnClickListener(v -> keymapProfiles.deleteProfile(profileName));
 
         viewHolder.binding.renameButton.setOnClickListener(view -> {
-            TextFieldNewProfileBinding binding = TextFieldNewProfileBinding.inflate(LayoutInflater.from(context));
+            TextFieldBinding binding = TextFieldBinding.inflate(LayoutInflater.from(context));
+            binding.getRoot().setHint(R.string.profile_name);
             binding.editText.setText(profileName);
 
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);

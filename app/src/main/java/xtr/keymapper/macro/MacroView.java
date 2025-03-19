@@ -95,15 +95,18 @@ public class MacroView extends View {
     public void clearCanvasAndFinish() {
         path.reset();
         invalidate();  // Request redraw
-        onFinishListener.onFinishMacro(this, stringBuilder.toString());
+
+        new MacroSharedPreferences(getContext())
+                .addMacroWithNextAvailableId(stringBuilder.toString());
+
+        onFinishListener.onFinishMacro(this);
     }
 
 
     public interface OnFinishListener {
         /**
          * @param macroView View with the macro visuals
-         * @param savedState Log with events recorded in macro
          */
-        void onFinishMacro(MacroView macroView, String savedState);
+        void onFinishMacro(MacroView macroView);
     }
 }

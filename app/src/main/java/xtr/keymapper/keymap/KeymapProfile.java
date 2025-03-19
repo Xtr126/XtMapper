@@ -6,6 +6,9 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.dpad.Dpad;
@@ -22,6 +25,7 @@ public class KeymapProfile implements Parcelable {
     public boolean disabled = false;
     public Dpad dpadUdlr;
     public int xRes, yRes;
+    public final Set<String> macroIds = new HashSet<>();
 
     public KeymapProfile() {
         dpadArray = new Dpad[MAX_DPADS];
@@ -66,15 +70,15 @@ public class KeymapProfile implements Parcelable {
             if (dpad != null) dpad.scale(scaleX, scaleY);
         }
         if (mouseAimConfig != null) {
-	        mouseAimConfig.xCenter *= scaleX;
-	        mouseAimConfig.yCenter *= scaleY;
+            mouseAimConfig.xCenter *= scaleX;
+            mouseAimConfig.yCenter *= scaleY;
 
-	        mouseAimConfig.xleftClick *= scaleX;
-	        mouseAimConfig.yleftClick *= scaleY;
+            mouseAimConfig.xleftClick *= scaleX;
+            mouseAimConfig.yleftClick *= scaleY;
 
-	        mouseAimConfig.width *= scaleX;
-	        mouseAimConfig.height *= scaleY;
-       }
+            mouseAimConfig.width *= scaleX;
+            mouseAimConfig.height *= scaleY;
+        }
     }
 
     protected KeymapProfile(Parcel in) {
@@ -88,6 +92,11 @@ public class KeymapProfile implements Parcelable {
         dpadUdlr = in.readParcelable(Dpad.class.getClassLoader());
         xRes = in.readInt();
         yRes = in.readInt();
+        ArrayList<String> stringArrayList = in.createStringArrayList();
+        macroIds.clear();
+        if (stringArrayList != null) {
+            macroIds.addAll(stringArrayList);
+        }
     }
 
     @Override
@@ -102,6 +111,7 @@ public class KeymapProfile implements Parcelable {
         dest.writeParcelable(dpadUdlr, flags);
         dest.writeInt(xRes);
         dest.writeInt(yRes);
+        dest.writeStringList(List.copyOf(macroIds));
     }
 
     @Override
@@ -120,4 +130,5 @@ public class KeymapProfile implements Parcelable {
             return new KeymapProfile[size];
         }
     };
+
 }

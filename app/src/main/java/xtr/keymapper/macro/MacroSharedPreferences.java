@@ -3,29 +3,38 @@ package xtr.keymapper.macro;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import androidx.annotation.NonNull;
+
 import java.util.Map;
 import java.util.Set;
 
 
 public class MacroSharedPreferences {
-    private SharedPreferences sharedPref;
-    private SharedPreferences.Editor editor;
+    private final SharedPreferences sharedPref;
+    private final SharedPreferences.Editor editor;
 
-    public MacroSharedPreferences(Context context) {
-        if (context != null) {
-            sharedPref = context.getSharedPreferences("macros", Context.MODE_PRIVATE);
-            editor = sharedPref.edit();
-        }
+    public MacroSharedPreferences(@NonNull Context context) {
+        sharedPref = context.getSharedPreferences("macros", Context.MODE_PRIVATE);
+        editor = sharedPref.edit();
+    }
+
+    public void registerOnSharedPreferenceChangeListener(SharedPreferences.OnSharedPreferenceChangeListener listener) {
+        sharedPref.registerOnSharedPreferenceChangeListener(listener);
+    }
+
+    public void unregisterOnSharedPreferenceChangeListener(SharedPreferences. OnSharedPreferenceChangeListener listener) {
+        sharedPref.unregisterOnSharedPreferenceChangeListener(listener);
     }
 
     /**
-     * Adds a key-value pair to SharedPreferences
-     * @param id Macro identifier string
-     * @param value Content of macro
+     * Renames a key of macro in key-value pair of SharedPreferences
+     * @param oldId Id of macro to be renamed
+     * @param newId New id
      */
-    public void addMacro(String id, String value) {
-        if (editor != null) {
-            editor.putString(id, value);
+    public void renameMacro(String oldId, String newId) {
+        if (!oldId.equals(newId)) {
+            editor.putString(newId, sharedPref.getString(oldId, null));
+            editor.remove(oldId);
             editor.apply();
         }
     }
@@ -36,21 +45,21 @@ public class MacroSharedPreferences {
      * @return Content of macro
      */
     public String getMacro(String id) {
-        return sharedPref != null ? sharedPref.getString(id, null) : null;
+        return sharedPref.getString(id, null);
     }
 
     /**
      * Retrieves all keys in SharedPreferences
      */
     public Set<String> getMacroIds() {
-        return sharedPref != null ? sharedPref.getAll().keySet() : null;
+        return sharedPref.getAll().keySet();
     }
 
     /**
      * Retrieves all key-value pairs in SharedPreferences
      */
     public Map<String, ?> getAllMacros() {
-        return sharedPref != null ? sharedPref.getAll() : null;
+        return sharedPref.getAll();
     }
 
     /**
@@ -58,20 +67,16 @@ public class MacroSharedPreferences {
      * @param id Macro identifier string
      */
     public void removeMacro(String id) {
-        if (editor != null) {
-            editor.remove(id);
-            editor.apply();
-        }
+        editor.remove(id);
+        editor.apply();
     }
 
     /**
      * Clears all key-value pairs in SharedPreferences
      */
     public void clearAllMacros() {
-        if (editor != null) {
-            editor.clear();
-            editor.apply();
-        }
+        editor.clear();
+        editor.apply();
     }
 
     /**
@@ -79,8 +84,6 @@ public class MacroSharedPreferences {
      * @param value Content of macro
      */
     public void addMacroWithNextAvailableId(String value) {
-        if (sharedPref == null || editor == null) return;
-
         int index = 0;
         String newKey;
 
