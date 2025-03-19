@@ -33,6 +33,7 @@ import java.util.Map;
 import xtr.keymapper.InputEventCodes;
 import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.R;
+import xtr.keymapper.Utils;
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CrosshairBinding;
 import xtr.keymapper.databinding.DpadArrowsBinding;
@@ -80,6 +81,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final ViewGroup keysContainerView;
     public static final int START_SETTINGS = 0;
     public static final int START_EDITOR = 1;
+    public static final int SHOW_KEYMAP_ONLY = 2;
     private final int startMode;
 
     interface KeyInFocus {
@@ -94,12 +96,19 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         layoutInflater = context.getSystemService(LayoutInflater.class);
 
-        settingsFragment = new SettingsFragment(context, startMode);
-        mainView = settingsFragment.createView(layoutInflater);
-        keysContainerView = settingsFragment.binding.keyContainer;
+        if (startMode != SHOW_KEYMAP_ONLY) {
+            settingsFragment = new SettingsFragment(context, startMode);
+            mainView = settingsFragment.createView(layoutInflater);
+            keysContainerView = settingsFragment.binding.keyContainer;
 
-        settingsFragment.inflateMenuResource(startMode, layoutInflater);
-        settingsFragment.setOnActionSelectedListener(this::onActionSelected);
+            settingsFragment.inflateMenuResource(startMode, layoutInflater);
+            settingsFragment.setOnActionSelectedListener(this::onActionSelected);
+        } else {
+            keysContainerView = new FrameLayout(context);
+            keysContainerView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            settingsFragment = null;
+            mainView = null;
+        }
     }
 
     public void open(boolean overlayWindow) {
@@ -126,7 +135,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         ((MainActivity)context).addContentView(mainView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
-    public void openOverlayWindow() {
+    private void openOverlayWindow() {
         if (overlayOpen) {
             removeView(mainView);
         }
@@ -139,6 +148,18 @@ public class EditorUI extends OnKeyEventListener.Stub {
                         WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
                 PixelFormat.TRANSLUCENT);
         mWindowManager.addView(mainView, mParams);
+        overlayOpen = true;
+        hideSystemBars();
+    }
+
+    void showControls() {
+        if (overlayOpen) {
+            removeView(keysContainerView);
+        }
+        WindowManager mWindowManager = context.getSystemService(WindowManager.class);
+        WindowManager.LayoutParams mParams = Utils.getPointerLayoutParams(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+
+        mWindowManager.addView(keysContainerView, mParams);
         overlayOpen = true;
         hideSystemBars();
     }
@@ -270,11 +291,13 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     public void hideView() {
-        if (startMode != EditorUI.START_SETTINGS) saveKeymap();
-        settingsFragment.onDestroyView();
-        removeView(mainView);
-        if (editorCallback != null) editorCallback.onHideView();
-        else RemoteServiceHelper.reloadKeymap(context);
+        if (startMode == START_EDITOR) saveKeymap();
+        if (startMode != SHOW_KEYMAP_ONLY) {
+            settingsFragment.onDestroyView();
+            removeView(mainView);
+            if (editorCallback != null) editorCallback.onHideView();
+            else RemoteServiceHelper.reloadKeymap(context);
+        } else removeView(keysContainerView);
     }
 
     private void removeView(ViewGroup view) {
@@ -283,7 +306,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         view.invalidate();
     }
 
-    private void loadKeymap() {
+    void loadKeymap() {
         profile = new KeymapProfiles(context).getProfile(profileName);
 
         profile.scale(keysContainerView.getWidth(), keysContainerView.getHeight());

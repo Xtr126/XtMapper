@@ -6,7 +6,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
-
     <uses-permission android:name="android.permission.DIAGNOSTIC" />
     <uses-permission android:name="android.permission.VIRTUAL_INPUT_DEVICE" />
     <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW" />
@@ -24,6 +23,11 @@
         android:label="@string/app_name"
         android:supportsRtl="false"
         android:theme="@style/Theme.XtMapper">
+        <service
+            android:name=".editor.ShowKeymapService"
+            android:enabled="false"
+            android:exported="false"></service>
+
         <activity
             android:name=".activity.ImportExportActivity"
             android:exported="true" />
@@ -49,12 +53,11 @@
         </activity>
         <activity
             android:name=".editor.EditorActivity"
-            android:exported="true"
             android:excludeFromRecents="true"
-            android:resizeableActivity="false"
+            android:exported="true"
             android:launchMode="singleInstance"
-            android:theme="@style/Theme.XtMapper.EditorUI">
-        </activity>
+            android:resizeableActivity="false"
+            android:theme="@style/Theme.XtMapper.EditorUI"></activity>
 
         <service
             android:name=".TouchPointer"
