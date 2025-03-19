@@ -5,6 +5,7 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
@@ -79,7 +80,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
                         RemoteServiceHelper.useShizuku = keymapConfig.useShizuku = true;
                         keymapConfig.applySharedPrefs();
                         alertShizukuNotAuthorized();
-                    });
+                    }, R.string.ok);
                 } else if (!RemoteServiceHelper.isRootService) {
                     alertRootAccessNotFound();
                 }
@@ -127,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
 
     private void launchApp() {
         if (selectedProfileName == null) {
-            showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null);
+            showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null, R.string.ok);
         } else {
             if (!stopped) pointerOverlay.launchProfile(selectedProfileName);
             else startPointer();
@@ -185,7 +186,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
 
     private void startEditor(){
         if (selectedProfileName == null) {
-            showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null);
+            showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null, R.string.ok);
         } else {
             Intent intent = new Intent(this, EditorActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -217,23 +218,23 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
                 startActivity(launchIntent);
                 System.exit(0);
             }
-        });
+        }, R.string.ok);
     }
 
     public void alertRootAccessAndExit() {
         showAlertDialog(R.string.root_no_privileges_title, R.string.root_no_privileges_message, (dialog, which) -> {
             finishAffinity();
             System.exit(0);
-        });
+        }, R.string.ok);
     }
 
     private void alertShizukuNotAuthorized() {
         if(Shizuku.pingBinder()) Shizuku.requestPermission(0);
-        showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, (dialog, which) -> launchShizukuAndExit());
+        showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, (dialog, which) -> launchShizukuAndExit(), R.string.ok);
     }
 
     private void alertShizukuNotRunning() {
-        showAlertDialog(R.string.shizuku_not_running_title, R.string.shizuku_not_running_message, (dialog, which) -> launchShizukuAndExit());
+        showAlertDialog(R.string.shizuku_not_running_title, R.string.shizuku_not_running_message, (dialog, which) -> launchShizukuAndExit(), R.string.start);
     }
 
     private void launchShizukuAndExit() {
@@ -245,11 +246,11 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     }
 
 
-    private void showAlertDialog(@StringRes int titleId, @StringRes int messageId, @Nullable android.content.DialogInterface.OnClickListener listener) {
+    private void showAlertDialog(@StringRes int titleId, @StringRes int messageId, @Nullable DialogInterface.OnClickListener listener, @StringRes int ok) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
         builder.setTitle(titleId)
                 .setMessage(messageId)
-                .setPositiveButton(R.string.ok, listener)
+                .setPositiveButton(ok, listener)
                 .setNegativeButton(R.string.cancel, null);
         runOnUiThread(() -> builder.create().show());
     }
