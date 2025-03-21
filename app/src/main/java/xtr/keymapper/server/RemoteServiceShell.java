@@ -33,11 +33,6 @@ public class RemoteServiceShell {
                         System.out.println("using wayland client");
                         mService.start_getevent();
                         break;
-                    case "--tcpip":
-                        mService.start_getevent();
-                        System.out.println("using tcpip");
-                        new RemoteServiceSocketServer(mService);
-                        break;
                     case "--no-auto-launch":
                         launchApp = false;
                         break;
