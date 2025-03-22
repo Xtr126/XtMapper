@@ -44,8 +44,10 @@ public class MacroSharedPreferences {
      * @param id Macro identifier string
      * @return Content of macro
      */
-    public String getMacro(String id) {
-        return sharedPref.getString(id, null);
+    public Macro getMacro(String id) {
+        String data = sharedPref.getString(id, null);
+        if (data != null) return new Macro(data);
+        else return null;
     }
 
     /**

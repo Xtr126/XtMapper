@@ -2,16 +2,20 @@ package xtr.keymapper.keymap;
 
 import static xtr.keymapper.dpad.Dpad.MAX_DPADS;
 
+import android.content.Context;
+import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.macro.Macro;
+import xtr.keymapper.macro.MacroSharedPreferences;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.swipekey.SwipeKey;
 
@@ -25,7 +29,7 @@ public class KeymapProfile implements Parcelable {
     public boolean disabled = false;
     public Dpad dpadUdlr;
     public int xRes, yRes;
-    public final Set<String> macroIds = new HashSet<>();
+    public final Map<String, Macro> macroIdMap = new HashMap<>();
 
     public KeymapProfile() {
         dpadArray = new Dpad[MAX_DPADS];
@@ -92,10 +96,9 @@ public class KeymapProfile implements Parcelable {
         dpadUdlr = in.readParcelable(Dpad.class.getClassLoader());
         xRes = in.readInt();
         yRes = in.readInt();
-        ArrayList<String> stringArrayList = in.createStringArrayList();
-        macroIds.clear();
-        if (stringArrayList != null) {
-            macroIds.addAll(stringArrayList);
+        Bundle bundle = in.readBundle(getClass().getClassLoader());
+        if (bundle != null) for (String key : bundle.keySet()) {
+            macroIdMap.put(key, (Macro) bundle.get(key));
         }
     }
 
@@ -111,7 +114,8 @@ public class KeymapProfile implements Parcelable {
         dest.writeParcelable(dpadUdlr, flags);
         dest.writeInt(xRes);
         dest.writeInt(yRes);
-        dest.writeStringList(List.copyOf(macroIds));
+        Bundle bundle = new Bundle();
+        macroIdMap.forEach(bundle::putParcelable);
     }
 
     @Override
@@ -131,4 +135,12 @@ public class KeymapProfile implements Parcelable {
         }
     };
 
+    public Set<String> getMacroIds() {
+        return macroIdMap.keySet();
+    }
+
+    public void loadMacros(Context context) {
+        MacroSharedPreferences macroSharedPreferences = new MacroSharedPreferences(context);
+        macroIdMap.replaceAll((macroId, v) -> macroSharedPreferences.getMacro(macroId));
+    }
 }

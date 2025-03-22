@@ -14,7 +14,7 @@ public class MacroIdUtils {
     }
 
     public static String getLine(KeymapProfile profile) {
-        return TAG + " " + encode(profile.macroIds);
+        return TAG + " " + encode(profile.getMacroIds());
     }
 
     public static List<String> decode(String data) {

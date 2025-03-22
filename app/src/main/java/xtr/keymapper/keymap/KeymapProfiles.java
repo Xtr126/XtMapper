@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -155,7 +156,12 @@ public class KeymapProfiles {
                     break;
 
                 case MacroIdUtils.TAG:
-                    if (data.length >= 2) profile.macroIds.addAll(MacroIdUtils.decode(data[1]));
+                    if (data.length >= 2) {
+                        List<String> macroIdList = MacroIdUtils.decode(data[1]);
+                        for (String macroId : macroIdList) {
+                            profile.macroIdMap.put(macroId, null);
+                        }
+                    }
                     break;
 
                 case SwipeKey.TAG:

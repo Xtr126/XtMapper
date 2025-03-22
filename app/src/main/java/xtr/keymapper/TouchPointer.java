@@ -128,6 +128,7 @@ public class TouchPointer extends Service {
             Point size = new Point();
             display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
             try {
+                profile.loadMacros(this);
                 if (keymapConfig.disableAutoProfiling) {
                     mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
                 } else {
