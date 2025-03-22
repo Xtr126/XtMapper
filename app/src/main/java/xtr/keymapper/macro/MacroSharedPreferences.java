@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 
 import androidx.annotation.NonNull;
 
-import java.util.Map;
 import java.util.Set;
 
 
@@ -58,26 +57,11 @@ public class MacroSharedPreferences {
     }
 
     /**
-     * Retrieves all key-value pairs in SharedPreferences
-     */
-    public Map<String, ?> getAllMacros() {
-        return sharedPref.getAll();
-    }
-
-    /**
      * Removes a key-value pair from SharedPreferences.
      * @param id Macro identifier string
      */
     public void removeMacro(String id) {
         editor.remove(id);
-        editor.apply();
-    }
-
-    /**
-     * Clears all key-value pairs in SharedPreferences
-     */
-    public void clearAllMacros() {
-        editor.clear();
         editor.apply();
     }
 
