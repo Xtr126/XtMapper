@@ -8,12 +8,12 @@ import android.content.SharedPreferences;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
 import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.macro.Macro;
 import xtr.keymapper.macro.MacroIdUtils;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.swipekey.SwipeKey;
@@ -156,11 +156,11 @@ public class KeymapProfiles {
                     break;
 
                 case MacroIdUtils.TAG:
-                    if (data.length >= 2) {
-                        List<String> macroIdList = MacroIdUtils.decode(data[1]);
-                        for (String macroId : macroIdList) {
-                            profile.macroIdMap.put(macroId, null);
-                        }
+                    if (data.length >= 3) {
+                        String macroId = data[1];
+                        Macro macro = new Macro();
+                        macro.triggerKeyCode = data[2];
+                        profile.macroIdMap.put(macroId, macro);
                     }
                     break;
 

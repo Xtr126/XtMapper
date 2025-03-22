@@ -35,6 +35,7 @@ public class Macro implements Parcelable {
     }
 
     private final Event[] events;
+    public String triggerKeyCode;
 
     /**
      * @param data format: x1 y1 0; x2 y2 elapsedTimeSinceLastEventMillis;
@@ -49,6 +50,32 @@ public class Macro implements Parcelable {
             this.events[i].y = Float.parseFloat(eventData[1]);
             this.events[i].elapsedTimeSinceLastEventMillis = Integer.parseInt(eventData[2]);
         }
+    }
+
+    // For editor
+    public Macro() {
+        events = null;
+    }
+
+    /**
+     * Blocking operation
+     * Run in thread
+     */
+    public void runMacro(IInputInterface mInput, int pointerId) {
+        // Initial input event
+        mInput.injectEvent(events[0].x, events[0].y, InputService.DOWN, pointerId);
+
+        // Inject one by one with delay
+        for (int i = 1; i < events.length - 1; i++) {
+            try {
+                Thread.sleep(events[i].elapsedTimeSinceLastEventMillis);
+                mInput.injectEvent(events[i].x, events[i].y, InputService.MOVE, pointerId);
+            } catch (InterruptedException ignored) {
+            }
+        }
+        // End input event sequence
+        mInput.injectEvent(events[events.length - 1].x, events[events.length - 1].y, InputService.UP, pointerId);
+
     }
 
     private static class Event implements Parcelable {

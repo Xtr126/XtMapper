@@ -360,7 +360,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .forEach(linesToWrite::add);
 
         // Enabled macro ids
-        linesToWrite.add(MacroIdUtils.getLine(profile));
+        MacroIdUtils.getLines(linesToWrite, profile);
 
         // Save Config
         KeymapProfiles profiles = new KeymapProfiles(context);
