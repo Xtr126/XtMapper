@@ -23,5 +23,6 @@ interface IRemoteService {
     void resumeMouse() = 8;
     void pauseMouse() = 9;
     void reloadKeymap() = 10;
+    boolean isActive() = 11;
 
 }

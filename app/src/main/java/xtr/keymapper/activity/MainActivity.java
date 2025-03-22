@@ -13,6 +13,7 @@ import android.content.res.ColorStateList;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.RemoteException;
 import android.provider.Settings;
 import android.widget.Button;
 import android.widget.Toast;
@@ -42,8 +43,9 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
 
     public ActivityMainBinding binding;
     private ColorStateList defaultTint;
-    private boolean stopped = true;
     private String selectedProfileName = null;
+
+    private boolean isServiceBound = false;
 
     static {
         // Set settings before the main shell can be created
@@ -72,6 +74,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         *   - if root access is not granted check if shizuku app is installed and prompt user to enable shizuku
         * Or if user has enabled shizuku then check shizuku permission
         */
+
         if(!RemoteServiceHelper.useShizuku) {
             Shell.getShell(shell -> {
                 RemoteServiceHelper.getInstance(this, null);
@@ -119,6 +122,16 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
                 (v -> startActivity(new Intent(this, InfoActivity.class)));
         binding.controls.importExportButton.setOnClickListener
                 (v -> startActivity(new Intent(this, ImportExportActivity.class)));
+
+        RemoteServiceHelper.getInstance(this, service -> {
+                    try {
+                        if (service.isActive()) {
+                            setButtonState(false);
+                        }
+                    } catch (RemoteException ignored) {
+                    }
+                }
+        );
     }
 
     private void launchSettings() {
@@ -130,19 +143,18 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         if (selectedProfileName == null) {
             showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null, R.string.ok);
         } else {
-            if (!stopped) pointerOverlay.launchProfile(selectedProfileName);
+            if (isServiceBound) pointerOverlay.launchProfile(selectedProfileName);
             else startPointer();
         }
     }
 
     public void startPointer(){
-        stopped = false;
         checkOverlayPermission(this);
         // Start service with selected profile if display on top permission is granted
         if(Settings.canDrawOverlays(this)) {
             Intent intent = new Intent(this, TouchPointer.class);
             intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName);
-            bindService(intent, connection, Context.BIND_AUTO_CREATE);
+            isServiceBound = bindService(intent, connection, Context.BIND_AUTO_CREATE);
             startForegroundService(intent);
             setButtonState(false);
             requestNotificationPermission();
@@ -173,7 +185,6 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         Intent intent = new Intent(this, TouchPointer.class);
         stopService(intent);
         setButtonState(true);
-        stopped = true;
     }
 
     private void unbindTouchPointer() {
@@ -181,7 +192,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             pointerOverlay.activityCallback = null;
             pointerOverlay = null;
         }
-        unbindService(connection);
+        if (isServiceBound) unbindService(connection);
     }
 
     private void startEditor(){
@@ -258,7 +269,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (!stopped) unbindTouchPointer();
+        unbindTouchPointer();
     }
 
     @Override
@@ -288,6 +299,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         @Override
         public void onServiceConnected(ComponentName className,
                                        IBinder service) {
+            isServiceBound = true;
             // We've bound to Service, cast the IBinder and get TouchPointer instance
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
@@ -295,6 +307,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         }
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
+            isServiceBound = false;
         }
     };
 }

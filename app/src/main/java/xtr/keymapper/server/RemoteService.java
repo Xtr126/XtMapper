@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.graphics.PixelFormat;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -312,6 +311,11 @@ public class RemoteService extends IRemoteService.Stub {
     @Override
     public void reloadKeymap() {
         if (inputService != null) inputService.reloadKeymap();
+    }
+
+    @Override
+    public boolean isActive() {
+        return inputService != null;
     }
 
 }

@@ -11,6 +11,8 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.topjohnwu.superuser.Shell;
 import com.topjohnwu.superuser.ipc.RootService;
 
@@ -55,7 +57,7 @@ public class RemoteServiceHelper {
     }
 
     public interface RootRemoteServiceCallback {
-        void onConnection(IRemoteService service);
+        void onConnection(@NonNull IRemoteService service);
     }
     public static class RemoteServiceConnection implements ServiceConnection {
         RootRemoteServiceCallback cb;
