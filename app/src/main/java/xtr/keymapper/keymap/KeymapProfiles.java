@@ -155,7 +155,7 @@ public class KeymapProfiles {
                     break;
 
                 case MacroIdUtils.TAG:
-                    profile.macroIds.addAll(MacroIdUtils.decode(data[1]));
+                    if (data.length >= 2) profile.macroIds.addAll(MacroIdUtils.decode(data[1]));
                     break;
 
                 case SwipeKey.TAG:
