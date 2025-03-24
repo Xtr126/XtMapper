@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 
 import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.macro.Macro;
+import xtr.keymapper.macro.MacroIdUtils;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.swipekey.SwipeKey;
 
@@ -151,6 +153,15 @@ public class KeymapProfiles {
                 case "SCREENSIZE":
                     profile.xRes = Integer.parseInt(data[1]);
                     profile.yRes = Integer.parseInt(data[2]);
+                    break;
+
+                case MacroIdUtils.TAG:
+                    if (data.length >= 3) {
+                        String macroId = data[1];
+                        Macro macro = new Macro();
+                        macro.triggerKey = data[2];
+                        profile.macroIdMap.put(macroId, macro);
+                    }
                     break;
 
                 case SwipeKey.TAG:

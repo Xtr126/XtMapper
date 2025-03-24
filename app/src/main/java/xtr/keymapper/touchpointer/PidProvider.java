@@ -10,4 +10,8 @@ public final class PidProvider {
             pidList.put(keycode, pidList.size());
         return pidList.get(keycode);
     }
+
+    public void releasePidFor(String keycode) {
+         pidList.remove(keycode);
+    }
 }

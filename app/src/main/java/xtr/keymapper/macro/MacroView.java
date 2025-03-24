@@ -18,12 +18,12 @@ import androidx.annotation.NonNull;
  */
 public class MacroView extends View {
 
-    private static final char DELIMITER = ',';
     private final Paint paintOuter;
     private final Paint paintInner;
     private final Path path;
     private final StringBuilder stringBuilder = new StringBuilder();
     private final OnFinishListener onFinishListener;
+    private long lastEventTime = -1;
 
     public MacroView(Context context, OnFinishListener onFinishListener) {
         super(context);
@@ -65,7 +65,13 @@ public class MacroView extends View {
     public boolean onTouchEvent(MotionEvent event) {
         float x = event.getX();
         float y = event.getY();
-        long elapsedTimeMillis = event.getEventTime() - event.getDownTime();
+
+        long elapsedTimeSinceLastEventMillis = 0;
+
+        if (lastEventTime > 0)
+            elapsedTimeSinceLastEventMillis = event.getEventTime() - lastEventTime;
+
+        lastEventTime = event.getEventTime();
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
@@ -78,32 +84,35 @@ public class MacroView extends View {
             default:
                 return false;
         }
-        logEvent(x, y, elapsedTimeMillis);
+        logEvent(x, y, elapsedTimeSinceLastEventMillis);
 
         invalidate();  // Request redraw
         return true;
     }
 
-    private void logEvent(float x, float y, long elapsedTimeMillis) {
-        stringBuilder.append(x).append(DELIMITER)
-                .append(y).append(DELIMITER)
-                .append(elapsedTimeMillis).append(DELIMITER)
-                .append("\n");
+    private void logEvent(float x, float y, long elapsedTimeSinceLastEventMillis) {
+        stringBuilder.append(x).append(' ')
+                .append(y).append(' ')
+                .append(elapsedTimeSinceLastEventMillis)
+                .append(";");
     }
 
 
     public void clearCanvasAndFinish() {
         path.reset();
         invalidate();  // Request redraw
-        onFinishListener.onFinishMacro(this, stringBuilder.toString());
+
+        new MacroSharedPreferences(getContext())
+                .addMacroWithNextAvailableId(stringBuilder.toString());
+
+        onFinishListener.onFinishMacro(this);
     }
 
 
     public interface OnFinishListener {
         /**
          * @param macroView View with the macro visuals
-         * @param savedState Log with events recorded in macro
          */
-        void onFinishMacro(MacroView macroView, String savedState);
+        void onFinishMacro(MacroView macroView);
     }
 }
