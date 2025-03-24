@@ -297,7 +297,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void loadKeymap() {
-        profile = new KeymapProfiles(context).getProfile(profileName);
+        profile = new KeymapProfiles(context).getProfile(profileName, false);
 
         profile.scale(keysContainerView.getWidth(), keysContainerView.getHeight());
 

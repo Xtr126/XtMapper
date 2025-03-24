@@ -21,8 +21,10 @@ import xtr.keymapper.swipekey.SwipeKey;
 public class KeymapProfiles {
     public final SharedPreferences sharedPref;
     public static final String MOUSE_RIGHT = "MOUSE_RIGHT";
+    private final Context context;
 
     public KeymapProfiles(Context context) {
+        this.context = context;
         sharedPref = context.getSharedPreferences("profiles", MODE_PRIVATE);
     }
 
@@ -106,9 +108,11 @@ public class KeymapProfiles {
         sharedPref.edit().remove(profileName).apply();
     }
 
-    public KeymapProfile getProfile(String profileName) {
+    public KeymapProfile getProfile(String profileName, boolean loadMacros) {
         Set<String> stringSet = sharedPref.getStringSet(profileName, null);
-        return getProfile(stringSet);
+        KeymapProfile keymapProfile = getProfile(stringSet);
+        if (loadMacros) keymapProfile.loadMacros(context);
+        return keymapProfile;
     }
 
     public KeymapProfile getProfile(Set<String> lines) {
