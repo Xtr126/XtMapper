@@ -13,14 +13,18 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 
 import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.macro.Macro;
+import xtr.keymapper.macro.MacroIdUtils;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.swipekey.SwipeKey;
 
 public class KeymapProfiles {
     public final SharedPreferences sharedPref;
     public static final String MOUSE_RIGHT = "MOUSE_RIGHT";
+    private final Context context;
 
     public KeymapProfiles(Context context) {
+        this.context = context;
         sharedPref = context.getSharedPreferences("profiles", MODE_PRIVATE);
     }
 
@@ -104,9 +108,11 @@ public class KeymapProfiles {
         sharedPref.edit().remove(profileName).apply();
     }
 
-    public KeymapProfile getProfile(String profileName) {
+    public KeymapProfile getProfile(String profileName, boolean loadMacros) {
         Set<String> stringSet = sharedPref.getStringSet(profileName, null);
-        return getProfile(stringSet);
+        KeymapProfile keymapProfile = getProfile(stringSet);
+        if (loadMacros) keymapProfile.loadMacros(context);
+        return keymapProfile;
     }
 
     public KeymapProfile getProfile(Set<String> lines) {
@@ -151,6 +157,15 @@ public class KeymapProfiles {
                 case "SCREENSIZE":
                     profile.xRes = Integer.parseInt(data[1]);
                     profile.yRes = Integer.parseInt(data[2]);
+                    break;
+
+                case MacroIdUtils.TAG:
+                    if (data.length >= 3) {
+                        String macroId = data[1];
+                        Macro macro = new Macro();
+                        macro.triggerKey = data[2];
+                        profile.macroIdMap.put(macroId, macro);
+                    }
                     break;
 
                 case SwipeKey.TAG:

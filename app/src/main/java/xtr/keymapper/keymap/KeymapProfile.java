@@ -2,13 +2,18 @@ package xtr.keymapper.keymap;
 
 import static xtr.keymapper.dpad.Dpad.MAX_DPADS;
 
+import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.macro.Macro;
+import xtr.keymapper.macro.MacroSharedPreferences;
 import xtr.keymapper.mouse.MouseAimConfig;
 import xtr.keymapper.swipekey.SwipeKey;
 
@@ -22,6 +27,7 @@ public class KeymapProfile implements Parcelable {
     public boolean disabled = false;
     public Dpad dpadUdlr;
     public int xRes, yRes;
+    public final Map<String, Macro> macroIdMap = new HashMap<>();
 
     public KeymapProfile() {
         dpadArray = new Dpad[MAX_DPADS];
@@ -42,10 +48,12 @@ public class KeymapProfile implements Parcelable {
     }
 
     private void scaleKeys(float scaleX, float scaleY) {
-        dpadUdlr.scale(scaleX, scaleY);
+        if (dpadUdlr != null) dpadUdlr.scale(scaleX, scaleY);
 
-        rightClick.x *= scaleX;
-        rightClick.y *= scaleY;
+        if (rightClick != null) {
+            rightClick.x *= scaleX;
+            rightClick.y *= scaleY;
+        }
 
         for (SwipeKey swipeKey : swipeKeys) {
             swipeKey.key1.x *= scaleX;
@@ -61,17 +69,18 @@ public class KeymapProfile implements Parcelable {
         }
 
         for (Dpad dpad : dpadArray) {
-            dpad.scale(scaleX, scaleY);
+            if (dpad != null) dpad.scale(scaleX, scaleY);
         }
+        if (mouseAimConfig != null) {
+            mouseAimConfig.xCenter *= scaleX;
+            mouseAimConfig.yCenter *= scaleY;
 
-        mouseAimConfig.xCenter *= scaleX;
-        mouseAimConfig.yCenter *= scaleY;
+            mouseAimConfig.xleftClick *= scaleX;
+            mouseAimConfig.yleftClick *= scaleY;
 
-        mouseAimConfig.xleftClick *= scaleX;
-        mouseAimConfig.yleftClick *= scaleY;
-
-        mouseAimConfig.width *= scaleX;
-        mouseAimConfig.height *= scaleY;
+            mouseAimConfig.width *= scaleX;
+            mouseAimConfig.height *= scaleY;
+        }
     }
 
     protected KeymapProfile(Parcel in) {
@@ -85,6 +94,8 @@ public class KeymapProfile implements Parcelable {
         dpadUdlr = in.readParcelable(Dpad.class.getClassLoader());
         xRes = in.readInt();
         yRes = in.readInt();
+        Map<String, Macro> hashMap = in.readHashMap(getClass().getClassLoader());
+        if(hashMap != null) macroIdMap.putAll(hashMap);
     }
 
     @Override
@@ -99,6 +110,7 @@ public class KeymapProfile implements Parcelable {
         dest.writeParcelable(dpadUdlr, flags);
         dest.writeInt(xRes);
         dest.writeInt(yRes);
+        dest.writeMap(macroIdMap);
     }
 
     @Override
@@ -117,4 +129,13 @@ public class KeymapProfile implements Parcelable {
             return new KeymapProfile[size];
         }
     };
+
+    protected void loadMacros(Context context) {
+        MacroSharedPreferences macroSharedPreferences = new MacroSharedPreferences(context);
+        macroIdMap.replaceAll((macroId, existingMacro) -> {
+            Macro loadedMacro = macroSharedPreferences.getMacro(macroId);
+            loadedMacro.triggerKey = existingMacro.triggerKey;
+            return loadedMacro;
+        });
+    }
 }

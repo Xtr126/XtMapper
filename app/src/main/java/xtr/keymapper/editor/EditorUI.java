@@ -48,6 +48,7 @@ import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
 import xtr.keymapper.keymap.KeymapProfiles;
+import xtr.keymapper.macro.MacroIdUtils;
 import xtr.keymapper.macro.MacroStatus;
 import xtr.keymapper.macro.MacroView;
 import xtr.keymapper.mouse.MouseAimConfig;
@@ -61,7 +62,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     private KeyInFocus keyInFocus;
     // Keyboard keys
-    private final Map<FrameLayout, MovableFloatingActionKey> floatingKeysMap = new HashMap<>();
+//    private final Map<FrameLayout, MovableFloatingActionKey> floatingKeysMap = new HashMap<>();
+    private final List<MovableFloatingActionKey> floatingActionKeyList = new ArrayList<>();
     private final Map<FrameLayout, MovableFloatingActionKey> swipeKeyViewMap = new HashMap<>();
     private final List<SwipeKeyView> swipeKeyList = new ArrayList<>();
     private MovableFloatingActionKey leftClick, rightClick;
@@ -250,14 +252,23 @@ public class EditorUI extends OnKeyEventListener.Stub {
         }
         else if (id == R.id.mouse_right) {
             addRightClick(defaultX, defaultY);
+
         } else if (id == R.id.macro) {
-            addMacro();
+            showMacroDialog();
         }
+    }
+
+    private void showMacroDialog() {
+        MacroDialog macroDialog = new MacroDialog(context, overlayOpen, profile);
+        macroDialog.show(v -> {
+           macroDialog.dismiss();
+           addMacro();
+       });
     }
 
     /**
      * MacroStatus for displaying elapsed time
-     * Stop when receiving any keyboard input from User
+     * Stop when receiving any keyboard input from User or stopwatch is clicked and show macro dialog finally
      * MacroView for visualization
      */
     private void addMacro() {
@@ -266,18 +277,20 @@ public class EditorUI extends OnKeyEventListener.Stub {
             mainView.setFocusable(true);
         }
         MacroStatus macroStatus = new MacroStatus(context, settingsFragment.binding.catalog);
-        MacroView macroView = new MacroView(context, (macroView1, savedState) -> {
+        MacroView macroView = new MacroView(context, (macroView_) -> {
             // Stop counting time in stopwatch
             macroStatus.stop();
 
             // Remove the macro view
-            keysContainerView.removeView(macroView1);
-            macroView1.invalidate();
+            keysContainerView.removeView(macroView_);
+            macroView_.invalidate();
 
             // Redirect keyboard input
             mainView.setOnKeyListener(EditorUI.this::onKey);
             settingsFragment.unHideButtons();
             if (editorCallback != null && !editorCallback.getEvent()) mainView.setFocusable(false);
+
+            showMacroDialog();
         });
         // Hide existing buttons in catalog till macro finish
         settingsFragment.hideButtons();
@@ -306,8 +319,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
         view.invalidate();
     }
 
-    void loadKeymap() {
-        profile = new KeymapProfiles(context).getProfile(profileName);
+    private void loadKeymap() {
+        profile = new KeymapProfiles(context).getProfile(profileName, false);
 
         profile.scale(keysContainerView.getWidth(), keysContainerView.getHeight());
 
@@ -363,11 +376,14 @@ public class EditorUI extends OnKeyEventListener.Stub {
         }
 
         // Keyboard keys
-        floatingKeysMap.forEach((frameLayout, movableFloatingActionKey) -> linesToWrite.add(movableFloatingActionKey.getData()));
+        floatingActionKeyList.forEach((movableFloatingActionKey) -> linesToWrite.add(movableFloatingActionKey.getData()));
         swipeKeyList.stream()
                 .map(SwipeKey::new)
                 .map(SwipeKey::getData)
                 .forEach(linesToWrite::add);
+
+        // Enabled macro ids
+        MacroIdUtils.getLines(linesToWrite, profile);
 
         // Save Config
         KeymapProfiles profiles = new KeymapProfiles(context);
@@ -449,7 +465,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     private void addKey(KeymapProfileKey key) {
         MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(context, key1 -> {
-            floatingKeysMap.remove(key1.frameView);
+            floatingActionKeyList.remove(key1);
             keysContainerView.removeView(key1.frameView);
         }, keysContainerView);
 
@@ -461,11 +477,15 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .start();
         floatingKey.setOnClickListener(this::onFloatingKeyClick);
 
-        floatingKeysMap.put(floatingKey.frameView, floatingKey);
+        floatingActionKeyList.add(floatingKey);
     }
 
     private void onFloatingKeyClick(View view) {
-        keyInFocus = key -> floatingKeysMap.get(view).setText(key);
+        keyInFocus = key -> 
+                floatingActionKeyList.forEach(movableFloatingActionKey -> {
+                    if (movableFloatingActionKey.frameView == view)
+                        movableFloatingActionKey.setText(key);
+                });
     }
 
     public void onSwipeKeyClick(View view) {

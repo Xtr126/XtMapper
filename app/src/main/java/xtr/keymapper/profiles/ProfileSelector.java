@@ -16,7 +16,7 @@ import java.util.ArrayList;
 
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.AppViewBinding;
-import xtr.keymapper.databinding.TextFieldNewProfileBinding;
+import xtr.keymapper.databinding.TextFieldBinding;
 import xtr.keymapper.keymap.KeymapProfiles;
 
 public class ProfileSelector {
@@ -90,7 +90,8 @@ public class ProfileSelector {
 
     public static void createNewProfileForApp(@UiContext Context context, String packageName, boolean enabled, OnProfileSelectedListener listener){
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-        TextFieldNewProfileBinding binding = TextFieldNewProfileBinding.inflate(LayoutInflater.from(context));
+        TextFieldBinding binding = TextFieldBinding.inflate(LayoutInflater.from(context));
+        binding.getRoot().setHint(R.string.profile_name);
         binding.editText.setText(packageName);
 
         builder.setTitle(R.string.dialog_alert_add_profile)

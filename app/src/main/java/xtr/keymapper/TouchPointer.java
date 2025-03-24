@@ -96,7 +96,7 @@ public class TouchPointer extends Service {
             this.selectedProfile = "Default";
         }
 
-        KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(selectedProfile);
+        KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(selectedProfile, true);
         connectRemoteService(keymapProfile);
 
         return super.onStartCommand(i, flags, startId);
@@ -104,7 +104,7 @@ public class TouchPointer extends Service {
 
     public void launchProfile(String profileName) {
         this.selectedProfile = profileName;
-        KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(selectedProfile);
+        KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(selectedProfile, true);
         connectRemoteService(keymapProfile);
     }
 
@@ -190,7 +190,7 @@ public class TouchPointer extends Service {
 
         @Override
         public KeymapProfile requestKeymapProfile() {
-            return new KeymapProfiles(TouchPointer.this).getProfile(selectedProfile);
+            return new KeymapProfiles(TouchPointer.this).getProfile(selectedProfile, true);
         }
 
         @Override
@@ -202,7 +202,7 @@ public class TouchPointer extends Service {
         @Override
         public void switchProfiles() { mHandler.post(() -> {
             KeymapProfiles keymapProfiles = new KeymapProfiles(TouchPointer.this);
-            KeymapProfile keymapProfile = keymapProfiles.getProfile(selectedProfile);
+            KeymapProfile keymapProfile = keymapProfiles.getProfile(selectedProfile, false);
             String application = keymapProfile.packageName;
 
             if (keymapProfiles.getAllProfilesForApp(application).size() == 1) {
@@ -213,7 +213,7 @@ public class TouchPointer extends Service {
             ProfileSelector.select(TouchPointer.this, profile -> {
                 TouchPointer.this.selectedProfile = profile;
                 // Reloading profile
-                connectRemoteService(keymapProfiles.getProfile(profile));
+                connectRemoteService(keymapProfiles.getProfile(profile, true));
             }, application);
         });
         }
@@ -297,7 +297,7 @@ public class TouchPointer extends Service {
                     ProfileSelector.select(context, profile -> {
                         // Reloading profile
                         TouchPointer.this.selectedProfile = profile;
-                        KeymapProfile keymapProfile = keymapProfiles.getProfile(profile);
+                        KeymapProfile keymapProfile = keymapProfiles.getProfile(profile, true);
                         if (!keymapProfile.disabled) {
                             connectRemoteService(keymapProfile);
                             Toast.makeText(TouchPointer.this, "Keymapping enabled for " + packageName, Toast.LENGTH_SHORT).show();

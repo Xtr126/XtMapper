@@ -11,6 +11,7 @@ import android.os.HandlerThread;
 import android.os.RemoteException;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 import xtr.keymapper.Utils;
 import xtr.keymapper.dpad.Dpad;
@@ -18,6 +19,7 @@ import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfileKey;
+import xtr.keymapper.macro.Macro;
 import xtr.keymapper.server.IInputInterface;
 import xtr.keymapper.swipekey.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyHandler;
@@ -119,6 +121,15 @@ public class KeyEventHandler {
 
         for (SwipeKeyHandler swipeKeyHandler : swipeKeyHandlers)
             swipeKeyHandler.handleEvent(event, mInput, pidProvider, eventHandler, keymapConfig.swipeDelayMs);
+
+        Map<String, Macro> macroIdMap = mInput.getKeymapProfile().macroIdMap;
+        if (!macroIdMap.isEmpty())
+            macroIdMap.forEach((macroId, macro) -> {
+                if (event.code.equals("KEY_" + macro.triggerKey)) new Thread(() -> {
+                    macro.runMacro(mInput, pidProvider.getPid(macroId));
+                    pidProvider.releasePidFor(macroId);
+                }).start();
+            });
     }
 
     private void detectCtrlAltKeys(KeyEvent event) {
