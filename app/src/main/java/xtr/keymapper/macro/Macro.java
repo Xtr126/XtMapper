@@ -18,7 +18,7 @@ public class Macro implements Parcelable {
      */
     public Macro(String data) {
         String[] eventsData = data.split(";");
-        this.events = new Event[data.length()];
+        this.events = new Event[eventsData.length];
 
         for (int i = 0; i < eventsData.length; i++) {
             String[] eventData = eventsData[i].split("\\s+");
