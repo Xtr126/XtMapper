@@ -128,25 +128,38 @@ public class MacroDialog {
             });
             holder.binding.deleteButton.setOnClickListener(v -> macroSharedPreferences.removeMacro(macroId));
 
-            holder.binding.toggle.setChecked(macroIdMap.containsKey(macroId));
+            boolean isMacroEnabled = macroIdMap.containsKey(macroId);
+
+            if (isMacroEnabled) {
+                holder.binding.key.setVisibility(View.VISIBLE);
+            } else {
+                holder.binding.key.setVisibility(View.GONE);
+            }
+
+            holder.binding.toggle.setChecked(isMacroEnabled);
             holder.binding.toggle.setOnCheckedChangeListener((t, checked) -> {
+                // Enable text field if checked
                 if (checked) {
+                    holder.binding.key.setVisibility(View.VISIBLE);
                     macroIdMap.put(macroId, new Macro());
                 } else {
+                    holder.binding.key.setVisibility(View.GONE);
                     macroIdMap.remove(macroId);
                 }
             });
-
-            Macro macro = macroIdMap.get(macroId);
-
-            holder.binding.key.setText(macro.triggerKeyCode);
             holder.binding.key.setOnKeyListener((view, keyCode, event) -> {
-                String key = String.valueOf(event.getDisplayLabel());
-                if ( key.matches("[a-zA-Z0-9]+" )) ((EditText) view).setText(key);
-                else ((EditText) view).getText().clear();
-                macro.triggerKeyCode = key;
+                Macro macro = macroIdMap.get(macroId);
+                if (macro != null) {
+                    String key = String.valueOf(event.getDisplayLabel());
+                    if ( key.matches("[a-zA-Z0-9]+" )) {
+                        macro.triggerKey = key;
+                        ((EditText) view).setText(key);
+                    } else ((EditText) view).getText().clear();
+                }
                 return true;
             });
+            Macro macro = macroIdMap.get(macroId);
+            if (macro != null) holder.binding.key.setText(macro.triggerKey);
         }
 
         @Override
