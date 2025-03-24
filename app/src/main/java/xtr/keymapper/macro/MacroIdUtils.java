@@ -9,6 +9,6 @@ public class MacroIdUtils {
 
     public static void getLines(ArrayList<String> linesToWrite, KeymapProfile profile) {
         profile.macroIdMap.forEach((macroId, macro) ->
-                linesToWrite.add(TAG + " " + macroId + " " + macro.triggerKeyCode));
+                linesToWrite.add(TAG + " " + macroId + " " + macro.triggerKey));
     }
 }

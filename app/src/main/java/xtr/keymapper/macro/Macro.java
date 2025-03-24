@@ -35,17 +35,18 @@ public class Macro implements Parcelable {
     }
 
     private final Event[] events;
-    public String triggerKeyCode;
+    public String triggerKey;
 
     /**
      * @param data format: x1 y1 0; x2 y2 elapsedTimeSinceLastEventMillis;
      */
     public Macro(String data) {
-        String[] events = data.split(";");
+        String[] eventsData = data.split(";");
         this.events = new Event[data.length()];
 
-        for (int i = 0; i < events.length; i++) {
-            String[] eventData = events[i].split("\\s+");
+        for (int i = 0; i < eventsData.length; i++) {
+            String[] eventData = eventsData[i].split("\\s+");
+            this.events[i] = new Event();
             this.events[i].x = Float.parseFloat(eventData[0]);
             this.events[i].y = Float.parseFloat(eventData[1]);
             this.events[i].elapsedTimeSinceLastEventMillis = Integer.parseInt(eventData[2]);
@@ -99,6 +100,9 @@ public class Macro implements Parcelable {
                 return new Event[size];
             }
         };
+
+        public Event() {
+        }
 
         public int describeContents() {
             return 0;

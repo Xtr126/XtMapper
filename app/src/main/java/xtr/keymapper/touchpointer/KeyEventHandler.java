@@ -125,7 +125,7 @@ public class KeyEventHandler {
         Map<String, Macro> macroIdMap = mInput.getKeymapProfile().macroIdMap;
         if (!macroIdMap.isEmpty())
             macroIdMap.forEach((macroId, macro) -> {
-                if (event.code.equals(macro.triggerKeyCode)) new Thread(() -> {
+                if (event.code.equals("KEY_" + macro.triggerKey)) new Thread(() -> {
                     macro.runMacro(mInput, pidProvider.getPid(macroId));
                     pidProvider.releasePidFor(macroId);
                 }).start();

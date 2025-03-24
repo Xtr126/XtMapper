@@ -159,7 +159,7 @@ public class KeymapProfiles {
                     if (data.length >= 3) {
                         String macroId = data[1];
                         Macro macro = new Macro();
-                        macro.triggerKeyCode = data[2];
+                        macro.triggerKey = data[2];
                         profile.macroIdMap.put(macroId, macro);
                     }
                     break;
