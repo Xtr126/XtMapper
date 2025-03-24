@@ -7,6 +7,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.EditText;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -15,12 +17,15 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import xtr.keymapper.R;
 import xtr.keymapper.databinding.MacroDialogLayoutBinding;
 import xtr.keymapper.databinding.MacroListItemBinding;
 import xtr.keymapper.databinding.TextFieldBinding;
+import xtr.keymapper.keymap.KeymapProfile;
+import xtr.keymapper.macro.Macro;
 import xtr.keymapper.macro.MacroSharedPreferences;
 
 public class MacroDialog {
@@ -28,15 +33,15 @@ public class MacroDialog {
     private final Context context;
     private final boolean useOverlayFlag;
     private final MacroSharedPreferences macroSharedPreferences;
-    private final Set<String> macroIds;
+    private final Map<String, Macro> macroIdMap;
     private AlertDialog dialog;
 
 
-    public MacroDialog(Context context, boolean useOverlayFlag, Set<String> macroIds) {
+    public MacroDialog(Context context, boolean useOverlayFlag, KeymapProfile profile) {
         this.context = context;
         this.useOverlayFlag = useOverlayFlag;
         this.macroSharedPreferences = new MacroSharedPreferences(context);
-        this.macroIds = macroIds;
+        this.macroIdMap = profile.macroIdMap;
     }
 
     public void show(View.OnClickListener l) {
@@ -108,7 +113,7 @@ public class MacroDialog {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             // Bind data to the TextView
             String macroId = dataList.get(position);
-            holder.binding.text1.setText(macroId);
+            holder.binding.macroId.setText(macroId);
             holder.binding.editButton.setOnClickListener(v -> {
                 TextFieldBinding binding = TextFieldBinding.inflate(LayoutInflater.from(context));
                 binding.getRoot().setHint(R.string.macro);
@@ -123,13 +128,24 @@ public class MacroDialog {
             });
             holder.binding.deleteButton.setOnClickListener(v -> macroSharedPreferences.removeMacro(macroId));
 
-            holder.binding.toggle.setChecked(macroIds.contains(macroId));
+            holder.binding.toggle.setChecked(macroIdMap.containsKey(macroId));
             holder.binding.toggle.setOnCheckedChangeListener((t, checked) -> {
                 if (checked) {
-                    macroIds.add(macroId);
+                    macroIdMap.put(macroId, new Macro());
                 } else {
-                    macroIds.remove(macroId);
+                    macroIdMap.remove(macroId);
                 }
+            });
+
+            Macro macro = macroIdMap.get(macroId);
+
+            holder.binding.key.setText(macro.triggerKeyCode);
+            holder.binding.key.setOnKeyListener((view, keyCode, event) -> {
+                String key = String.valueOf(event.getDisplayLabel());
+                if ( key.matches("[a-zA-Z0-9]+" )) ((EditText) view).setText(key);
+                else ((EditText) view).getText().clear();
+                macro.triggerKeyCode = key;
+                return true;
             });
         }
 

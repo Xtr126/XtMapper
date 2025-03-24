@@ -10,7 +10,6 @@ import android.os.Parcelable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.dpad.Dpad;
@@ -134,10 +133,6 @@ public class KeymapProfile implements Parcelable {
             return new KeymapProfile[size];
         }
     };
-
-    public Set<String> getMacroIds() {
-        return macroIdMap.keySet();
-    }
 
     public void loadMacros(Context context) {
         MacroSharedPreferences macroSharedPreferences = new MacroSharedPreferences(context);
