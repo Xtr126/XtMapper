@@ -3,7 +3,6 @@ package xtr.keymapper.keymap;
 import static xtr.keymapper.dpad.Dpad.MAX_DPADS;
 
 import android.content.Context;
-import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -95,10 +94,8 @@ public class KeymapProfile implements Parcelable {
         dpadUdlr = in.readParcelable(Dpad.class.getClassLoader());
         xRes = in.readInt();
         yRes = in.readInt();
-        Bundle bundle = in.readBundle(getClass().getClassLoader());
-        if (bundle != null) for (String key : bundle.keySet()) {
-            macroIdMap.put(key, (Macro) bundle.get(key));
-        }
+        Map<String, Macro> hashMap = in.readHashMap(getClass().getClassLoader());
+        if(hashMap != null) macroIdMap.putAll(hashMap);
     }
 
     @Override
@@ -113,8 +110,7 @@ public class KeymapProfile implements Parcelable {
         dest.writeParcelable(dpadUdlr, flags);
         dest.writeInt(xRes);
         dest.writeInt(yRes);
-        Bundle bundle = new Bundle();
-        macroIdMap.forEach(bundle::putParcelable);
+        dest.writeMap(macroIdMap);
     }
 
     @Override
