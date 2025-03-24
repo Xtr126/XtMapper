@@ -132,6 +132,10 @@ public class KeymapProfile implements Parcelable {
 
     public void loadMacros(Context context) {
         MacroSharedPreferences macroSharedPreferences = new MacroSharedPreferences(context);
-        macroIdMap.replaceAll((macroId, v) -> macroSharedPreferences.getMacro(macroId));
+        macroIdMap.replaceAll((macroId, existingMacro) -> {
+            Macro loadedMacro = macroSharedPreferences.getMacro(macroId);
+            loadedMacro.triggerKey = existingMacro.triggerKey;
+            return loadedMacro;
+        });
     }
 }

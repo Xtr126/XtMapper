@@ -10,30 +10,6 @@ import xtr.keymapper.server.InputService;
 
 public class Macro implements Parcelable {
 
-    protected Macro(Parcel in) {
-        events = in.createTypedArray(Event.CREATOR);
-    }
-
-    public static final Creator<Macro> CREATOR = new Creator<>() {
-        @Override
-        public Macro createFromParcel(Parcel in) {
-            return new Macro(in);
-        }
-
-        @Override
-        public Macro[] newArray(int size) {
-            return new Macro[size];
-        }
-    };
-
-    public int describeContents() {
-        return 0;
-    }
-
-    public void writeToParcel(@NonNull Parcel dest, int flags) {
-        dest.writeTypedArray(events, flags);
-    }
-
     private final Event[] events;
     public String triggerKey;
 
@@ -57,6 +33,34 @@ public class Macro implements Parcelable {
     public Macro() {
         events = null;
     }
+
+    protected Macro(Parcel in) {
+        events = in.createTypedArray(Event.CREATOR);
+        triggerKey = in.readString();
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeTypedArray(events, flags);
+        dest.writeString(triggerKey);
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    public static final Creator<Macro> CREATOR = new Creator<>() {
+        @Override
+        public Macro createFromParcel(Parcel in) {
+            return new Macro(in);
+        }
+
+        @Override
+        public Macro[] newArray(int size) {
+            return new Macro[size];
+        }
+    };
 
     /**
      * Blocking operation
