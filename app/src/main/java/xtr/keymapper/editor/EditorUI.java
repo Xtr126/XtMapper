@@ -6,6 +6,7 @@ import static xtr.keymapper.keymap.KeymapProfiles.MOUSE_RIGHT;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
@@ -99,6 +100,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         layoutInflater = context.getSystemService(LayoutInflater.class);
 
         if (startMode != SHOW_KEYMAP_ONLY) {
+            context.stopService(new Intent(context, ShowKeymapService.class));
             settingsFragment = new SettingsFragment(context, startMode);
             mainView = settingsFragment.createView(layoutInflater);
             keysContainerView = settingsFragment.binding.keyContainer;
@@ -306,6 +308,11 @@ public class EditorUI extends OnKeyEventListener.Stub {
     public void hideView() {
         if (startMode == START_EDITOR) saveKeymap();
         if (startMode != SHOW_KEYMAP_ONLY) {
+            KeymapConfig keymapConfig = new KeymapConfig(context);
+
+            if (keymapConfig.showControls && editorCallback.getEvent())
+                ShowKeymapService.start(context, profileName);
+
             settingsFragment.onDestroyView();
             removeView(mainView);
             if (editorCallback != null) editorCallback.onHideView();
@@ -319,7 +326,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         view.invalidate();
     }
 
-    private void loadKeymap() {
+    protected void loadKeymap() {
         profile = new KeymapProfiles(context).getProfile(profileName, false);
 
         profile.scale(keysContainerView.getWidth(), keysContainerView.getHeight());
