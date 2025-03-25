@@ -30,6 +30,7 @@ import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.editor.EditorActivity;
 import xtr.keymapper.editor.EditorService;
+import xtr.keymapper.editor.ShowKeymapService;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.KeymapProfiles;
@@ -112,16 +113,6 @@ public class TouchPointer extends Service {
         if (activityCallback != null) activityCallback.updateCmdView1("connecting to server..");
         RemoteServiceHelper.getInstance(this, service -> {
             mService = service;
-            if (mService == null) {
-                if (activityCallback != null) {
-                    activityCallback.updateCmdView1("connection failed\n Please retry activation");
-                    activityCallback.stopPointer();
-                } else {
-                    onDestroy();
-                    stopSelf();
-                }
-                return;
-            }
             KeymapConfig keymapConfig = new KeymapConfig(this);
             mWindowManager = getSystemService(WindowManager.class);
             Display display = mWindowManager.getDefaultDisplay();
@@ -134,10 +125,12 @@ public class TouchPointer extends Service {
                     if (!activityRemoteCallback) {
                         mService.registerActivityObserver(mActivityObserverCallback);
                         activityRemoteCallback = true;
-                    } else {
-                        if (!profile.disabled)
-                            mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+                    } else if (!profile.disabled) {
+                        mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
                     }
+                }
+                if (keymapConfig.showControls) {
+                    ShowKeymapService.start(this, selectedProfile);
                 }
             } catch (Exception e) {
                 if(activityCallback != null) {
@@ -157,13 +150,18 @@ public class TouchPointer extends Service {
     public void onDestroy() {
         if (mService != null) try {
             mService.unregisterActivityObserver(mActivityObserverCallback);
-            mService.stopServer();
+            stopServer();
         } catch (Exception e) {
             Log.e("stopServer", e.toString(), e);
         }
         mService = null;
         activityCallback = null;
         super.onDestroy();
+    }
+
+    private void stopServer() throws RemoteException {
+        stopService(new Intent(this, ShowKeymapService.class));
+        mService.stopServer();
     }
 
     /**
@@ -228,7 +226,7 @@ public class TouchPointer extends Service {
                 keymapConfig.applySharedPrefs();
                 activityCallback.stopPointer();
                 try {
-                    mService.stopServer();
+                    stopServer();
                 } catch (RemoteException ignored) {
                 }
                 return;

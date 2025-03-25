@@ -7,9 +7,10 @@ import android.content.SharedPreferences;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import androidx.annotation.NonNull;
-
 public class KeymapConfig implements Parcelable {
+    public boolean showControls;
+    public float showControlsOpacity;
+
     private SharedPreferences sharedPref;
     public Float mouseSensitivity = 1f, scrollSpeed = 1f;
     public boolean ctrlMouseWheelZoom, ctrlDragMouseGesture, rightClickMouseAim, keyGraveMouseAim;
@@ -48,6 +49,8 @@ public class KeymapConfig implements Parcelable {
     }
 
     protected KeymapConfig(Parcel in) {
+        showControls = in.readByte() != 0;
+        showControlsOpacity = in.readFloat();
         if (in.readByte() == 0) {
             mouseSensitivity = null;
         } else {
@@ -62,6 +65,9 @@ public class KeymapConfig implements Parcelable {
         ctrlDragMouseGesture = in.readByte() != 0;
         rightClickMouseAim = in.readByte() != 0;
         keyGraveMouseAim = in.readByte() != 0;
+        disableAutoProfiling = in.readByte() != 0;
+        useShizuku = in.readByte() != 0;
+        editorOverlay = in.readByte() != 0;
         pauseResumeShortcutKey = in.readInt();
         launchEditorShortcutKey = in.readInt();
         switchProfileShortcutKey = in.readInt();
@@ -69,13 +75,51 @@ public class KeymapConfig implements Parcelable {
         pauseResumeShortcutKeyModifier = in.readString();
         launchEditorShortcutKeyModifier = in.readString();
         switchProfileShortcutKeyModifier = in.readString();
+        pointerMode = in.readInt();
         mouseAimShortcutKey = in.readInt();
         mouseAimToggle = in.readByte() != 0;
-        disableAutoProfiling = in.readByte() != 0;
         touchpadInputMode = in.readInt();
-        useShizuku = in.readByte() != 0;
-        editorOverlay = in.readByte() != 0;
-        pointerMode = in.readInt();
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeByte((byte) (showControls ? 1 : 0));
+        dest.writeFloat(showControlsOpacity);
+        if (mouseSensitivity == null) {
+            dest.writeByte((byte) 0);
+        } else {
+            dest.writeByte((byte) 1);
+            dest.writeFloat(mouseSensitivity);
+        }
+        if (scrollSpeed == null) {
+            dest.writeByte((byte) 0);
+        } else {
+            dest.writeByte((byte) 1);
+            dest.writeFloat(scrollSpeed);
+        }
+        dest.writeByte((byte) (ctrlMouseWheelZoom ? 1 : 0));
+        dest.writeByte((byte) (ctrlDragMouseGesture ? 1 : 0));
+        dest.writeByte((byte) (rightClickMouseAim ? 1 : 0));
+        dest.writeByte((byte) (keyGraveMouseAim ? 1 : 0));
+        dest.writeByte((byte) (disableAutoProfiling ? 1 : 0));
+        dest.writeByte((byte) (useShizuku ? 1 : 0));
+        dest.writeByte((byte) (editorOverlay ? 1 : 0));
+        dest.writeInt(pauseResumeShortcutKey);
+        dest.writeInt(launchEditorShortcutKey);
+        dest.writeInt(switchProfileShortcutKey);
+        dest.writeInt(swipeDelayMs);
+        dest.writeString(pauseResumeShortcutKeyModifier);
+        dest.writeString(launchEditorShortcutKeyModifier);
+        dest.writeString(switchProfileShortcutKeyModifier);
+        dest.writeInt(pointerMode);
+        dest.writeInt(mouseAimShortcutKey);
+        dest.writeByte((byte) (mouseAimToggle ? 1 : 0));
+        dest.writeInt(touchpadInputMode);
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
     }
 
     public static final Creator<KeymapConfig> CREATOR = new Creator<>() {
@@ -99,6 +143,9 @@ public class KeymapConfig implements Parcelable {
         disableAutoProfiling = sharedPref.getBoolean("disable_auto_profile", true);
         useShizuku = sharedPref.getBoolean("use_shizuku", false);
         editorOverlay = sharedPref.getBoolean("editor_overlay", false);
+
+        showControls = sharedPref.getBoolean("show_controls", false);
+        showControlsOpacity = sharedPref.getFloat("show_controls_opacity", 0.2f);
 
         launchEditorShortcutKey = sharedPref.getInt("launch_editor_shortcut", launchEditorShortcutKey);
         pauseResumeShortcutKey = sharedPref.getInt("pause_resume_shortcut", pauseResumeShortcutKey);
@@ -129,6 +176,8 @@ public class KeymapConfig implements Parcelable {
                 .putBoolean("disable_auto_profile", disableAutoProfiling)
                 .putBoolean("use_shizuku", useShizuku)
                 .putBoolean("editor_overlay", editorOverlay)
+                .putBoolean("show_controls", showControls)
+                .putFloat("show_controls_opacity", showControlsOpacity)
                 .putInt("pause_resume_shortcut", pauseResumeShortcutKey)
                 .putInt("launch_editor_shortcut", launchEditorShortcutKey)
                 .putInt("switch_profile_shortcut", switchProfileShortcutKey)
@@ -142,42 +191,4 @@ public class KeymapConfig implements Parcelable {
                 .apply();
     }
 
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(@NonNull Parcel dest, int flags) {
-        if (mouseSensitivity == null) {
-            dest.writeByte((byte) 0);
-        } else {
-            dest.writeByte((byte) 1);
-            dest.writeFloat(mouseSensitivity);
-        }
-        if (scrollSpeed == null) {
-            dest.writeByte((byte) 0);
-        } else {
-            dest.writeByte((byte) 1);
-            dest.writeFloat(scrollSpeed);
-        }
-        dest.writeByte((byte) (ctrlMouseWheelZoom ? 1 : 0));
-        dest.writeByte((byte) (ctrlDragMouseGesture ? 1 : 0));
-        dest.writeByte((byte) (rightClickMouseAim ? 1 : 0));
-        dest.writeByte((byte) (keyGraveMouseAim ? 1 : 0));
-        dest.writeInt(pauseResumeShortcutKey);
-        dest.writeInt(launchEditorShortcutKey);
-        dest.writeInt(switchProfileShortcutKey);
-        dest.writeInt(swipeDelayMs);
-        dest.writeString(pauseResumeShortcutKeyModifier);
-        dest.writeString(launchEditorShortcutKeyModifier);
-        dest.writeString(switchProfileShortcutKeyModifier);
-        dest.writeInt(mouseAimShortcutKey);
-        dest.writeByte((byte) (mouseAimToggle ? 1 : 0));
-        dest.writeByte((byte) (disableAutoProfiling ? 1 : 0));
-        dest.writeInt(touchpadInputMode);
-        dest.writeByte((byte) (useShizuku ? 1 : 0));
-        dest.writeByte((byte) (editorOverlay ? 1 : 0));
-        dest.writeInt(pointerMode);
-    }
 }

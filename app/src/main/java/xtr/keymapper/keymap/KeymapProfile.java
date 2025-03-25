@@ -27,7 +27,7 @@ public class KeymapProfile implements Parcelable {
     public boolean disabled = false;
     public Dpad dpadUdlr;
     public int xRes, yRes;
-    public final Map<String, Macro> macroIdMap = new HashMap<>();
+    public final HashMap<String, Macro> macroIdMap = new HashMap<>();
 
     public KeymapProfile() {
         dpadArray = new Dpad[MAX_DPADS];
