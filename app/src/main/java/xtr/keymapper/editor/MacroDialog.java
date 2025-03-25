@@ -16,8 +16,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import xtr.keymapper.R;
@@ -33,7 +33,7 @@ public class MacroDialog {
     private final Context context;
     private final boolean useOverlayFlag;
     private final MacroSharedPreferences macroSharedPreferences;
-    private final Map<String, Macro> macroIdMap;
+    private final HashMap<String, Macro> macroIdMap;
     private AlertDialog dialog;
 
 
@@ -128,15 +128,6 @@ public class MacroDialog {
             });
             holder.binding.deleteButton.setOnClickListener(v -> macroSharedPreferences.removeMacro(macroId));
 
-            boolean isMacroEnabled = macroIdMap.containsKey(macroId);
-
-            if (isMacroEnabled) {
-                holder.binding.key.setVisibility(View.VISIBLE);
-            } else {
-                holder.binding.key.setVisibility(View.GONE);
-            }
-
-            holder.binding.toggle.setChecked(isMacroEnabled);
             holder.binding.toggle.setOnCheckedChangeListener((t, checked) -> {
                 // Enable text field if checked
                 if (checked) {
@@ -147,6 +138,9 @@ public class MacroDialog {
                     macroIdMap.remove(macroId);
                 }
             });
+            boolean isMacroEnabled = macroIdMap.containsKey(macroId);
+            holder.binding.toggle.setChecked(isMacroEnabled);
+
             holder.binding.key.setOnKeyListener((view, keyCode, event) -> {
                 Macro macro = macroIdMap.get(macroId);
                 if (macro != null) {

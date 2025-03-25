@@ -124,11 +124,7 @@
                 android:layout_height="wrap_content"
                 android:stepSize="1"
                 android:valueFrom="1"
-                android:valueTo="5"
-                app:haloColor="@color/purple_700"
-                app:thumbColor="@color/purple_500"
-                app:trackColorActive="@color/teal_200"
-                app:trackHeight="10dp"/>
+                android:valueTo="5"/>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -141,11 +137,7 @@
                 android:layout_height="wrap_content"
                 android:stepSize="1"
                 android:valueFrom="1"
-                android:valueTo="5"
-                app:haloColor="@color/purple_700"
-                app:thumbColor="@color/purple_500"
-                app:trackColorActive="@color/teal_200"
-                app:trackHeight="10dp"/>
+                android:valueTo="5"/>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -158,8 +150,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:valueFrom="0"
-                android:valueTo="500"
-                app:trackHeight="10dp" />
+                android:valueTo="500" />
 
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

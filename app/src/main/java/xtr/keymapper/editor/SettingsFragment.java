@@ -135,6 +135,15 @@ public class SettingsFragment {
         settingsBinding.useShizuku.setChecked(keymapConfig.useShizuku);
         settingsBinding.editorOverlay.setChecked(keymapConfig.editorOverlay);
 
+        settingsBinding.showControls.setOnCheckedChangeListener((t, checked) -> {
+            if (checked) {
+                settingsBinding.showControlsOpacity.setVisibility(View.VISIBLE);
+            } else {
+                settingsBinding.showControlsOpacity.setVisibility(View.GONE);
+            }
+        });
+        settingsBinding.showControls.setChecked(keymapConfig.showControls);
+
         AlertDialog dialog = new MaterialAlertDialogBuilder(context, R.style.MaterialAlertDialog_Centered)
                 .setView(settingsBinding.getRoot())
                 .setTitle(R.string.advanced)
@@ -144,6 +153,7 @@ public class SettingsFragment {
                     keymapConfig.disableAutoProfiling = settingsBinding.autoProfileSwitch.isChecked();
                     keymapConfig.useShizuku = settingsBinding.useShizuku.isChecked();
                     keymapConfig.editorOverlay = settingsBinding.editorOverlay.isChecked();
+                    keymapConfig.showControls = settingsBinding.showControls.isChecked();
                 })
                 .create();
         if(overlayWindow) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
