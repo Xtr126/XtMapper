@@ -25,6 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.topjohnwu.superuser.Shell;
 
+import kotlin.Unit;
 import rikka.shizuku.Shizuku;
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.R;
@@ -55,6 +56,8 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
                 .setTimeout(10)
         );
     }
+
+    private DisplaySelector displaySelector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +97,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             alertShizukuNotAuthorized();
         }
 
+        displaySelector = new DisplaySelector(this).register(this::startPointer);
         setupButtons();
 
         // Check for if this activity was started with am shell command
@@ -149,6 +153,10 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     }
 
     public void startPointer(){
+        displaySelector.launch();
+    }
+
+    private Unit startPointer(Integer displayId) {
         checkOverlayPermission(this);
         // Start service with selected profile if display on top permission is granted
         if(Settings.canDrawOverlays(this)) {
@@ -165,6 +173,8 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         } else if (!RemoteServiceHelper.isRootService) {
             alertRootAccessAndExit();
         }
+
+        return null;
     }
 
     private void setButtonState(boolean start) {
