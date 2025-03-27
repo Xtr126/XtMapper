@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="start">ਚਲਾਓੁ</string>
     <string name="stop">ਰੋਕੋ</string>
@@ -6,36 +7,28 @@
     <string name="help">ਮਦਦ</string>
     <string name="package_name">ਪੈਕੇਜ ਦਾ ਨਾਮ: </string>
     <string name="mouse_sensitivity">ਮਾਊਸ ਸੰਵੇਦਨਸ਼ੀਲਤਾ</string>
-    <string name="mouse_aim_activated">
-       ਸ਼ੂਟਿੰਗ ਮੋਡ ਚਲਾ ਦਿੱਤਾ ਗਿਆ ਹੈ ਬਾਹਰ ਜਾਣ ਲਈ ਸੱਜਾ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ~ ਕੁੰਜੀ
+    <string name="mouse_aim_activated">       ਸ਼ੂਟਿੰਗ ਮੋਡ ਚਲਾ ਦਿੱਤਾ ਗਿਆ ਹੈ ਬਾਹਰ ਜਾਣ ਲਈ ਸੱਜਾ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ~ ਕੁੰਜੀ
     </string>
     <string name="scroll_speed">ਸਕ੍ਰੌਲ ਸਪੀਡ</string>
     <string name="keyboard_shortcuts">ਕੀਬੋਰਡ ਸ਼ਾਰਟਕੱਟ:</string>
-    <string name="dialog_alert_editor">
-       ਸੇਵਾ ਨਹੀਂ ਚੱਲ ਰਹੀ ਹੈ। \n
+    <string name="dialog_alert_editor">       ਸੇਵਾ ਨਹੀਂ ਚੱਲ ਰਹੀ ਹੈ। \n
         ਹੋ ਸਕਦਾ ਹੈ ਕਿ ਤੁਸੀਂ ਸਾਰੀਆਂ ਮੁੱਖ ਇਵੇਟਾ ਨੂੰ ਮੈਪ ਕਰਨ ਦੇ ਯੋਗ ਨਾ ਹੋਵੋ। \n
         ਐਕਟੀਵੇਸ਼ਨ ਚਲਾਓ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
-
     <string name="dialog_alert_editor_title">ਚਾਲੂ ਨਹੀ</string>
     <string name="dialog_alert_add_profile">ਨਵਾਂ ਪ੍ਰੋਫਾਈਲ ਨਾਮ ਦਾਖਲ ਕਰੋ:</string>
     <string name="dialog_alert_select_profile">ਲਈ ਪ੍ਰੋਫਾਈਲ ਚੁਣੋ \ </string>
     <string name="dialog_alert_enable_profile">ਕੀ ਇਸ ਐਪ ਲਈ ਕੀਮੈਪਿੰਗ ਚਾਲੂ ਕਰਨੀ ਹੈ?</string>
-
     <string name="key">ਬਟਨ</string>
-
     <string name="switch_profile">ਪ੍ਰੋਫਾਈਲ ਬਦਲੋ</string>
     <string name="launch_editor">ਏਡੀਟਰ ਲਾਂਚ ਕਰੋ</string>
     <string name="pause_resume">ਰੋਕੋ/ਮੁੜ ਸ਼ੁਰੂ ਕਰੋ</string>
-
     <!-- bottom navigation in settings fragment -->
     <string name="tuning">ਟਿਊਨਿੰਗ</string>
     <string name="config">ਕੋਨਫਿਗ</string>
     <string name="shortcuts">ਸ਼ਾਰਟਕੱਟ</string>
-
     <string name="trigger_mouse_aim_with">ਇਸ ਨਾਲ ਮਾਊਸ ਏਮ ਨੂੰ ਟਰਿੱਗਰ ਕਰੋ:</string>
     <string name="right_click">ਸੱਜਾ ਕਲਿੱਕ</string>
     <string name="key_grave">~ ਬਟਨ</string>
-
     <string name="pinch_to_zoom_gesture_info">ਦੋ ਉਂਗਲਾਂ ਦੇ ਇਸ਼ਾਰੇ ਨਾਲ ਕਰੋ:</string>
     <string name="drag_mouse">ਕੰਟਰੋਲ + ਮਾਊਸ ਹਿੱਲਣਾ</string>
     <string name="mouse_wheel">ਕੰਟਰੋਲ + ਮਾਊਸ ਵ੍ਹੀਲ</string>
@@ -49,8 +42,7 @@
     <string name="root_not_found_title">ਰੂਟ ਨਹੀਂ ਮਿਲੀ</string>
     <string name="root_not_found_message">ਕੀਮੈਪਰ ਨੂੰ ਕੰਮ ਕਰਨ ਲਈ ਰੂਟ ਦੀ ਲੋੜ ਹੈ। \n ਕਿਰਪਾ ਕਰਕੇ KernelSU ਪ੍ਰਬੰਧਕ ਐਪ ਤੋਂ XtMapper ਨੂੰ ਸੁਪਰਯੂਜ਼ਰ ਦਿਓ</string>
     <string name="root_no_privileges_title">ਸੇਵਾ ਰੂਟ ਵਜੋਂ ਸ਼ੁਰੂ ਕਰਨ ਵਿੱਚ ਅਸਫਲ ਰਹੀ</string>
-    <string name="root_no_privileges_message">
-        ਵਿਸ਼ੇਸ਼ ਅਧਿਕਾਰ ਪ੍ਰਾਪਤ ਕਰਨ ਵਿੱਚ ਅਸਮਰੱਥ ਹਾ। ਕੀ ਤੁਸੀਂ ਐਪਲੀਕੇਸ਼ਨ ਤੋਂ ਬਾਹਰ ਜਾਣਾ ਚਾਹੁੰਦੇ ਹੋ?\n
+    <string name="root_no_privileges_message">        ਵਿਸ਼ੇਸ਼ ਅਧਿਕਾਰ ਪ੍ਰਾਪਤ ਕਰਨ ਵਿੱਚ ਅਸਮਰੱਥ ਹਾ। ਕੀ ਤੁਸੀਂ ਐਪਲੀਕੇਸ਼ਨ ਤੋਂ ਬਾਹਰ ਜਾਣਾ ਚਾਹੁੰਦੇ ਹੋ?\n
         ਜੇਕਰ ਤੁਸੀਂ ਪਹਿਲਾਂ ਹੀ ਸੁਪਰਯੂਜ਼ਰ ਵਿਸ਼ੇਸ਼ ਅਧਿਕਾਰ ਦਿੱਤੇ ਹਨ, ਤਾਂ ਇਹ ਐਪ ਨੂੰ ਬੰਦ ਕਰਨ ਅਤੇ ਖੋਲ੍ਹਣ ਤੋਂ ਬਾਅਦ ਕੰਮ ਕਰ ਸਕਦਾ ਹੈ।
     </string>
     <string name="disable_auto_profile">ਆਟੋ ਪ੍ਰੋਫਾਈਲਿੰਗ ਨੂੰ ਬੰਦ ਕਰੋ</string>
@@ -59,7 +51,6 @@
     <string name="use_shizuku">Shizuku ਵਰਤੋ</string>
     <string name="pointer">ਪੁਆਇੰਟਰ ਮੋਡ</string>
     <string name="open_editor_as_overlay">ਓਵਰਲੇਅ ਵਜੋਂ ਏਡੀਟਰ ਖੋਲ੍ਹੋ</string>
-
     <!--  Keymap editor  -->
     <string name="d_pad">ਡੀ-ਪੈਡ</string>
     <string name="crosshair">ਕਰਾਸ ਹੇਅਰ</string>
@@ -67,21 +58,17 @@
     <string name="swipe_key">ਸਵਾਈਪ ਬਟਨ</string>
     <string name="add_key">ਸ਼ਾਮਲ ਕਰੋ ਬਟਨ</string>
     <string name="save">ਸੇਵ ਕਰੋ</string>
-
     <!--  Mouse Aim  -->
     <string name="toggle">ਟੌਗਲ</string>
     <string name="hold">ਦਬਾਕੇ ਰੱਖਣਾ</string>
-
     <!--  Pointer Mode  -->
     <string name="combined">ਜੋੜਣਾ</string>
     <string name="overlay">ਓਵਰਲੇ</string>
     <string name="system">ਸਿਸਟਮ</string>
-
     <!--  Touchpad  -->
     <string name="relative">ਨਾਲਦਾ</string>
     <string name="disabled">ਬੰਦ ਕਰਨਾ</string>
     <string name="direct">ਡਾਇਰੈਕਟ</string>
-
     <string name="shizuku_not_authorized_title">Shizuku ਅਧਿਕਾਰਤ ਨਹੀ ਹੈ</string>
     <string name="shizuku_not_authorized_message">ਜਾਰੀ ਰੱਖਣ ਲਈ Shizuku ਮੈਨੇਜਰ ਐਪ ਤੋਂ XtMapper ਨੂੰ ਅਧਿਕਾਰਤ ਕਰੋ</string>
     <string name="activate_with">ਨਾਲ ਚਾਲੂ</string>
@@ -101,17 +88,17 @@
     <string name="delete">ਮਿਟਾਓ</string>
     <string name="enabled">ਸਮਰੱਥ ਹੈ</string>
     <string name="no_profile_selected">ਕੋਈ ਪ੍ਰੋਫਾਈਲ ਨਹੀਂ ਚੁਣਿਆ ਗਿਆ</string>
-    <string name="select_profile_from_below">ਇਸ ਨੂੰ ਚੁਣਨ ਲਈ ਹੇਠਾਂ ਦਿੱਤੀ ਸੂਚੀ ਵਿੱਚੋਂ ਇੱਕ ਪ੍ਰੋਫਾਈਲ 'ਤੇ ਟੈਪ ਕਰੋ</string>
+    <string name="select_profile_from_below">ਇਸ ਨੂੰ ਚੁਣਨ ਲਈ ਹੇਠਾਂ ਦਿੱਤੀ ਸੂਚੀ ਵਿੱਚੋਂ ਇੱਕ ਪ੍ਰੋਫਾਈਲ \'ਤੇ ਟੈਪ ਕਰੋ</string>
     <string name="detected_shizuku">Shizuku ਮਿਲਿਆ ਹੈ</string>
     <string name="use_shizuku_for_activation">ਐਕਟੀਵੇਸ਼ਨ ਲਈ Shizuku ਦੀ ਵਰਤੋਂ ਕਰਨੀ ਹੈ?</string>
     <string name="add_games">ਗੇਮਾਂ ਸ਼ਾਮਲ ਕਰੋ</string>
     <string name="macro">ਮੈਕਰੋ</string>
-    <string name="loading">"ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ…"</string>
+    <string name="loading">ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ…</string>
     <string name="camera">ਕੈਮਰਾ</string>
     <string name="press_any_key_to_stop_recording">ਰਿਕਾਰਡਿੰਗ ਬੰਦ ਕਰਨ ਲਈ ਕੋਈ ਵੀ ਕੁੰਜੀ ਦਬਾਓ...</string>
     <string name="advanced">ਐਡਵਾਂਸਡ</string>
     <string name="shizuku_not_running_title">Shizuku ਸ਼ੁਰੂ ਨਹੀਂ ਹੋਇਆ ਹੈ</string>
-    <string name="shizuku_not_running_message" />
+    <string name="shizuku_not_running_message"></string>
     <string name="edit">ਸੰਪਾਦਿਤ ਕਰੋ</string>
-    <string name="show_controls_on_screen">ਸਕ੍ਰੀਨ 'ਤੇ ਕੰਟਰੋਲ ਦਿਖਾਓ</string>
+    <string name="show_controls_on_screen">ਸਕ੍ਰੀਨ \'ਤੇ ਕੰਟਰੋਲ ਦਿਖਾਓ</string>
 </resources>
