@@ -7,28 +7,35 @@
     <string name="help">帮助</string>
     <string name="package_name">包名：</string>
     <string name="mouse_sensitivity">鼠标灵敏度</string>
-    <string name="mouse_aim_activated">    射击模式点击右键或~键退出
+    <string name="mouse_aim_activated">
+    射击模式点击右键或~键退出
     </string>
     <string name="scroll_speed">滚动速度</string>
     <string name="keyboard_shortcuts">键盘快捷键：</string>
-    <string name="dialog_alert_editor">    服务未运行。\n
-    您可能无法映射所有按键事件。\n
-    运行激活并重试。</string>
+    <string name="dialog_alert_editor">
+    服务未运行。
+    \n您可能无法映射所有按键事件。
+    \n运行激活并重试。</string>
     <string name="dialog_alert_editor_title">未激活</string>
     <string name="dialog_alert_add_profile">输入新的配置名称：</string>
     <string name="dialog_alert_select_profile">选择配置文件 \ </string>
     <string name="dialog_alert_enable_profile">为此应用启用映射吗？</string>
+
     <string name="key">键</string>
+
     <string name="switch_profile">切换配置文件</string>
     <string name="launch_editor">启动编辑器</string>
     <string name="pause_resume">暂停/恢复</string>
+
     <!-- bottom navigation in settings fragment -->
     <string name="tuning">微调</string>
     <string name="config">配置</string>
     <string name="shortcuts">快捷</string>
+
     <string name="trigger_mouse_aim_with">触发鼠标瞄准：</string>
-    <string name="right_click">右键点击</string>
-    <string name="key_grave">~波浪号键</string>
+    <string name="right_click">右键单击</string>
+    <string name="key_grave">~键</string>
+
     <string name="pinch_to_zoom_gesture_info">使用以下命令执行二指手势：</string>
     <string name="drag_mouse">Ctrl + 拖动鼠标</string>
     <string name="mouse_wheel">Ctrl + 鼠标滚轮</string>
@@ -39,11 +46,11 @@
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">滑动延迟 %d 毫秒</string>
     <string name="profile_name">配置名称</string>
-    <string name="root_not_found_title">未获取 root 权限</string>
-    <string name="root_not_found_message">键映射器需要获取root权限才能运行。\n请从 KernelSU 管理器应用向 XtMapper 授予权限</string>
-    <string name="root_no_privileges_title">服务无法以 root 权限启动</string>
-    <string name="root_no_privileges_message">    无法获得权限。您想退出程序吗？\n
-    如果您已授予(root)超级用户权限，则退出并打开应用程序后可能会起作用。
+    <string name="root_not_found_title">未获取root权限</string>
+    <string name="root_not_found_message">键映射需要获取root权限才能运行。\n请在您的root管理器中为XtMapper授予权限</string>
+    <string name="root_no_privileges_title">无法以root权限启动服务</string>
+    <string name="root_no_privileges_message">
+    无法获得权限。您想退出程序吗？\n如果您已授予(root)超级用户权限，可能重启应用程序后才会生效。
     </string>
     <string name="disable_auto_profile">禁用自动分析</string>
     <string name="touchpad_input">触摸板输入</string>
@@ -51,6 +58,7 @@
     <string name="use_shizuku">使用 Shizuku</string>
     <string name="pointer">指针模式</string>
     <string name="open_editor_as_overlay">以叠加方式打开编辑器</string>
+
     <!--  Keymap editor  -->
     <string name="d_pad">方向键</string>
     <string name="crosshair">十字线</string>
@@ -58,47 +66,51 @@
     <string name="swipe_key">滑动键</string>
     <string name="add_key">添加键</string>
     <string name="save">保存</string>
+
     <!--  Mouse Aim  -->
     <string name="toggle">切换</string>
     <string name="hold">按住</string>
+
     <!--  Pointer Mode  -->
     <string name="combined">组合</string>
     <string name="overlay">叠加</string>
     <string name="system">跟随系统</string>
+
     <!--  Touchpad  -->
     <string name="relative">相对模式</string>
     <string name="disabled">禁用</string>
     <string name="direct">直接模式</string>
-    <string name="shizuku_not_authorized_title">Shizuku 未授权</string>
+
+    <string name="shizuku_not_authorized_title">未获得 Shizuku 授权</string>
     <string name="shizuku_not_authorized_message">在 Shizuku 中为 XtMapper 授权后继续</string>
-    <string name="activate_with">Activate with</string>
+    <string name="activate_with">激活使用</string>
     <string name="grave_key">~ 键</string>
-    <string name="x_sensitivity">X-Sensitivity</string>
-    <string name="y_sensitivity">Y-Sensitivity</string>
-    <string name="apply_non_linear_scaling">Apply non linear scaling</string>
-    <string name="import_export">Import/Export</string>
-    <string name="import_profiles">Import profiles</string>
-    <string name="import_previously_exported_profiles_from_storage">Import previously exported profiles from storage.</string>
-    <string name="export_profiles">Export profiles</string>
-    <string name="export_profiles_to_disk_for_restoring_later_or_sharing">Export profiles to disk for restoring later or sharing.</string>
-    <string name="export_selected">Export selected</string>
-    <string name="select_all">Select all</string>
-    <string name="import_button">Import</string>
-    <string name="rename">Rename</string>
-    <string name="delete">Delete</string>
-    <string name="enabled">Enabled</string>
-    <string name="no_profile_selected">No profile selected</string>
-    <string name="select_profile_from_below">Tap on a profile from the list below to select it</string>
-    <string name="detected_shizuku">Detected Shizuku</string>
-    <string name="use_shizuku_for_activation">Use Shizuku for activation?</string>
-    <string name="add_games">Add Games</string>
-    <string name="macro">Macro</string>
+    <string name="x_sensitivity">X轴灵敏度</string>
+    <string name="y_sensitivity">Y轴灵敏度</string>
+    <string name="apply_non_linear_scaling">使用非线性缩放</string>
+    <string name="import_export">导入/导出</string>
+    <string name="import_profiles">导入配置</string>
+    <string name="import_previously_exported_profiles_from_storage">导入之前从存储中导出的配置。</string>
+    <string name="export_profiles">导出配置</string>
+    <string name="export_profiles_to_disk_for_restoring_later_or_sharing">将配置导出到内部存储以备份或共享。</string>
+    <string name="export_selected">导出已选</string>
+    <string name="select_all">选择全部</string>
+    <string name="import_button">导入</string>
+    <string name="rename">重命名</string>
+    <string name="delete">删除</string>
+    <string name="enabled">启用</string>
+    <string name="no_profile_selected">未选择配置文件</string>
+    <string name="select_profile_from_below">点击下方列表中的配置以选择它</string>
+    <string name="detected_shizuku">检测到Shizuku</string>
+    <string name="use_shizuku_for_activation">要使用Shizuku激活吗？</string>
+    <string name="add_games">添加游戏</string>
+    <string name="macro">鼠标宏</string>
     <string name="loading">正在加载…</string>
-    <string name="camera">Camera</string>
-    <string name="press_any_key_to_stop_recording">Press any key to stop recording…</string>
-    <string name="advanced">Advanced</string>
-    <string name="shizuku_not_running_title">Shizuku is not started</string>
-    <string name="shizuku_not_running_message"></string>
-    <string name="edit">Edit</string>
-    <string name="show_controls_on_screen">Show controls on screen</string>
+    <string name="camera">相机</string>
+    <string name="press_any_key_to_stop_recording">按任意键停止录制……</string>
+    <string name="advanced">高级</string>
+    <string name="shizuku_not_running_title">Shizuku未运行</string>
+    <string name="shizuku_not_running_message" />
+    <string name="edit">编辑</string>
+    <string name="show_controls_on_screen">在屏幕上显示控件</string>
 </resources>
