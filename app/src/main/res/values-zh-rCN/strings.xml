@@ -7,35 +7,28 @@
     <string name="help">帮助</string>
     <string name="package_name">包名：</string>
     <string name="mouse_sensitivity">鼠标灵敏度</string>
-    <string name="mouse_aim_activated">
-    射击模式点击右键或~键退出
+    <string name="mouse_aim_activated">    射击模式点击右键或~键退出
     </string>
     <string name="scroll_speed">滚动速度</string>
     <string name="keyboard_shortcuts">键盘快捷键：</string>
-    <string name="dialog_alert_editor">
-    服务未运行。
+    <string name="dialog_alert_editor">    服务未运行。
     \n您可能无法映射所有按键事件。
     \n运行激活并重试。</string>
     <string name="dialog_alert_editor_title">未激活</string>
     <string name="dialog_alert_add_profile">输入新的配置名称：</string>
     <string name="dialog_alert_select_profile">选择配置文件 \ </string>
     <string name="dialog_alert_enable_profile">为此应用启用映射吗？</string>
-
     <string name="key">键</string>
-
     <string name="switch_profile">切换配置文件</string>
     <string name="launch_editor">启动编辑器</string>
     <string name="pause_resume">暂停/恢复</string>
-
     <!-- bottom navigation in settings fragment -->
     <string name="tuning">微调</string>
     <string name="config">配置</string>
     <string name="shortcuts">快捷</string>
-
     <string name="trigger_mouse_aim_with">触发鼠标瞄准：</string>
     <string name="right_click">右键单击</string>
     <string name="key_grave">~键</string>
-
     <string name="pinch_to_zoom_gesture_info">使用以下命令执行二指手势：</string>
     <string name="drag_mouse">Ctrl+拖动鼠标</string>
     <string name="mouse_wheel">Ctrl+鼠标滚轮</string>
@@ -49,8 +42,7 @@
     <string name="root_not_found_title">未获取root权限</string>
     <string name="root_not_found_message">键映射需要获取root权限才能运行。\n请在您的root管理器中为XtMapper授予权限</string>
     <string name="root_no_privileges_title">无法以root权限启动服务</string>
-    <string name="root_no_privileges_message">
-    无法获得权限。您想退出程序吗？\n如果您已授予(root)超级用户权限，可能重启应用程序后才会生效。
+    <string name="root_no_privileges_message">    无法获得权限。您想退出程序吗？\n如果您已授予(root)超级用户权限，可能重启应用程序后才会生效。
     </string>
     <string name="disable_auto_profile">禁用自动分析</string>
     <string name="touchpad_input">触摸板输入</string>
@@ -58,7 +50,6 @@
     <string name="use_shizuku">使用 Shizuku</string>
     <string name="pointer">指针模式</string>
     <string name="open_editor_as_overlay">以叠加方式打开编辑器</string>
-
     <!--  Keymap editor  -->
     <string name="d_pad">方向键</string>
     <string name="crosshair">十字线</string>
@@ -66,21 +57,17 @@
     <string name="swipe_key">滑动键</string>
     <string name="add_key">添加键</string>
     <string name="save">保存</string>
-
     <!--  Mouse Aim  -->
     <string name="toggle">切换</string>
     <string name="hold">按住</string>
-
     <!--  Pointer Mode  -->
     <string name="combined">组合</string>
     <string name="overlay">叠加</string>
     <string name="system">跟随系统</string>
-
     <!--  Touchpad  -->
     <string name="relative">相对模式</string>
     <string name="disabled">禁用</string>
     <string name="direct">直接模式</string>
-
     <string name="shizuku_not_authorized_title">未获得 Shizuku 授权</string>
     <string name="shizuku_not_authorized_message">在 Shizuku 中为 XtMapper 授权后继续</string>
     <string name="activate_with">激活使用</string>
@@ -110,7 +97,7 @@
     <string name="press_any_key_to_stop_recording">按任意键停止录制……</string>
     <string name="advanced">高级</string>
     <string name="shizuku_not_running_title">Shizuku未运行</string>
-    <string name="shizuku_not_running_message" />
+    <string name="shizuku_not_running_message"></string>
     <string name="edit">编辑</string>
     <string name="show_controls_on_screen">在屏幕上显示控件</string>
 </resources>
