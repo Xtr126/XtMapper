@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
+import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -152,8 +153,14 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         }
     }
 
-    public void startPointer(){
-        displaySelector.launch();
+    public void startPointer() {
+        DisplayManager displayManager = getSystemService(DisplayManager.class);
+
+        if (displayManager.getDisplays().length > 1) {
+            displaySelector.launch();
+        } else {
+            startPointer(null);
+        }
     }
 
     private Unit startPointer(Integer displayId) {
@@ -162,6 +169,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         if(Settings.canDrawOverlays(this)) {
             Intent intent = new Intent(this, TouchPointer.class);
             intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName);
+            if (displayId != null) intent.putExtra(TouchPointer.DISPLAY_ID, 0);
             isServiceBound = bindService(intent, connection, Context.BIND_AUTO_CREATE);
             startForegroundService(intent);
             setButtonState(false);

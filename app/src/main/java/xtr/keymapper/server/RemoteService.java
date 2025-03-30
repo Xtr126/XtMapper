@@ -205,7 +205,7 @@ public class RemoteService extends IRemoteService.Stub {
      * @param screenWidth  Screen resolution (horizontal)
      */
     @Override
-    public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) throws RemoteException {
+    public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight, int displayId) throws RemoteException {
         if (inputService != null) stopServer(false);
         if (cb != null) cb.asBinder().linkToDeath(this::stopServer, 0);
         mHandler.post(() -> {

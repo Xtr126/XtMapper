@@ -39,6 +39,7 @@ import xtr.keymapper.server.RemoteServiceHelper;
 
 
 public class TouchPointer extends Service {
+    public static final String DISPLAY_ID = "display_id";
     private final IBinder binder = new TouchPointerBinder();
     public MainActivity.Callback activityCallback;
     public IRemoteService mService;
@@ -46,6 +47,7 @@ public class TouchPointer extends Service {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private boolean activityRemoteCallback = false;
     private WindowManager mWindowManager;
+    private int displayId;
 
 
     public class TouchPointerBinder extends Binder {
@@ -97,6 +99,8 @@ public class TouchPointer extends Service {
             this.selectedProfile = "Default";
         }
 
+        this.displayId = i.getIntExtra(DISPLAY_ID, Display.DEFAULT_DISPLAY);
+
         KeymapProfile keymapProfile = new KeymapProfiles(this).getProfile(selectedProfile, true);
         connectRemoteService(keymapProfile);
 
@@ -120,13 +124,13 @@ public class TouchPointer extends Service {
             display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
             try {
                 if (keymapConfig.disableAutoProfiling) {
-                    mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+                    mService.startServer(profile, keymapConfig, mCallback, size.x, size.y, displayId);
                 } else {
                     if (!activityRemoteCallback) {
                         mService.registerActivityObserver(mActivityObserverCallback);
                         activityRemoteCallback = true;
                     } else if (!profile.disabled) {
-                        mService.startServer(profile, keymapConfig, mCallback, size.x, size.y);
+                        mService.startServer(profile, keymapConfig, mCallback, size.x, size.y, displayId);
                     }
                 }
                 if (keymapConfig.showControls) {

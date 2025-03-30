@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.dp
 import xtr.keymapper.activity.ui.theme.XtMapperTheme
 
 // Constants for the result
-const val EXTRA_SELECTED_DISPLAY_ID = "selected_display_id"
+private const val EXTRA_SELECTED_DISPLAY_ID = "selected_display_id"
 
 // 1. Activity to select display
 class DisplaySelectorActivity : ComponentActivity() {
@@ -201,7 +201,7 @@ class DisplaySelector(var activity: AppCompatActivity) {
     private lateinit var launcher: ActivityResultLauncher<Intent>
     private lateinit var intent: Intent
 
-    fun register(callback: (displayId: Int?) -> Unit): DisplaySelector  {
+    fun register(callback: (displayId: Int?) -> Unit?): DisplaySelector  {
         intent = Intent(activity, DisplaySelectorActivity::class.java)
         launcher = activity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()

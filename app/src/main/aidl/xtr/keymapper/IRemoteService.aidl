@@ -11,7 +11,7 @@ interface IRemoteService {
     void destroy() = 16777114; // Destroy method defined by Shizuku server
 
 
-    void startServer(in KeymapProfile profile, in KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight) = 2;
+    void startServer(in KeymapProfile profile, in KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight, int displayId) = 2;
     void stopServer() = 3;
 
     void registerOnKeyEventListener(OnKeyEventListener l) = 4;
