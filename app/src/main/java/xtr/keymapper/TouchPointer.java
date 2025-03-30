@@ -10,6 +10,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Point;
+import android.hardware.display.DisplayManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
@@ -118,10 +119,11 @@ public class TouchPointer extends Service {
         RemoteServiceHelper.getInstance(this, service -> {
             mService = service;
             KeymapConfig keymapConfig = new KeymapConfig(this);
-            mWindowManager = getSystemService(WindowManager.class);
-            Display display = mWindowManager.getDefaultDisplay();
+            DisplayManager displayManager = getSystemService(DisplayManager.class);
+            Display display = displayManager.getDisplay(displayId);
             Point size = new Point();
             display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
+            mWindowManager = createDisplayContext(display).getSystemService(WindowManager.class);
             try {
                 if (keymapConfig.disableAutoProfiling) {
                     mService.startServer(profile, keymapConfig, mCallback, size.x, size.y, displayId);
@@ -238,9 +240,11 @@ public class TouchPointer extends Service {
 
             mHandler.post(() -> {
                 if(cursorView == null) {
+                    DisplayManager displayManager = getSystemService(DisplayManager.class);
+                    Display display = displayManager.getDisplay(displayId);
+
                     cursorView = CursorBinding.inflate(LayoutInflater.from(
-                            new ContextThemeWrapper(TouchPointer.this, R.style.Theme_XtMapper)
-                    )).getRoot();
+                            new ContextThemeWrapper(TouchPointer.this.createDisplayContext(display), R.style.Theme_XtMapper)                    )).getRoot();
                     WindowManager.LayoutParams mParams = Utils.getPointerLayoutParams(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
                     mWindowManager.addView(cursorView, mParams);
                 }

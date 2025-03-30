@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.hardware.display.DisplayManager;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -45,25 +46,33 @@ public class RemoteService extends IRemoteService.Stub {
     private View cursorView;
     private int TYPE_SECURE_SYSTEM_OVERLAY;
     Handler mHandler = new Handler(Looper.getMainLooper());
-    private final WindowManager windowManager;
-    final Context context;
+    private WindowManager mWindowManager;
+    protected Context context;
     public static final String TAG = "xtmapper-server";
     boolean startedFromShell = false;
 
     public RemoteService(Context context) {
         loadLibraries();
         this.context = context;
+        init();
+    }
 
+    private WindowManager getWindowManager(int displayId) {
+        final WindowManager windowManager;
+        DisplayManager displayManager = context.getSystemService(DisplayManager.class);
+        this.context = context.createDisplayContext(displayManager.getDisplay(displayId));
         windowManager = context.getSystemService(WindowManager.class);
         LayoutInflater layoutInflater = context.getSystemService(LayoutInflater.class);
         context.setTheme(R.style.Theme_XtMapper);
         cursorView = CursorBinding.inflate(layoutInflater).getRoot();
+
         try {
             prepareCursorOverlayWindow();
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);
         }
-        init();
+
+        return windowManager;
     }
 
 
@@ -116,7 +125,7 @@ public class RemoteService extends IRemoteService.Stub {
         } else {
             WindowManager.LayoutParams params = Utils.getPointerLayoutParams(TYPE_SECURE_SYSTEM_OVERLAY);
             try {
-                windowManager.addView(cursorView, params);
+                mWindowManager.addView(cursorView, params);
             } catch (IllegalStateException e) { // A14 QPR3 issue https://gist.github.com/RikkaW/be3fe4178903702c54ec73b2fc1187fe
                 cursorView = null;
                 Log.e(TAG, e.getMessage(), e);
@@ -128,8 +137,8 @@ public class RemoteService extends IRemoteService.Stub {
     public void prepareCursorOverlayWindow() throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
         TYPE_SECURE_SYSTEM_OVERLAY = WindowManager.LayoutParams.class.getField("TYPE_SECURE_SYSTEM_OVERLAY").getInt(null);
         Binder sWindowToken = new Binder();
-        Method setDefaultTokenMethod = windowManager.getClass().getMethod("setDefaultToken", IBinder.class);
-        setDefaultTokenMethod.invoke(windowManager, sWindowToken);
+        Method setDefaultTokenMethod = mWindowManager.getClass().getMethod("setDefaultToken", IBinder.class);
+        setDefaultTokenMethod.invoke(mWindowManager, sWindowToken);
     }
 
     public static void loadLibraries() {
@@ -209,6 +218,8 @@ public class RemoteService extends IRemoteService.Stub {
         if (inputService != null) stopServer(false);
         if (cb != null) cb.asBinder().linkToDeath(this::stopServer, 0);
         mHandler.post(() -> {
+            mWindowManager = getWindowManager(displayId);
+
             if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
                 addCursorView();
             } else {
