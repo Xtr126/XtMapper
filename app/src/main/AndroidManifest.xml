@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" >
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -22,11 +22,18 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="false"
-        android:theme="@style/Theme.XtMapper">
+        android:theme="@style/Theme.XtMapper" >
+
+        <activity
+            android:name=".activity.DisplaySelectorActivity"
+            android:exported="true"
+            android:label="Displays"
+            android:theme="@style/Theme.Material3.DayNight.Dialog" />
+
         <service
             android:name=".editor.ShowKeymapService"
             android:enabled="false"
-            android:exported="false"></service>
+            android:exported="false" />
 
         <activity
             android:name=".activity.ImportExportActivity"
@@ -44,7 +51,7 @@
         <activity
             android:name=".activity.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.XtMapper.MainActivity">
+            android:theme="@style/Theme.XtMapper.MainActivity" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -57,7 +64,7 @@
             android:exported="true"
             android:launchMode="singleInstance"
             android:resizeableActivity="false"
-            android:theme="@style/Theme.XtMapper.EditorUI"></activity>
+            android:theme="@style/Theme.XtMapper.EditorUI" />
 
         <service
             android:name=".TouchPointer"
@@ -66,7 +73,7 @@
         <service
             android:name=".service.InputListenerService"
             android:exported="true"
-            android:permission="android.permission.BIND_INPUT_METHOD">
+            android:permission="android.permission.BIND_INPUT_METHOD" >
             <intent-filter>
                 <action android:name="android.view.InputMethod" />
             </intent-filter>

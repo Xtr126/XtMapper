@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
+import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -25,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.topjohnwu.superuser.Shell;
 
+import kotlin.Unit;
 import rikka.shizuku.Shizuku;
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.R;
@@ -55,6 +57,8 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
                 .setTimeout(10)
         );
     }
+
+    private DisplaySelector displaySelector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +98,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             alertShizukuNotAuthorized();
         }
 
+        displaySelector = new DisplaySelector(this).register(this::startPointer);
         setupButtons();
 
         // Check for if this activity was started with am shell command
@@ -148,12 +153,23 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         }
     }
 
-    public void startPointer(){
+    public void startPointer() {
+        DisplayManager displayManager = getSystemService(DisplayManager.class);
+
+        if (displayManager.getDisplays().length > 1) {
+            displaySelector.launch();
+        } else {
+            startPointer(null);
+        }
+    }
+
+    private Unit startPointer(Integer displayId) {
         checkOverlayPermission(this);
         // Start service with selected profile if display on top permission is granted
         if(Settings.canDrawOverlays(this)) {
             Intent intent = new Intent(this, TouchPointer.class);
             intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName);
+            if (displayId != null) intent.putExtra(TouchPointer.DISPLAY_ID, 0);
             isServiceBound = bindService(intent, connection, Context.BIND_AUTO_CREATE);
             startForegroundService(intent);
             setButtonState(false);
@@ -165,6 +181,8 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         } else if (!RemoteServiceHelper.isRootService) {
             alertRootAccessAndExit();
         }
+
+        return null;
     }
 
     private void setButtonState(boolean start) {
