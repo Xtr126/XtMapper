@@ -24,7 +24,7 @@ public class InputService implements IInputInterface {
     private final KeyEventHandler keyEventHandler;
     private KeymapConfig keymapConfig;
     private KeymapProfile keymapProfile;
-    private final Input input = new Input();
+    private final Input input;
     public static final int UP = 0, DOWN = 1, MOVE = 2;
     private final IRemoteServiceCallback mCallback;
     boolean stopEvents = false;
@@ -35,7 +35,14 @@ public class InputService implements IInputInterface {
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
-    public InputService(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback mCallback, int screenWidth, int screenHeight, View cursorView, boolean isWaylandClient) throws RemoteException {
+    public InputService(KeymapProfile profile,
+                        KeymapConfig keymapConfig,
+                        IRemoteServiceCallback mCallback,
+                        int screenWidth,
+                        int screenHeight,
+                        View cursorView,
+                        boolean isWaylandClient,
+                        int displayId) throws RemoteException {
         profile.scale(screenWidth, screenHeight);
         this.keymapProfile = profile;
         this.keymapConfig = keymapConfig;
@@ -62,6 +69,7 @@ public class InputService implements IInputInterface {
 
         keyEventHandler = new KeyEventHandler(this);
         keyEventHandler.init();
+        input = new Input(displayId);
     }
 
     public void injectEvent(float x, float y, int action, int pointerId) {

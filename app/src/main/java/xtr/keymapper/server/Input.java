@@ -19,14 +19,17 @@ public class Input {
 
     static Method injectInputEventMethod;
     static Object inputManager;
+    static Method setDisplayIdMethod;
 
     private final PointersState pointersState = new PointersState();
     private final MotionEvent.PointerProperties[] pointerProperties = new MotionEvent.PointerProperties[PointersState.MAX_POINTERS];
     private final MotionEvent.PointerCoords[] pointerCoords = new MotionEvent.PointerCoords[PointersState.MAX_POINTERS];
+    private final int displayId;
     private long lastTouchDown;
-    private final SmoothScroll scrollHandler = new SmoothScroll();
-    private Handler mHandler;
     private int pointerCount = 0;
+
+    private final SmoothScrollThread mScrollThread = new SmoothScrollThread();
+
 
     private void initPointers() {
         for (int i = 0; i < PointersState.MAX_POINTERS; ++i) {
@@ -52,7 +55,8 @@ public class Input {
         return true;
     }
 
-    public Input() {
+    public Input(int displayId) {
+        this.displayId = displayId;
         initPointers();
     }
 
@@ -92,16 +96,11 @@ public class Input {
                 pointerProperties, pointerCoords,
                 0, 0, 1f, 1f,
                 0, 0, source, 0);
-        try {
-            injectInputEventMethod.invoke(inputManager, motionEvent, 0);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            Log.e(RemoteService.TAG, e.getMessage(), e);
-        }
+        injectInputEvent(motionEvent);
     }
 
     public void onScrollEvent(float x, float y, int value){
-        if (mHandler == null) mHandler = new Handler(scrollHandler.getLooper());
-        scrollHandler.onScrollEvent(x, y, value);
+        mScrollThread.onScrollEvent(x, y, value);
     }
 
     private void injectScroll(ScrollEvent event, float value) {
@@ -120,8 +119,16 @@ public class Input {
                         pointerProperties, pointerCoords,
                         0, 0, 1f, 1f, 0, 0,
                         InputDevice.SOURCE_MOUSE, 0);
+            injectInputEvent(motionEvent);
+    }
+
+    private void injectInputEvent(MotionEvent motionEvent)  {
         try {
-            injectInputEventMethod.invoke(inputManager, motionEvent, 0);
+            // Set display ID for the motion event using reflection
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && setDisplayIdMethod != null) {
+                setDisplayIdMethod.invoke(motionEvent, displayId);
+            }
+            injectInputEventMethod.invoke(inputManager, motionEvent, displayId);
         } catch (IllegalAccessException | InvocationTargetException e) {
             Log.e(RemoteService.TAG, e.getMessage(), e);
         }
@@ -133,13 +140,14 @@ public class Input {
         float value;
     }
 
-    private class SmoothScroll extends HandlerThread {
+    private class SmoothScrollThread extends HandlerThread {
         private final ScrollEvent event = new ScrollEvent();
         boolean active = false;
         float value = 0;
         int DELAY_MS = 50;
+        private final Handler mHandler = new Handler(this.getLooper());
 
-        public SmoothScroll() {
+        public SmoothScrollThread() {
             super("scroll");
             start();
         }
@@ -220,6 +228,12 @@ public class Input {
              methodName = "injectInputEvent";
 
              injectInputEventMethod = inputManagerClass.getMethod(methodName, android.view.InputEvent.class, Integer.TYPE);
+
+             // Get the reference to setDisplayId method
+             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                 setDisplayIdMethod = MotionEvent.class.getDeclaredMethod("setDisplayId", Integer.TYPE);
+                 setDisplayIdMethod.setAccessible(true);
+             }
 
          } catch (Exception e) {
              Log.e(RemoteService.TAG, e.getMessage(), e);
