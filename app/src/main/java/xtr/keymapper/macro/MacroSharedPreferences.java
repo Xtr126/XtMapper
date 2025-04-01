@@ -46,7 +46,7 @@ public class MacroSharedPreferences {
     public Macro getMacro(String id) {
         String data = sharedPref.getString(id, null);
         if (data != null) return new Macro(data);
-        else return null;
+        else return new Macro();
     }
 
     /**
