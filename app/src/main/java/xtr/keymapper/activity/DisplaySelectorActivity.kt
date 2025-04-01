@@ -40,7 +40,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import xtr.keymapper.R
 import xtr.keymapper.activity.ui.theme.XtMapperTheme
 
 // Constants for the result
@@ -98,13 +100,13 @@ fun DisplaySelectorScreen(
             .padding(16.dp)
     ) {
         Text(
-            text = "Select a Display",
+            text = stringResource(R.string.select_a_display),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
         if (displays.isEmpty()) {
-            Text("No displays found", modifier = Modifier.padding(16.dp))
+            Text(stringResource(R.string.no_displays_found), modifier = Modifier.padding(16.dp))
         } else {
             LazyColumn (
                 modifier = Modifier.weight(1f),
@@ -133,13 +135,13 @@ fun DisplaySelectorScreen(
                 onClick = onCancelClicked,
                 modifier = Modifier.padding(end = 8.dp)
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
             Button(
                 onClick = onOkClicked,
                 enabled = selectedId != -1
             ) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
             }
         }
     }
@@ -184,7 +186,7 @@ fun DisplayCard(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
-                text = "Display #${display.displayId}",
+                text = stringResource(R.string.display_id, display.displayId),
                 style = MaterialTheme.typography.titleLarge
             )
             Spacer(modifier = Modifier.height(8.dp))

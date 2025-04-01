@@ -115,4 +115,7 @@
     <string name="shizuku_not_running_message"/>
     <string name="edit">Edit</string>
     <string name="show_controls_on_screen">Show controls on screen</string>
+    <string name="select_a_display">Select a Display</string>
+    <string name="no_displays_found">No displays found</string>
+    <string name="display_id">Display #%1$s</string>
 </resources>

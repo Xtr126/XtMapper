@@ -3,6 +3,7 @@ package xtr.keymapper.server;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.InputDevice;
@@ -145,7 +146,7 @@ public class Input {
         boolean active = false;
         float value = 0;
         int DELAY_MS = 50;
-        private final Handler mHandler = new Handler(this.getLooper());
+        private final Handler mHandler = new Handler(Looper.getMainLooper());
 
         public SmoothScrollThread() {
             super("scroll");
