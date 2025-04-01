@@ -169,7 +169,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         if(Settings.canDrawOverlays(this)) {
             Intent intent = new Intent(this, TouchPointer.class);
             intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName);
-            if (displayId != null) intent.putExtra(TouchPointer.DISPLAY_ID, 0);
+            if (displayId != null) intent.putExtra(TouchPointer.DISPLAY_ID, displayId.intValue());
             isServiceBound = bindService(intent, connection, Context.BIND_AUTO_CREATE);
             startForegroundService(intent);
             setButtonState(false);
