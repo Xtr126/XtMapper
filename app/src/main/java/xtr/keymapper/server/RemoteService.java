@@ -8,6 +8,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -60,14 +61,17 @@ public class RemoteService extends IRemoteService.Stub {
     private WindowManager getWindowManager(int displayId) {
         final WindowManager windowManager;
         DisplayManager displayManager = context.getSystemService(DisplayManager.class);
-        this.context = context.createDisplayContext(displayManager.getDisplay(displayId));
-        windowManager = context.getSystemService(WindowManager.class);
-        LayoutInflater layoutInflater = context.getSystemService(LayoutInflater.class);
-        context.setTheme(R.style.Theme_XtMapper);
+        this.context = this.context.createDisplayContext(displayManager.getDisplay(displayId));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            this.context = this.context.createWindowContext(displayManager.getDisplay(displayId), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null);
+        }
+        windowManager = this.context.getSystemService(WindowManager.class);
+        LayoutInflater layoutInflater = this.context.getSystemService(LayoutInflater.class);
+        this.context.setTheme(R.style.Theme_XtMapper);
         cursorView = CursorBinding.inflate(layoutInflater).getRoot();
 
         try {
-            prepareCursorOverlayWindow();
+            prepareCursorOverlayWindow(windowManager);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);
         }
@@ -134,11 +138,11 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
 
-    public void prepareCursorOverlayWindow() throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
+    public void prepareCursorOverlayWindow(WindowManager windowManager) throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
         TYPE_SECURE_SYSTEM_OVERLAY = WindowManager.LayoutParams.class.getField("TYPE_SECURE_SYSTEM_OVERLAY").getInt(null);
         Binder sWindowToken = new Binder();
-        Method setDefaultTokenMethod = mWindowManager.getClass().getMethod("setDefaultToken", IBinder.class);
-        setDefaultTokenMethod.invoke(mWindowManager, sWindowToken);
+        Method setDefaultTokenMethod = windowManager.getClass().getMethod("setDefaultToken", IBinder.class);
+        setDefaultTokenMethod.invoke(windowManager, sWindowToken);
     }
 
     public static void loadLibraries() {
