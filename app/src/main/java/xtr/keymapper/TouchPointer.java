@@ -119,11 +119,10 @@ public class TouchPointer extends Service {
         RemoteServiceHelper.getInstance(this, service -> {
             mService = service;
             KeymapConfig keymapConfig = new KeymapConfig(this);
-            DisplayManager displayManager = getSystemService(DisplayManager.class);
-            Display display = displayManager.getDisplay(displayId);
+            Display display = getSystemService(DisplayManager.class).getDisplay(displayId);
             Point size = new Point();
             display.getRealSize(size); // TODO: getRealSize() deprecated in API level 31
-            mWindowManager = createDisplayContext(display).getSystemService(WindowManager.class);
+            mWindowManager = getDisplayContext().getSystemService(WindowManager.class);
             try {
                 if (keymapConfig.disableAutoProfiling) {
                     mService.startServer(profile, keymapConfig, mCallback, size.x, size.y, displayId);
@@ -240,11 +239,9 @@ public class TouchPointer extends Service {
 
             mHandler.post(() -> {
                 if(cursorView == null) {
-                    DisplayManager displayManager = getSystemService(DisplayManager.class);
-                    Display display = displayManager.getDisplay(displayId);
 
                     cursorView = CursorBinding.inflate(LayoutInflater.from(
-                            new ContextThemeWrapper(TouchPointer.this.createDisplayContext(display), R.style.Theme_XtMapper)                    )).getRoot();
+                            new ContextThemeWrapper(getDisplayContext(), R.style.Theme_XtMapper)                    )).getRoot();
                     WindowManager.LayoutParams mParams = Utils.getPointerLayoutParams(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
                     mWindowManager.addView(cursorView, mParams);
                 }
@@ -275,6 +272,18 @@ public class TouchPointer extends Service {
             });
         }
     };
+
+    private Context getDisplayContext() {
+        DisplayManager displayManager = getSystemService(DisplayManager.class);
+        Display display = displayManager.getDisplay(displayId);
+        final Context context;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            context = createDisplayContext(display).createWindowContext(display, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null);
+        } else {
+            context = createDisplayContext(display);
+        }
+        return context;
+    }
 
     /**
      * This implementation is used to receive callbacks from the remote

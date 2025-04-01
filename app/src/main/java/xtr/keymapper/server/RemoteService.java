@@ -14,6 +14,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
 import android.util.Log;
+import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
@@ -59,21 +60,12 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     private WindowManager getWindowManager(int displayId) {
-        final WindowManager windowManager;
-        DisplayManager displayManager = context.getSystemService(DisplayManager.class);
-        this.context = this.context.createDisplayContext(displayManager.getDisplay(displayId));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            this.context = this.context.createWindowContext(displayManager.getDisplay(displayId), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null);
-        }
-        windowManager = this.context.getSystemService(WindowManager.class);
-        LayoutInflater layoutInflater = this.context.getSystemService(LayoutInflater.class);
-        this.context.setTheme(R.style.Theme_XtMapper);
-        cursorView = CursorBinding.inflate(layoutInflater).getRoot();
-
+        WindowManager windowManager;
         try {
-            prepareCursorOverlayWindow(windowManager);
+            windowManager = prepareCursorOverlayWindow(displayId);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);
+            windowManager = context.getSystemService(WindowManager.class);
         }
 
         return windowManager;
@@ -138,11 +130,31 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
 
-    public void prepareCursorOverlayWindow(WindowManager windowManager) throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
+    public WindowManager prepareCursorOverlayWindow(int displayId) throws NoSuchMethodException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
+        final WindowManager windowManager;
         TYPE_SECURE_SYSTEM_OVERLAY = WindowManager.LayoutParams.class.getField("TYPE_SECURE_SYSTEM_OVERLAY").getInt(null);
+
+        Display display = context.getSystemService(DisplayManager.class).getDisplay(displayId);
+        this.context = this.context.createDisplayContext(display);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            this.context = this.context.createWindowContext(display, TYPE_SECURE_SYSTEM_OVERLAY, null);
+        }
+        /*
+        * We obtained an instance of WindowManager configured to show windows on the given display.
+        * Now call getSystemService(Class) on the returned window context.
+        */
+        windowManager = this.context.getSystemService(WindowManager.class);
+
+        LayoutInflater layoutInflater = this.context.getSystemService(LayoutInflater.class);
+        this.context.setTheme(R.style.Theme_XtMapper);
+        cursorView = CursorBinding.inflate(layoutInflater).getRoot();
+
+
         Binder sWindowToken = new Binder();
         Method setDefaultTokenMethod = windowManager.getClass().getMethod("setDefaultToken", IBinder.class);
         setDefaultTokenMethod.invoke(windowManager, sWindowToken);
+        return windowManager;
     }
 
     public static void loadLibraries() {
