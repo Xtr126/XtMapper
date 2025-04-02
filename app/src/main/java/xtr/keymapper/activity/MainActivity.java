@@ -14,7 +14,6 @@ import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.os.RemoteException;
 import android.provider.Settings;
 import android.widget.Button;
 import android.widget.Toast;
@@ -128,15 +127,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         binding.controls.importExportButton.setOnClickListener
                 (v -> startActivity(new Intent(this, ImportExportActivity.class)));
 
-        RemoteServiceHelper.getInstance(this, service -> {
-                    try {
-                        if (service.isActive()) {
-                            setButtonState(false);
-                        }
-                    } catch (RemoteException ignored) {
-                    }
-                }
-        );
+        RemoteServiceHelper.runIfActive(this, () -> runOnUiThread(() -> setButtonState(false)));
     }
 
     private void launchSettings() {

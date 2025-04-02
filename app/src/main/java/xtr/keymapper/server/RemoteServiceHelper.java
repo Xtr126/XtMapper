@@ -56,6 +56,10 @@ public class RemoteServiceHelper {
         });
     }
 
+    public static void runIfActive(Context context, Runnable runnable) {
+        getInstance(context, service -> runnable.run());
+    }
+
     public interface RootRemoteServiceCallback {
         void onConnection(@NonNull IRemoteService service);
     }
