@@ -1,12 +1,13 @@
 package xtr.keymapper.server;
 
+import android.hardware.input.InputManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.InputDevice;
+import android.view.InputEvent;
 import android.view.MotionEvent;
 
 import com.genymobile.scrcpy.Point;
@@ -146,11 +147,12 @@ public class Input {
         boolean active = false;
         float value = 0;
         int DELAY_MS = 50;
-        private final Handler mHandler = new Handler(Looper.getMainLooper());
+        private final Handler mHandler;
 
         public SmoothScrollThread() {
             super("scroll");
             start();
+            mHandler = new Handler(getLooper());
         }
 
         public void onScrollEvent(float x, float y, int value) {
@@ -215,7 +217,7 @@ public class Input {
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 inputManagerClass = Class.forName("android.hardware.input.InputManagerGlobal");
              } else {
-                 inputManagerClass = android.hardware.input.InputManager.class;
+                 inputManagerClass = InputManager.class;
              }
 
              inputManager = inputManagerClass.getDeclaredMethod(methodName)
@@ -228,7 +230,7 @@ public class Input {
              //Get the reference to injectInputEvent method
              methodName = "injectInputEvent";
 
-             injectInputEventMethod = inputManagerClass.getMethod(methodName, android.view.InputEvent.class, Integer.TYPE);
+             injectInputEventMethod = inputManagerClass.getMethod(methodName, InputEvent.class, Integer.TYPE);
 
              // Get the reference to setDisplayId method
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
