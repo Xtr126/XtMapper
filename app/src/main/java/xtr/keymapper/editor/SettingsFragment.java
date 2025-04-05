@@ -1,7 +1,6 @@
 package xtr.keymapper.editor;
 
 import android.content.Context;
-import android.content.DialogInterface;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -143,6 +142,7 @@ public class SettingsFragment {
             }
         });
         settingsBinding.showControls.setChecked(keymapConfig.showControls);
+        settingsBinding.showControlsOpacity.setValue(keymapConfig.showControlsOpacity);
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(context, R.style.MaterialAlertDialog_Centered)
                 .setView(settingsBinding.getRoot())
@@ -154,6 +154,7 @@ public class SettingsFragment {
                     keymapConfig.useShizuku = settingsBinding.useShizuku.isChecked();
                     keymapConfig.editorOverlay = settingsBinding.editorOverlay.isChecked();
                     keymapConfig.showControls = settingsBinding.showControls.isChecked();
+                    keymapConfig.showControlsOpacity = settingsBinding.showControlsOpacity.getValue();
                 })
                 .create();
         if(overlayWindow) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);

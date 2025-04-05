@@ -32,7 +32,7 @@
 
         <service
             android:name=".editor.ShowKeymapService"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="false" />
 
         <activity

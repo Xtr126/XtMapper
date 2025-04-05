@@ -5,6 +5,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 
+import androidx.appcompat.view.ContextThemeWrapper;
+
+import xtr.keymapper.R;
+import xtr.keymapper.keymap.KeymapConfig;
+
 public class ShowKeymapService extends Service {
     private EditorUI editorUi;
 
@@ -15,17 +20,23 @@ public class ShowKeymapService extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public void onDestroy() {
+        editorUi.hideView();
+        super.onDestroy();
+    }
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
         String selectedProfile = intent.getStringExtra(EditorActivity.PROFILE_NAME);
 
         if (selectedProfile == null) {
             selectedProfile = "Default";
         }
-
-        editorUi = new EditorUI(this, editorCallback, selectedProfile, EditorUI.SHOW_KEYMAP_ONLY);
-        editorUi.loadKeymap();
-        editorUi.showControls();
+        KeymapConfig keymapConfig = new KeymapConfig(this);
+        Context context = new ContextThemeWrapper(this, R.style.Theme_XtMapper);
+        editorUi = new EditorUI(context, editorCallback, selectedProfile, EditorUI.SHOW_KEYMAP_ONLY);
+        editorUi.loadKeymapAfterView();
+        editorUi.showControls(keymapConfig.showControlsOpacity);
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -33,7 +44,6 @@ public class ShowKeymapService extends Service {
         @Override
         public void onHideView() {
             editorUi = null;
-            stopSelf();
         }
 
         @Override

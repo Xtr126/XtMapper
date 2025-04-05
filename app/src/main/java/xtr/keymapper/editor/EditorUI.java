@@ -7,7 +7,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -132,7 +131,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
             mainView.setFocusable(true);
         }
 
-        keysContainerView.post(this::loadKeymap);
+        loadKeymapAfterView();
     }
 
     public void openSettings() {
@@ -140,37 +139,33 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void openOverlayWindow() {
-        if (overlayOpen) {
-            removeView(mainView);
-        }
-        WindowManager mWindowManager = context.getSystemService(WindowManager.class);
-        WindowManager.LayoutParams mParams = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
-                PixelFormat.TRANSLUCENT);
-        mWindowManager.addView(mainView, mParams);
-        overlayOpen = true;
-        hideSystemBars();
+        openOverlayWindow(-1);
     }
 
-    void showControls() {
+    void showControls(float alpha) {
+        openOverlayWindow(alpha);
+    }
+
+    private void openOverlayWindow(float alpha) {
+        ViewGroup overlayView = startMode == SHOW_KEYMAP_ONLY ? keysContainerView : mainView;
         if (overlayOpen) {
-            removeView(keysContainerView);
+            removeView(overlayView);
         }
         WindowManager mWindowManager = context.getSystemService(WindowManager.class);
         WindowManager.LayoutParams mParams = Utils.getPointerLayoutParams(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
 
-        mWindowManager.addView(keysContainerView, mParams);
+        if (alpha < 1 && alpha > 0)
+            overlayView.setAlpha(alpha);
+
+        mWindowManager.addView(overlayView, mParams);
         overlayOpen = true;
         hideSystemBars();
     }
 
     private void hideSystemBars() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            WindowInsetsController windowInsetsController = mainView.getWindowInsetsController();
+            ViewGroup overlayView = startMode == SHOW_KEYMAP_ONLY ? keysContainerView : mainView;
+            WindowInsetsController windowInsetsController = overlayView.getWindowInsetsController();
             if (windowInsetsController != null) {
                 windowInsetsController.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
                 windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
@@ -328,7 +323,11 @@ public class EditorUI extends OnKeyEventListener.Stub {
         view.invalidate();
     }
 
-    protected void loadKeymap() {
+    void loadKeymapAfterView() {
+        keysContainerView.post(this::loadKeymap);
+    }
+
+    private void loadKeymap() {
         profile = new KeymapProfiles(context).getProfile(profileName, false);
 
         profile.scale(keysContainerView.getWidth(), keysContainerView.getHeight());
@@ -352,6 +351,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         if (profile.mouseAimConfig != null) addCrosshair(profile.mouseAimConfig.xCenter, profile.mouseAimConfig.yCenter);
         if (profile.rightClick != null) addRightClick(profile.rightClick.x, profile.rightClick.y);
     }
+
 
     private void removeSwipeKey(SwipeKeyView swipeKeyView) {
         swipeKeyViewMap.remove(swipeKeyView.button1.frameView, swipeKeyView.button1);
