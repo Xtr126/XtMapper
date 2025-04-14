@@ -73,30 +73,34 @@ public class PointersState {
      * @return The number of items initialized (the number of pointers).
      */
     public int update(MotionEvent.PointerProperties[] props, MotionEvent.PointerCoords[] coords) {
-        int count = pointers.size();
-        for (int i = 0; i < count; ++i) {
-            Pointer pointer = pointers.get(i);
+        synchronized (pointers) {
+            int count = pointers.size();
+            for (int i = 0; i < count; ++i) {
+                Pointer pointer = pointers.get(i);
 
-            // id 0 is reserved for mouse events
-            props[i].id = pointer.getLocalId();
+                // id 0 is reserved for mouse events
+                props[i].id = pointer.getLocalId();
 
-            Point point = pointer.getPoint();
-            coords[i].x = point.getX();
-            coords[i].y = point.getY();
-            coords[i].pressure = pointer.getPressure();
+                Point point = pointer.getPoint();
+                coords[i].x = point.getX();
+                coords[i].y = point.getY();
+                coords[i].pressure = pointer.getPressure();
+            }
+            cleanUp();
+            return count;
         }
-        cleanUp();
-        return count;
     }
 
     /**
      * Remove all pointers which are UP.
      */
     private void cleanUp() {
-        for (int i = pointers.size() - 1; i >= 0; --i) {
-            Pointer pointer = pointers.get(i);
-            if (pointer.isUp()) {
-                pointers.remove(i);
+        synchronized (pointers) {
+            for (int i = pointers.size() - 1; i >= 0; --i) {
+                Pointer pointer = pointers.get(i);
+                if (pointer.isUp()) {
+                    pointers.remove(i);
+                }
             }
         }
     }

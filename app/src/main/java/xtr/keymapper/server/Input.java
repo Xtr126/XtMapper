@@ -94,11 +94,13 @@ public class Input {
                         (pointerIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
             }
         }
-        MotionEvent motionEvent = MotionEvent.obtain(lastTouchDown, now, action, pointerCount,
-                pointerProperties, pointerCoords,
-                0, 0, 1f, 1f,
-                0, 0, source, 0);
-        injectInputEvent(motionEvent);
+        if (pointerCount >= 1) {
+            MotionEvent motionEvent = MotionEvent.obtain(lastTouchDown, now, action, pointerCount,
+                    pointerProperties, pointerCoords,
+                    0, 0, 1f, 1f,
+                    0, 0, source, 0);
+            injectInputEvent(motionEvent);
+        }
     }
 
     public void onScrollEvent(float x, float y, int value){
