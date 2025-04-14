@@ -85,6 +85,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     public static final int START_EDITOR = 1;
     public static final int SHOW_KEYMAP_ONLY = 2;
     private final int startMode;
+    private MacroDialog macroDialog = null;
 
     interface KeyInFocus {
         void setText(String key);
@@ -200,12 +201,14 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         // Ignore non key events
         if(!input_event[1].equals("EV_KEY") || !code.contains("KEY_")) return;
+        String key = input_event[2].substring(4);
 
         // Incoming calls are not guaranteed to be executed on the main thread
         mHandler.post(() -> {
-            if (keyInFocus != null)
-                keyInFocus.setText(input_event[2].substring(4));
+            if (macroDialog != null) macroDialog.onKey(key);
+            else if (keyInFocus != null) keyInFocus.setText(key);
         });
+
     }
 
 
@@ -256,10 +259,11 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void showMacroDialog() {
-        MacroDialog macroDialog = new MacroDialog(context, overlayOpen, profile);
+        macroDialog = new MacroDialog(context, overlayOpen, profile);
         macroDialog.show(v -> {
            macroDialog.dismiss();
-           addMacro();
+           macroDialog = null;
+           if (v != null) addMacro();
        });
     }
 

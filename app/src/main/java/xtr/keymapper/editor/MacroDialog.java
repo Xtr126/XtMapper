@@ -3,11 +3,14 @@ package xtr.keymapper.editor;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -35,6 +38,7 @@ public class MacroDialog {
     private final MacroSharedPreferences macroSharedPreferences;
     private final HashMap<String, Macro> macroIdMap;
     private AlertDialog dialog;
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
 
     public MacroDialog(Context context, boolean useOverlayFlag, KeymapProfile profile) {
@@ -63,7 +67,10 @@ public class MacroDialog {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context)
                 .setView(dialogBinding.getRoot())
                 .setTitle(R.string.macro)
-                .setOnDismissListener(dialog1 -> macroSharedPreferences.unregisterOnSharedPreferenceChangeListener(listener));
+                .setOnDismissListener(dialog1 -> {
+                    macroSharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
+                    l.onClick(null);
+                });
 
         dialog = builder.create();
 
@@ -91,6 +98,15 @@ public class MacroDialog {
             dialog.dismiss();
         }
     }
+
+    public void onKey(String key) {
+        // Incoming calls are not guaranteed to be executed on the main thread
+        mHandler.post(() -> {
+            if (keyInFocus != null) keyInFocus.setText(key);
+        });
+    }
+
+    private TextView keyInFocus = null;
 
     // RecyclerView Adapter with View Binding
     private class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder> {
@@ -152,6 +168,8 @@ public class MacroDialog {
                 }
                 return true;
             });
+
+            holder.binding.key.setOnClickListener(v -> keyInFocus = (TextView) v);
             Macro macro = macroIdMap.get(macroId);
             if (macro != null) holder.binding.key.setText(macro.triggerKey);
         }
