@@ -48,13 +48,15 @@ public class Input {
     }
 
     public boolean noPointersDown() {
-        if (pointerCount > 0) {
-            pointerCount = pointersState.update(pointerProperties, pointerCoords);
-            for (int i = 0; i < pointerCount; i++) {
-                if (!pointersState.get(i).isUp()) return false;
+        synchronized (pointersState) {
+            if (pointerCount > 0) {
+                pointerCount = pointersState.update(pointerProperties, pointerCoords);
+                for (int i = 0; i < pointerCount; i++) {
+                    if (!pointersState.get(i).isUp()) return false;
+                }
             }
+            return true;
         }
-        return true;
     }
 
     public Input(int displayId) {
@@ -63,42 +65,45 @@ public class Input {
     }
 
     public void injectTouch(int action, int pointerId, float pressure, float x, float y) {
-        long now = SystemClock.uptimeMillis();
-        Point point = new Point(x, y);
+        synchronized (pointersState) {
+            long now = SystemClock.uptimeMillis();
+            Point point = new Point(x, y);
 
-        int pointerIndex = pointersState.getPointerIndex(pointerId);
-        if (pointerIndex == -1) {
-            Log.e(RemoteService.TAG, "Too many pointers for touch event");
-        }
-        Pointer pointer = pointersState.get(pointerIndex);
-        pointer.setPoint(point);
-        pointer.setPressure(pressure);
-        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_HOVER_MOVE) pointer.setUp(true);        
-        else if (action == MotionEvent.ACTION_DOWN) pointer.setUp(false);
-
-        int source = InputDevice.SOURCE_TOUCHSCREEN;
-
-        pointerCount = pointersState.update(pointerProperties, pointerCoords);
-
-        if (pointerCount == 1) {
-            if (action == MotionEvent.ACTION_DOWN) {
-                lastTouchDown = now;
+            int pointerIndex = pointersState.getPointerIndex(pointerId);
+            if (pointerIndex == -1) {
+                Log.e(RemoteService.TAG, "Too many pointers for touch event");
             }
-        } else {
-            // secondary pointers must use ACTION_POINTER_* ORed with the pointerIndex
-            if (action == MotionEvent.ACTION_UP) {
-                action = MotionEvent.ACTION_POINTER_UP |
-                        (pointerIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
-            } else if (action == MotionEvent.ACTION_DOWN) {
-                action = MotionEvent.ACTION_POINTER_DOWN |
-                        (pointerIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
+            Pointer pointer = pointersState.get(pointerIndex);
+            pointer.setPoint(point);
+            pointer.setPressure(pressure);
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_HOVER_MOVE)
+                pointer.setUp(true);
+            else if (action == MotionEvent.ACTION_DOWN) pointer.setUp(false);
+
+            int source = InputDevice.SOURCE_TOUCHSCREEN;
+
+            pointerCount = pointersState.update(pointerProperties, pointerCoords);
+
+            if (pointerCount == 1) {
+                if (action == MotionEvent.ACTION_DOWN) {
+                    lastTouchDown = now;
+                }
+            } else {
+                // secondary pointers must use ACTION_POINTER_* ORed with the pointerIndex
+                if (action == MotionEvent.ACTION_UP) {
+                    action = MotionEvent.ACTION_POINTER_UP |
+                            (pointerIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
+                } else if (action == MotionEvent.ACTION_DOWN) {
+                    action = MotionEvent.ACTION_POINTER_DOWN |
+                            (pointerIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
+                }
             }
+            MotionEvent motionEvent = MotionEvent.obtain(lastTouchDown, now, action, pointerCount,
+                    pointerProperties, pointerCoords,
+                    0, 0, 1f, 1f,
+                    0, 0, source, 0);
+            injectInputEvent(motionEvent);
         }
-        MotionEvent motionEvent = MotionEvent.obtain(lastTouchDown, now, action, pointerCount,
-                pointerProperties, pointerCoords,
-                0, 0, 1f, 1f,
-                0, 0, source, 0);
-        injectInputEvent(motionEvent);
     }
 
     public void onScrollEvent(float x, float y, int value){
