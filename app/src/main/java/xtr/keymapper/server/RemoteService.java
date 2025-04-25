@@ -180,9 +180,9 @@ public class RemoteService extends IRemoteService.Stub {
                 while ((line = getevent.readLine()) != null) {
                     String[] data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
                     if (addNewDevices(data)) {
-                        if (inputService != null) {
+                        if (inputService != null) try {
                             if (isWaylandClient && data[0].contains("wl_pointer"))
-                                inputService.sendWaylandMouseEvent(data[1]);
+                                mHandler.post(() -> inputService.sendWaylandMouseEvent(data[1]));
 
                             KeyEventHandler k = inputService.getKeyEventHandler();
                             if (!inputService.stopEvents) {
@@ -190,8 +190,10 @@ public class RemoteService extends IRemoteService.Stub {
                             } else {
                                 k.handleKeyboardShortcutEvent(data[1]);
                             }
+                            if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
+                        } catch (RemoteException e) {
+                            throw new RuntimeException(e);
                         }
-                        if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
                     }
                 }
             } catch (Exception e){
