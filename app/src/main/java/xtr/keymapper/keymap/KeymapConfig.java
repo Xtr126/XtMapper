@@ -10,6 +10,7 @@ import android.os.Parcelable;
 public class KeymapConfig implements Parcelable {
     public boolean showControls;
     public float showControlsOpacity;
+    public float floatingKeysSize;
 
     private SharedPreferences sharedPref;
     public Float mouseSensitivity = 1f, scrollSpeed = 1f;
@@ -79,6 +80,7 @@ public class KeymapConfig implements Parcelable {
         mouseAimShortcutKey = in.readInt();
         mouseAimToggle = in.readByte() != 0;
         touchpadInputMode = in.readInt();
+        floatingKeysSize = in.readFloat();
     }
 
     @Override
@@ -115,6 +117,7 @@ public class KeymapConfig implements Parcelable {
         dest.writeInt(mouseAimShortcutKey);
         dest.writeByte((byte) (mouseAimToggle ? 1 : 0));
         dest.writeInt(touchpadInputMode);
+        dest.writeFloat(floatingKeysSize);
     }
 
     @Override
@@ -163,6 +166,8 @@ public class KeymapConfig implements Parcelable {
 
         touchpadInputMode = sharedPref.getInt("touchpad_input_mode", TOUCHPAD_DISABLED);
         pointerMode = sharedPref.getInt("pointer_mode", POINTER_OVERLAY);
+
+        floatingKeysSize = sharedPref.getFloat("floating_keys_size", 1);
     }
 
     public void applySharedPrefs() {
@@ -188,6 +193,7 @@ public class KeymapConfig implements Parcelable {
                 .putInt("touchpad_input_mode", touchpadInputMode)
                 .putInt("swipe_delay_ms", swipeDelayMs)
                 .putInt("pointer_mode", pointerMode)
+                .putFloat("floating_keys_size", floatingKeysSize)
                 .apply();
     }
 

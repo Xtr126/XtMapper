@@ -36,6 +36,11 @@
             android:labelFor="@id/show_controls_opacity"
             android:text="@string/show_controls_on_screen" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/opacity" />
+
         <com.google.android.material.slider.Slider
             android:id="@+id/show_controls_opacity"
             android:layout_width="match_parent"

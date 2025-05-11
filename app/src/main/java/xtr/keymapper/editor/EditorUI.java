@@ -78,7 +78,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private KeymapProfile profile;
     private boolean overlayOpen = false;
     private MovableFrameLayout dpadUdlr;
-    private final SettingsFragment settingsFragment;
+    private final SettingsOverlay settingsFragment;
     private final ViewGroup mainView;
     private final ViewGroup keysContainerView;
     public static final int START_SETTINGS = 0;
@@ -101,7 +101,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         if (startMode != SHOW_KEYMAP_ONLY) {
             context.stopService(new Intent(context, ShowKeymapService.class));
-            settingsFragment = new SettingsFragment(context, startMode);
+            settingsFragment = new SettingsOverlay(context, startMode);
             mainView = settingsFragment.createView(layoutInflater);
             keysContainerView = settingsFragment.binding.keyContainer;
 
@@ -477,6 +477,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     private void addKey(KeymapProfileKey key) {
+        KeymapConfig keymapConfig = new KeymapConfig(context);
+
         MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(context, key1 -> {
             floatingActionKeyList.remove(key1);
             keysContainerView.removeView(key1.frameView);
@@ -489,6 +491,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
                 .setDuration(1000)
                 .start();
         floatingKey.setOnClickListener(this::onFloatingKeyClick);
+
+        floatingKey.frameView.setScaleX(keymapConfig.floatingKeysSize);
+        floatingKey.frameView.setScaleY(keymapConfig.floatingKeysSize);
 
         floatingActionKeyList.add(floatingKey);
     }

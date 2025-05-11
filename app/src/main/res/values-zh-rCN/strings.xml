@@ -103,4 +103,6 @@
     <string name="select_a_display">Select a Display</string>
     <string name="no_displays_found">No displays found</string>
     <string name="display_id">Display #%1$s</string>
+    <string name="opacity">Opacity</string>
+    <string name="floating_keys_size">Floating keys size</string>
 </resources>

@@ -31,7 +31,7 @@ import xtr.keymapper.databinding.KeymapEditorLayoutBinding;
 import xtr.keymapper.databinding.SettingsBinding;
 import xtr.keymapper.keymap.KeymapConfig;
 
-public class SettingsFragment {
+public class SettingsOverlay {
     private final KeymapConfig keymapConfig;
     protected KeymapEditorLayoutBinding binding;
     private Map<String, Integer> pointerModeMap;
@@ -41,7 +41,7 @@ public class SettingsFragment {
     private final int startMode;
     boolean overlayWindow;
 
-    public SettingsFragment(Context context, int startMode) {
+    public SettingsOverlay(Context context, int startMode) {
         this.context = context;
         keymapConfig = new KeymapConfig(context);
         this.startMode = startMode;
@@ -76,6 +76,7 @@ public class SettingsFragment {
         binding.sliderMouse.setValue(keymapConfig.mouseSensitivity);
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
         binding.sliderSwipeDelay.setValue(keymapConfig.swipeDelayMs);
+        binding.sliderFloatingKeysSize.setValue(keymapConfig.floatingKeysSize);
 
         binding.swipeDelayText.setText(context.getString(R.string.swipe_delay_ms, keymapConfig.swipeDelayMs));
         binding.sliderSwipeDelay.addOnChangeListener((slider, value, fromUser) -> binding.swipeDelayText.setText(context.getString(R.string.swipe_delay_ms, (int)value)));
@@ -134,13 +135,6 @@ public class SettingsFragment {
         settingsBinding.useShizuku.setChecked(keymapConfig.useShizuku);
         settingsBinding.editorOverlay.setChecked(keymapConfig.editorOverlay);
 
-        settingsBinding.showControls.setOnCheckedChangeListener((t, checked) -> {
-            if (checked) {
-                settingsBinding.showControlsOpacity.setVisibility(View.VISIBLE);
-            } else {
-                settingsBinding.showControlsOpacity.setVisibility(View.GONE);
-            }
-        });
         settingsBinding.showControls.setChecked(keymapConfig.showControls);
         settingsBinding.showControlsOpacity.setValue(keymapConfig.showControlsOpacity);
 
@@ -263,6 +257,7 @@ public class SettingsFragment {
         keymapConfig.mouseSensitivity = binding.sliderMouse.getValue();
         keymapConfig.scrollSpeed = binding.sliderScrollSpeed.getValue();
         keymapConfig.swipeDelayMs = (int) binding.sliderSwipeDelay.getValue();
+        keymapConfig.floatingKeysSize = binding.sliderFloatingKeysSize.getValue();
 
         keymapConfig.ctrlMouseWheelZoom = binding.mouseWheelToggle.isChecked();
         keymapConfig.ctrlDragMouseGesture = binding.mouseDragToggle.isChecked();

@@ -9,6 +9,7 @@ import com.google.android.material.button.MaterialButton;
 
 import xtr.keymapper.databinding.SwipeKeyBinding;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
+import xtr.keymapper.keymap.KeymapConfig;
 
 public class SwipeKeyView {
 
@@ -37,6 +38,14 @@ public class SwipeKeyView {
                 .setDuration(500)
                 .withEndAction(() -> onXyChange(0, 0))
                 .start();
+
+        KeymapConfig keymapConfig = new KeymapConfig(mainView.getContext());
+
+        button1.frameView.setScaleX(keymapConfig.floatingKeysSize);
+        button1.frameView.setScaleY(keymapConfig.floatingKeysSize);
+
+        button2.frameView.setScaleX(keymapConfig.floatingKeysSize);
+        button2.frameView.setScaleY(keymapConfig.floatingKeysSize);
     }
 
     public SwipeKeyView(ViewGroup rootView, OnViewRemoved callback, View.OnClickListener onClickListener){
