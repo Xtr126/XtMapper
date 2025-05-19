@@ -57,7 +57,12 @@ public class RemoteServiceHelper {
     }
 
     public static void runIfActive(Context context, Runnable runnable) {
-        getInstance(context, service -> runnable.run());
+        getInstance(context, service -> {
+            try {
+                if (service.isActive()) runnable.run();
+            } catch (RemoteException ignored) {
+            }
+        });
     }
 
     public interface RootRemoteServiceCallback {
