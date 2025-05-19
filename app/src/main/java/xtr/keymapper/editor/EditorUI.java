@@ -79,7 +79,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private KeymapProfile profile;
     private boolean overlayOpen = false;
     private MovableFrameLayout dpadUdlr;
-    private final SettingsOverlay settingsFragment;
+    private final SettingsOverlay settingsOverlay;
     private final ViewGroup mainView;
     private final ViewGroup keysContainerView;
     public static final int START_SETTINGS = 0;
@@ -102,22 +102,22 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         if (startMode != SHOW_KEYMAP_ONLY) {
             context.stopService(new Intent(context, ShowKeymapService.class));
-            settingsFragment = new SettingsOverlay(context, startMode);
-            mainView = settingsFragment.createView(layoutInflater);
-            keysContainerView = settingsFragment.binding.keyContainer;
+            settingsOverlay = new SettingsOverlay(context, startMode);
+            mainView = settingsOverlay.createView(layoutInflater);
+            keysContainerView = settingsOverlay.binding.keyContainer;
 
-            settingsFragment.inflateMenuResource(startMode, layoutInflater);
-            settingsFragment.setOnActionSelectedListener(this::onActionSelected);
+            settingsOverlay.inflateMenuResource(startMode, layoutInflater);
+            settingsOverlay.setOnActionSelectedListener(this::onActionSelected);
         } else {
             keysContainerView = new FrameLayout(context);
             keysContainerView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            settingsFragment = null;
+            settingsOverlay = null;
             mainView = null;
         }
     }
 
     public void open(boolean overlayWindow) {
-        settingsFragment.overlayWindow = overlayWindow;
+        settingsOverlay.overlayWindow = overlayWindow;
         if (mainView.getWindowToken() == null && mainView.getParent() == null)
             if (overlayWindow) openOverlayWindow();
             else {
@@ -169,7 +169,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         mWindowManager.addView(overlayView, mParams);
         overlayOpen = true;
-        hideSystemBars();
+        if(startMode != SHOW_KEYMAP_ONLY) hideSystemBars();
     }
 
     private void hideSystemBars() {
@@ -286,7 +286,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         if (editorCallback != null && editorCallback.getEvent()) {
             mainView.setFocusable(true);
         }
-        MacroStatus macroStatus = new MacroStatus(context, settingsFragment.binding.catalog);
+        MacroStatus macroStatus = new MacroStatus(context, settingsOverlay.binding.catalog);
         MacroView macroView = new MacroView(context, (macroView_) -> {
             // Stop counting time in stopwatch
             macroStatus.stop();
@@ -297,34 +297,34 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
             // Redirect keyboard input
             mainView.setOnKeyListener(EditorUI.this::onKey);
-            settingsFragment.unHideButtons();
+            settingsOverlay.unHideButtons();
             if (editorCallback != null && !editorCallback.getEvent()) mainView.setFocusable(false);
 
             showMacroDialog();
         });
         // Hide existing buttons in catalog till macro finish
-        settingsFragment.hideButtons();
+        settingsOverlay.hideButtons();
         macroStatus.start();
 
         keysContainerView.addView(macroView);
         // Redirect keyboard input
         mainView.setOnKeyListener((v, keyCode, event) -> macroView.onKey(event));
 
-        settingsFragment.binding.catalog.setOnClickListener(v -> macroView.clearCanvasAndFinish());
+        settingsOverlay.binding.catalog.setOnClickListener(v -> macroView.clearCanvasAndFinish());
     }
 
     public void hideView() {
         if (startMode == START_EDITOR) saveKeymap();
         if (startMode != SHOW_KEYMAP_ONLY) {
-            KeymapConfig keymapConfig = new KeymapConfig(context);
-
-            settingsFragment.onDestroyView();
+            settingsOverlay.onDestroyView();
 
             removeView(mainView);
 
             if (editorCallback != null) editorCallback.onHideView();
             else RemoteServiceHelper.reloadKeymap(context);
 
+            // Load keymap config after settingsOverlay wrote config
+            KeymapConfig keymapConfig = new KeymapConfig(context);
             RemoteServiceHelper.runIfActive(context, () -> {
                 if (keymapConfig.showControls)
                     ShowKeymapService.start(context, profileName);
