@@ -318,15 +318,18 @@ public class EditorUI extends OnKeyEventListener.Stub {
         if (startMode != SHOW_KEYMAP_ONLY) {
             KeymapConfig keymapConfig = new KeymapConfig(context);
 
+            settingsFragment.onDestroyView();
+
+            removeView(mainView);
+
+            if (editorCallback != null) editorCallback.onHideView();
+            else RemoteServiceHelper.reloadKeymap(context);
+
             RemoteServiceHelper.runIfActive(context, () -> {
                 if (keymapConfig.showControls)
                     ShowKeymapService.start(context, profileName);
             });
 
-            settingsFragment.onDestroyView();
-            removeView(mainView);
-            if (editorCallback != null) editorCallback.onHideView();
-            else RemoteServiceHelper.reloadKeymap(context);
         } else removeView(keysContainerView);
     }
 
