@@ -7,6 +7,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -152,8 +153,16 @@ public class EditorUI extends OnKeyEventListener.Stub {
         if (overlayOpen) {
             removeView(overlayView);
         }
+
         WindowManager mWindowManager = context.getSystemService(WindowManager.class);
-        WindowManager.LayoutParams mParams = Utils.getPointerLayoutParams(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        WindowManager.LayoutParams mParams = startMode == SHOW_KEYMAP_ONLY ? Utils.getPointerLayoutParams(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) : new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN |
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                        WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
+                PixelFormat.TRANSLUCENT);
+
 
         if (alpha < 1 && alpha > 0)
             overlayView.setAlpha(alpha);
