@@ -235,7 +235,8 @@ public class Input {
 
              // Get the reference to setDisplayId method
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                 setDisplayIdMethod = MotionEvent.class.getDeclaredMethod("setDisplayId", Integer.TYPE);
+                 methodName = "getDeclaredMethod";
+                 setDisplayIdMethod = MotionEvent.class.getDeclaredMethod(methodName, Integer.TYPE);
                  setDisplayIdMethod.setAccessible(true);
              }
 
