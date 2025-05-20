@@ -108,12 +108,6 @@ public class RemoteService extends IRemoteService.Stub {
         });
     }
 
-    @Override
-    public void destroy() {
-        stopServer();
-        System.exit(0);
-    }
-
     private void addCursorView() {
         if (cursorView == null) return;
 
@@ -219,6 +213,8 @@ public class RemoteService extends IRemoteService.Stub {
         return true;
     }
 
+    private final DeathRecipient mStartServerDeathRecipient = this::stopServer;
+
     /**
      * Called by client to start the remote server.
      *
@@ -230,9 +226,9 @@ public class RemoteService extends IRemoteService.Stub {
      */
     @Override
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight, int displayId) throws RemoteException {
-        if (inputService != null) stopServer(false);
-        if (cb != null) cb.asBinder().linkToDeath(this::stopServer, 0);
+        if (cb != null) cb.asBinder().linkToDeath(mStartServerDeathRecipient, 0);
         mHandler.post(() -> {
+            if (inputService != null) stopServer(false);
             mWindowManager = getWindowManager(displayId);
 
             if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
@@ -263,8 +259,13 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     @Override
-    public void stopServer() {
+    public void destroy() {
         stopServer(true);
+    }
+
+    @Override
+    public void stopServer() {
+        mHandler.post(() -> stopServer(true));
     }
 
     private void stopServer(boolean exitProcess) {
@@ -283,21 +284,21 @@ public class RemoteService extends IRemoteService.Stub {
             inputService.stopMouse();
             inputService.stopTouchpad();
             inputService.destroyUinputDev();
+            if (inputService.getCallback() != null) inputService.getCallback().asBinder().unlinkToDeath(mKeyEventListenerDeathRecipient, 0);
             inputService = null;
         }
     }
-
-    private final DeathRecipient mDeathRecipient = () -> mOnKeyEventListener = null;
+    private final DeathRecipient mKeyEventListenerDeathRecipient = () -> mOnKeyEventListener = null;
 
     @Override
     public void registerOnKeyEventListener(OnKeyEventListener l) throws RemoteException {
-        l.asBinder().linkToDeath(mDeathRecipient, 0);
+        l.asBinder().linkToDeath(mKeyEventListenerDeathRecipient, 0);
         mOnKeyEventListener = l;
     }
 
     @Override
     public void unregisterOnKeyEventListener(OnKeyEventListener l)  {
-        if (l != null) l.asBinder().unlinkToDeath(mDeathRecipient, 0);
+        if (l != null) l.asBinder().unlinkToDeath(mKeyEventListenerDeathRecipient, 0);
         mOnKeyEventListener = null;
     }
 
