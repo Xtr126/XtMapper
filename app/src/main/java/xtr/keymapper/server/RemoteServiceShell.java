@@ -31,7 +31,6 @@ public class RemoteServiceShell {
                     case "--wayland-client":
                         mService.isWaylandClient = true;
                         System.out.println("using wayland client");
-                        mService.start_getevent();
                         break;
                     case "--no-auto-launch":
                         launchApp = false;

@@ -47,7 +47,7 @@ public class RemoteService extends IRemoteService.Stub {
     String nativeLibraryDir = System.getProperty("java.library.path");
     private View cursorView;
     private int TYPE_SECURE_SYSTEM_OVERLAY;
-    Handler mHandler = new Handler(Looper.getMainLooper());
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
     private WindowManager mWindowManager;
     protected Context context;
     public static final String TAG = "xtmapper-server";
@@ -78,7 +78,8 @@ public class RemoteService extends IRemoteService.Stub {
         try {
             ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
             nativeLibraryDir = ai.nativeLibraryDir;
-            if(!isWaylandClient) start_getevent();
+            if(!isWaylandClient) new Thread(this::start_getevent).start();
+            else mHandler.post(this::start_getevent);
         } catch (PackageManager.NameNotFoundException e) {
             Log.e(TAG, e.getMessage(), e);
             throw new RuntimeException(e);
@@ -165,42 +166,38 @@ public class RemoteService extends IRemoteService.Stub {
     }
 
     /**
-     * Executes getevent command and processes the output
+     * Executes getevent command and processes the output or reads from stdin if wayland client
      */
-    void start_getevent() {
-        new Thread(() -> {
-            try {
-                final BufferedReader getevent;
-                if (isWaylandClient) {
-                    getevent = new BufferedReader(new InputStreamReader(System.in));
-                } else {
-                    getevent = Utils.geteventStream(nativeLibraryDir);
-                }
-                String line;
-                while ((line = getevent.readLine()) != null) {
-                    String[] data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
-                    if (addNewDevices(data)) {
-                        if (inputService != null) try {
-                            if (isWaylandClient && data[0].contains("wl_pointer"))
-                                mHandler.post(() -> inputService.sendWaylandMouseEvent(data[1]));
+    private void start_getevent() { try {
+        final BufferedReader getevent;
+        if (isWaylandClient) {
+            getevent = new BufferedReader(new InputStreamReader(System.in));
+        } else {
+            getevent = Utils.geteventStream(nativeLibraryDir);
+        }
+        String line;
+        while ((line = getevent.readLine()) != null) {
+            String[] data = line.split(":"); // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
+            if (addNewDevices(data)) {
+                if (inputService != null) try {
+                    if (isWaylandClient && data[0].contains("wl_pointer"))
+                        inputService.sendWaylandMouseEvent(data[1]);
 
-                            KeyEventHandler k = inputService.getKeyEventHandler();
-                            if (!inputService.stopEvents) {
-                                k.handleEvent(data[1]);
-                            } else {
-                                k.handleKeyboardShortcutEvent(data[1]);
-                            }
-                            if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
-                        } catch (RemoteException e) {
-                            throw new RuntimeException(e);
-                        }
+                    KeyEventHandler k = inputService.getKeyEventHandler();
+                    if (!inputService.stopEvents) {
+                        k.handleEvent(data[1]);
+                    } else {
+                        k.handleKeyboardShortcutEvent(data[1]);
                     }
+                    if (mOnKeyEventListener != null) mOnKeyEventListener.onKeyEvent(line);
+                } catch (RemoteException e) {
+                    throw new RuntimeException(e);
                 }
-            } catch (Exception e){
-                Log.e(TAG, e.getMessage(), e);
             }
-        }).start();
-    }
+        }
+    } catch (Exception e){
+        Log.e(TAG, e.getMessage(), e);
+    }}
 
     /**
      * @param data split output of getevent command
