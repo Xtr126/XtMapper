@@ -270,9 +270,11 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private void showMacroDialog() {
         macroDialog = new MacroDialog(context, overlayOpen, profile);
         macroDialog.show(v -> {
-           macroDialog.dismiss();
-           macroDialog = null;
-           if (v != null) addMacro();
+            if (v != null) addMacro();
+            if (macroDialog != null) {
+                macroDialog.dismiss();
+                macroDialog = null;
+            }
        });
     }
 
