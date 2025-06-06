@@ -228,7 +228,13 @@ public class RemoteService extends IRemoteService.Stub {
     public void startServer(KeymapProfile profile, KeymapConfig keymapConfig, IRemoteServiceCallback cb, int screenWidth, int screenHeight, int displayId) throws RemoteException {
         if (cb != null) cb.asBinder().linkToDeath(mStartServerDeathRecipient, 0);
         mHandler.post(() -> {
-            if (inputService != null) stopServer(false);
+            if (inputService != null) {
+                if (isWaylandClient) {
+                    inputService.hideCursor();
+                    inputService.stop();
+                }
+                stopServer(false);
+            }
             mWindowManager = getWindowManager(displayId);
 
             if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
