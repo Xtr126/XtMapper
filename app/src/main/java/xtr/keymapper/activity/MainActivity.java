@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.hardware.display.DisplayManager;
 import android.os.Build;
@@ -64,55 +63,78 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        boolean startedFromShell = isStartedWithShell();
 
-        // User has enabled shizuku or not
         KeymapConfig keymapConfig = new KeymapConfig(this);
+
+        /*
+         * If user has enabled "Use Shizuku" but this activity was started from shell (waydroid or adb)
+         * Then reset "Use Shizuku" setting to false since it crashes the app
+         */
+        if (startedFromShell && keymapConfig.useShizuku) {
+            keymapConfig.useShizuku = false;
+            keymapConfig.applySharedPrefs();
+        }
+
         RemoteServiceHelper.useShizuku = keymapConfig.useShizuku;
         Server.setupServer(this, mCallback);
 
-        /*
-        * If user has not enabled shizuku from settings
-        * Then Check for root access
-        *   - if root access is granted then auto-start
-        *   - if root access is not granted check if shizuku app is installed and prompt user to enable shizuku
-        * Or if user has enabled shizuku then check shizuku permission
-        */
 
-        if(!RemoteServiceHelper.useShizuku) {
-            Shell.getShell(shell -> {
-                RemoteServiceHelper.getInstance(this, null);
-                if (Shizuku.pingBinder() || getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api") != null) { // Ask user to enable shizuku if shizuku app detected
-                    showAlertDialog(R.string.detected_shizuku, R.string.use_shizuku_for_activation, (dialog, which) -> {
-                        RemoteServiceHelper.useShizuku = keymapConfig.useShizuku = true;
-                        keymapConfig.applySharedPrefs();
-                        alertShizukuNotAuthorized();
-                    }, R.string.ok);
-                } else if (!RemoteServiceHelper.isRootService) {
-                    alertRootAccessNotFound();
-                }
-            });
-        } else if (!Shizuku.pingBinder()) {
-            alertShizukuNotRunning();
-        } else if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-            alertShizukuNotAuthorized();
+        if (!startedFromShell) {
+            /*
+             * If user has not enabled "Use Shizuku" from settings
+             * Then Check for root access
+             *   - if root access is granted then auto-start
+             *   - if root access is not granted check if shizuku app is installed and prompt user to enable shizuku
+             * Or if user has enabled shizuku then check shizuku permission
+             */
+            if(!RemoteServiceHelper.useShizuku) {
+                Shell.getShell(shell -> {
+                    RemoteServiceHelper.getInstance(this, null);
+                    if (Shizuku.pingBinder() || getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api") != null) { // Ask user to enable shizuku if shizuku app detected
+                        showAlertDialog(R.string.detected_shizuku, R.string.use_shizuku_for_activation, (dialog, which) -> {
+                            RemoteServiceHelper.useShizuku = keymapConfig.useShizuku = true;
+                            keymapConfig.applySharedPrefs();
+                            alertShizukuNotAuthorized();
+                        }, R.string.ok);
+                    } else if (!RemoteServiceHelper.isRootService) {
+                        alertRootAccessNotFound();
+                    }
+                });
+            } else if (!Shizuku.pingBinder()) {
+                alertShizukuNotRunning();
+            } else if (Shizuku.checkSelfPermission() != PERMISSION_GRANTED) {
+                alertShizukuNotAuthorized();
+            }
         }
 
         displaySelector = new DisplaySelector(this).register(this::startPointer);
         setupButtons();
 
-        // Check for if this activity was started with am shell command
+        if (startedFromShell) {
+            if (getIntent().getStringExtra("data").equals(SHELL_INIT))
+                startPointer();
+        }
+    }
+
+    /**
+     * Check if this activity was started with am shell command
+     * Also handles crash report from server and shows a dialog with crash log
+     * @return true if this activity was started with am shell command
+     */
+    private boolean isStartedWithShell() {
         String data = getIntent().getStringExtra("data");
         if (data != null) {
-            if (data.equals(SHELL_INIT)) {
-                startPointer();
-            } else {
+            if (!data.equals(SHELL_INIT)) {
                 // Crash report
                 new MaterialAlertDialogBuilder(MainActivity.this).setTitle("Server crashed")
                         .setMessage(data)
                         .setPositiveButton(R.string.ok, null)
                         .show();
             }
+            return true;
         }
+        return false;
     }
 
     private void setupButtons() {
@@ -167,7 +189,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             requestNotificationPermission();
         }
         if (RemoteServiceHelper.useShizuku) {
-            if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED)
+            if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)
                 alertShizukuNotAuthorized();
         } else if (!RemoteServiceHelper.isRootService) {
             alertRootAccessAndExit();
