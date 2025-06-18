@@ -290,7 +290,7 @@ public class RemoteService extends IRemoteService.Stub {
             inputService.stopMouse();
             inputService.stopTouchpad();
             inputService.destroyUinputDev();
-            if (inputService.getCallback() != null) inputService.getCallback().asBinder().unlinkToDeath(mKeyEventListenerDeathRecipient, 0);
+            if (inputService.getCallback() != null) inputService.getCallback().asBinder().unlinkToDeath(mStartServerDeathRecipient, 0);
             inputService = null;
         }
     }
