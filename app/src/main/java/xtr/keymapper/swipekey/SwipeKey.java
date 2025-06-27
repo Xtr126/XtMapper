@@ -23,14 +23,7 @@ public class SwipeKey implements Parcelable {
         key2.y = Float.parseFloat(data[6]);
     }
 
-    public SwipeKey(SwipeKeyView swipeKey){
-        key1.code = swipeKey.button1.getText();
-        key1.x = swipeKey.button1.getX();
-        key1.y = swipeKey.button1.getY();
-
-        key2.code = swipeKey.button2.getText();
-        key2.x = swipeKey.button2.getX();
-        key2.y = swipeKey.button2.getY();
+    public SwipeKey() {
     }
 
     protected SwipeKey(Parcel in) {

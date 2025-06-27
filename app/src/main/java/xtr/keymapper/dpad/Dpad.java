@@ -15,8 +15,13 @@ public class Dpad implements Parcelable {
     public final DpadKeyCodes keycodes;
     public static final int MAX_DPADS = 2;
     public static final String TAG = "DPAD";
-    public static final String UDLR = "DPAD_UDLR";
+    public static final String TAG_ARROW_KEYS = "DPAD_UDLR";
     private final String tag;
+
+    public static final String[] ARROW_KEYS = {"KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT"};
+    public static final String[] WASD_KEYS = {"KEY_W", "KEY_S", "KEY_A", "KEY_D"};
+    public static final String[] IJKL_KEYS = {"KEY_I", "KEY_K", "KEY_J", "KEY_L"};
+
 
     public Dpad (MovableFrameLayout dpad, DpadKeyCodes keycodes, String tag) {
         this.keycodes = keycodes;

@@ -131,7 +131,7 @@ public class KeymapProfiles {
                             }
                     break;
 
-                case Dpad.UDLR:
+                case Dpad.TAG_ARROW_KEYS:
                     if (data.length >= 12)
                         profile.dpadUdlr = new Dpad(data);
                     break;
