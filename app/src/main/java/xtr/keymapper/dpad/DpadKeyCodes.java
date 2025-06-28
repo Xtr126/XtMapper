@@ -55,4 +55,11 @@ public class DpadKeyCodes implements Parcelable {
         dest.writeString(Left);
         dest.writeString(Right);
     }
+
+    public boolean equals(DpadKeyCodes keyCodes) {
+        return this.Up.equals(keyCodes.Up) &&
+                this.Down.equals(keyCodes.Down) &&
+                this.Left.equals(keyCodes.Left) &&
+                this.Right.equals(keyCodes.Right);
+    }
 }

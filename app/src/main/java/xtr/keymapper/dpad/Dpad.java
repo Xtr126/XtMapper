@@ -13,7 +13,6 @@ public class Dpad implements Parcelable {
     final float xOfCenter, yOfCenter;
     final float radius;
     public final DpadKeyCodes keycodes;
-    public static final int MAX_DPADS = 2;
     public static final String TAG = "DPAD";
     public static final String TAG_ARROW_KEYS = "DPAD_UDLR";
     private final String tag;

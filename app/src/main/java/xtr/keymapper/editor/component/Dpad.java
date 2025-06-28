@@ -6,7 +6,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.TextView;
 
@@ -27,6 +26,7 @@ public class Dpad extends EditorUiComponent {
     private final float defaultX;
     private final float defaultY;
     private MovableFrameLayout dpadView;
+    private xtr.keymapper.dpad.Dpad dpad;
     private DpadBinding dpadBinding;
 
     public Dpad(EditorUiComponentCallback callback, Context context, float defaultX, float defaultY) {
@@ -37,14 +37,25 @@ public class Dpad extends EditorUiComponent {
 
     public Dpad(EditorUiComponentCallback mCallback, Context context, xtr.keymapper.dpad.Dpad dpad) {
         this(mCallback, context, dpad.getX(), dpad.getY());
+        addDpad(dpad);
+    }
+
+    private void addDpad(xtr.keymapper.dpad.Dpad dpad) {
+        this.dpad = dpad;
+        if (dpad.keycodes.equals(new DpadKeyCodes(xtr.keymapper.dpad.Dpad.ARROW_KEYS)))
+            addArrowKeysDpad(dpad.getX(), dpad.getY());
+        else
+            addDpad(dpad.getX(), dpad.getY(), dpad.keycodes);
     }
 
     @Override
     public String getDataLine() {
-        xtr.keymapper.dpad.Dpad dpad =
-                (dpadBinding != null) ?
-                new xtr.keymapper.dpad.Dpad(dpadView, new DpadKeyCodes(dpadBinding), xtr.keymapper.dpad.Dpad.TAG) :
-                new xtr.keymapper.dpad.Dpad(dpadView, new DpadKeyCodes(xtr.keymapper.dpad.Dpad.ARROW_KEYS), xtr.keymapper.dpad.Dpad.TAG_ARROW_KEYS);
+        // Create new dpad instance for updating properties
+        if (dpad.keycodes.equals(new DpadKeyCodes(xtr.keymapper.dpad.Dpad.ARROW_KEYS)))
+            this.dpad = new xtr.keymapper.dpad.Dpad(dpadView, new DpadKeyCodes(xtr.keymapper.dpad.Dpad.ARROW_KEYS), xtr.keymapper.dpad.Dpad.TAG_ARROW_KEYS);
+        else
+            this.dpad = new xtr.keymapper.dpad.Dpad(dpadView, new DpadKeyCodes(dpadBinding), xtr.keymapper.dpad.Dpad.TAG);
+
         return dpad.getData();
     }
 
@@ -62,18 +73,17 @@ public class Dpad extends EditorUiComponent {
         return this;
     }
 
-    public Dpad arrowKeys(){
-        addArrowKeysDpad(defaultX, defaultY);
-        return this;
-    }
-
     private void addArrowKeysDpad(float x, float y) {
         DpadArrowsBinding dpadArrowsBinding = DpadArrowsBinding.inflate(getLayoutInflater(), getCallback().getKeysContainerView(), true);
         dpadView = dpadArrowsBinding.getRoot();
 
         dpadArrowsBinding.closeButton.setOnClickListener(this::onClose);
         dpadArrowsBinding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpadView));
-        moveResizeDpad(dpadView, getCallback().getProfile().dpadUdlr, x, y);
+
+        if (dpad == null)
+            this.dpad = new xtr.keymapper.dpad.Dpad(dpadView, new DpadKeyCodes(xtr.keymapper.dpad.Dpad.ARROW_KEYS), xtr.keymapper.dpad.Dpad.TAG_ARROW_KEYS);
+
+        moveResizeDpad(x, y);
     }
 
     private void addDpad(float x, float y, DpadKeyCodes dpadKeycodes) {
@@ -82,8 +92,13 @@ public class Dpad extends EditorUiComponent {
 
         dpadBinding.closeButton.setOnClickListener(this::onClose);
         dpadBinding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpadView));
-        setDpadKeys(dpadBinding, dpadKeycodes);
-        moveResizeDpad(dpadView, null, x, y);
+
+        if (this.dpad == null) {
+            setDpadKeys(dpadBinding, dpadKeycodes);
+            this.dpad = new xtr.keymapper.dpad.Dpad(dpadView, new DpadKeyCodes(dpadBinding), xtr.keymapper.dpad.Dpad.TAG);
+        }
+
+        moveResizeDpad(x, y);
     }
 
     private void addWasdDpad(float x, float y) {
@@ -106,23 +121,21 @@ public class Dpad extends EditorUiComponent {
         }
     }
 
-    private void moveResizeDpad(ViewGroup dpadLayout, xtr.keymapper.dpad.Dpad dpad, float x, float y) {
-        dpadLayout.animate().x(x).y(y)
+    private void moveResizeDpad(float x, float y) {
+        dpadView.animate().x(x).y(y)
                 .setDuration(500)
                 .start();
 
-        if (dpad != null) {
-            // resize dpad from saved profile configuration
-            float x1 = dpad.getWidth() - dpadLayout.getLayoutParams().width;
-            float y1 = dpad.getHeight() - dpadLayout.getLayoutParams().height;
-            resizeView(dpadLayout, (int) x1, (int) y1);
-        }
+        // resize dpad from saved profile configuration
+        float x1 = dpad.getWidth() - dpadView.getLayoutParams().width;
+        float y1 = dpad.getHeight() - dpadView.getLayoutParams().height;
+        resizeView(dpadView, (int) x1, (int) y1);
     }
 
     private void onClose(View v) {
-        dpadBinding = null;
-        dpadView = null;
         getCallback().removeComponent(this, dpadView);
+        dpadView = null;
+        dpadBinding = null;
     }
 
     static class ResizeableDpadView implements View.OnTouchListener {

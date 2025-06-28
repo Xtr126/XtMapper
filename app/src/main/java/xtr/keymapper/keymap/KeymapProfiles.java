@@ -122,22 +122,18 @@ public class KeymapProfiles {
 
             String[] data = line.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
             switch (data[0]){
+                case MouseAimConfig.TAG:
+                    profile.mouseAimConfig = new MouseAimConfig().parse(data);
+                    break;
+
                 case Dpad.TAG:
+                case Dpad.TAG_ARROW_KEYS:
                     if (data.length >= 12)
                         for (int i = 0; i < profile.dpadArray.length; i++)
                             if (profile.dpadArray[i] == null) {
                                 profile.dpadArray[i] = new Dpad(data);
                                 break;
                             }
-                    break;
-
-                case Dpad.TAG_ARROW_KEYS:
-                    if (data.length >= 12)
-                        profile.dpadUdlr = new Dpad(data);
-                    break;
-
-                case MouseAimConfig.TAG:
-                    profile.mouseAimConfig = new MouseAimConfig().parse(data);
                     break;
 
                 case MOUSE_RIGHT:

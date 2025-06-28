@@ -1,7 +1,5 @@
 package xtr.keymapper.keymap;
 
-import static xtr.keymapper.dpad.Dpad.MAX_DPADS;
-
 import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -25,9 +23,9 @@ public class KeymapProfile implements Parcelable {
     public ArrayList<SwipeKey> swipeKeys = new ArrayList<>();
     public KeymapProfileKey rightClick;
     public boolean disabled = false;
-    public Dpad dpadUdlr;
     public int xRes, yRes;
     public final HashMap<String, Macro> macroIdMap = new HashMap<>();
+    public static final int MAX_DPADS = 3;
 
     public KeymapProfile() {
         dpadArray = new Dpad[MAX_DPADS];
@@ -48,8 +46,6 @@ public class KeymapProfile implements Parcelable {
     }
 
     private void scaleKeys(float scaleX, float scaleY) {
-        if (dpadUdlr != null) dpadUdlr.scale(scaleX, scaleY);
-
         if (rightClick != null) {
             rightClick.x *= scaleX;
             rightClick.y *= scaleY;
@@ -91,7 +87,6 @@ public class KeymapProfile implements Parcelable {
         swipeKeys = in.createTypedArrayList(SwipeKey.CREATOR);
         rightClick = in.readParcelable(KeymapProfileKey.class.getClassLoader());
         disabled = in.readByte() != 0;
-        dpadUdlr = in.readParcelable(Dpad.class.getClassLoader());
         xRes = in.readInt();
         yRes = in.readInt();
         Map<String, Macro> hashMap = in.readHashMap(getClass().getClassLoader());
@@ -107,7 +102,6 @@ public class KeymapProfile implements Parcelable {
         dest.writeTypedList(swipeKeys);
         dest.writeParcelable(rightClick, flags);
         dest.writeByte((byte) (disabled ? 1 : 0));
-        dest.writeParcelable(dpadUdlr, flags);
         dest.writeInt(xRes);
         dest.writeInt(yRes);
         dest.writeMap(macroIdMap);

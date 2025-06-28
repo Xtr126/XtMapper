@@ -2,6 +2,7 @@ package xtr.keymapper.touchpointer;
 
 import static xtr.keymapper.keymap.KeymapConfig.KEY_ALT;
 import static xtr.keymapper.keymap.KeymapConfig.KEY_CTRL;
+import static xtr.keymapper.keymap.KeymapProfile.MAX_DPADS;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.UP;
 import static xtr.keymapper.touchpointer.PointerId.dpadpid1;
@@ -14,7 +15,6 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import xtr.keymapper.Utils;
-import xtr.keymapper.dpad.Dpad;
 import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
@@ -47,15 +47,10 @@ public class KeyEventHandler {
         KeymapProfile profile = mInput.getKeymapProfile();
 
 
-        dpadHandlers = new DpadHandler[Dpad.MAX_DPADS + 1];
+        dpadHandlers = new DpadHandler[MAX_DPADS];
         for (int i = 0; i < dpadHandlers.length; i++) {
             int pid = dpadpid1.id + i;
-            if ( i >= 2 ) { // Arrow keys
-                if (profile.dpadUdlr != null) {
-                    dpadHandlers[i] = new DpadHandler(profile.dpadUdlr, pid, eventHandler, keymapConfig.swipeDelayMs);
-                    dpadHandlers[i].setInterface(mInput);
-                }
-            } else if (profile.dpadArray[i] != null) {
+            if (profile.dpadArray[i] != null) {
                 dpadHandlers[i] = new DpadHandler(profile.dpadArray[i], pid, eventHandler, keymapConfig.swipeDelayMs);
                 dpadHandlers[i].setInterface(mInput);
             }
