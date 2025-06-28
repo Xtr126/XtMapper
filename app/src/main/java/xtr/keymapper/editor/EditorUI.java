@@ -209,6 +209,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         if (id == R.id.save) {
             hideView();
+        } else if (id == R.id.macro) {
+            showMacroDialog();
         } else {
             editorUiComponents.addMatchingComponentForId(id, mCallback, context, defaultX, defaultY);
         }
@@ -302,13 +304,6 @@ public class EditorUI extends OnKeyEventListener.Stub {
         editorUiComponentFactory.addKeys(profile.keys);
         editorUiComponentFactory.addSwipeKeys(profile.swipeKeys);
         editorUiComponentFactory.addDpads(profile.dpadArray);
-
-        if (profile.dpadUdlr != null)
-            editorUiComponents.add(new xtr.keymapper.editor.component.Dpad(mCallback,
-                context,
-                profile.dpadUdlr)
-                .arrowKeys()
-            );
 
         if (profile.mouseAimConfig != null) {
             editorUiComponents.add(new Crosshair(mCallback, context, profile.mouseAimConfig));
