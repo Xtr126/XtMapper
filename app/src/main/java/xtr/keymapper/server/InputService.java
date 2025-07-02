@@ -16,8 +16,8 @@ import android.view.View;
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
-import xtr.keymapper.touchpointer.KeyEventHandler;
-import xtr.keymapper.touchpointer.MouseEventHandler;
+import xtr.keymapper.event.KeyEventHandler;
+import xtr.keymapper.event.MouseEventHandler;
 
 public class InputService implements IInputInterface {
     private final MouseEventHandler mouseEventHandler;

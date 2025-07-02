@@ -1,4 +1,4 @@
-package xtr.keymapper.touchpointer;
+package xtr.keymapper.event;
 
 import androidx.collection.SimpleArrayMap;
 

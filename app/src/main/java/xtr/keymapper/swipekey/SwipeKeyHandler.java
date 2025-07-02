@@ -6,8 +6,8 @@ import static xtr.keymapper.server.InputService.MOVE;
 import android.os.Handler;
 
 import xtr.keymapper.server.IInputInterface;
-import xtr.keymapper.touchpointer.KeyEventHandler.KeyEvent;
-import xtr.keymapper.touchpointer.PidProvider;
+import xtr.keymapper.event.KeyEventHandler.KeyEvent;
+import xtr.keymapper.event.PidProvider;
 
 public class SwipeKeyHandler {
 

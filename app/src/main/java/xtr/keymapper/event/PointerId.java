@@ -1,4 +1,4 @@
-package xtr.keymapper.touchpointer;
+package xtr.keymapper.event;
 
 public enum PointerId {
     // pointer id 0-35 reserved for keyboard events

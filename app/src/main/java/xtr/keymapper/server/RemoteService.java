@@ -36,7 +36,7 @@ import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CursorBinding;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
-import xtr.keymapper.touchpointer.KeyEventHandler;
+import xtr.keymapper.event.KeyEventHandler;
 
 public class RemoteService extends IRemoteService.Stub {
     private String currentDevice = "";

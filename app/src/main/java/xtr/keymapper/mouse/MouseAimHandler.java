@@ -16,7 +16,7 @@ import android.os.Handler;
 import android.os.Looper;
 
 import xtr.keymapper.server.IInputInterface;
-import xtr.keymapper.touchpointer.PointerId;
+import xtr.keymapper.event.PointerId;
 
 public class MouseAimHandler {
 

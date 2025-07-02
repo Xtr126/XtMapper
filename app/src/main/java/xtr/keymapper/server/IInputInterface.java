@@ -3,8 +3,8 @@ package xtr.keymapper.server;
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
-import xtr.keymapper.touchpointer.KeyEventHandler;
-import xtr.keymapper.touchpointer.MouseEventHandler;
+import xtr.keymapper.event.KeyEventHandler;
+import xtr.keymapper.event.MouseEventHandler;
 
 public interface IInputInterface {
     void injectEvent(float x, float y, int action, int pointerId);

@@ -1,11 +1,11 @@
-package xtr.keymapper.touchpointer;
+package xtr.keymapper.event;
 
 import static xtr.keymapper.keymap.KeymapConfig.KEY_ALT;
 import static xtr.keymapper.keymap.KeymapConfig.KEY_CTRL;
 import static xtr.keymapper.keymap.KeymapProfile.MAX_DPADS;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.UP;
-import static xtr.keymapper.touchpointer.PointerId.dpadpid1;
+import static xtr.keymapper.event.PointerId.dpadpid1;
 
 import android.os.Handler;
 import android.os.HandlerThread;

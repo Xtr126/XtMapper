@@ -1,4 +1,4 @@
-package xtr.keymapper.touchpointer;
+package xtr.keymapper.event;
 
 import static xtr.keymapper.InputEventCodes.BTN_EXTRA;
 import static xtr.keymapper.InputEventCodes.BTN_MIDDLE;
