@@ -90,14 +90,14 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
              */
             if(!RemoteServiceHelper.useShizuku) {
                 Shell.getShell(shell -> {
-                    RemoteServiceHelper.getInstance(this, null);
-                    if (Shizuku.pingBinder() || getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api") != null) { // Ask user to enable shizuku if shizuku app detected
+                    // Ask user to enable shizuku if shizuku app detected
+                    if (Shizuku.pingBinder() || getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api") != null) {
                         showAlertDialog(R.string.detected_shizuku, R.string.use_shizuku_for_activation, (dialog, which) -> {
                             RemoteServiceHelper.useShizuku = keymapConfig.useShizuku = true;
                             keymapConfig.applySharedPrefs();
                             alertShizukuNotAuthorized();
                         }, R.string.ok);
-                    } else if (!RemoteServiceHelper.isRootService) {
+                    } else if (Boolean.FALSE.equals(Shell.isAppGrantedRoot())) {
                         alertRootAccessNotFound();
                     }
                 });
@@ -191,7 +191,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         if (RemoteServiceHelper.useShizuku) {
             if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)
                 alertShizukuNotAuthorized();
-        } else if (!RemoteServiceHelper.isRootService) {
+        } else if (Boolean.FALSE.equals(Shell.isAppGrantedRoot())) {
             alertRootAccessAndExit();
         }
 

@@ -38,7 +38,6 @@ public class EditorActivity extends Activity implements EditorCallback {
         WindowInsetsControllerCompat windowInsetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
-        RemoteServiceHelper.getInstance(this, service -> mService = service);
 
         if (editor != null) editor.hideView();
 
@@ -54,23 +53,32 @@ public class EditorActivity extends Activity implements EditorCallback {
             MainActivity.checkOverlayPermission(this);
         }
 
-        if (getEvent())
-            // Can receive key events from remote service
-            try {
-                mService.registerOnKeyEventListener(editor);
-                mService.pauseMouse();
-            } catch (RemoteException e) {
-                Log.e("editorActivity", e.getMessage(), e);
-            }
-        else {
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        RemoteServiceHelper.getInstance(this, this::onConnection);
+    }
 
-            builder.setMessage(R.string.dialog_alert_editor)
-                    .setPositiveButton(R.string.ok, (dialog, which) -> {})
-                    .setTitle(R.string.dialog_alert_editor_title);
-            AlertDialog dialog = builder.create();
-            if (keymapConfig.editorOverlay) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
-            dialog.show();
+    private void onConnection(IRemoteService service) {
+        if (editor != null) {
+            this.mService = service;
+            KeymapConfig keymapConfig = new KeymapConfig(this);
+
+            if (getEvent())
+                // Can receive key events from remote service
+                try {
+                    mService.registerOnKeyEventListener(editor);
+                    mService.pauseMouse();
+                } catch (RemoteException e) {
+                    Log.e("editorActivity", e.getMessage(), e);
+                }
+            else {
+                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+
+                builder.setMessage(R.string.dialog_alert_editor)
+                        .setPositiveButton(R.string.ok, (dialog, which) -> {})
+                        .setTitle(R.string.dialog_alert_editor_title);
+                AlertDialog dialog = builder.create();
+                if (keymapConfig.editorOverlay) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                dialog.show();
+            }
         }
     }
 

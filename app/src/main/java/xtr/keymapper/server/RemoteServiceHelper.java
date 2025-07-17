@@ -11,8 +11,6 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-
 import com.topjohnwu.superuser.Shell;
 import com.topjohnwu.superuser.ipc.RootService;
 
@@ -23,7 +21,6 @@ import xtr.keymapper.IRemoteService;
 public class RemoteServiceHelper {
 
     private static IRemoteService service = null;
-    public static boolean isRootService = true;
     public static boolean useShizuku = false;
 
     public static void pauseKeymap(Context context){
@@ -59,14 +56,14 @@ public class RemoteServiceHelper {
     public static void runIfActive(Context context, Runnable runnable) {
         getInstance(context, service -> {
             try {
-                if (service.isActive()) runnable.run();
+                if (service != null && service.isActive()) runnable.run();
             } catch (RemoteException ignored) {
             }
         });
     }
 
     public interface RootRemoteServiceCallback {
-        void onConnection(@NonNull IRemoteService service);
+        void onConnection(IRemoteService service);
     }
     public static class RemoteServiceConnection implements ServiceConnection {
         RootRemoteServiceCallback cb;
@@ -141,17 +138,18 @@ public class RemoteServiceHelper {
         } else {
             getInstance();
             if (service != null) {
-                if (callback != null) callback.onConnection(service);
+                callback.onConnection(service);
             } else {
                 RemoteServiceConnection connection = new RemoteServiceConnection(callback);
                 if (useShizuku) {
                     if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED)
-                        if (callback != null) bindShizukuService(context, connection);
+                        bindShizukuService(context, connection);
+                    else callback.onConnection(null);
                 } else {
-                    Boolean hasRootAccess = Shell.isAppGrantedRoot();
-                    if (hasRootAccess != null) isRootService = hasRootAccess;
-                    Intent intent = new Intent(context, RootRemoteService.class);
-                    if (callback != null) RootService.bind(intent, connection);
+                    if (Boolean.TRUE.equals(Shell.isAppGrantedRoot())) {
+                        Intent intent = new Intent(context, RootRemoteService.class);
+                        RootService.bind(intent, connection);
+                    } else callback.onConnection(null);
                 }
             }
         }
