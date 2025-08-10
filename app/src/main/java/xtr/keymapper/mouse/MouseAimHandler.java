@@ -15,8 +15,10 @@ import android.graphics.RectF;
 import android.os.Handler;
 import android.os.Looper;
 
+import xtr.keymapper.keymap.element.Camera;
+import xtr.keymapper.keymap.element.MouseAimConfig;
 import xtr.keymapper.server.IInputInterface;
-import xtr.keymapper.event.PointerId;
+import xtr.keymapper.server.pid.PointerId;
 
 public class MouseAimHandler {
 
@@ -26,13 +28,25 @@ public class MouseAimHandler {
     private IInputInterface service;
     private final int pointerIdMouse = PointerId.pid1.id;
     private final int pointerIdAim = PointerId.pid2.id;
-    private final Handler mHandler;
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     public MouseAimHandler(MouseAimConfig config){
         currentX = config.xCenter;
         currentY = config.yCenter;
         this.config = config;
-        mHandler = new Handler(Looper.getMainLooper());
+    }
+
+    public MouseAimHandler(Camera camera) {
+        this(new MouseAimConfig(camera.x,
+                camera.y,
+                0,
+                0,
+                0,
+                0,
+                true,
+                camera.xSensitivity,
+                camera.ySensitivity,
+                false));
     }
 
     public void setInterface(IInputInterface input) {

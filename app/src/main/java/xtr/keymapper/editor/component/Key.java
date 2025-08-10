@@ -7,14 +7,13 @@ import xtr.keymapper.editor.EditorUiComponent;
 import xtr.keymapper.editor.EditorUiComponentCallback;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.keymap.KeymapConfig;
-import xtr.keymapper.keymap.KeymapProfileKey;
 
 public class Key extends EditorUiComponent {
     private final MovableFloatingActionKey floatingKey;
 
     public Key(EditorUiComponentCallback callback, Context context, float x, float y) {
         super(callback, context, x, y);
-        KeymapProfileKey key = new KeymapProfileKey();
+        xtr.keymapper.keymap.element.Key key = new xtr.keymapper.keymap.element.Key();
         key.code = "KEY_X";
         key.x = x;
         key.y = y;
@@ -27,12 +26,12 @@ public class Key extends EditorUiComponent {
     }
 
 
-    public Key(EditorUiComponentCallback callback, Context context, KeymapProfileKey key) {
+    public Key(EditorUiComponentCallback callback, Context context, xtr.keymapper.keymap.element.Key key) {
         super(callback, context, key.x, key.y);
         floatingKey = addKey(key);
     }
 
-    private MovableFloatingActionKey addKey(KeymapProfileKey key) {
+    private MovableFloatingActionKey addKey(xtr.keymapper.keymap.element.Key key) {
         KeymapConfig keymapConfig = new KeymapConfig(getContext());
 
         MovableFloatingActionKey floatingKey = new MovableFloatingActionKey(getContext(), floatingActionKey -> {

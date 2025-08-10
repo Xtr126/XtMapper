@@ -26,7 +26,7 @@ public class Dpad extends EditorUiComponent {
     private final float defaultX;
     private final float defaultY;
     private MovableFrameLayout dpadView;
-    private xtr.keymapper.dpad.Dpad dpad;
+    private xtr.keymapper.keymap.element.Dpad dpad;
     private DpadBinding dpadBinding;
 
     public Dpad(EditorUiComponentCallback callback, Context context, float defaultX, float defaultY) {
@@ -35,14 +35,14 @@ public class Dpad extends EditorUiComponent {
         this.defaultY = defaultY;
     }
 
-    public Dpad(EditorUiComponentCallback mCallback, Context context, xtr.keymapper.dpad.Dpad dpad) {
+    public Dpad(EditorUiComponentCallback mCallback, Context context, xtr.keymapper.keymap.element.Dpad dpad) {
         this(mCallback, context, dpad.getX(), dpad.getY());
         addDpad(dpad);
     }
 
-    private void addDpad(xtr.keymapper.dpad.Dpad dpad) {
+    private void addDpad(xtr.keymapper.keymap.element.Dpad dpad) {
         this.dpad = dpad;
-        if (dpad.keycodes.equals(new DpadKeyCodes(xtr.keymapper.dpad.Dpad.ARROW_KEYS)))
+        if (dpad.keycodes.equals(DpadKeyCodes.ARROW_KEYS))
             addArrowKeysDpad(dpad.getX(), dpad.getY());
         else
             addDpad(dpad.getX(), dpad.getY(), dpad.keycodes);
@@ -51,10 +51,10 @@ public class Dpad extends EditorUiComponent {
     @Override
     public String getDataLine() {
         // Create new dpad instance for updating properties
-        if (dpad.keycodes.equals(new DpadKeyCodes(xtr.keymapper.dpad.Dpad.ARROW_KEYS)))
-            this.dpad = new xtr.keymapper.dpad.Dpad(dpadView, new DpadKeyCodes(xtr.keymapper.dpad.Dpad.ARROW_KEYS), xtr.keymapper.dpad.Dpad.TAG_ARROW_KEYS);
+        if (dpad.keycodes.equals(DpadKeyCodes.ARROW_KEYS))
+            this.dpad = new xtr.keymapper.keymap.element.Dpad(dpadView, DpadKeyCodes.ARROW_KEYS, xtr.keymapper.keymap.element.Dpad.TAG_ARROW_KEYS);
         else
-            this.dpad = new xtr.keymapper.dpad.Dpad(dpadView, new DpadKeyCodes(dpadBinding), xtr.keymapper.dpad.Dpad.TAG);
+            this.dpad = new xtr.keymapper.keymap.element.Dpad(dpadView, new DpadKeyCodes(dpadBinding), xtr.keymapper.keymap.element.Dpad.TAG);
 
         return dpad.getData();
     }
@@ -81,7 +81,7 @@ public class Dpad extends EditorUiComponent {
         dpadArrowsBinding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpadView));
 
         if (dpad == null)
-            this.dpad = new xtr.keymapper.dpad.Dpad(dpadView, new DpadKeyCodes(xtr.keymapper.dpad.Dpad.ARROW_KEYS), xtr.keymapper.dpad.Dpad.TAG_ARROW_KEYS);
+            this.dpad = new xtr.keymapper.keymap.element.Dpad(dpadView, DpadKeyCodes.ARROW_KEYS, xtr.keymapper.keymap.element.Dpad.TAG_ARROW_KEYS);
 
         moveResizeDpad(x, y);
     }
@@ -95,18 +95,18 @@ public class Dpad extends EditorUiComponent {
 
         if (this.dpad == null) {
             setDpadKeys(dpadBinding, dpadKeycodes);
-            this.dpad = new xtr.keymapper.dpad.Dpad(dpadView, new DpadKeyCodes(dpadBinding), xtr.keymapper.dpad.Dpad.TAG);
+            this.dpad = new xtr.keymapper.keymap.element.Dpad(dpadView, new DpadKeyCodes(dpadBinding), xtr.keymapper.keymap.element.Dpad.TAG);
         }
 
         moveResizeDpad(x, y);
     }
 
     private void addWasdDpad(float x, float y) {
-        addDpad(x, y, new DpadKeyCodes(xtr.keymapper.dpad.Dpad.WASD_KEYS));
+        addDpad(x, y, DpadKeyCodes.WASD_KEYS);
     }
 
     private void addCustomDpad(float x, float y) {
-        addDpad(x, y, new DpadKeyCodes(xtr.keymapper.dpad.Dpad.IJKL_KEYS));
+        addDpad(x, y, DpadKeyCodes.IJKL_KEYS);
     }
 
     private void setDpadKeys(DpadBinding binding, DpadKeyCodes dpadKeycodes) {

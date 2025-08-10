@@ -1,4 +1,4 @@
-package xtr.keymapper.event;
+package xtr.keymapper.server.pid;
 
 public enum PointerId {
     // pointer id 0-35 reserved for keyboard events

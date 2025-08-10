@@ -8,6 +8,9 @@ import androidx.annotation.NonNull;
 import xtr.keymapper.databinding.DpadBinding;
 
 public class DpadKeyCodes implements Parcelable {
+    public static final DpadKeyCodes ARROW_KEYS = new DpadKeyCodes(new String[]{"KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT"});
+    public static final DpadKeyCodes WASD_KEYS = new DpadKeyCodes(new String[]{"KEY_W", "KEY_S", "KEY_A", "KEY_D"});
+    public static final DpadKeyCodes IJKL_KEYS = new DpadKeyCodes(new String[]{"KEY_I", "KEY_K", "KEY_J", "KEY_L"});
     public final String Up, Down, Left, Right;
 
     public DpadKeyCodes(String[] in){

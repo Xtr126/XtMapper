@@ -1,19 +1,29 @@
-package xtr.keymapper.swipekey;
+package xtr.keymapper.keymap.element;
 
 import android.os.Parcel;
-import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
 
-import xtr.keymapper.keymap.KeymapProfileKey;
+import xtr.keymapper.keymap.KeymapProfileElement;
 
-public class SwipeKey implements Parcelable {
-    public KeymapProfileKey key1 = new KeymapProfileKey();
-    public KeymapProfileKey key2 = new KeymapProfileKey();
+public class SwipeKey extends KeymapProfileElement {
+    public final Key key1;
+    public final Key key2;
 
     public static final String TAG = "SWIPE_KEY";
 
-    public SwipeKey (String[] data){
+    @Override
+    public void scale(float scaleX, float scaleY) {
+        key1.x *= scaleX;
+        key1.y *= scaleY;
+
+        key2.x *= scaleX;
+        key2.y *= scaleY;
+
+    }
+
+    public SwipeKey(String[] data) {
+        this();
         key1.code = data[1];
         key1.x = Float.parseFloat(data[2]);
         key1.y = Float.parseFloat(data[3]);
@@ -24,11 +34,13 @@ public class SwipeKey implements Parcelable {
     }
 
     public SwipeKey() {
+        key1 = new Key();
+        key2 = new Key();
     }
 
     protected SwipeKey(Parcel in) {
-        key1 = in.readParcelable(KeymapProfileKey.class.getClassLoader());
-        key2 = in.readParcelable(KeymapProfileKey.class.getClassLoader());
+        key1 = in.readParcelable(Key.class.getClassLoader());
+        key2 = in.readParcelable(Key.class.getClassLoader());
     }
 
     public static final Creator<SwipeKey> CREATOR = new Creator<>() {

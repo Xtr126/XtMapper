@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xtr.keymapper.floatingkeys.MovableFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    tools:ignore="HardcodedText,ContentDescription">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="140dp"
+        android:layout_height="100dp"
+        android:translationZ="2dp">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:scaleX="0.6"
+            android:scaleY="0.6"
+            android:id="@+id/background"
+            android:src="@drawable/key"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"/>
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/baseline_360_24"
+            app:layout_constraintCircle="@id/background"
+            android:id="@+id/camera"
+            />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/editButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:theme="@style/Theme.MaterialComponents.DayNight"
+            app:backgroundTint="#FF0000"
+            app:fabSize="mini"
+            app:fabCustomSize="30dp"
+            android:layout_marginBottom="-8dp"
+            android:src="@drawable/ic_baseline_settings_24"
+            app:layout_constraintStart_toEndOf="@id/camera"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/closeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-8dp"
+            android:theme="@style/Theme.MaterialComponents.DayNight"
+            app:backgroundTint="#FF0000"
+            app:fabCustomSize="30dp"
+            app:fabSize="mini"
+            app:layout_constraintStart_toEndOf="@id/camera"
+            app:layout_constraintTop_toTopOf="parent"
+            android:src="@android:drawable/ic_delete" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</xtr.keymapper.floatingkeys.MovableFrameLayout>

@@ -8,7 +8,7 @@ import static xtr.keymapper.server.InputService.MOVE;
 import static xtr.keymapper.server.InputService.UP;
 
 import xtr.keymapper.server.IInputInterface;
-import xtr.keymapper.event.PointerId;
+import xtr.keymapper.server.pid.PointerId;
 
 public class MousePinchZoom {
     private final IInputInterface service;

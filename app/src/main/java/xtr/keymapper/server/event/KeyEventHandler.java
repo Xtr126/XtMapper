@@ -1,11 +1,11 @@
-package xtr.keymapper.event;
+package xtr.keymapper.server.event;
 
 import static xtr.keymapper.keymap.KeymapConfig.KEY_ALT;
 import static xtr.keymapper.keymap.KeymapConfig.KEY_CTRL;
 import static xtr.keymapper.keymap.KeymapProfile.MAX_DPADS;
 import static xtr.keymapper.server.InputService.DOWN;
 import static xtr.keymapper.server.InputService.UP;
-import static xtr.keymapper.event.PointerId.dpadpid1;
+import static xtr.keymapper.server.pid.PointerId.dpadpid1;
 
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -18,10 +18,12 @@ import xtr.keymapper.Utils;
 import xtr.keymapper.dpad.DpadHandler;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
-import xtr.keymapper.keymap.KeymapProfileKey;
+import xtr.keymapper.keymap.element.Camera;
+import xtr.keymapper.keymap.element.Key;
 import xtr.keymapper.macro.Macro;
 import xtr.keymapper.server.IInputInterface;
-import xtr.keymapper.swipekey.SwipeKey;
+import xtr.keymapper.server.pid.PidProvider;
+import xtr.keymapper.keymap.element.SwipeKey;
 import xtr.keymapper.swipekey.SwipeKeyHandler;
 
 public class KeyEventHandler {
@@ -58,7 +60,7 @@ public class KeyEventHandler {
 
 
         // Correction of x and y deviation from center
-        for (KeymapProfileKey key: profile.keys) {
+        for (Key key: profile.keys) {
             key.x += key.offset;
             key.y += key.offset;
         }
@@ -95,7 +97,7 @@ public class KeyEventHandler {
         int i = Utils.obtainIndex(event.code);
         if (i > 0) { // A-Z and 0-9 keys
             if (event.action == DOWN) if (handleKeyboardShortcuts(i)) return;
-            handleMouseAim(i, event.action);
+            handleMouseAimAndCamera(i, event.action);
         } else { // CTRL, ALT, Arrow keys
             if (event.code.equals("KEY_GRAVE") && event.action == DOWN)
                 if (keymapConfig.keyGraveMouseAim) {
@@ -109,8 +111,8 @@ public class KeyEventHandler {
                 dpadHandler.handleEvent(event.code, event.action);
         }
 
-        ArrayList<KeymapProfileKey> keyList = mInput.getKeymapProfile().keys;
-        for (KeymapProfileKey key : keyList)
+        ArrayList<Key> keyList = mInput.getKeymapProfile().keys;
+        for (Key key : keyList)
             if (event.code.equals(key.code))
                 mInput.injectEvent(key.x, key.y, event.action, keyList.indexOf(key));
 
@@ -187,10 +189,20 @@ public class KeyEventHandler {
         }
     }
 
-    private void handleMouseAim(int keycode, int action) {
+    private void handleMouseAimAndCamera(int keycode, int action) {
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
-        if (keycode == keymapConfig.mouseAimShortcutKey)
+        if (keycode == keymapConfig.mouseAimShortcutKey) {
+            // if not toggle then hold down key to aim
             if (action == DOWN && keymapConfig.mouseAimToggle) mInput.getMouseEventHandler().triggerMouseAim();
             else mInput.getMouseEventHandler().triggerMouseAim();
+        }
+        else {
+            Camera camera = mInput.getKeymapProfile().camera;
+            if (keycode == camera.triggerKeyCode) {
+                // If not toggle then hold down key to move camera
+                if (action == DOWN && camera.toggle) mInput.getMouseEventHandler().triggerMouseAim();
+                else mInput.getMouseEventHandler().triggerMouseAim();
+            }
+        }
     }
 }

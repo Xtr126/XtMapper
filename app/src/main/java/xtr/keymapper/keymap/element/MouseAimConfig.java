@@ -1,14 +1,14 @@
-package xtr.keymapper.mouse;
+package xtr.keymapper.keymap.element;
 
 import android.os.Parcel;
-import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
 
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
+import xtr.keymapper.keymap.KeymapProfileElement;
 
-public class MouseAimConfig implements Parcelable {
+public class MouseAimConfig extends KeymapProfileElement {
     public float xCenter, yCenter, xleftClick, yleftClick;
     public float width, height;
     public boolean limitedBounds = true;
@@ -16,6 +16,19 @@ public class MouseAimConfig implements Parcelable {
     public static final String TAG = "MOUSE_AIM";
     public float xSensitivity = 1, ySensitivity = 1;
     public boolean applyNonLinearScaling = false;
+
+    @Override
+    public void scale(float scaleX, float scaleY) {
+        xCenter *= scaleX;
+        yCenter *= scaleY;
+
+        xleftClick *= scaleX;
+        yleftClick *= scaleY;
+
+        width *= scaleX;
+        height *= scaleY;
+
+    }
 
     public MouseAimConfig() {
         xCenter = xleftClick = yleftClick = yCenter = initXY;
@@ -34,6 +47,24 @@ public class MouseAimConfig implements Parcelable {
         applyNonLinearScaling = in.readByte() != 0;
     }
 
+    public MouseAimConfig(float xCenter, float yCenter,
+                  float xleftClick, float yleftClick,
+                  float width, float height,
+                  boolean limitedBounds,
+                  float xSensitivity, float ySensitivity,
+                  boolean applyNonLinearScaling) {
+        this.xCenter = xCenter;
+        this.yCenter = yCenter;
+        this.xleftClick = xleftClick;
+        this.yleftClick = yleftClick;
+        this.width = width;
+        this.height = height;
+        this.limitedBounds = limitedBounds;
+        this.xSensitivity = xSensitivity;
+        this.ySensitivity = ySensitivity;
+        this.applyNonLinearScaling = applyNonLinearScaling;
+    }
+
     public static final Creator<MouseAimConfig> CREATOR = new Creator<>() {
         @Override
         public MouseAimConfig createFromParcel(Parcel in) {
@@ -46,7 +77,7 @@ public class MouseAimConfig implements Parcelable {
         }
     };
 
-    public MouseAimConfig parse(String[] data){
+    public MouseAimConfig(String[] data){
         xCenter = Float.parseFloat(data[1]);
         yCenter = Float.parseFloat(data[2]);
         limitedBounds = Integer.parseInt(data[3]) != 0;
@@ -59,7 +90,6 @@ public class MouseAimConfig implements Parcelable {
             ySensitivity = Float.parseFloat(data[9]);
             applyNonLinearScaling = Integer.parseInt(data[10]) != 0;
         }
-        return this;
     }
 
     public String getData() {

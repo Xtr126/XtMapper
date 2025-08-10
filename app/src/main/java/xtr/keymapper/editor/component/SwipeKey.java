@@ -31,7 +31,7 @@ public class SwipeKey extends EditorUiComponent {
         });
     }
 
-    public SwipeKey(EditorUiComponentCallback mCallback, Context context, xtr.keymapper.swipekey.SwipeKey swipeKey) {
+    public SwipeKey(EditorUiComponentCallback mCallback, Context context, xtr.keymapper.keymap.element.SwipeKey swipeKey) {
         super(mCallback, context, 0, 0);
         swipeKeyView = new SwipeKeyView(mCallback.getKeysContainerView(), swipeKey, new SwipeKeyView.SwipeKeyCallback() {
             @Override
@@ -49,7 +49,7 @@ public class SwipeKey extends EditorUiComponent {
 
     @Override
     public String getDataLine() {
-        xtr.keymapper.swipekey.SwipeKey swipeKey = new xtr.keymapper.swipekey.SwipeKey();
+        xtr.keymapper.keymap.element.SwipeKey swipeKey = new xtr.keymapper.keymap.element.SwipeKey();
         swipeKey.key1.code = swipeKeyView.button1.getText();
         swipeKey.key1.x = swipeKeyView.button1.getX();
         swipeKey.key1.y = swipeKeyView.button1.getY();
@@ -73,7 +73,7 @@ public class SwipeKey extends EditorUiComponent {
         }
 
         /* From saved profile */
-        public SwipeKeyView(ViewGroup rootView, xtr.keymapper.swipekey.SwipeKey swipeKey, SwipeKeyCallback callback) {
+        public SwipeKeyView(ViewGroup rootView, xtr.keymapper.keymap.element.SwipeKey swipeKey, SwipeKeyCallback callback) {
             this(rootView, callback);
             button1.setText(swipeKey.key1.code);
             button1.frameView.animate()

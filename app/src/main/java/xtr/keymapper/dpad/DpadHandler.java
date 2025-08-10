@@ -7,6 +7,7 @@ import static xtr.keymapper.server.InputService.UP;
 import android.os.Handler;
 import android.os.SystemClock;
 
+import xtr.keymapper.keymap.element.Dpad;
 import xtr.keymapper.server.IInputInterface;
 
 public class DpadHandler {

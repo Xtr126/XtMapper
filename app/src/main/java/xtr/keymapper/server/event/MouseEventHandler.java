@@ -1,4 +1,4 @@
-package xtr.keymapper.event;
+package xtr.keymapper.server.event;
 
 import static xtr.keymapper.InputEventCodes.BTN_EXTRA;
 import static xtr.keymapper.InputEventCodes.BTN_MIDDLE;
@@ -18,9 +18,10 @@ import xtr.keymapper.mouse.MouseAimHandler;
 import xtr.keymapper.mouse.MousePinchZoom;
 import xtr.keymapper.mouse.MouseWheelZoom;
 import xtr.keymapper.keymap.KeymapProfile;
-import xtr.keymapper.keymap.KeymapProfileKey;
+import xtr.keymapper.keymap.element.Key;
 import xtr.keymapper.server.IInputInterface;
 import xtr.keymapper.server.RemoteService;
+import xtr.keymapper.server.pid.PointerId;
 
 public class MouseEventHandler {
     int sensitivity = 1;
@@ -30,18 +31,30 @@ public class MouseEventHandler {
     private final int pointerId = PointerId.pid1.id;
     private final int pointerIdRightClick = PointerId.pid3.id;
     private MouseAimHandler mouseAimHandler;
-    private KeymapProfileKey rightClick;
+    private MouseAimHandler mouseCameraHandler;
+    private Key rightClick;
     int x1 = 100, y1 = 100;
     int width; int height;
     private final IInputInterface mInput;
     boolean pointer_down;
     public boolean mouseAimActive = false;
+    private MouseAimHandler mouseAimOrCameraHandler;
 
     public void triggerMouseAim() {
-        if (mouseAimHandler != null) {
+        triggerMouseAimOrCamera(mouseAimHandler);
+    }
+
+
+    public void triggerCamera() {
+        triggerMouseAimOrCamera(mouseCameraHandler);
+    }
+
+    private void triggerMouseAimOrCamera(MouseAimHandler instance) {
+        mouseAimOrCameraHandler = instance;
+        if (instance != null) {
             mouseAimActive = !mouseAimActive;
             if (mouseAimActive) {
-                mouseAimHandler.resetPointer();
+                instance.resetPointer();
                 // Notifying user that shooting mode was activated
                 try {
                     mInput.getCallback().alertMouseAimActivated();
@@ -50,7 +63,7 @@ public class MouseEventHandler {
                 }
                 mInput.hideCursor();
             } else {
-                mouseAimHandler.stop();
+                instance.stop();
                 mInput.showCursor();
             }
         }
@@ -71,11 +84,18 @@ public class MouseEventHandler {
         KeymapProfile profile = mInput.getKeymapProfile();
         if (profile.mouseAimConfig != null)
             mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
+        else if (profile.camera != null)
+            mouseCameraHandler = new MouseAimHandler(profile.camera);
+
         this.rightClick = profile.rightClick;
 
         if (mouseAimHandler != null) {
             mouseAimHandler.setInterface(mInput);
             mouseAimHandler.setDimensions(width, height);
+        }
+        if (mouseCameraHandler != null) {
+            mouseCameraHandler.setInterface(mInput);
+            mouseCameraHandler.setDimensions(width, height);
         }
 
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
@@ -95,14 +115,14 @@ public class MouseEventHandler {
     }
 
     private void handleRightClick(int value) {
-        if (value == 1 && mInput.getKeymapConfig().rightClickMouseAim) triggerMouseAim();
+        if (value == 1 && mInput.getKeymapConfig().rightClickMouseAim)  triggerMouseAim();
         else if (rightClick != null)
             mInput.injectEvent(rightClick.x, rightClick.y, value, pointerIdRightClick);
     }
 
     public void handleEvent(int code, int value) {
-        if (mouseAimHandler != null && mouseAimActive) {
-            mouseAimHandler.handleEvent(code, value, this::handleMouseEvent);
+        if (mouseAimOrCameraHandler != null && mouseAimActive) {
+            mouseAimOrCameraHandler.handleEvent(code, value, this::handleMouseEvent);
         } else handleMouseEvent(code, value);
     }
 
@@ -178,5 +198,6 @@ public class MouseEventHandler {
         scrollZoomHandler = null;
         pinchZoom = null;
         mouseAimHandler = null;
+        mouseCameraHandler = null;
     }
 }

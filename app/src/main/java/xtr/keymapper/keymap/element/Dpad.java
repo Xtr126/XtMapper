@@ -1,25 +1,23 @@
-package xtr.keymapper.dpad;
+package xtr.keymapper.keymap.element;
 
 import android.os.Parcel;
-import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
 
+import xtr.keymapper.dpad.DpadKeyCodes;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
+import xtr.keymapper.keymap.KeymapProfileElement;
 
-public class Dpad implements Parcelable {
+public class Dpad extends KeymapProfileElement {
     private float viewX, viewY;
     private final int width, height;
-    final float xOfCenter, yOfCenter;
-    final float radius;
+    public final float xOfCenter;
+    public final float yOfCenter;
+    public final float radius;
     public final DpadKeyCodes keycodes;
     public static final String TAG = "DPAD";
     public static final String TAG_ARROW_KEYS = "DPAD_UDLR";
     private final String tag;
-
-    public static final String[] ARROW_KEYS = {"KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT"};
-    public static final String[] WASD_KEYS = {"KEY_W", "KEY_S", "KEY_A", "KEY_D"};
-    public static final String[] IJKL_KEYS = {"KEY_I", "KEY_K", "KEY_J", "KEY_L"};
 
 
     public Dpad (MovableFrameLayout dpad, DpadKeyCodes keycodes, String tag) {
@@ -32,18 +30,6 @@ public class Dpad implements Parcelable {
         yOfCenter = viewY + radius;
         width = dpad.getLayoutParams().width;
         height = dpad.getLayoutParams().height;
-    }
-
-    public Dpad (String[] data){
-        this.tag = data[0];
-        viewX = Float.parseFloat(data[1]); // x y coordinates for use in EditorUI
-        viewY = Float.parseFloat(data[2]);
-        radius = Float.parseFloat(data[3]); // radius of dpad
-        xOfCenter = Float.parseFloat(data[4]); // absolute x position of pivot (center)
-        yOfCenter = Float.parseFloat(data[5]); // absolute y position of pivot (center)
-        width = Integer.parseInt(data[6]);
-        height = Integer.parseInt(data[7]);
-        keycodes = new DpadKeyCodes(new String[]{data[8], data[9], data[10], data[11]});
     }
 
     protected Dpad(Parcel in) {
@@ -100,6 +86,18 @@ public class Dpad implements Parcelable {
     public void scale(float scaleX, float scaleY) {
         viewX *= scaleX;
         viewY *= scaleY;
+    }
+
+    public Dpad(String[] data){
+        this.tag = data[0];
+        viewX = Float.parseFloat(data[1]); // x y coordinates for use in EditorUI
+        viewY = Float.parseFloat(data[2]);
+        radius = Float.parseFloat(data[3]); // radius of dpad
+        xOfCenter = Float.parseFloat(data[4]); // absolute x position of pivot (center)
+        yOfCenter = Float.parseFloat(data[5]); // absolute y position of pivot (center)
+        width = Integer.parseInt(data[6]);
+        height = Integer.parseInt(data[7]);
+        keycodes = new DpadKeyCodes(new String[]{data[8], data[9], data[10], data[11]});
     }
 
     public int getHeight() {

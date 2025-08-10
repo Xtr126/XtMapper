@@ -8,12 +8,12 @@ import java.util.ArrayList;
 import java.util.function.Consumer;
 
 import xtr.keymapper.R;
-import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.editor.component.Camera;
+import xtr.keymapper.keymap.element.Dpad;
 import xtr.keymapper.editor.component.Crosshair;
-import xtr.keymapper.editor.component.Key;
 import xtr.keymapper.editor.component.RightClick;
-import xtr.keymapper.keymap.KeymapProfileKey;
-import xtr.keymapper.swipekey.SwipeKey;
+import xtr.keymapper.keymap.element.Key;
+import xtr.keymapper.keymap.element.SwipeKey;
 
 class EditorUiComponentList extends ArrayList<EditorUiComponent> {
 
@@ -24,7 +24,7 @@ class EditorUiComponentList extends ArrayList<EditorUiComponent> {
     public void addMatchingComponentForId(@MenuRes int id, EditorUiComponentCallback callback, Context context, float x, float y) {
         final EditorUiComponent component;
         if (id == R.id.add) {
-            component = new Key(callback, context, x, y);
+            component = new xtr.keymapper.editor.component.Key(callback, context, x, y);
         }
         else if (id == R.id.dpad) {
             component = new xtr.keymapper.editor.component.Dpad(callback, context, x, y).pickType();
@@ -44,7 +44,7 @@ class EditorUiComponentList extends ArrayList<EditorUiComponent> {
                     crosshair -> crosshair.animateLeftClick(x, y));
         }
         else if (id == R.id.camera) {
-            component = null;
+            component = new Camera(callback, context, x, y);
         }
         else {
             component = null;
@@ -71,8 +71,8 @@ class EditorUiComponentList extends ArrayList<EditorUiComponent> {
             this.context = context;
         }
 
-        public void addKeys(ArrayList<KeymapProfileKey> keys) {
-            keys.forEach( key -> add(new Key(mCallback, context, key)));
+        public void addKeys(ArrayList<Key> keys) {
+            keys.forEach( key -> add(new xtr.keymapper.editor.component.Key(mCallback, context, key)));
         }
 
         public void addSwipeKeys(ArrayList<SwipeKey> swipeKeys) {

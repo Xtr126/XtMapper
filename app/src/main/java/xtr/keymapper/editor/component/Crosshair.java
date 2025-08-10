@@ -22,33 +22,33 @@ import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
 import xtr.keymapper.floatingkeys.MovableFrameLayout;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
-import xtr.keymapper.mouse.MouseAimConfig;
+import xtr.keymapper.keymap.element.MouseAimConfig;
 
 public class Crosshair extends EditorUiComponent {
     private final MovableFrameLayout crosshairView;
     private final MovableFloatingActionKey leftClick;
 
     public Crosshair(EditorUiComponentCallback callback, Context context, float x, float y) {
-        super(callback, context, x, y);
-        KeymapProfile profile = getCallback().getProfile();
-        profile.mouseAimConfig = new MouseAimConfig();
+            super(callback, context, x, y);
+            KeymapProfile profile = getCallback().getProfile();
+            profile.mouseAimConfig = new MouseAimConfig();
 
-        CrosshairBinding binding = CrosshairBinding.inflate(getLayoutInflater(), getCallback().getKeysContainerView(), true);
-        crosshairView = binding.getRoot();
+            CrosshairBinding binding = CrosshairBinding.inflate(getLayoutInflater(), getCallback().getKeysContainerView(), true);
+            crosshairView = binding.getRoot();
 
-        binding.expandButton.setOnClickListener(this::onExpandButtonClicked);
+            binding.expandButton.setOnClickListener(this::onExpandButtonClicked);
 
-        binding.editButton.setOnClickListener(v -> showMouseAimSettingsDialog());
+            binding.editButton.setOnClickListener(v -> showMouseAimSettingsDialog());
 
-        crosshairView.animate().x(x).y(y)
-                .setDuration(500)
-                .start();
+            crosshairView.animate().x(x).y(y)
+                    .setDuration(500)
+                    .start();
 
-        // Add left click
-        leftClick = addLeftClick(profile.mouseAimConfig.xleftClick, profile.mouseAimConfig.yleftClick);
+            // Add left click
+            leftClick = addLeftClick(profile.mouseAimConfig.xleftClick, profile.mouseAimConfig.yleftClick);
 
-        /* Remove all views and release references when close button clicked */
-        binding.closeButton.setOnClickListener(v -> getCallback().removeComponent(this, crosshairView, leftClick.frameView));
+            /* Remove all views and release references when close button clicked */
+            binding.closeButton.setOnClickListener(v -> getCallback().removeComponent(this, crosshairView, leftClick.frameView));
     }
 
     @Override

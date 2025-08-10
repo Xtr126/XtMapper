@@ -12,11 +12,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
-import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.keymap.element.Camera;
+import xtr.keymapper.keymap.element.Dpad;
+import xtr.keymapper.keymap.element.Key;
 import xtr.keymapper.macro.Macro;
 import xtr.keymapper.macro.MacroIdUtils;
-import xtr.keymapper.mouse.MouseAimConfig;
-import xtr.keymapper.swipekey.SwipeKey;
+import xtr.keymapper.keymap.element.MouseAimConfig;
+import xtr.keymapper.keymap.element.SwipeKey;
 
 public class KeymapProfiles {
     public final SharedPreferences sharedPref;
@@ -123,7 +125,7 @@ public class KeymapProfiles {
             String[] data = line.split("\\s+"); // Split a String like KEY_G 760.86346 426.18607
             switch (data[0]){
                 case MouseAimConfig.TAG:
-                    profile.mouseAimConfig = new MouseAimConfig().parse(data);
+                    profile.mouseAimConfig = new MouseAimConfig(data);
                     break;
 
                 case Dpad.TAG:
@@ -137,7 +139,7 @@ public class KeymapProfiles {
                     break;
 
                 case MOUSE_RIGHT:
-                    profile.rightClick = new KeymapProfileKey();
+                    profile.rightClick = new Key();
                     profile.rightClick.x = Float.parseFloat(data[1]);
                     profile.rightClick.y = Float.parseFloat(data[2]);
                     break;
@@ -168,13 +170,14 @@ public class KeymapProfiles {
                     if (data.length > 6) profile.swipeKeys.add(new SwipeKey(data));
                     break;
 
+                case Camera.TAG:
+                    if (data.length >= 4)
+                        profile.camera = new Camera(data);
+                    break;
+
                 default: {
-                    if (data.length > 3) {
-                        final KeymapProfileKey key = new KeymapProfileKey();
-                        key.code = data[0];
-                        key.x = Float.parseFloat(data[1]);
-                        key.y = Float.parseFloat(data[2]);
-                        key.offset = Float.parseFloat(data[3]);
+                    if (data.length == 4 && data[0].startsWith("KEY_")) {
+                        final Key key = new Key(data);
                         profile.keys.add(key);
                     }
                     break;

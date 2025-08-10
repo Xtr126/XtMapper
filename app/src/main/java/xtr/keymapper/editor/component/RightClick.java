@@ -8,7 +8,7 @@ import xtr.keymapper.R;
 import xtr.keymapper.editor.EditorUiComponent;
 import xtr.keymapper.editor.EditorUiComponentCallback;
 import xtr.keymapper.floatingkeys.MovableFloatingActionKey;
-import xtr.keymapper.keymap.KeymapProfileKey;
+import xtr.keymapper.keymap.element.Key;
 
 public class RightClick extends EditorUiComponent {
 
@@ -32,7 +32,7 @@ public class RightClick extends EditorUiComponent {
         return MOUSE_RIGHT + " " + rightClick.getX() + " " + rightClick.getY();
     }
 
-    public RightClick(EditorUiComponentCallback mCallback, Context context, KeymapProfileKey rightClick) {
+    public RightClick(EditorUiComponentCallback mCallback, Context context, Key rightClick) {
         this(mCallback, context, rightClick.x, rightClick.y);
     }
 }

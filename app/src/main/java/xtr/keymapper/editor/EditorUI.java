@@ -23,6 +23,7 @@ import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.R;
 import xtr.keymapper.Utils;
 import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.editor.component.Camera;
 import xtr.keymapper.editor.component.Crosshair;
 import xtr.keymapper.editor.component.RightClick;
 import xtr.keymapper.keymap.KeymapConfig;
@@ -310,6 +311,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
         }
         if (profile.rightClick != null) {
             editorUiComponents.add(new RightClick(mCallback, context, profile.rightClick));
+        }
+        if (profile.camera != null) {
+            editorUiComponents.add(new Camera(mCallback, context, profile.camera.x, profile.camera.y));
         }
     }
 

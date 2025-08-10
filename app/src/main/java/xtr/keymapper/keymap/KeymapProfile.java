@@ -7,75 +7,50 @@ import android.os.Parcelable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import xtr.keymapper.BuildConfig;
-import xtr.keymapper.dpad.Dpad;
+import xtr.keymapper.keymap.element.Camera;
+import xtr.keymapper.keymap.element.Dpad;
+import xtr.keymapper.keymap.element.Key;
 import xtr.keymapper.macro.Macro;
 import xtr.keymapper.macro.MacroSharedPreferences;
-import xtr.keymapper.mouse.MouseAimConfig;
-import xtr.keymapper.swipekey.SwipeKey;
+import xtr.keymapper.keymap.element.MouseAimConfig;
+import xtr.keymapper.keymap.element.SwipeKey;
 
 public class KeymapProfile implements Parcelable {
     public String packageName = BuildConfig.APPLICATION_ID;
     public final Dpad[] dpadArray;
     public MouseAimConfig mouseAimConfig = null;
-    public ArrayList<KeymapProfileKey> keys = new ArrayList<>();
+    public ArrayList<Key> keys = new ArrayList<>();
     public ArrayList<SwipeKey> swipeKeys = new ArrayList<>();
-    public KeymapProfileKey rightClick;
+    public Key rightClick;
     public boolean disabled = false;
     public int xRes, yRes;
     public final HashMap<String, Macro> macroIdMap = new HashMap<>();
     public static final int MAX_DPADS = 3;
+    public Camera camera = null;
 
     public KeymapProfile() {
         dpadArray = new Dpad[MAX_DPADS];
     }
 
     public void scale(float newWidth, float newHeight) {
-        float scaleX = 1, scaleY = 1;
-
-        if (xRes > 0)
-            scaleX = newWidth / xRes;
-
-        if (yRes > 0)
-            scaleY = newHeight / yRes;
+        float scaleX = (xRes > 0) ? newWidth / xRes : 1;
+        float scaleY = (yRes > 0) ? newHeight / yRes : 1;
 
         if (xRes > 0 && yRes > 0) {
-            scaleKeys(scaleX, scaleY);
-        }
-    }
-
-    private void scaleKeys(float scaleX, float scaleY) {
-        if (rightClick != null) {
-            rightClick.x *= scaleX;
-            rightClick.y *= scaleY;
-        }
-
-        for (SwipeKey swipeKey : swipeKeys) {
-            swipeKey.key1.x *= scaleX;
-            swipeKey.key1.y *= scaleY;
-
-            swipeKey.key2.x *= scaleX;
-            swipeKey.key2.y *= scaleY;
-        }
-
-        for (KeymapProfileKey key : keys) {
-            key.x *= scaleX;
-            key.y *= scaleY;
-        }
-
-        for (Dpad dpad : dpadArray) {
-            if (dpad != null) dpad.scale(scaleX, scaleY);
-        }
-        if (mouseAimConfig != null) {
-            mouseAimConfig.xCenter *= scaleX;
-            mouseAimConfig.yCenter *= scaleY;
-
-            mouseAimConfig.xleftClick *= scaleX;
-            mouseAimConfig.yleftClick *= scaleY;
-
-            mouseAimConfig.width *= scaleX;
-            mouseAimConfig.height *= scaleY;
+            Consumer<KeymapProfileElement> scaler = element -> {
+                if (element != null)
+                    element.scale(scaleX, scaleY);
+            };
+            keys.forEach(scaler);
+            swipeKeys.forEach(scaler);
+            for (Dpad dpad : dpadArray) {
+                scaler.accept(dpad);
+            }
+            scaler.accept(rightClick);
+            scaler.accept(mouseAimConfig);
         }
     }
 
@@ -83,9 +58,9 @@ public class KeymapProfile implements Parcelable {
         packageName = in.readString();
         dpadArray = in.createTypedArray(Dpad.CREATOR);
         mouseAimConfig = in.readParcelable(MouseAimConfig.class.getClassLoader());
-        keys = in.createTypedArrayList(KeymapProfileKey.CREATOR);
+        keys = in.createTypedArrayList(Key.CREATOR);
         swipeKeys = in.createTypedArrayList(SwipeKey.CREATOR);
-        rightClick = in.readParcelable(KeymapProfileKey.class.getClassLoader());
+        rightClick = in.readParcelable(Key.class.getClassLoader());
         disabled = in.readByte() != 0;
         xRes = in.readInt();
         yRes = in.readInt();
