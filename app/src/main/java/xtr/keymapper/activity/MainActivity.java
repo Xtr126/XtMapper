@@ -57,13 +57,14 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     }
 
     private DisplaySelector displaySelector;
+    private Boolean startedFromShell;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        boolean startedFromShell = isStartedWithShell();
+        if (startedFromShell == null) startedFromShell = isStartedWithShell();
 
         KeymapConfig keymapConfig = new KeymapConfig(this);
 
@@ -193,7 +194,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
                 alertShizukuNotAuthorized();
         } else if (Boolean.FALSE.equals(Shell.isAppGrantedRoot())) {
             // No need to alert about root access if started from shell
-            if (!isStartedWithShell()) alertRootAccessAndExit();
+            if (!startedFromShell) alertRootAccessAndExit();
         }
 
         return null;
