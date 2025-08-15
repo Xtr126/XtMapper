@@ -88,10 +88,10 @@ public class SettingsOverlay {
         binding.mouseAimRightClick.setChecked(keymapConfig.rightClickMouseAim);
 
         loadKeyboardShortcuts();
-        binding.launchEditor.setOnKeyListener(this::onKey);
-        binding.pauseResume.setOnKeyListener(this::onKey);
-        binding.switchProfile.setOnKeyListener(this::onKey);
-        binding.mouseAimKey.setOnKeyListener(this::onKey);
+        binding.launchEditor.setOnKeyListener(SettingsOverlay::onKey);
+        binding.pauseResume.setOnKeyListener(SettingsOverlay::onKey);
+        binding.switchProfile.setOnKeyListener(SettingsOverlay::onKey);
+        binding.mouseAimKey.setOnKeyListener(SettingsOverlay::onKey);
 
 
 
@@ -219,7 +219,7 @@ public class SettingsOverlay {
         binding.touchpadInputMode.setSimpleItems(touchpadInputModeNames);
     }
 
-    public boolean onKey(View view, int keyCode, KeyEvent event) {
+    public static boolean onKey(View view, int keyCode, KeyEvent event) {
         String key = String.valueOf(event.getDisplayLabel());
         if ( key.matches("[a-zA-Z0-9]+" )) ((EditText) view).setText(key);
         else ((EditText) view).getText().clear();
