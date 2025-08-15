@@ -66,6 +66,7 @@ public class KeymapProfile implements Parcelable {
         yRes = in.readInt();
         Map<String, Macro> hashMap = in.readHashMap(getClass().getClassLoader());
         if(hashMap != null) macroIdMap.putAll(hashMap);
+        camera = in.readParcelable(Camera.class.getClassLoader());
     }
 
     @Override
@@ -80,6 +81,7 @@ public class KeymapProfile implements Parcelable {
         dest.writeInt(xRes);
         dest.writeInt(yRes);
         dest.writeMap(macroIdMap);
+        dest.writeParcelable(camera, flags);
     }
 
     @Override
