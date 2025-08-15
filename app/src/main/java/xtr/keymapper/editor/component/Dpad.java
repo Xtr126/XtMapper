@@ -88,13 +88,13 @@ public class Dpad extends EditorUiComponent {
 
     private void addDpad(float x, float y, DpadKeyCodes dpadKeycodes) {
         dpadBinding = DpadBinding.inflate(getLayoutInflater(), getCallback().getKeysContainerView(), true);
+        setDpadKeys(dpadBinding, dpadKeycodes);
         dpadView = dpadBinding.getRoot();
 
         dpadBinding.closeButton.setOnClickListener(this::onClose);
         dpadBinding.resizeHandle.setOnTouchListener(new ResizeableDpadView(dpadView));
 
         if (this.dpad == null) {
-            setDpadKeys(dpadBinding, dpadKeycodes);
             this.dpad = new xtr.keymapper.keymap.element.Dpad(dpadView, new DpadKeyCodes(dpadBinding), xtr.keymapper.keymap.element.Dpad.TAG);
         }
 
