@@ -45,7 +45,7 @@ public class RemoteServiceHelper {
 
     public static void reloadKeymap(Context context) {
         RemoteServiceHelper.getInstance(context, service -> {
-            try {
+            if (service != null) try {
                 service.reloadKeymap();
             } catch (RemoteException e) {
                 Log.i(RemoteService.TAG, e.getMessage(), e);
