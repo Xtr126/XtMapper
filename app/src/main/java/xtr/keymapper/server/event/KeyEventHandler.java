@@ -193,15 +193,15 @@ public class KeyEventHandler {
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
         if (keycode == keymapConfig.mouseAimShortcutKey) {
             // if not toggle then hold down key to aim
-            if (action == DOWN && keymapConfig.mouseAimToggle) mInput.getMouseEventHandler().triggerMouseAim();
-            else mInput.getMouseEventHandler().triggerMouseAim();
+            if (keymapConfig.mouseAimToggle && action == UP) return;
+            mInput.getMouseEventHandler().triggerMouseAim();
         }
         else {
             Camera camera = mInput.getKeymapProfile().camera;
-            if (keycode == camera.triggerKeyCode) {
+            if (camera != null) if (keycode == camera.triggerKeyCode) {
                 // If not toggle then hold down key to move camera
-                if (action == DOWN && camera.toggle) mInput.getMouseEventHandler().triggerMouseAim();
-                else mInput.getMouseEventHandler().triggerMouseAim();
+                if (camera.toggle && action == UP) return;
+                mInput.getMouseEventHandler().triggerMouseAim();
             }
         }
     }
