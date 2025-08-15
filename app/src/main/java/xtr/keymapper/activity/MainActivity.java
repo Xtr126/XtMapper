@@ -192,7 +192,8 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)
                 alertShizukuNotAuthorized();
         } else if (Boolean.FALSE.equals(Shell.isAppGrantedRoot())) {
-            alertRootAccessAndExit();
+            // No need to alert about root access if started from shell
+            if (!isStartedWithShell()) alertRootAccessAndExit();
         }
 
         return null;
