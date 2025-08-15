@@ -11,7 +11,7 @@ public class Camera extends KeymapProfileElement {
     public float y;
     public int triggerKeyCode = -1;
     public static final String TAG = "CAMERA";
-    public boolean toggle;
+    public boolean toggle = true;
     public float xSensitivity = 1f;
     public float ySensitivity = 1f;
 
