@@ -201,7 +201,7 @@ public class KeyEventHandler {
             if (camera != null) if (keycode == camera.triggerKeyCode) {
                 // If not toggle then hold down key to move camera
                 if (camera.toggle && action == UP) return;
-                mInput.getMouseEventHandler().triggerMouseAim();
+                mInput.getMouseEventHandler().triggerCamera();
             }
         }
     }
