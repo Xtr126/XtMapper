@@ -41,14 +41,17 @@ public class Camera extends EditorUiComponent {
 
     @Override
     public String getDataLine() {
-        return getCallback().getProfile().camera.getData();
+        xtr.keymapper.keymap.element.Camera camera = getCallback().getProfile().camera;
+        camera.x = cameraView.getX();
+        camera.y = cameraView.getY();
+        return camera.getData();
     }
 
     public void showSettingsDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
         CameraConfigBinding binding = CameraConfigBinding.inflate(getLayoutInflater(), null, false);
 
-        xtr.keymapper.keymap.element.Camera camera = getCallback().getProfile().camera;
+        xtr.keymapper.keymap.element.Camera camera = getCamera();
 
         if (camera.triggerKeyCode > -1) {
             String triggerKeyCode = String.valueOf(Utils.alphabet.charAt(camera.triggerKeyCode));
@@ -73,5 +76,10 @@ public class Camera extends EditorUiComponent {
         AlertDialog dialog = builder.create();
         if (getCallback().isOverlayOpen()) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         dialog.show();
+    }
+
+    private xtr.keymapper.keymap.element.Camera getCamera() {
+        xtr.keymapper.keymap.element.Camera camera = getCallback().getProfile().camera;
+        return camera;
     }
 }
