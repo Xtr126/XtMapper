@@ -84,7 +84,7 @@ public class MouseEventHandler {
         KeymapProfile profile = mInput.getKeymapProfile();
         if (profile.mouseAimConfig != null)
             mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
-        else if (profile.camera != null)
+        if (profile.camera != null)
             mouseCameraHandler = new MouseAimHandler(profile.camera);
 
         this.rightClick = profile.rightClick;
