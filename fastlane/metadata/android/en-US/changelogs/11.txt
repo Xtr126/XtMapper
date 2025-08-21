@@ -1,0 +1,1 @@
+signing key changed from debug to release. If you have a version older than 2.1.1 installed, you'll need to uninstall and reinstall.
