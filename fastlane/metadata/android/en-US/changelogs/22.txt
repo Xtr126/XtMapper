@@ -1,0 +1,8 @@
+**Bugfixes:**
+* Crash when adding macro
+* Multiple cursors (waydroid) 
+* Server crash if shizuku installed 
+* Server crash when editing keymap 
+
+**What's new:**
+* Implemented camera feature
