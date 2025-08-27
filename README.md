@@ -22,9 +22,19 @@ https://xtr126.github.io/XtMapper-docs/guides/about
 
  ## Screenshots
 
+<details>
+
+<summary>Click to expand</summary>
+
 |   |   |   |
 | ------------- | ------------- | ------------- |
-|  <img src="https://github.com/user-attachments/assets/827924ac-3e26-4bdf-a219-c427ad4c110c"/>  |  <img src="https://github.com/user-attachments/assets/9150aff0-3545-4d8d-b5dc-91ed7ff8864a"/>  |  <img src="https://github.com/user-attachments/assets/f8303664-5c9e-41e1-b7c7-0d80fd0ad3e9"/>  |
+|  <img src="https://github.com/user-attachments/assets/df57855f-66a8-495e-8252-05c433933eae"/>  |  <img src="https://github.com/user-attachments/assets/d5866a7b-241f-4ab6-9f1f-79538fe116d3"/>  |  <img src="https://github.com/user-attachments/assets/b7bd4346-c22e-485e-85b0-b05659afe183"/>  |
+|  <img src="https://github.com/user-attachments/assets/9f8cabe9-9fea-4bf8-b215-d843bb6f15d6"/>  |  <img src="https://github.com/user-attachments/assets/a58848b0-c9a9-4c6f-a0aa-01c051dfb611"/>  |  <img src="https://github.com/user-attachments/assets/d39b871f-2554-4f71-b211-d06372f67ae9"/>  |
+<img width="2340" height="992" alt="image" src="https://github.com/user-attachments/assets/b494cd0d-5503-4b7d-8a6f-cb86adefc4e1" />
+
+</details>
+
+
 ## Development
 
 ### Build
