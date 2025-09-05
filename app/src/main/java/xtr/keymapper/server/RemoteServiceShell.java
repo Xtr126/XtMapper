@@ -18,12 +18,12 @@ public class RemoteServiceShell {
     public static void main(String[] args) {
         try {
             System.out.println("Waiting for overlay...");
-            new ProcessBuilder("logcat", "-v", "color", "--pid=" + android.os.Process.myPid()).inheritIO().start();
             new ProcessBuilder("setenforce", "0").inheritIO().start();
             RemoteService.loadLibraries();
             Looper.prepareMainLooper();
             RemoteService mService = new RemoteService(getContext());
             mService.startedFromShell = true;
+            boolean noLogcat = false;
 
             boolean launchApp = true;
             for (String arg: args) {
@@ -35,6 +35,9 @@ public class RemoteServiceShell {
                     case "--no-auto-launch":
                         launchApp = false;
                         break;
+                    case "--no-logcat":
+                        noLogcat = true;
+                        break;
                     default:
                         System.out.println("Invalid argument: " + arg);
                         break;
@@ -44,6 +47,8 @@ public class RemoteServiceShell {
             ServiceManager.addService("xtmapper", mService);
             new ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start();
             new ProcessBuilder("settings put system alert_window_bypass_low_ram 1".split("\\s+")).inheritIO().start();
+            if (!noLogcat)
+                new ProcessBuilder("logcat", "-v", "color", "--pid=" + android.os.Process.myPid()).inheritIO().start();
 
             if (launchApp) new ProcessBuilder("am", "start", "-a", "android.intent.action.MAIN", "-n",
                     new ComponentName(mService.context, MainActivity.class).flattenToString(),
