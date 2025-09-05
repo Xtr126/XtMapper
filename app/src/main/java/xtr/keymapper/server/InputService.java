@@ -58,7 +58,9 @@ public class InputService implements IInputInterface {
         }
         if (currentPointerMode != KeymapConfig.POINTER_SYSTEM) showCursor();
 
-        this.touchpadInputMode = keymapConfig.touchpadInputMode;
+        // Disable touchpad features for wayland client
+        this.touchpadInputMode = isWaylandClient ? KeymapConfig.TOUCHPAD_DISABLED : keymapConfig.touchpadInputMode;
+
         if (touchpadInputMode == KeymapConfig.TOUCHPAD_DIRECT)
             startTouchpadDirect();
         else if (touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
