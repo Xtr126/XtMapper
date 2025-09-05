@@ -122,9 +122,13 @@
                 android:id="@+id/slider_mouse"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:stepSize="1"
-                android:valueFrom="1"
-                android:valueTo="5"/>
+                android:valueFrom="0"
+                android:valueTo="5"
+                android:value="1"
+                app:trackIconInactiveEnd="@drawable/ic_baseline_mouse_36"
+                app:trackStopIndicatorSize="0dp"
+                app:trackIconSize="14dp"
+                />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -135,9 +139,12 @@
                 android:id="@+id/slider_scroll_speed"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:stepSize="1"
-                android:valueFrom="1"
-                android:valueTo="5"/>
+                android:valueFrom="0"
+                android:valueTo="5"
+                app:trackIconInactiveEnd="@drawable/ic_baseline_speed_24"
+                app:trackStopIndicatorSize="0dp"
+                app:trackIconSize="14dp"
+                />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -150,7 +157,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:valueFrom="0"
-                android:valueTo="500" />
+                android:valueTo="500"
+                app:trackIconInactiveEnd="@drawable/ic_baseline_touch_app_24"
+                app:trackStopIndicatorSize="0dp"
+                app:trackIconSize="14dp"
+                />
 
 
             <TextView
@@ -163,7 +174,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:valueFrom="0"
-                android:valueTo="1" />
+                android:valueTo="1"
+                app:trackIconInactiveEnd="@drawable/ic_baseline_zoom_out_map_24"
+                app:trackStopIndicatorSize="0dp"
+                app:trackIconSize="14dp"
+                />
 
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

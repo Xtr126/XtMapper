@@ -24,8 +24,8 @@ import xtr.keymapper.server.RemoteService;
 import xtr.keymapper.server.pid.PointerId;
 
 public class MouseEventHandler {
-    int sensitivity = 1;
-    int scroll_speed_multiplier = 1;
+    float sensitivity;
+    float scroll_speed_multiplier;
     private MousePinchZoom pinchZoom;
     private MouseWheelZoom scrollZoomHandler;
     private final int pointerId = PointerId.pid1.id;
@@ -102,8 +102,8 @@ public class MouseEventHandler {
         if (keymapConfig.ctrlMouseWheelZoom)
             scrollZoomHandler = new MouseWheelZoom(mInput);
 
-        sensitivity = keymapConfig.mouseSensitivity.intValue();
-        scroll_speed_multiplier = keymapConfig.scrollSpeed.intValue();
+        sensitivity = keymapConfig.mouseSensitivity;
+        scroll_speed_multiplier = keymapConfig.scrollSpeed;
     }
 
     private void movePointerX() {
@@ -135,8 +135,8 @@ public class MouseEventHandler {
             }
         switch (code) {
             case REL_X: {
+                value = (int) (value*sensitivity);
                 if (value == 0) break;
-                value *= sensitivity;
                 x1 += value;
                 if (x1 > width || x1 < 0) x1 -= value;
                 if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
@@ -144,8 +144,8 @@ public class MouseEventHandler {
                 break;
             }
             case REL_Y: {
+                value = (int) (value*sensitivity);
                 if (value == 0) break;
-                value *= sensitivity;
                 y1 += value;
                 if (y1 > height || y1 < 0) y1 -= value;
                 if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);

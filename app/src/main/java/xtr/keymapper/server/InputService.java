@@ -94,7 +94,7 @@ public class InputService implements IInputInterface {
             input.injectTouch(MotionEvent.ACTION_HOVER_MOVE, pointerId, 1.0f, x, y);
     }
 
-    public void injectScroll(float x, float y, int value) {
+    public void injectScroll(float x, float y, float value) {
         input.onScrollEvent(x, y, value);
     }
 

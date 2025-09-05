@@ -102,7 +102,7 @@ public class Input {
         injectInputEvent(motionEvent);
     }
 
-    public void onScrollEvent(float x, float y, int value){
+    public void onScrollEvent(float x, float y, float value){
         mScrollThread.onScrollEvent(x, y, value);
     }
 
@@ -156,7 +156,7 @@ public class Input {
             mHandler = new Handler(getLooper());
         }
 
-        public void onScrollEvent(float x, float y, int value) {
+        public void onScrollEvent(float x, float y, float value) {
             event.x = x;
             event.y = y;
             this.value += value;
