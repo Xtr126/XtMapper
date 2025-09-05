@@ -27,6 +27,8 @@ public class ShowKeymapService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (editorUi != null) editorUi.hideView();
+
         String selectedProfile = intent.getStringExtra(EditorActivity.PROFILE_NAME);
 
         if (selectedProfile == null) {
