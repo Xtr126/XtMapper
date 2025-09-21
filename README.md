@@ -46,7 +46,7 @@ To report any bugs to help improve XtMapper please create an issue at https://gi
 To share your thoughts on XtMapper/ ask any questions please create a post at https://github.com/Xtr126/XtMapper/discussions 
 
 ## Using on waydroid
-https://xtr126.github.io/XtMapper-docs/waydroid
+https://xtr126.github.io/XtMapper-docs/waydroid/1-overview/
 ## Credits
 @guobao2333 - [Chinese translation](https://github.com/Xtr126/XtMapper/pull/101)  
 @muhammadbahaa2001 - [Arabic translation](https://github.com/Xtr126/XtMapper/pull/106)  
