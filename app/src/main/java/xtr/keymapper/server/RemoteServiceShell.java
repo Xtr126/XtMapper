@@ -13,12 +13,14 @@ import java.lang.reflect.Method;
 
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.activity.MainActivity;
+import xtr.keymapper.server.windows.TouchpadDataReceiver;
+import xtr.keymapper.server.windows.TouchpadDataReceiverKt;
+import xtr.keymapper.server.windows.TouchpadInputProcessor;
 
 public class RemoteServiceShell {
     public static void main(String[] args) {
         try {
             System.out.println("Waiting for overlay...");
-            new ProcessBuilder("setenforce", "0").inheritIO().start();
             RemoteService.loadLibraries();
             Looper.prepareMainLooper();
             RemoteService mService = new RemoteService(getContext());
@@ -26,7 +28,7 @@ public class RemoteServiceShell {
             boolean noLogcat = false;
 
             boolean launchApp = true;
-            for (String arg: args) {
+            for (String arg : args) {
                 switch (arg) {
                     case "--wayland-client":
                         mService.isWaylandClient = true;
@@ -38,13 +40,20 @@ public class RemoteServiceShell {
                     case "--no-logcat":
                         noLogcat = true;
                         break;
+                    case "--touchpad-input-udp-port":
+                    case "--touchpad-input-tcp-port":
+                    case "--touchpad-input-stdin":
+                        TouchpadDataReceiverKt.start(args);
+                        System.exit(0);
+                        break;
                     default:
                         System.out.println("Invalid argument: " + arg);
                         break;
                 }
             }
-
+            new ProcessBuilder("setenforce", "0").inheritIO().start();
             ServiceManager.addService("xtmapper", mService);
+
             new ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start();
             new ProcessBuilder("settings put system alert_window_bypass_low_ram 1".split("\\s+")).inheritIO().start();
             if (!noLogcat)
