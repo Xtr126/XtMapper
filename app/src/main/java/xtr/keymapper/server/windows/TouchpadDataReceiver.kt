@@ -1,5 +1,6 @@
 package xtr.keymapper.server.windows
 
+import android.os.Process
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -7,6 +8,10 @@ import java.net.ServerSocket
 import java.net.Socket
 
 class TouchpadDataReceiver {
+    var verbose: Boolean
+        get() = injector.verbose
+        set(value) { injector.verbose = value }
+
     val injector = TouchpadInputInjector()
     val inputProcessor = TouchpadInputProcessor()
 
@@ -14,7 +19,7 @@ class TouchpadDataReceiver {
         var prevContacts: List<TouchpadContact> = emptyList()
         while (true) {
             val contacts = inputProcessor.readFrame(System.`in`) ?: break
-            println("Received frame (${contacts.size} contacts):")
+            if (verbose) println("Received frame (${contacts.size} contacts):")
             injector.inject(prevContacts, contacts)
             prevContacts = contacts
         }
@@ -32,7 +37,7 @@ class TouchpadDataReceiver {
             val packet = DatagramPacket(buffer, buffer.size)
             socket.receive(packet)
             val contacts = inputProcessor.parseContacts(packet.data, packet.length)
-            println("Received frame (${contacts.size} contacts):")
+            if (verbose) println("Received frame (${contacts.size} contacts):")
             injector.inject(prevContacts, contacts)
             prevContacts = contacts
         }
@@ -70,7 +75,7 @@ class TouchpadDataReceiver {
 
             while (true) {
                 val contacts = inputProcessor.readFrame(inputStream) ?: break
-                println("Received frame (${contacts.size} contacts):")
+                if (verbose) println("Received frame (${contacts.size} contacts):")
                 injector.inject(prevContacts, contacts)
                 prevContacts = contacts
             }
@@ -110,13 +115,15 @@ fun start(args: Array<String>) {
         }
 
     }
+    val touchpadDataReceiver = TouchpadDataReceiver()
 
     while (iterator.hasNext()) {
         when (val arg = iterator.next()) {
-            "--touchpad-input-udp-port" -> getPort(TouchpadDataReceiver()::startUdp)
-            "--touchpad-input-tcp-port" -> getPort(TouchpadDataReceiver()::startTcp)
-            "--touchpad-input-stdin" -> TouchpadDataReceiver().startSystemIn()
-            "--logcat" -> ProcessBuilder("logcat", "-v", "color", "--pid=" + android.os.Process.myPid()).inheritIO().start()
+            "--touchpad-input-udp-port" -> getPort(touchpadDataReceiver::startUdp)
+            "--touchpad-input-tcp-port" -> getPort(touchpadDataReceiver::startTcp)
+            "--touchpad-input-stdin" -> touchpadDataReceiver.startSystemIn()
+            "--logcat" -> ProcessBuilder("logcat", "-v", "color", "--pid=" + Process.myPid()).inheritIO().start()
+            "--verbose" -> touchpadDataReceiver.verbose = true
             else -> println("Invalid argument: $arg")
         }
     }

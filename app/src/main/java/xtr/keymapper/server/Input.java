@@ -125,7 +125,7 @@ public class Input {
             injectInputEvent(motionEvent);
     }
 
-    public void injectInputEvent(MotionEvent motionEvent)  {
+    private void injectInputEvent(MotionEvent motionEvent)  {
         try {
             // Set display ID for the motion event using reflection
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && setDisplayIdMethod != null) {
