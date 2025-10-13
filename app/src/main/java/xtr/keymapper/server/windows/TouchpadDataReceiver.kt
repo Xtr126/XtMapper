@@ -6,6 +6,7 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.ServerSocket
 import java.net.Socket
+import kotlin.system.exitProcess
 
 class TouchpadDataReceiver {
     var verbose: Boolean
@@ -97,34 +98,41 @@ class TouchpadDataReceiver {
 
 fun start(args: Array<String>) {
     val iterator = args.iterator()
-    fun runOnNewThreadIfNeeded(function: () -> Unit) {
-        if (iterator.hasNext())
-            Thread { function.invoke() }.start()
-        else
-            function.invoke()
+
+    fun portNotSpecified(): () -> Unit {
+        println("Error: Port not specified")
+        return { exitProcess(1) }
     }
 
-    fun getPort(function: (Int) -> Unit) {
+    fun getPort(function: (Int) -> Unit): () -> Unit {
         if (iterator.hasNext()) {
             val port = iterator.next()
-            runOnNewThreadIfNeeded {
-                function.invoke(port.toInt())
-            }
+            return { port.toIntOrNull()?.let { function.invoke(it) } ?: portNotSpecified() }
         } else {
-            println("Error: Port not specified")
+            return portNotSpecified()
         }
-
     }
+
+    val taskQueue: MutableList<Runnable> = mutableListOf()
+
     val touchpadDataReceiver = TouchpadDataReceiver()
 
     while (iterator.hasNext()) {
         when (val arg = iterator.next()) {
-            "--touchpad-input-udp-port" -> getPort(touchpadDataReceiver::startUdp)
-            "--touchpad-input-tcp-port" -> getPort(touchpadDataReceiver::startTcp)
-            "--touchpad-input-stdin" -> touchpadDataReceiver.startSystemIn()
+            "--touchpad-input-udp-port" -> taskQueue.add(getPort(touchpadDataReceiver::startUdp))
+            "--touchpad-input-tcp-port" -> taskQueue.add(getPort(touchpadDataReceiver::startTcp))
+            "--touchpad-input-stdin" -> taskQueue.add(touchpadDataReceiver::startSystemIn)
             "--logcat" -> ProcessBuilder("logcat", "-v", "color", "--pid=" + Process.myPid()).inheritIO().start()
             "--verbose" -> touchpadDataReceiver.verbose = true
             else -> println("Invalid argument: $arg")
+        }
+    }
+
+    // Iterate if needed and run the last task in the current thread
+    taskQueue.singleOrNull()?.run() ?: taskQueue.iterator().also {
+        while (it.hasNext()) {
+            if (it.hasNext()) Thread { it.next().run() }.start()
+            else it.next().run()
         }
     }
 }
