@@ -20,7 +20,6 @@ import xtr.keymapper.server.windows.TouchpadInputProcessor;
 public class RemoteServiceShell {
     public static void main(String[] args) {
         try {
-            System.out.println("Waiting for overlay...");
             RemoteService.loadLibraries();
             Looper.prepareMainLooper();
             RemoteService mService = new RemoteService(getContext());
