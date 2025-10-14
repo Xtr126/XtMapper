@@ -4,6 +4,7 @@ import android.os.Process
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
 import kotlin.system.exitProcess
@@ -15,6 +16,20 @@ class TouchpadDataReceiver {
 
     val injector = TouchpadInputInjector()
     val inputProcessor = TouchpadInputProcessor()
+
+    init {
+        println("Reachable at")
+        NetworkInterface.getNetworkInterfaces().iterator().forEach { iface ->
+            // Skip down or loopback interfaces
+            if (!iface.isUp || iface.isLoopback) return@forEach
+
+            iface.inetAddresses.iterator().forEach { addr ->
+                // Skip loopback, link-local, or unspecified addresses
+                if (!(addr.isLoopbackAddress || addr.isLinkLocalAddress || addr.isAnyLocalAddress))
+                    println("    iface[${iface.index}]=${iface.displayName} ip=${addr.hostAddress}")
+            }
+        }
+    }
 
     fun startSystemIn() {
         var prevContacts: List<TouchpadContact> = emptyList()
@@ -38,7 +53,7 @@ class TouchpadDataReceiver {
             val packet = DatagramPacket(buffer, buffer.size)
             socket.receive(packet)
             val contacts = inputProcessor.parseContacts(packet.data, packet.length)
-            if (verbose) println("Received frame (${contacts.size} contacts):")
+            if (verbose) println("Received frame (${contacts.size} contacts)")
             injector.inject(prevContacts, contacts)
             prevContacts = contacts
         }
@@ -48,7 +63,7 @@ class TouchpadDataReceiver {
         var serverSocket: ServerSocket? = null
         try {
             serverSocket = ServerSocket(port)
-            println("TCP Touchpad receiver started on port $port")
+            println("Listening on TCP port $port...")
 
             while (true) {
                 try {
@@ -76,7 +91,7 @@ class TouchpadDataReceiver {
 
             while (true) {
                 val contacts = inputProcessor.readFrame(inputStream) ?: break
-                if (verbose) println("Received frame (${contacts.size} contacts):")
+                if (verbose) println("Received frame (${contacts.size} contacts)")
                 injector.inject(prevContacts, contacts)
                 prevContacts = contacts
             }
