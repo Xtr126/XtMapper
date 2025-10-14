@@ -128,12 +128,11 @@ fun start(args: Array<String>) {
         }
     }
 
-    // Iterate if needed and run the last task in the current thread
-    taskQueue.singleOrNull()?.run() ?: taskQueue.iterator().also {
-        while (it.hasNext()) {
-            if (it.hasNext()) Thread { it.next().run() }.start()
-            else it.next().run()
-        }
+    taskQueue.dropLast(1).forEach { task ->
+        Thread { task.run() }.start()
     }
+
+    // Run the last task in the current thread
+    taskQueue.lastOrNull()?.run()
 }
 
