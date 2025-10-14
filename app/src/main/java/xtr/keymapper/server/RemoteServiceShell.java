@@ -42,6 +42,8 @@ public class RemoteServiceShell {
                     case "--touchpad-input-udp-port":
                     case "--touchpad-input-tcp-port":
                     case "--touchpad-input-stdin":
+                    case "--logcat":
+                    case "--verbose":
                         TouchpadDataReceiverKt.start(args);
                         System.exit(0);
                         break;
