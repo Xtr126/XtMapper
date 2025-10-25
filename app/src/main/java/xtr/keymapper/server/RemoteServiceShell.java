@@ -13,9 +13,7 @@ import java.lang.reflect.Method;
 
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.activity.MainActivity;
-import xtr.keymapper.server.windows.TouchpadDataReceiver;
 import xtr.keymapper.server.windows.TouchpadDataReceiverKt;
-import xtr.keymapper.server.windows.TouchpadInputProcessor;
 
 public class RemoteServiceShell {
     public static void main(String[] args) {

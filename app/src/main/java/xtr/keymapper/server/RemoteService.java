@@ -213,7 +213,10 @@ public class RemoteService extends IRemoteService.Stub {
         return true;
     }
 
-    private final DeathRecipient mStartServerDeathRecipient = this::stopServer;
+    private final DeathRecipient mStartServerDeathRecipient = () -> {
+        inputService = null;
+        stopServer();
+    };
 
     /**
      * Called by client to start the remote server.
