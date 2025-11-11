@@ -53,10 +53,8 @@ public class Camera extends EditorUiComponent {
 
         xtr.keymapper.keymap.element.Camera camera = getCamera();
 
-        if (camera.triggerKeyCode > -1) {
-            String triggerKeyCode = String.valueOf(Utils.alphabet.charAt(camera.triggerKeyCode));
-            binding.key.setText(triggerKeyCode);
-        }
+        binding.key.setText(String.valueOf(camera.triggerKeyCode));
+
         binding.toggleSwitch.setChecked(camera.toggle);
         binding.sliderXSensitivity.setValue(camera.xSensitivity);
         binding.sliderYSensitivity.setValue(camera.ySensitivity);
@@ -67,7 +65,7 @@ public class Camera extends EditorUiComponent {
         builder.setView(view)
                 .setPositiveButton(R.string.ok, (dialog, which) -> {
                     if(binding.key.getText().toString().isEmpty()) binding.key.setText(" ");
-                    camera.triggerKeyCode = Utils.alphabet.indexOf(binding.key.getText().charAt(0));
+                    camera.triggerKeyCode = binding.key.getText().charAt(0);
                     camera.toggle = binding.toggleSwitch.isChecked();
                     camera.xSensitivity = binding.sliderXSensitivity.getValue();
                     camera.ySensitivity = binding.sliderYSensitivity.getValue();

@@ -5,10 +5,4 @@ package xtr.keymapper.editor;
  */
 public interface EditorCallback {
     void onHideView();
-
-    /**
-     * @return true if getevent is running
-     */
-    boolean getEvent();
-
 }

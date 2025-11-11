@@ -13,7 +13,9 @@ import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.RemoteException;
 import android.provider.Settings;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -27,6 +29,7 @@ import com.topjohnwu.superuser.Shell;
 import kotlin.Unit;
 import rikka.shizuku.Shizuku;
 import xtr.keymapper.BuildConfig;
+import xtr.keymapper.IRemoteService;
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
 import xtr.keymapper.TouchPointer;
@@ -154,8 +157,26 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     }
 
     private void launchSettings() {
-        EditorUI editorUI = new EditorUI(this, null, null, EditorUI.START_SETTINGS);
-        editorUI.openSettings();
+        final Context context = MainActivity.this;
+        var remoteServiceCallback = new RemoteServiceHelper.RootRemoteServiceCallback() {
+
+            private EditorUI editorUi = new EditorUI(context, this::editorCallback, null, EditorUI.START_SETTINGS);
+
+            private void editorCallback() { editorUi = null; }
+
+            @Override
+            public void onConnection(IRemoteService remoteService) {
+                if (remoteService != null && editorUi != null) try {
+                    editorUi.registerOnKeyEventListener(remoteService);
+                } catch (RemoteException e) {
+                    Log.e("MainActivity", e.getMessage(), e);
+                    editorUi.unregisterOnKeyEventListener();
+                }
+            }
+        };
+        remoteServiceCallback.editorUi.openSettings();
+        RemoteServiceHelper.getInstance(context, remoteServiceCallback);
+
     }
 
     private void launchApp() {

@@ -20,10 +20,9 @@ import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.server.RemoteServiceHelper;
 
-public class EditorActivity extends Activity implements EditorCallback {
+public class EditorActivity extends Activity {
     public static final String PROFILE_NAME = "profile";
     private EditorUI editor;
-    private IRemoteService mService;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -43,7 +42,7 @@ public class EditorActivity extends Activity implements EditorCallback {
 
         setTheme(R.style.Theme_XtMapper);
 
-        editor = new EditorUI(this, this, selectedProfile, EditorUI.START_EDITOR);
+        editor = new EditorUI(this, this::editorCallback, selectedProfile, EditorUI.START_EDITOR);
 
         KeymapConfig keymapConfig = new KeymapConfig(this);
         if (Settings.canDrawOverlays(this)) {
@@ -56,16 +55,19 @@ public class EditorActivity extends Activity implements EditorCallback {
         RemoteServiceHelper.getInstance(this, this::onConnection);
     }
 
+    private void editorCallback() {
+        editor = null;
+        finish();
+    }
+
     private void onConnection(IRemoteService service) {
         if (editor != null) {
-            this.mService = service;
             KeymapConfig keymapConfig = new KeymapConfig(this);
 
-            if (getEvent())
+            if (service != null)
                 // Can receive key events from remote service
                 try {
-                    mService.registerOnKeyEventListener(editor);
-                    mService.pauseMouse();
+                    editor.registerOnKeyEventListener(service);
                 } catch (RemoteException e) {
                     Log.e("editorActivity", e.getMessage(), e);
                 }
@@ -85,22 +87,7 @@ public class EditorActivity extends Activity implements EditorCallback {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (getEvent()) try {
-            mService.unregisterOnKeyEventListener(editor);
-            mService.resumeMouse();
-            mService.reloadKeymap();
-        } catch (RemoteException ignored) {
-        }
+        if (editor != null) editor.hideView();
         editor = null;
-    }
-
-    @Override
-    public void onHideView() {
-        finish();
-    }
-
-    @Override
-    public boolean getEvent() {
-        return mService != null;
     }
 }

@@ -42,16 +42,8 @@ public class ShowKeymapService extends Service {
         return super.onStartCommand(intent, flags, startId);
     }
 
-    private final EditorCallback editorCallback = new EditorCallback() {
-        @Override
-        public void onHideView() {
-            editorUi = null;
-        }
-
-        @Override
-        public boolean getEvent() {
-            return false;
-        }
+    private final EditorCallback editorCallback = () -> {
+        editorUi = null;
     };
 
 

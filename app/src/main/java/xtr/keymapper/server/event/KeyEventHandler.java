@@ -94,10 +94,11 @@ public class KeyEventHandler {
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
 
         detectCtrlAltKeys(event);
+        if (event.action == DOWN) if (handleKeyboardShortcuts(event.code)) return;
+        handleMouseAimAndCamera(event.code, event.action);
         int i = Utils.obtainIndex(event.code);
-        if (i > 0) { // A-Z and 0-9 keys
-            if (event.action == DOWN) if (handleKeyboardShortcuts(i)) return;
-            handleMouseAimAndCamera(i, event.action);
+        if (i > 0) {
+            // A-Z and 0-9 keys
         } else { // CTRL, ALT, Arrow keys
             if (event.code.equals("KEY_GRAVE") && event.action == DOWN)
                 if (keymapConfig.keyGraveMouseAim) {
@@ -155,25 +156,25 @@ public class KeyEventHandler {
         return event;
     }
 
-    private boolean handleKeyboardShortcuts(int keycode) throws RemoteException {
+    private boolean handleKeyboardShortcuts(String keycode) throws RemoteException {
         if (!(altKeyPressed || ctrlKeyPressed)) return false;
         final String modifier = ctrlKeyPressed ? KEY_CTRL : KEY_ALT;
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
 
         if (keymapConfig.launchEditorShortcutKeyModifier.equals(modifier))
-            if (keycode == keymapConfig.launchEditorShortcutKey) {
+            if (keycode.equals(keymapConfig.launchEditorShortcutKey)) {
                 mInput.getCallback().launchEditor();
                 return true;
             }
 
         if (keymapConfig.pauseResumeShortcutKeyModifier.equals(modifier))
-            if (keycode == keymapConfig.pauseResumeShortcutKey) {
+            if (keycode.equals(keymapConfig.pauseResumeShortcutKey)) {
                 mInput.pauseResumeKeymap();
                 return true;
             }
 
         if (keymapConfig.switchProfileShortcutKeyModifier.equals(modifier))
-            if (keycode == keymapConfig.switchProfileShortcutKey) {
+            if (keycode.equals(keymapConfig.switchProfileShortcutKey)) {
                 mInput.getCallback().switchProfiles();
                 return true;
             }
@@ -184,24 +185,25 @@ public class KeyEventHandler {
         KeyEvent event = getEvent(line);
         if (event != null) {
             detectCtrlAltKeys(event);
-            int i = Utils.obtainIndex(event.code);
-            if (event.action == DOWN) handleKeyboardShortcuts(i);
+            if (event.action == DOWN) handleKeyboardShortcuts(event.code);
         }
     }
 
-    private void handleMouseAimAndCamera(int keycode, int action) {
+    private void handleMouseAimAndCamera(String keycode, int action) {
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
-        if (keycode == keymapConfig.mouseAimShortcutKey) {
+        if (keycode.equals(keymapConfig.mouseAimShortcutKey)) {
             // if not toggle then hold down key to aim
             if (keymapConfig.mouseAimToggle && action == UP) return;
             mInput.getMouseEventHandler().triggerMouseAim();
         }
         else {
             Camera camera = mInput.getKeymapProfile().camera;
-            if (camera != null) if (keycode == camera.triggerKeyCode) {
-                // If not toggle then hold down key to move camera
-                if (camera.toggle && action == UP) return;
-                mInput.getMouseEventHandler().triggerCamera();
+            if (camera != null && keycode.length() == 5) {
+                if (keycode.charAt(4) == camera.triggerKeyCode) {
+                    // If not toggle then hold down key to move camera
+                    if (camera.toggle && action == UP) return;
+                    mInput.getMouseEventHandler().triggerCamera();
+                }
             }
         }
     }

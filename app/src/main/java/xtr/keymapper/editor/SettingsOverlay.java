@@ -1,6 +1,7 @@
 package xtr.keymapper.editor;
 
 import android.content.Context;
+import android.text.Editable;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -11,6 +12,7 @@ import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.TextView;
 
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
@@ -20,7 +22,11 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import org.w3c.dom.Text;
+
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -40,6 +46,7 @@ public class SettingsOverlay {
     private OnCardItemSelectedListener onCardItemSelectedListener;
     private final int startMode;
     boolean overlayWindow;
+    private View keyInFocus;
 
     public SettingsOverlay(Context context, int startMode) {
         this.context = context;
@@ -72,7 +79,7 @@ public class SettingsOverlay {
         }
     };
 
-    public void init() {
+    private void init() {
         binding.sliderMouse.setValue(keymapConfig.mouseSensitivity);
         binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed);
         binding.sliderSwipeDelay.setValue(keymapConfig.swipeDelayMs);
@@ -92,7 +99,6 @@ public class SettingsOverlay {
         binding.pauseResume.setOnKeyListener(SettingsOverlay::onKey);
         binding.switchProfile.setOnKeyListener(SettingsOverlay::onKey);
         binding.mouseAimKey.setOnKeyListener(SettingsOverlay::onKey);
-
 
 
         mouseAimActions();
@@ -157,30 +163,13 @@ public class SettingsOverlay {
 
 
     private void loadKeyboardShortcuts(){
-        int pause_resume = keymapConfig.pauseResumeShortcutKey;
-        int launch_editor = keymapConfig.launchEditorShortcutKey;
-        int switch_profile = keymapConfig.switchProfileShortcutKey;
-        int mouse_aim = keymapConfig.mouseAimShortcutKey;
+        // Strips KEY_ from start
+        Function<String, String> removekeyPrefix = key -> key.length() > 4 ? key.substring(4) :  " ";
 
-        if (pause_resume > -1) {
-            String pauseResumeShortcutKey = String.valueOf(Utils.alphabet.charAt(pause_resume));
-            binding.pauseResume.setText(pauseResumeShortcutKey);
-        }
-
-        if (launch_editor > -1) {
-            String launchEditorShortcutKey = String.valueOf(Utils.alphabet.charAt(launch_editor));
-            binding.launchEditor.setText(launchEditorShortcutKey);
-        }
-
-        if (switch_profile > -1) {
-            String switchProfileShortcutKey = String.valueOf(Utils.alphabet.charAt(switch_profile));
-            binding.switchProfile.setText(switchProfileShortcutKey);
-        }
-
-        if (mouse_aim > -1) {
-            String mouseAimShortcutKey = String.valueOf(Utils.alphabet.charAt(mouse_aim));
-            binding.mouseAimKey.setText(mouseAimShortcutKey);
-        }
+        binding.pauseResume.setText(removekeyPrefix.apply(keymapConfig.pauseResumeShortcutKey));
+        binding.launchEditor.setText(removekeyPrefix.apply(keymapConfig.launchEditorShortcutKey));
+        binding.switchProfile.setText(removekeyPrefix.apply(keymapConfig.switchProfileShortcutKey));
+        binding.mouseAimKey.setText(removekeyPrefix.apply(keymapConfig.mouseAimShortcutKey));
 
         loadModifierKeys();
     }
@@ -219,29 +208,14 @@ public class SettingsOverlay {
         binding.touchpadInputMode.setSimpleItems(touchpadInputModeNames);
     }
 
-    public static boolean onKey(View view, int keyCode, KeyEvent event) {
-        String key = String.valueOf(event.getDisplayLabel());
-        if ( key.matches("[a-zA-Z0-9]+" )) ((EditText) view).setText(key);
-        else ((EditText) view).getText().clear();
-        return true;
-    }
-
 
     private void saveKeyboardShortcuts() {
-        if(binding.launchEditor.getText().toString().isEmpty()) binding.launchEditor.setText(" ");
-        if(binding.pauseResume.getText().toString().isEmpty()) binding.pauseResume.setText(" ");
-        if(binding.switchProfile.getText().toString().isEmpty()) binding.switchProfile.setText(" ");
-        if(binding.mouseAimKey.getText().toString().isEmpty()) binding.mouseAimKey.setText(" ");
+        Function<EditText, String> keyPrefix = e -> "KEY_" + e.getText();
 
-        int launch_editor_shortcut = Utils.alphabet.indexOf(binding.launchEditor.getText().charAt(0));
-        int pause_resume_shortcut = Utils.alphabet.indexOf(binding.pauseResume.getText().charAt(0));
-        int switch_profile_shortcut = Utils.alphabet.indexOf(binding.switchProfile.getText().charAt(0));
-        int mouse_aim_shortcut = Utils.alphabet.indexOf(binding.mouseAimKey.getText().charAt(0));
-
-        keymapConfig.launchEditorShortcutKey = launch_editor_shortcut;
-        keymapConfig.pauseResumeShortcutKey = pause_resume_shortcut;
-        keymapConfig.switchProfileShortcutKey = switch_profile_shortcut;
-        keymapConfig.mouseAimShortcutKey = mouse_aim_shortcut;
+        keymapConfig.launchEditorShortcutKey = keyPrefix.apply(binding.launchEditor);
+        keymapConfig.pauseResumeShortcutKey = keyPrefix.apply(binding.pauseResume);
+        keymapConfig.switchProfileShortcutKey = keyPrefix.apply(binding.switchProfile);
+        keymapConfig.mouseAimShortcutKey = keyPrefix.apply(binding.mouseAimKey);
 
         keymapConfig.launchEditorShortcutKeyModifier = binding.launchEditorModifier.getText().toString();
         keymapConfig.pauseResumeShortcutKeyModifier = binding.pauseResumeModifier.getText().toString();
@@ -319,6 +293,37 @@ public class SettingsOverlay {
 
     public void setOnActionSelectedListener(OnCardItemSelectedListener l) {
         this.onCardItemSelectedListener = l;
+    }
+
+    public void onRegisterKeyEventListener() {
+        binding.launchEditor.setOnKeyListener(this::focusKey);
+        binding.pauseResume.setOnKeyListener(this::focusKey);
+        binding.switchProfile.setOnKeyListener(this::focusKey);
+        binding.mouseAimKey.setOnKeyListener(this::focusKey);
+    }
+
+    public void onUnRegisterKeyEventListener() {
+        binding.launchEditor.setOnKeyListener(SettingsOverlay::onKey);
+        binding.pauseResume.setOnKeyListener(SettingsOverlay::onKey);
+        binding.switchProfile.setOnKeyListener(SettingsOverlay::onKey);
+        binding.mouseAimKey.setOnKeyListener(SettingsOverlay::onKey);
+    }
+
+    public static boolean onKey(View view, int keyCode, KeyEvent event) {
+        String key = String.valueOf(event.getDisplayLabel());
+        if ( key.matches("[a-zA-Z0-9]+" )) ((EditText) view).setText(key);
+        else ((EditText) view).getText().clear();
+        return true;
+    }
+
+    public void onKey(String key) {
+        if (keyInFocus != null)
+            ((EditText) keyInFocus).setText(key);
+    }
+
+    private boolean focusKey(View v, int keyCode, KeyEvent event) {
+        keyInFocus = v;
+        return true;
     }
 
     public interface OnCardItemSelectedListener {

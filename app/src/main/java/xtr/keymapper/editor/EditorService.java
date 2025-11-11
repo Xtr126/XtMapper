@@ -16,28 +16,10 @@ import xtr.keymapper.server.RemoteServiceHelper;
 public class EditorService extends Service {
     private EditorUI editor;
 
-    private final EditorCallback editorCallback = new EditorCallback() {
-        @Override
-        public void onHideView() {
-            RemoteServiceHelper.getInstance(EditorService.this, service -> {
-                try {
-                    service.unregisterOnKeyEventListener(editor);
-                    service.resumeMouse();
-                    service.reloadKeymap();
-                } catch (RemoteException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            editor = null;
-            stopSelf();
-        }
-
-        @Override
-        public boolean getEvent() {
-            return true;
-        }
+    private void editorCallback() {
+        editor = null;
+        stopSelf();
     };
-
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -51,13 +33,12 @@ public class EditorService extends Service {
         KeymapConfig keymapConfig = new KeymapConfig(this);
         if (keymapConfig.editorOverlay) {
             Context context = new ContextThemeWrapper(EditorService.this, R.style.Theme_XtMapper);
-            editor = new EditorUI(context, editorCallback, selectedProfile, EditorUI.START_EDITOR);
+            editor = new EditorUI(context, this::editorCallback, selectedProfile, EditorUI.START_EDITOR);
 
             RemoteServiceHelper.getInstance(EditorService.this, remoteService -> {
                 try {
                     if (editor != null) {
-                        remoteService.registerOnKeyEventListener(editor);
-                        remoteService.pauseMouse();
+                        editor.registerOnKeyEventListener(remoteService);
                     }
                 } catch (RemoteException e) {
                     Log.e("editorActivity", e.getMessage(), e);

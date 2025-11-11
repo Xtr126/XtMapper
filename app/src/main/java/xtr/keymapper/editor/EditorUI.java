@@ -7,6 +7,7 @@ import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.RemoteException;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,6 +20,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import java.util.ArrayList;
 
+import xtr.keymapper.IRemoteService;
 import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.R;
 import xtr.keymapper.Utils;
@@ -65,6 +67,28 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
     private final EditorUiComponentList editorUiComponents = new EditorUiComponentList();
 
+    private IRemoteService mService;
+
+    public void unregisterOnKeyEventListener() {
+        settingsOverlay.onUnRegisterKeyEventListener();
+        if (mService != null) {
+            try {
+                mService.unregisterOnKeyEventListener(this);
+                mService.resumeMouse();
+                mService.reloadKeymap();
+            } catch (RemoteException ignored) {
+            }
+        }
+        mService = null;
+    }
+
+    public void registerOnKeyEventListener(IRemoteService service) throws RemoteException {
+        mService = service;
+        mService.registerOnKeyEventListener(this);
+        settingsOverlay.onRegisterKeyEventListener();
+        mService.pauseMouse();
+    }
+
     public interface KeyInFocusListener {
         void setText(String key);
     }
@@ -105,7 +129,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
                     ((Activity)context).addContentView(mainView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             }
 
-        if (editorCallback != null && !editorCallback.getEvent()) {
+        if (mService == null) {
             mainView.setOnKeyListener(this::onKey);
             mainView.setFocusable(true);
         }
@@ -193,6 +217,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         mHandler.post(() -> {
             if (macroDialog != null) macroDialog.onKey(key);
             else if (keyInFocus != null) keyInFocus.setText(key);
+            settingsOverlay.onKey(key);
         });
 
     }
@@ -235,7 +260,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
      */
     private void addMacro() {
 
-        if (editorCallback != null && editorCallback.getEvent()) {
+        if (mService != null) {
             mainView.setFocusable(true);
         }
         MacroStatus macroStatus = new MacroStatus(context, settingsOverlay.binding.catalog);
@@ -250,7 +275,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
             // Redirect keyboard input
             mainView.setOnKeyListener(EditorUI.this::onKey);
             settingsOverlay.unHideButtons();
-            if (editorCallback != null && !editorCallback.getEvent()) mainView.setFocusable(false);
+            if (mService == null) mainView.setFocusable(false);
 
             showMacroDialog();
         });
@@ -268,10 +293,10 @@ public class EditorUI extends OnKeyEventListener.Stub {
     public void hideView() {
         if (startMode == START_EDITOR) saveKeymap();
         if (startMode != SHOW_KEYMAP_ONLY) {
+            unregisterOnKeyEventListener();
             settingsOverlay.onDestroyView();
 
             removeView(mainView);
-
             if (editorCallback != null) editorCallback.onHideView();
             else RemoteServiceHelper.reloadKeymap(context);
 
