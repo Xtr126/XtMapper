@@ -153,7 +153,7 @@ public class KeymapConfig implements Parcelable {
         launchEditorShortcutKey = sharedPref.getString("launch_editor_shortcut", launchEditorShortcutKey);
         pauseResumeShortcutKey = sharedPref.getString("pause_resume_shortcut", pauseResumeShortcutKey);
         switchProfileShortcutKey = sharedPref.getString("switch_profile_shortcut", switchProfileShortcutKey);
-        mouseAimShortcutKey = sharedPref.getString("mouse_aim_shortcut", mouseAimShortcutKey);
+        mouseAimShortcutKey = sharedPref.getString("mouse_aim_shortcut", "");
 
         launchEditorShortcutKeyModifier = sharedPref.getString("launch_editor_shortcut_modifier", KEY_CTRL);
         pauseResumeShortcutKeyModifier = sharedPref.getString("pause_resume_shortcut_modifier", KEY_CTRL);
