@@ -3,6 +3,7 @@ package xtr.keymapper.keymap;
 import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,6 +39,12 @@ public class KeymapProfile implements Parcelable {
     public void scale(float newWidth, float newHeight) {
         float scaleX = (xRes > 0) ? newWidth / xRes : 1;
         float scaleY = (yRes > 0) ? newHeight / yRes : 1;
+        Log.d("KeymapProfile", "scaleX=" + scaleX +
+                ", scaleY=" + scaleY +
+                ", newWidth=" + newWidth +
+                ", newHeight=" + newHeight +
+                ", xRes=" + xRes +
+                ", yRes=" + yRes);
 
         if (xRes > 0 && yRes > 0) {
             Consumer<KeymapProfileElement> scaler = element -> {

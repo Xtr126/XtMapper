@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.PixelFormat;
+import android.graphics.Point;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -323,7 +324,10 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private void loadKeymap() {
         profile = new KeymapProfiles(context).getProfile(profileName, false);
 
-        profile.scale(keysContainerView.getWidth(), keysContainerView.getHeight());
+        Point size = new Point();
+        keysContainerView.getDisplay().getRealSize(size);
+        // Scale to current display size
+        profile.scale(size.x, size.y);
 
         EditorUiComponentList.Factory editorUiComponentFactory = editorUiComponents.newFactory(mCallback, context);
 
@@ -355,6 +359,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
         // Save Config
         KeymapProfiles profiles = new KeymapProfiles(context);
+
         profiles.saveProfile(profileName, linesToWrite, profile.packageName, !profile.disabled,
                 keysContainerView.getWidth(), keysContainerView.getHeight());
     }
