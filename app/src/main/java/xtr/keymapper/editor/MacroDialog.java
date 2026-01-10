@@ -3,6 +3,7 @@ package xtr.keymapper.editor;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
@@ -80,7 +81,7 @@ public class MacroDialog {
     private void setOverlayFlagAndShowDialog(AlertDialog dialog) {
         // Set window flags if required
         if (useOverlayFlag) {
-            dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+            dialog.getWindow().setType(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
             dialog.getWindow().setFormat(PixelFormat.TRANSLUCENT);
         }
         dialog.show();

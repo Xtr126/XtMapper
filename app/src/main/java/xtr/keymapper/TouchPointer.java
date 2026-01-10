@@ -3,7 +3,6 @@ package xtr.keymapper;
 import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -26,6 +25,9 @@ import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.annotation.UiThread;
+import androidx.core.app.NotificationChannelCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.databinding.CursorBinding;
@@ -69,17 +71,37 @@ public class TouchPointer extends Service {
             stopSelf();
             return super.onStartCommand(null, flags, startId);
         }
+        // Launch default profile
+
+        this.selectedProfile = i.getStringExtra(EditorActivity.PROFILE_NAME);
+        if (this.selectedProfile == null) {
+            this.selectedProfile = "Default";
+        }
+
+
         String CHANNEL_ID = "pointer_service";
         String name = "Overlay";
-        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW);
+        NotificationChannelCompat channel = new NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManager.IMPORTANCE_LOW).setName(name).build();
 
-        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        NotificationManagerCompat notificationManager = getSystemService(NotificationManagerCompat.class);
         notificationManager.createNotificationChannel(channel);
 
-        Intent intent = new Intent(this, EditorService.class);
-        PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+        KeymapConfig keymapConfig = new KeymapConfig(this);
 
-        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
+        PendingIntent pendingIntent;
+
+        if (keymapConfig.editorOverlay) {
+            Intent intent = new Intent(this, EditorService.class);
+            pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+        } else {
+            Intent intent = new Intent(this, EditorActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                    .putExtra(EditorActivity.PROFILE_NAME, selectedProfile);
+            pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID);
         Notification notification = builder.setOngoing(true)
                 .setContentTitle("Keymapper service running")
                 .setContentText("Touch to launch editor")
@@ -93,12 +115,6 @@ public class TouchPointer extends Service {
             startForeground(2, notification);
         }
 
-        // Launch default profile
-
-        this.selectedProfile = i.getStringExtra(EditorActivity.PROFILE_NAME);
-        if (this.selectedProfile == null) {
-            this.selectedProfile = "Default";
-        }
 
         this.displayId = i.getIntExtra(DISPLAY_ID, Display.DEFAULT_DISPLAY);
 
@@ -241,8 +257,11 @@ public class TouchPointer extends Service {
                 if(cursorView == null) {
 
                     cursorView = CursorBinding.inflate(LayoutInflater.from(
-                            new ContextThemeWrapper(getDisplayContext(), R.style.Theme_XtMapper)                    )).getRoot();
-                    WindowManager.LayoutParams mParams = Utils.getPointerLayoutParams(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                            new ContextThemeWrapper(getDisplayContext(), R.style.Theme_XtMapper))).getRoot();
+
+
+                    WindowManager.LayoutParams mParams = Utils.getPointerLayoutParams(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+
                     mWindowManager.addView(cursorView, mParams);
                 }
             });
@@ -300,12 +319,10 @@ public class TouchPointer extends Service {
             KeymapProfiles keymapProfiles = new KeymapProfiles(context);
             if (!keymapProfiles.profileExistsWithPackageName(packageName)) {
                 // No profile found, prompt user to create a new profile
-                mHandler.post(() -> {
-                    ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
-                            ProfileSelector.createNewProfileForApp(context, packageName, enabled, profile -> {
-                                launchProfile(profile);
-                            }));
-                });
+                mHandler.post(() -> ProfileSelector.showEnableProfileDialog(context, packageName, enabled ->
+                        ProfileSelector.createNewProfileForApp(context, packageName, enabled, profile -> {
+                            launchProfile(profile);
+                        })));
             } else {
                 // App specific profiles selection dialog
                 mHandler.post(() -> {

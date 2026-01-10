@@ -1,13 +1,13 @@
 package xtr.keymapper.editor.component;
 
 import android.content.Context;
+import android.os.Build;
 import android.view.View;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.AlertDialog;
 
 import xtr.keymapper.R;
-import xtr.keymapper.Utils;
 import xtr.keymapper.databinding.CameraBinding;
 import xtr.keymapper.databinding.CameraConfigBinding;
 import xtr.keymapper.editor.EditorUiComponent;
@@ -72,7 +72,7 @@ public class Camera extends EditorUiComponent {
                 })
                 .setNegativeButton(R.string.cancel, null);
         AlertDialog dialog = builder.create();
-        if (getCallback().isOverlayOpen()) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        if (getCallback().isOverlayOpen()) dialog.getWindow().setType(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
         dialog.show();
     }
 

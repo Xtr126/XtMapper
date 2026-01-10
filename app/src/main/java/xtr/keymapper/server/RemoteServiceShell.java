@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Looper;
 import android.os.ServiceManager;
 import android.util.Log;
@@ -17,6 +18,11 @@ import xtr.keymapper.server.windows.TouchpadDataReceiverKt;
 
 public class RemoteServiceShell {
     public static void main(String[] args) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            System.out.println("Unsupported Android version");
+            return;
+        }
+
         try {
             RemoteService.loadLibraries();
             Looper.prepareMainLooper();

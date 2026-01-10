@@ -3,6 +3,7 @@ package xtr.keymapper.profiles;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.WindowManager;
@@ -126,7 +127,7 @@ public class ProfileSelector {
     protected static AlertDialog showDialog(MaterialAlertDialogBuilder builder) {
         AlertDialog dialog = builder.create();
         if (Settings.canDrawOverlays(dialog.getContext()))
-            dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+            dialog.getWindow().setType(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
         dialog.show();
         return dialog;
     }

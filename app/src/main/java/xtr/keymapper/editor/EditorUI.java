@@ -157,9 +157,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
         }
 
         WindowManager mWindowManager = context.getSystemService(WindowManager.class);
-        WindowManager.LayoutParams mParams = startMode == SHOW_KEYMAP_ONLY ? Utils.getPointerLayoutParams(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) : new WindowManager.LayoutParams(
+        WindowManager.LayoutParams mParams = startMode == SHOW_KEYMAP_ONLY ? Utils.getPointerLayoutParams(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) : new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN |
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
                         WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,

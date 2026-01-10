@@ -98,7 +98,7 @@ public class RemoteService extends IRemoteService.Stub {
                                 crashInfo.throwClassName + "\n" +
                                 crashInfo.throwFileName + "\n" +
                                 crashInfo.throwLineNumber + "\n" +
-                                crashInfo.throwMethodName).inheritIO().start();
+                                crashInfo.throwMethodName).start();
 
             } catch (Exception ex) {
                 Log.e(TAG, ex.getMessage(), ex);
@@ -259,7 +259,7 @@ public class RemoteService extends IRemoteService.Stub {
                 Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(profile.packageName);
                 if (launchIntent != null && launchIntent.getComponent() != null) try {
                     new ProcessBuilder("am", "start", "-a", "android.intent.action.MAIN", "-n",
-                            launchIntent.getComponent().flattenToString()).inheritIO().start();
+                            launchIntent.getComponent().flattenToString()).start();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

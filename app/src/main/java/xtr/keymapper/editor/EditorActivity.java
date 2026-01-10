@@ -1,6 +1,7 @@
 package xtr.keymapper.editor;
 
 import android.app.Activity;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.provider.Settings;
@@ -78,7 +79,7 @@ public class EditorActivity extends Activity {
                         .setPositiveButton(R.string.ok, (dialog, which) -> {})
                         .setTitle(R.string.dialog_alert_editor_title);
                 AlertDialog dialog = builder.create();
-                if (keymapConfig.editorOverlay) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                if (keymapConfig.editorOverlay) dialog.getWindow().setType(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
                 dialog.show();
             }
         }

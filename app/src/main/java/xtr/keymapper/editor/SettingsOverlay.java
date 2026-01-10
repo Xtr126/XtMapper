@@ -1,7 +1,7 @@
 package xtr.keymapper.editor;
 
 import android.content.Context;
-import android.text.Editable;
+import android.os.Build;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -12,26 +12,22 @@ import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
-import android.widget.TextView;
 
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.view.MenuItemCompat;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.w3c.dom.Text;
-
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import xtr.keymapper.R;
-import xtr.keymapper.Utils;
 import xtr.keymapper.databinding.KeymapEditorItemBinding;
 import xtr.keymapper.databinding.KeymapEditorLayoutBinding;
 import xtr.keymapper.databinding.SettingsBinding;
@@ -157,7 +153,7 @@ public class SettingsOverlay {
                     keymapConfig.showControlsOpacity = settingsBinding.showControlsOpacity.getValue();
                 })
                 .create();
-        if(overlayWindow) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        if(overlayWindow) dialog.getWindow().setType(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
         dialog.show();
     }
 
@@ -265,7 +261,7 @@ public class SettingsOverlay {
                 MaterialButton button = itemBinding.getRoot();
                 button.setIcon(menuItem.getIcon());
                 button.setText(menuItem.getTitle());
-                button.setContentDescription(menuItem.getContentDescription());
+                button.setContentDescription(MenuItemCompat.getContentDescription(menuItem));
                 button.setOnClickListener(v -> onCardItemSelected(menuItem.getItemId()));
             }
         } else if (startMode == EditorUI.START_SETTINGS) {

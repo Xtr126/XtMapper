@@ -4,6 +4,7 @@ import static xtr.keymapper.editor.EditorUI.resizeView;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.os.Build;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -68,7 +69,7 @@ public class Dpad extends EditorUiComponent {
             else addCustomDpad(defaultX, defaultY);
         });
         AlertDialog dialog = builder.create();
-        if (getCallback().isOverlayOpen()) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        if (getCallback().isOverlayOpen()) dialog.getWindow().setType(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
         dialog.show();
         return this;
     }

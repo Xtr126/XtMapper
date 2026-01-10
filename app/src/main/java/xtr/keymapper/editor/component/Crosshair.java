@@ -2,6 +2,7 @@ package xtr.keymapper.editor.component;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.os.Build;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -77,7 +78,7 @@ public class Crosshair extends EditorUiComponent {
                     }
                 });
         AlertDialog dialog = builder.create();
-        if(getCallback().isOverlayOpen()) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        if(getCallback().isOverlayOpen()) dialog.getWindow().setType(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
         dialog.show();
 
     }
@@ -124,7 +125,7 @@ public class Crosshair extends EditorUiComponent {
                 })
                 .setNegativeButton(R.string.cancel, null);
         AlertDialog dialog = builder.create();
-        if (getCallback().isOverlayOpen()) dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        if (getCallback().isOverlayOpen()) dialog.getWindow().setType(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
         dialog.show();
     }
 

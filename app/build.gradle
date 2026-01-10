@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId "xtr.keymapper"
-        minSdk 28
+        minSdk 25
         targetSdk 34
         versionCode 22
         versionName '2.4.2'

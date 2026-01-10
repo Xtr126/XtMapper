@@ -22,6 +22,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.topjohnwu.superuser.Shell;
@@ -206,7 +207,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName);
             if (displayId != null) intent.putExtra(TouchPointer.DISPLAY_ID, displayId.intValue());
             isServiceBound = bindService(intent, connection, Context.BIND_AUTO_CREATE);
-            startForegroundService(intent);
+            ContextCompat.startForegroundService(this, intent);
             setButtonState(false);
             requestNotificationPermission();
         }
