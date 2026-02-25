@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Looper;
 import android.os.ServiceManager;
+import android.os.SystemProperties;
 import android.util.Log;
 
 import java.lang.reflect.Method;
@@ -61,8 +62,17 @@ public class RemoteServiceShell {
 
             new ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start();
             new ProcessBuilder("settings put system alert_window_bypass_low_ram 1".split("\\s+")).inheritIO().start();
-            if (!noLogcat)
+
+            var fakeTouch = SystemProperties.get("persist.waydroid.fake_touch", null);
+            if (fakeTouch != null && !fakeTouch.isBlank()) {
+                final String ANSI_RED = "\u001B[31m";
+                final String ANSI_RESET = "\u001B[0m";
+                System.out.println(ANSI_RED + "Warning: persist.waydroid.fake_touch=" + fakeTouch + " set" + ANSI_RESET);
+                System.out.println(ANSI_RED + "Reset it with " + "waydroid prop set persist.waydroid.fake_touch \"\" to avoid issues with XtMapper" + ANSI_RESET);
+            } else if (!noLogcat) {
+                // Don't flood the console with logcat if warning is being shown
                 new ProcessBuilder("logcat", "-v", "color", "--pid=" + android.os.Process.myPid()).inheritIO().start();
+            }
 
             if (launchApp) new ProcessBuilder("am", "start", "-a", "android.intent.action.MAIN", "-n",
                     new ComponentName(mService.context, MainActivity.class).flattenToString(),
