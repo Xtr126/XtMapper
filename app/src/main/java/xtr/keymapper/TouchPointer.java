@@ -83,7 +83,7 @@ public class TouchPointer extends Service {
         String name = "Overlay";
         NotificationChannelCompat channel = new NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManager.IMPORTANCE_LOW).setName(name).build();
 
-        NotificationManagerCompat notificationManager = getSystemService(NotificationManagerCompat.class);
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
         notificationManager.createNotificationChannel(channel);
 
         KeymapConfig keymapConfig = new KeymapConfig(this);
