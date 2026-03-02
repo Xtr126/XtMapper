@@ -238,10 +238,12 @@ public class InputService implements IInputInterface {
         int value = Integer.parseInt(input_event[3]);
         switch (input_event[2]) {
             case "ABS_X":
-                mouseEventHandler.evAbsX(value);
+                if (!mouseEventHandler.mouseAimActive)
+                    mouseEventHandler.evAbsX(value);
                 break;
             case "ABS_Y":
-                mouseEventHandler.evAbsY(value);
+                if (!mouseEventHandler.mouseAimActive)
+                    mouseEventHandler.evAbsY(value);
                 break;
             case "REL_WHEEL":
                 mouseEventHandler.handleEvent(REL_WHEEL, value);
