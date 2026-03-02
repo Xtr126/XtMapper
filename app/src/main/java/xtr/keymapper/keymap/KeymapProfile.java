@@ -14,6 +14,7 @@ import xtr.keymapper.BuildConfig;
 import xtr.keymapper.keymap.element.Camera;
 import xtr.keymapper.keymap.element.Dpad;
 import xtr.keymapper.keymap.element.Key;
+import xtr.keymapper.keymap.element.MouseWalk;
 import xtr.keymapper.macro.Macro;
 import xtr.keymapper.macro.MacroSharedPreferences;
 import xtr.keymapper.keymap.element.MouseAimConfig;
@@ -23,6 +24,7 @@ public class KeymapProfile implements Parcelable {
     public String packageName = BuildConfig.APPLICATION_ID;
     public final Dpad[] dpadArray;
     public MouseAimConfig mouseAimConfig = null;
+    public MouseWalk mouseWalk = null;
     public ArrayList<Key> keys = new ArrayList<>();
     public ArrayList<SwipeKey> swipeKeys = new ArrayList<>();
     public Key rightClick;
@@ -58,6 +60,7 @@ public class KeymapProfile implements Parcelable {
             }
             scaler.accept(rightClick);
             scaler.accept(mouseAimConfig);
+            scaler.accept(mouseWalk);
         }
     }
 
@@ -74,6 +77,7 @@ public class KeymapProfile implements Parcelable {
         Map<String, Macro> hashMap = in.readHashMap(getClass().getClassLoader());
         if(hashMap != null) macroIdMap.putAll(hashMap);
         camera = in.readParcelable(Camera.class.getClassLoader());
+        mouseWalk = in.readParcelable(MouseWalk.class.getClassLoader());
     }
 
     @Override
@@ -89,6 +93,7 @@ public class KeymapProfile implements Parcelable {
         dest.writeInt(yRes);
         dest.writeMap(macroIdMap);
         dest.writeParcelable(camera, flags);
+        dest.writeParcelable(mouseWalk, flags);
     }
 
     @Override

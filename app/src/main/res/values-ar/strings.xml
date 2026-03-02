@@ -107,4 +107,5 @@
     <string name="display_id">Display #%1$s</string>
     <string name="opacity">Opacity</string>
     <string name="floating_keys_size">Floating keys size</string>
+    <string name="mouse_walk">Mouse walk</string>
 </resources>

@@ -15,6 +15,7 @@ import java.util.function.BiConsumer;
 import xtr.keymapper.keymap.element.Camera;
 import xtr.keymapper.keymap.element.Dpad;
 import xtr.keymapper.keymap.element.Key;
+import xtr.keymapper.keymap.element.MouseWalk;
 import xtr.keymapper.macro.Macro;
 import xtr.keymapper.macro.MacroIdUtils;
 import xtr.keymapper.keymap.element.MouseAimConfig;
@@ -173,6 +174,11 @@ public class KeymapProfiles {
                 case Camera.TAG:
                     if (data.length >= 4)
                         profile.camera = new Camera(data);
+                    break;
+
+                case MouseWalk.TAG:
+                    if (data.length == 4)
+                        profile.mouseWalk = new MouseWalk(data);
                     break;
 
                 default: {

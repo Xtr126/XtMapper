@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 import xtr.keymapper.R;
 import xtr.keymapper.editor.component.Camera;
+import xtr.keymapper.editor.component.MouseWalk;
 import xtr.keymapper.keymap.element.Dpad;
 import xtr.keymapper.editor.component.Crosshair;
 import xtr.keymapper.editor.component.RightClick;
@@ -46,6 +47,9 @@ class EditorUiComponentList extends ArrayList<EditorUiComponent> {
         else if (id == R.id.camera) {
             component = new Camera(callback, context, x, y);
         }
+        else if (id == R.id.mouse_walk) {
+            component = new MouseWalk(callback, context, x, y);
+        }
         else {
             component = null;
         }
@@ -59,8 +63,6 @@ class EditorUiComponentList extends ArrayList<EditorUiComponent> {
             }
         }
     }
-
-
 
     class Factory {
         private final EditorUiComponentCallback mCallback;

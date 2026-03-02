@@ -39,4 +39,8 @@
         android:id="@+id/camera"
         android:icon="@drawable/baseline_360_24"
         android:title="@string/camera" />
+    <item
+        android:id="@+id/mouse_walk"
+        android:icon="@drawable/baseline_360_24"
+        android:title="@string/mouse_walk" />
 </menu>

@@ -16,6 +16,7 @@ import android.util.Log;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.mouse.MouseAimHandler;
 import xtr.keymapper.mouse.MousePinchZoom;
+import xtr.keymapper.mouse.MouseWalkHandler;
 import xtr.keymapper.mouse.MouseWheelZoom;
 import xtr.keymapper.keymap.KeymapProfile;
 import xtr.keymapper.keymap.element.Key;
@@ -38,7 +39,9 @@ public class MouseEventHandler {
     private final IInputInterface mInput;
     boolean pointer_down;
     public boolean mouseAimActive = false;
+    public boolean mouseWalkActive = false;
     private MouseAimHandler mouseAimOrCameraHandler;
+    private MouseWalkHandler mouseWalkHandler;
 
     public void triggerMouseAim() {
         triggerMouseAimOrCamera(mouseAimHandler);
@@ -86,6 +89,8 @@ public class MouseEventHandler {
             mouseAimHandler = new MouseAimHandler(profile.mouseAimConfig);
         if (profile.camera != null)
             mouseCameraHandler = new MouseAimHandler(profile.camera);
+        if (profile.mouseWalk != null)
+            mouseWalkHandler = new MouseWalkHandler(profile.mouseWalk);
 
         this.rightClick = profile.rightClick;
 
@@ -98,6 +103,11 @@ public class MouseEventHandler {
             mouseCameraHandler.setDimensions(width, height);
         }
 
+        if (mouseWalkHandler != null) {
+            mouseWalkHandler.setInterface(mInput);
+            mouseWalkHandler.setDimensions(width, height);
+        }
+
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
         if (keymapConfig.ctrlMouseWheelZoom)
             scrollZoomHandler = new MouseWheelZoom(mInput);
@@ -107,15 +117,27 @@ public class MouseEventHandler {
     }
 
     private void movePointerX() {
+        if (mouseWalkActive) mouseWalkHandler.onCursorPosition(x1, y1);
         mInput.moveCursorX(x1);
     }
 
     private void movePointerY() {
+        if (mouseWalkActive) mouseWalkHandler.onCursorPosition(x1, y1);
         mInput.moveCursorY(y1);
     }
 
     private void handleRightClick(int value) {
-        if (value == 1 && mInput.getKeymapConfig().rightClickMouseAim)  triggerMouseAim();
+        if (mouseWalkHandler != null) {
+            if (mouseWalkActive) {
+                mouseWalkActive = false;
+                mouseWalkHandler.stop();
+            } else {
+                mouseWalkHandler.resetPointer();
+                mouseWalkActive = true;
+            }
+        }
+        else if (value == 1 && mInput.getKeymapConfig().rightClickMouseAim)
+            triggerMouseAim();
         else if (rightClick != null)
             mInput.injectEvent(rightClick.x, rightClick.y, value, pointerIdRightClick);
     }
@@ -199,5 +221,6 @@ public class MouseEventHandler {
         pinchZoom = null;
         mouseAimHandler = null;
         mouseCameraHandler = null;
+        mouseWalkHandler = null;
     }
 }

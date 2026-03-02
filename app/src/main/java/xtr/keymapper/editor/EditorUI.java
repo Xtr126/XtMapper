@@ -28,6 +28,7 @@ import xtr.keymapper.Utils;
 import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.editor.component.Camera;
 import xtr.keymapper.editor.component.Crosshair;
+import xtr.keymapper.editor.component.MouseWalk;
 import xtr.keymapper.editor.component.RightClick;
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
@@ -343,6 +344,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
         }
         if (profile.camera != null) {
             editorUiComponents.add(new Camera(mCallback, context, profile.camera.x, profile.camera.y));
+        }
+        if (profile.mouseWalk != null) {
+            editorUiComponents.add(new MouseWalk(mCallback, context, profile.mouseWalk));
         }
     }
 
