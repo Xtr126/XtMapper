@@ -127,17 +127,19 @@ public class MouseEventHandler {
     }
 
     private void handleRightClick(int value) {
-        if (mouseWalkHandler != null) {
-            if (mouseWalkActive) {
-                mouseWalkActive = false;
-                mouseWalkHandler.stop();
-            } else {
-                mouseWalkHandler.resetPointer();
-                mouseWalkActive = true;
+        if (value == 1) {
+            if (mouseWalkHandler != null) {
+                if (mouseWalkActive) {
+                    mouseWalkActive = false;
+                    mouseWalkHandler.stop();
+                } else {
+                    mouseWalkHandler.resetPointer();
+                    mouseWalkActive = true;
+                }
             }
+            else if (mInput.getKeymapConfig().rightClickMouseAim)
+                triggerMouseAim();
         }
-        else if (value == 1 && mInput.getKeymapConfig().rightClickMouseAim)
-            triggerMouseAim();
         else if (rightClick != null)
             mInput.injectEvent(rightClick.x, rightClick.y, value, pointerIdRightClick);
     }
