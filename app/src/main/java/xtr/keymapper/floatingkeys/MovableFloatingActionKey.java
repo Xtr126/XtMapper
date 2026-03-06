@@ -89,20 +89,18 @@ public class MovableFloatingActionKey implements View.OnTouchListener {
                 return frameView.performClick();
             }
             case MotionEvent.ACTION_MOVE: {
-                int viewWidth = view.getWidth();
-                int viewHeight = view.getHeight();
 
                 View viewParent = (View)view.getParent();
                 int parentWidth = viewParent.getWidth();
                 int parentHeight = viewParent.getHeight();
 
                 float newX = motionEvent.getRawX() + dX;
-                newX = Math.max(layoutParams.leftMargin, newX); // Don't allow the FAB past the left hand side of the parent
-                newX = Math.min(parentWidth - viewWidth - layoutParams.rightMargin, newX); // Don't allow the FAB past the right hand side of the parent
+                newX = Math.max(layoutParams.leftMargin - view.getPivotX(), newX); // Don't allow the FAB past the left hand side of the parent
+                newX = Math.min(parentWidth - view.getPivotX() - layoutParams.rightMargin, newX); // Don't allow the FAB past the right hand side of the parent
 
                 float newY = motionEvent.getRawY() + dY;
-                newY = Math.max(layoutParams.topMargin, newY); // Don't allow the FAB past the top of the parent
-                newY = Math.min(parentHeight - viewHeight - layoutParams.bottomMargin, newY); // Don't allow the FAB past the bottom of the parent
+                newY = Math.max(layoutParams.topMargin - view.getPivotY(), newY); // Don't allow the FAB past the top of the parent
+                newY = Math.min(parentHeight - view.getPivotY() - layoutParams.bottomMargin, newY); // Don't allow the FAB past the bottom of the parent
 
                 view.animate().x(newX).y(newY).setDuration(0).start();
 
