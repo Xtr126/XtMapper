@@ -32,7 +32,9 @@ public class Crosshair extends EditorUiComponent {
     public Crosshair(EditorUiComponentCallback callback, Context context, float x, float y) {
             super(callback, context, x, y);
             KeymapProfile profile = getCallback().getProfile();
-            profile.mouseAimConfig = new MouseAimConfig();
+
+            if (profile.mouseAimConfig == null)
+                profile.mouseAimConfig = new MouseAimConfig();
 
             CrosshairBinding binding = CrosshairBinding.inflate(getLayoutInflater(), getCallback().getKeysContainerView(), true);
             crosshairView = binding.getRoot();
