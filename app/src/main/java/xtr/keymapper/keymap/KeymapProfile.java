@@ -41,12 +41,6 @@ public class KeymapProfile implements Parcelable {
     public void scale(float newWidth, float newHeight) {
         float scaleX = (xRes > 0) ? newWidth / xRes : 1;
         float scaleY = (yRes > 0) ? newHeight / yRes : 1;
-        Log.d("KeymapProfile", "scaleX=" + scaleX +
-                ", scaleY=" + scaleY +
-                ", newWidth=" + newWidth +
-                ", newHeight=" + newHeight +
-                ", xRes=" + xRes +
-                ", yRes=" + yRes);
 
         if (xRes > 0 && yRes > 0) {
             Consumer<KeymapProfileElement> scaler = element -> {
@@ -61,6 +55,9 @@ public class KeymapProfile implements Parcelable {
             scaler.accept(rightClick);
             scaler.accept(mouseAimConfig);
             scaler.accept(mouseWalk);
+
+            xRes = (int) newWidth;
+            yRes = (int) newHeight;
         }
     }
 

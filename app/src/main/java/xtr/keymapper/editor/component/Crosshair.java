@@ -121,9 +121,10 @@ public class Crosshair extends EditorUiComponent {
                     keymapConfig.keyGraveMouseAim = binding.graveKeyCheckbox.isChecked();
                     keymapConfig.applySharedPrefs();
 
-                    profile.mouseAimConfig.applyNonLinearScaling = binding.applyNonLinearScalingCheckbox.isChecked();
-                    profile.mouseAimConfig.xSensitivity = binding.sliderXSensitivity.getValue();
-                    profile.mouseAimConfig.ySensitivity = binding.sliderYSensitivity.getValue();
+                    // profile might have changed in the meantime
+                    getCallback().getProfile().mouseAimConfig.applyNonLinearScaling = binding.applyNonLinearScalingCheckbox.isChecked();
+                    getCallback().getProfile().mouseAimConfig.xSensitivity = binding.sliderXSensitivity.getValue();
+                    getCallback().getProfile().mouseAimConfig.ySensitivity = binding.sliderYSensitivity.getValue();
                 })
                 .setNegativeButton(R.string.cancel, null);
         AlertDialog dialog = builder.create();

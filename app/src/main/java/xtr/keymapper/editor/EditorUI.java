@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.PixelFormat;
-import android.graphics.Point;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -240,7 +239,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         } else if (id == R.id.macro) {
             showMacroDialog();
         } else {
-            editorUiComponents.addMatchingComponentForId(id, mCallback, context, defaultX, defaultY);
+            editorUiComponents.addMatchingComponentForId(id, mCallback, context, defaultX, defaultY, editorUiComponents::add);
         }
     }
 
@@ -304,6 +303,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
 
             // Load keymap config after settingsOverlay wrote config
             KeymapConfig keymapConfig = new KeymapConfig(context);
+            // We stopped the service, so we must restart it
             RemoteServiceHelper.runIfActive(context, () -> {
                 if (keymapConfig.showControls)
                     ShowKeymapService.start(context, profileName);
@@ -319,16 +319,30 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     void loadKeymapAfterView() {
+        keysContainerView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (right != oldRight || left != oldLeft || top != oldTop || bottom != oldBottom) {
+                if (profile != null) {
+                    // Save previous state before wiping
+                    saveKeymap();
+                    reloadKeymap();
+                }
+            }
+        });
         keysContainerView.post(this::loadKeymap);
     }
 
+    private void reloadKeymap() {
+        keysContainerView.removeAllViews();
+        editorUiComponents.clear();
+        loadKeymap();
+    }
+
     private void loadKeymap() {
+
         profile = new KeymapProfiles(context).getProfile(profileName, false);
 
-        Point size = new Point();
-        keysContainerView.getDisplay().getRealSize(size);
         // Scale to current display size
-        profile.scale(size.x, size.y);
+        profile.scale(keysContainerView.getWidth(), keysContainerView.getHeight());
 
         EditorUiComponentList.Factory editorUiComponentFactory = editorUiComponents.newFactory(mCallback, context);
 

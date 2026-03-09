@@ -14,6 +14,8 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.util.function.Consumer;
+
 import xtr.keymapper.databinding.DpadArrowsBinding;
 import xtr.keymapper.databinding.DpadBinding;
 import xtr.keymapper.dpad.DpadKeyCodes;
@@ -60,13 +62,14 @@ public class Dpad extends EditorUiComponent {
         return dpad.getData();
     }
 
-    public Dpad pickType() {
+    public Dpad pickType(Consumer<EditorUiComponent> addComponent) {
         final CharSequence[] items = { "Arrow keys", "WASD Keys", "Custom"};
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getContext());
         builder.setTitle("Select Dpad").setItems(items, (dialog, i) -> {
             if (i == 0) addArrowKeysDpad(defaultX, defaultY);
             else if (i == 1) addWasdDpad(defaultX, defaultY);
             else addCustomDpad(defaultX, defaultY);
+            addComponent.accept(this);
         });
         AlertDialog dialog = builder.create();
         if (getCallback().isOverlayOpen()) dialog.getWindow().setType(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
