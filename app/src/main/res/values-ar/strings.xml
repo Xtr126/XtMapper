@@ -99,13 +99,13 @@
     <string name="press_any_key_to_stop_recording">اضغط على أي مفتاح لإيقاف التسجيل…</string>
     <string name="advanced">متقدم</string>
     <string name="shizuku_not_running_title">لم يتم بدء تشغيل Shizuku</string>
-    <string name="shizuku_not_running_message"></string>
+    <string name="shizuku_not_running_message">يرجى بدء تشغيل تطبيق Shizuku أولاً</string>
     <string name="edit">تعديل</string>
     <string name="show_controls_on_screen">إظهار عناصر التحكم على الشاشة</string>
-    <string name="select_a_display">Select a Display</string>
-    <string name="no_displays_found">No displays found</string>
-    <string name="display_id">Display #%1$s</string>
-    <string name="opacity">Opacity</string>
-    <string name="floating_keys_size">Floating keys size</string>
-    <string name="mouse_walk">Mouse walk</string>
+    <string name="select_a_display">حدد عرضًا</string>
+    <string name="no_displays_found">لم يتم العثور على عروض</string>
+    <string name="display_id">العرض #%1$s</string>
+    <string name="opacity">الشفافية</string>
+    <string name="floating_keys_size">حجم المفاتيح العائمة</string>
+    <string name="mouse_walk">سير الماوس</string>
 </resources>

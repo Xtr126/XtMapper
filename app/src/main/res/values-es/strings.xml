@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">XtMapper</string>
+    <string name="start">Empezar</string>
+    <string name="stop">Detener</string>
+    <string name="configure">Configuración</string>
+    <string name="edit_keymap">Editar mapa de teclas</string>
+    <string name="help">Ayuda</string>
+    <string name="package_name">nombre del paquete: </string>
+    <string name="mouse_sensitivity">Sensibilidad del ratón</string>
+    <string name="mouse_aim_activated">
+        Modo de apuntería activado Haga clic derecho o presione ~ para salir
+    </string>
+    <string name="scroll_speed">Velocidad de desplazamiento</string>
+    <string name="keyboard_shortcuts">Atajos de teclado:</string>
+    <string name="dialog_alert_editor">
+        El servicio no está en ejecución. \n
+        Es posible que no pueda reasignar todos los eventos de teclas. \n
+        Ejecute Activación e intente de nuevo.</string>
+
+    <string name="dialog_alert_editor_title">No activado</string>
+    <string name="dialog_alert_add_profile">Ingrese el nuevo nombre del perfil:</string>
+    <string name="dialog_alert_select_profile">Seleccionar perfil para \ </string>
+    <string name="dialog_alert_enable_profile">¿Habilitar remapeo de teclas para esta aplicación?</string>
+
+    <string name="key">Tecla</string>
+
+    <string name="switch_profile">Cambiar perfil</string>
+    <string name="launch_editor">Abrir editor</string>
+    <string name="pause_resume">Pausar/Reanudar</string>
+
+    <!-- bottom navigation in settings fragment -->
+    <string name="tuning">Sintonización</string>
+    <string name="config">Configuración</string>
+    <string name="shortcuts">Atajos</string>
+
+    <string name="trigger_mouse_aim_with">Activar apuntería con:</string>
+    <string name="right_click">Clic derecho</string>
+    <string name="key_grave">Tecla ~</string>
+
+    <string name="pinch_to_zoom_gesture_info">Realiza gesto con dos dedos con:</string>
+    <string name="drag_mouse">Ctrl + Arrastrar ratón</string>
+    <string name="mouse_wheel">Ctrl + Rueda del ratón</string>
+    <string name="mouse_aim">Apuntería del ratón</string>
+    <string name="cancel">@android:string/cancel</string>
+    <string name="ok">@android:string/ok</string>
+    <string name="yes">@android:string/yes</string>
+    <string name="no">@android:string/no</string>
+    <string name="swipe_delay_ms">Retraso de deslizamiento %d milisegundos</string>
+    <string name="profile_name">Nombre del perfil</string>
+    <string name="root_not_found_title">Acceso raíz no encontrado</string>
+    <string name="root_not_found_message">Se requiere acceso raíz para que el remapeador de teclas funcione. \n Otorgue permisos de superusuario a XtMapper desde la aplicación del administrador de KernelSU</string>
+    <string name="root_no_privileges_title">El servicio no pudo iniciarse como raíz</string>
+    <string name="root_no_privileges_message">
+        No se pueden obtener privilegios. ¿Desea salir de la aplicación?\n
+        Si ya otorgó privilegios de superusuario, podría funcionar después de salir y abrir la aplicación.
+    </string>
+    <string name="disable_auto_profile">Desactivar perfil automático</string>
+    <string name="touchpad_input">Entrada del panel táctil</string>
+    <string name="launch_app">Abrir aplicación</string>
+    <string name="use_shizuku">Usar Shizuku</string>
+    <string name="pointer">Modo de puntero</string>
+    <string name="open_editor_as_overlay">Abrir editor como superposición</string>
+
+    <!--  Keymap editor  -->
+    <string name="d_pad">D-Pad</string>
+    <string name="crosshair">Retícula</string>
+    <string name="left_click">Clic izquierdo</string>
+    <string name="swipe_key">Tecla de deslizamiento</string>
+    <string name="add_key">Agregar tecla</string>
+    <string name="save">Guardar</string>
+
+    <!--  Mouse Aim  -->
+    <string name="toggle">Alternar</string>
+    <string name="hold">Mantener presionado</string>
+
+    <!--  Pointer Mode  -->
+    <string name="combined">Combinado</string>
+    <string name="overlay">Superposición</string>
+    <string name="system">Sistema</string>
+
+    <!--  Touchpad  -->
+    <string name="relative">Relativo</string>
+    <string name="disabled">Deshabilitado</string>
+    <string name="direct">Directo</string>
+
+    <string name="shizuku_not_authorized_title">Shizuku no autorizado</string>
+    <string name="shizuku_not_authorized_message">Autorizar XtMapper desde la aplicación del administrador de Shizuku para continuar</string>
+    <string name="activate_with">Activar con</string>
+    <string name="grave_key">Tecla ~</string>
+    <string name="x_sensitivity">Sensibilidad X</string>
+    <string name="y_sensitivity">Sensibilidad Y</string>
+    <string name="apply_non_linear_scaling">Aplicar escala no lineal</string>
+    <string name="import_export">Importar/Exportar</string>
+    <string name="import_profiles">Importar perfiles</string>
+    <string name="import_previously_exported_profiles_from_storage">Importe perfiles previamente exportados del almacenamiento.</string>
+    <string name="export_profiles">Exportar perfiles</string>
+    <string name="export_profiles_to_disk_for_restoring_later_or_sharing">Exporte perfiles al disco para restaurar más tarde o compartir.</string>
+    <string name="export_selected">Exportar seleccionados</string>
+    <string name="select_all">Seleccionar todo</string>
+    <string name="import_button">Importar</string>
+    <string name="rename">Renombrar</string>
+    <string name="delete">Eliminar</string>
+    <string name="enabled">Habilitado</string>
+    <string name="no_profile_selected">Ningún perfil seleccionado</string>
+    <string name="select_profile_from_below">Toque un perfil de la lista siguiente para seleccionarlo</string>
+    <string name="detected_shizuku">Shizuku detectado</string>
+    <string name="use_shizuku_for_activation">¿Usar Shizuku para la activación?</string>
+    <string name="add_games">Agregar juegos</string>
+    <string name="macro">Macro</string>
+    <string name="loading">Cargando…</string>
+    <string name="camera">Cámara</string>
+    <string name="press_any_key_to_stop_recording">Presione cualquier tecla para detener la grabación…</string>
+    <string name="advanced">Avanzado</string>
+    <string name="shizuku_not_running_title">Shizuku no se está ejecutando</string>
+    <string name="shizuku_not_running_message"/>
+    <string name="edit">Editar</string>
+    <string name="show_controls_on_screen">Mostrar controles en pantalla</string>
+    <string name="select_a_display">Seleccionar una pantalla</string>
+    <string name="no_displays_found">No se encontraron pantallas</string>
+    <string name="display_id">Pantalla #%1$s</string>
+    <string name="opacity">Opacidad</string>
+    <string name="floating_keys_size">Tamaño de teclas flotantes</string>
+    <string name="mouse_walk">Movimiento del ratón</string>
+</resources>

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">XtMapper</string>
+    <string name="start">Начать</string>
+    <string name="stop">Остановить</string>
+    <string name="configure">Параметры</string>
+    <string name="edit_keymap">Редактировать раскладку</string>
+    <string name="help">Справка</string>
+    <string name="package_name">имя пакета: </string>
+    <string name="mouse_sensitivity">Чувствительность мыши</string>
+    <string name="mouse_aim_activated">
+        Режим прицеливания активирован Щёлкните правой кнопкой мыши или нажмите ~ для выхода
+    </string>
+    <string name="scroll_speed">Скорость прокрутки</string>
+    <string name="keyboard_shortcuts">Сочетания клавиш:</string>
+    <string name="dialog_alert_editor">
+        Служба не запущена. \n
+        Вы можете не сможете переназначить все события клавиш. \n
+        Запустите активацию и повторите попытку.</string>
+
+    <string name="dialog_alert_editor_title">Не активирован</string>
+    <string name="dialog_alert_add_profile">Введите новое имя профиля:</string>
+    <string name="dialog_alert_select_profile">Выберите профиль для \ </string>
+    <string name="dialog_alert_enable_profile">Включить переназначение клавиш для этого приложения?</string>
+
+    <string name="key">Клавиша</string>
+
+    <string name="switch_profile">Переключить профиль</string>
+    <string name="launch_editor">Запустить редактор</string>
+    <string name="pause_resume">Пауза/Возобновить</string>
+
+    <!-- bottom navigation in settings fragment -->
+    <string name="tuning">Настройка</string>
+    <string name="config">Конфигурация</string>
+    <string name="shortcuts">Сочетания клавиш</string>
+
+    <string name="trigger_mouse_aim_with">Активировать прицеливание мышью:</string>
+    <string name="right_click">Щелчок правой кнопкой</string>
+    <string name="key_grave">Клавиша ~</string>
+
+    <string name="pinch_to_zoom_gesture_info">Выполните двухпальцевый жест с:</string>
+    <string name="drag_mouse">Ctrl + Перетаскивание мыши</string>
+    <string name="mouse_wheel">Ctrl + Колёсико мыши</string>
+    <string name="mouse_aim">Прицеливание мышью</string>
+    <string name="cancel">@android:string/cancel</string>
+    <string name="ok">@android:string/ok</string>
+    <string name="yes">@android:string/yes</string>
+    <string name="no">@android:string/no</string>
+    <string name="swipe_delay_ms">Задержка скольжения %d миллисекунд</string>
+    <string name="profile_name">Имя профиля</string>
+    <string name="root_not_found_title">Доступ суперпользователя не найден</string>
+    <string name="root_not_found_message">Для работы переназначителя клавиш требуется доступ суперпользователя. \n Пожалуйста, предоставьте права суперпользователя XtMapper из приложения KernelSU</string>
+    <string name="root_no_privileges_title">Службе не удалось запуститься с правами суперпользователя</string>
+    <string name="root_no_privileges_message">
+        Не удалось получить привилегии. Вы хотите выйти из приложения?\n
+        Если вы уже предоставили права суперпользователя, это может сработать после выхода и повторного открытия приложения.
+    </string>
+    <string name="disable_auto_profile">Отключить автоматический профиль</string>
+    <string name="touchpad_input">Ввод с сенсорной панели</string>
+    <string name="launch_app">Запустить приложение</string>
+    <string name="use_shizuku">Использовать Shizuku</string>
+    <string name="pointer">Режим указателя</string>
+    <string name="open_editor_as_overlay">Открыть редактор как наложение</string>
+
+    <!--  Keymap editor  -->
+    <string name="d_pad">D-Pad</string>
+    <string name="crosshair">Перекрестие</string>
+    <string name="left_click">Щелчок левой кнопкой</string>
+    <string name="swipe_key">Клавиша скольжения</string>
+    <string name="add_key">Добавить клавишу</string>
+    <string name="save">Сохранить</string>
+
+    <!--  Mouse Aim  -->
+    <string name="toggle">Переключение</string>
+    <string name="hold">Удержание</string>
+
+    <!--  Pointer Mode  -->
+    <string name="combined">Комбинированный</string>
+    <string name="overlay">Наложение</string>
+    <string name="system">Система</string>
+
+    <!--  Touchpad  -->
+    <string name="relative">Относительный</string>
+    <string name="disabled">Отключено</string>
+    <string name="direct">Прямой</string>
+
+    <string name="shizuku_not_authorized_title">Shizuku не авторизирован</string>
+    <string name="shizuku_not_authorized_message">Авторизуйте XtMapper в приложении Shizuku для продолжения</string>
+    <string name="activate_with">Активировать с помощью</string>
+    <string name="grave_key">Клавиша ~</string>
+    <string name="x_sensitivity">Чувствительность X</string>
+    <string name="y_sensitivity">Чувствительность Y</string>
+    <string name="apply_non_linear_scaling">Применить нелинейное масштабирование</string>
+    <string name="import_export">Импорт/Экспорт</string>
+    <string name="import_profiles">Импортировать профили</string>
+    <string name="import_previously_exported_profiles_from_storage">Импортировать ранее экспортированные профили из хранилища.</string>
+    <string name="export_profiles">Экспортировать профили</string>
+    <string name="export_profiles_to_disk_for_restoring_later_or_sharing">Экспортировать профили на диск для последующего восстановления или общего доступа.</string>
+    <string name="export_selected">Экспортировать выбранное</string>
+    <string name="select_all">Выбрать все</string>
+    <string name="import_button">Импортировать</string>
+    <string name="rename">Переименовать</string>
+    <string name="delete">Удалить</string>
+    <string name="enabled">Включено</string>
+    <string name="no_profile_selected">Профиль не выбран</string>
+    <string name="select_profile_from_below">Нажмите на профиль из списка ниже, чтобы выбрать его</string>
+    <string name="detected_shizuku">Обнаружен Shizuku</string>
+    <string name="use_shizuku_for_activation">Использовать Shizuku для активации?</string>
+    <string name="add_games">Добавить игры</string>
+    <string name="macro">Макрос</string>
+    <string name="loading">Загрузка…</string>
+    <string name="camera">Камера</string>
+    <string name="press_any_key_to_stop_recording">Нажмите любую клавишу, чтобы остановить запись…</string>
+    <string name="advanced">Дополнительно</string>
+    <string name="shizuku_not_running_title">Shizuku не запущен</string>
+    <string name="shizuku_not_running_message"/>
+    <string name="edit">Редактировать</string>
+    <string name="show_controls_on_screen">Показать элементы управления на экране</string>
+    <string name="select_a_display">Выберите дисплей</string>
+    <string name="no_displays_found">Дисплеи не найдены</string>
+    <string name="display_id">Дисплей #%1$s</string>
+    <string name="opacity">Непрозрачность</string>
+    <string name="floating_keys_size">Размер плавающих клавиш</string>
+    <string name="mouse_walk">Прогулка мышью</string>
+</resources>
