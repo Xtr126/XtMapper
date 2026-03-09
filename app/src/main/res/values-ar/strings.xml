@@ -99,7 +99,7 @@
     <string name="press_any_key_to_stop_recording">اضغط على أي مفتاح لإيقاف التسجيل…</string>
     <string name="advanced">متقدم</string>
     <string name="shizuku_not_running_title">لم يتم بدء تشغيل Shizuku</string>
-    <string name="shizuku_not_running_message">يرجى بدء تشغيل تطبيق Shizuku أولاً</string>
+    <string name="shizuku_not_running_message"></string>
     <string name="edit">تعديل</string>
     <string name="show_controls_on_screen">إظهار عناصر التحكم على الشاشة</string>
     <string name="select_a_display">حدد عرضًا</string>
