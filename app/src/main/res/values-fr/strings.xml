@@ -116,4 +116,5 @@
     <string name="opacity">Opacité</string>
     <string name="floating_keys_size">Taille des touches flottantes</string>
     <string name="mouse_walk">Marche à la souris</string>
+    <string name="reset">Reset</string>
 </resources>

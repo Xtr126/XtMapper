@@ -122,4 +122,5 @@
     <string name="opacity">Непрозрачность</string>
     <string name="floating_keys_size">Размер плавающих клавиш</string>
     <string name="mouse_walk">Прогулка мышью</string>
+    <string name="reset">Reset</string>
 </resources>

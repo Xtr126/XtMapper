@@ -108,4 +108,5 @@
     <string name="opacity">الشفافية</string>
     <string name="floating_keys_size">حجم المفاتيح العائمة</string>
     <string name="mouse_walk">سير الماوس</string>
+    <string name="reset">Reset</string>
 </resources>

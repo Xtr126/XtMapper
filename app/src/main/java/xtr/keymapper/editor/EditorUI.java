@@ -50,6 +50,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     private final String profileName;
 
     private KeymapProfile profile;
+    private KeymapProfile profileBackup;
 
     private boolean overlayOpen = false;
 
@@ -238,6 +239,9 @@ public class EditorUI extends OnKeyEventListener.Stub {
             hideView();
         } else if (id == R.id.macro) {
             showMacroDialog();
+        } else if (id == R.id.reset) {
+            profile = profileBackup;
+            reloadKeymap();
         } else {
             editorUiComponents.addMatchingComponentForId(id, mCallback, context, defaultX, defaultY, editorUiComponents::add);
         }
@@ -319,6 +323,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
     }
 
     void loadKeymapAfterView() {
+        profileBackup = new KeymapProfiles(context).getProfile(profileName, false);
         keysContainerView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
             if (right != oldRight || left != oldLeft || top != oldTop || bottom != oldBottom) {
                 if (profile != null) {
