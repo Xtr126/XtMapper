@@ -102,7 +102,6 @@ public class RemoteService extends IRemoteService.Stub {
 
             } catch (Exception ex) {
                 Log.e(TAG, ex.getMessage(), ex);
-                Log.e(TAG, e.getMessage(), e);
             }
             System.exit(1);
         });

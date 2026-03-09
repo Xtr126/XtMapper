@@ -13,6 +13,8 @@ import static xtr.keymapper.server.InputService.MOVE;
 import android.os.RemoteException;
 import android.util.Log;
 
+import java.util.Objects;
+
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.mouse.MouseAimHandler;
 import xtr.keymapper.mouse.MousePinchZoom;
@@ -191,7 +193,8 @@ public class MouseEventHandler {
             case BTN_EXTRA:
             case BTN_SIDE:
             case BTN_MIDDLE:
-                if (value == 1) triggerMouseAim();
+                if (value == 1 && Objects.equals(mInput.getKeymapConfig().mouseAimShortcutKey, "KEY_MMB"))
+                    triggerMouseAim();
 
             case REL_WHEEL:
                 if (mInput.getKeyEventHandler().ctrlKeyPressed && keymapConfig.ctrlMouseWheelZoom)
