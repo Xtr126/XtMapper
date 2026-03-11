@@ -40,9 +40,26 @@ public class MouseEventHandler {
     int width; int height;
     private final IInputInterface mInput;
     boolean pointer_down;
-    public boolean mouseAimActive = false;
+
+    /* SoufianoDev:
+     * Note : This Field Is Declared volatile To Fix A Data Race Between The Main Thread
+     *        (Which Writes The Flag Via triggerMouseAimOrCamera) And The Native Input Thread
+     *        (Which Reads It Inside handleEvent). Without volatile, The JVM Provides No
+     *        Visibility Guarantee, Allowing The Native Thread To Observe A Stale False Value
+     *        Even After Aim Mode Has Been Activated — Causing handleMouseEvent To Execute
+     *        Unconstrained And Inject Hover / Cursor Events Into Active Game Touch Zones.
+     */
+    public volatile boolean mouseAimActive = false;
     public boolean mouseWalkActive = false;
-    private MouseAimHandler mouseAimOrCameraHandler;
+
+    /* SoufianoDev:
+     * Note : This Field Is Also Declared volatile For The Same Cross-Thread Visibility Reason.
+     *        The Main Thread Assigns The Handler Reference Before Flipping mouseAimActive.
+     *        Without volatile, The CPU Or Compiler May Reorder These Two Writes, Letting The
+     *        Native Thread See mouseAimActive == True While mouseAimOrCameraHandler Is Still
+     *        Null Or Points To A Stale Instance — Either Crashing Or Silently Bypassing Aim Mode.
+     */
+    private volatile MouseAimHandler mouseAimOrCameraHandler;
     private MouseWalkHandler mouseWalkHandler;
 
     public void triggerMouseAim() {
@@ -54,7 +71,7 @@ public class MouseEventHandler {
         triggerMouseAimOrCamera(mouseCameraHandler);
     }
 
-    private void triggerMouseAimOrCamera(MouseAimHandler instance) {
+   /* private void triggerMouseAimOrCamera(MouseAimHandler instance) {
         mouseAimOrCameraHandler = instance;
         if (instance != null) {
             mouseAimActive = !mouseAimActive;
@@ -65,6 +82,31 @@ public class MouseEventHandler {
                     mInput.getCallback().alertMouseAimActivated();
                 } catch (RemoteException e) {
                     Log.e(RemoteService.TAG, e.getMessage(), e);
+                }
+                mInput.hideCursor();
+            } else {
+                instance.stop();
+                mInput.showCursor();
+            }
+        }
+    }
+
+    */
+
+    private void triggerMouseAimOrCamera(MouseAimHandler instance) {
+        if (instance == null) return;
+
+        synchronized (this) {
+            mouseAimOrCameraHandler = instance;
+            mouseAimActive = !mouseAimActive;
+
+            if (mouseAimActive) {
+                instance.resetPointer();
+                // Notifying User That Shooting Mode Was Activated
+                try {
+                    mInput.getCallback().alertMouseAimActivated();
+                } catch (RemoteException e) {
+                    Log.e(RemoteService.TAG, Objects.requireNonNull(e.getMessage()), e);
                 }
                 mInput.hideCursor();
             } else {
@@ -195,6 +237,16 @@ public class MouseEventHandler {
             case BTN_MIDDLE:
                 if (value == 1 && Objects.equals(mInput.getKeymapConfig().mouseAimShortcutKey, "KEY_MMB"))
                     triggerMouseAim();
+
+                /*SoufianoDev:
+                 * Note : This Break Statement Fixes A Fall-Through Bug Into The REL_WHEEL Case.
+                 *        Previously, Any BTN_MIDDLE / BTN_SIDE / BTN_EXTRA Press Would Continue
+                 *        Execution Into REL_WHEEL And Call injectScroll() At The Current Cursor
+                 *        Position (x1, y1). During Aim Mode This Produced A Spurious Scroll Event
+                 *        That Interacted With Game UI Elements Such As The Scope Toggle Or Map
+                 *        Zone — Exactly The Unintended Input Bleed Reported By Shooter Game Users.
+                 */
+                break;
 
             case REL_WHEEL:
                 if (mInput.getKeyEventHandler().ctrlKeyPressed && keymapConfig.ctrlMouseWheelZoom)

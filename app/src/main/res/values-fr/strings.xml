@@ -116,5 +116,14 @@
     <string name="opacity">Opacité</string>
     <string name="floating_keys_size">Taille des touches flottantes</string>
     <string name="mouse_walk">Marche à la souris</string>
-    <string name="reset">Reset</string>
+    <string name="reset">Réinitialiser</string>
+
+    <!-- Import/Export functionality -->
+    <string name="default_backup_name">sauvegarde.zip</string>
+    <string name="error_export_failed">Échec de l\'exportation</string>
+    <string name="action_retry">Réessayer</string>
+    <string name="msg_backup_saved">Sauvegarde enregistrée avec succès</string>
+    <string name="error_save_failed">Échec de l\'enregistrement</string>
+    <string name="msg_profiles_imported">Profils importés avec succès</string>
+    <string name="error_import_failed">Échec de l\'importation</string>
 </resources>

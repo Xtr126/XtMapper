@@ -1,5 +1,6 @@
 package xtr.keymapper.server.windows
 
+import android.os.Build
 import android.os.Process
 import java.io.IOException
 import java.net.DatagramPacket
@@ -137,7 +138,10 @@ fun start(args: Array<String>) {
             "--touchpad-input-udp-port" -> taskQueue.add(getPort(touchpadDataReceiver::startUdp))
             "--touchpad-input-tcp-port" -> taskQueue.add(getPort(touchpadDataReceiver::startTcp))
             "--touchpad-input-stdin" -> taskQueue.add(touchpadDataReceiver::startSystemIn)
-            "--logcat" -> ProcessBuilder("logcat", "-v", "color", "--pid=" + Process.myPid()).inheritIO().start()
+            "--logcat" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ProcessBuilder("logcat", "-v", "color", "--pid=" + Process.myPid()).inheritIO().start()
+            }
+
             "--verbose" -> touchpadDataReceiver.verbose = true
             else -> println("Invalid argument: $arg")
         }

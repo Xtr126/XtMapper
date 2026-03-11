@@ -122,4 +122,13 @@
     <string name="floating_keys_size">Floating keys size</string>
     <string name="mouse_walk">Mouse walk</string>
     <string name="reset">Reset</string>
+
+    <!-- Import/Export functionality -->
+    <string name="default_backup_name">backup.zip</string>
+    <string name="error_export_failed">Export Failed</string>
+    <string name="action_retry">Retry</string>
+    <string name="msg_backup_saved">Backup Saved Successfully</string>
+    <string name="error_save_failed">Save Failed</string>
+    <string name="msg_profiles_imported">Profiles Imported Successfully</string>
+    <string name="error_import_failed">Import Failed</string>
 </resources>

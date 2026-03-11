@@ -108,5 +108,14 @@
     <string name="opacity">الشفافية</string>
     <string name="floating_keys_size">حجم المفاتيح العائمة</string>
     <string name="mouse_walk">سير الماوس</string>
-    <string name="reset">Reset</string>
+    <string name="reset">إعادة تعيين</string>
+
+    <!-- Import/Export functionality -->
+    <string name="default_backup_name">backup.zip</string>
+    <string name="error_export_failed">فشل التصدير</string>
+    <string name="action_retry">إعادة المحاولة</string>
+    <string name="msg_backup_saved">تم حفظ النسخة الاحتياطية بنجاح</string>
+    <string name="error_save_failed">فشل الحفظ</string>
+    <string name="msg_profiles_imported">تم استيراد الملفات الشخصية بنجاح</string>
+    <string name="error_import_failed">فشل الاستيراد</string>
 </resources>

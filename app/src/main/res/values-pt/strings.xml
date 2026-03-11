@@ -122,5 +122,14 @@
     <string name="opacity">Opacidade</string>
     <string name="floating_keys_size">Tamanho das teclas flutuantes</string>
     <string name="mouse_walk">Movimento do Mouse</string>
-    <string name="reset">Reset</string>
+    <string name="reset">Redefinir</string>
+
+    <!-- Import/Export functionality -->
+    <string name="default_backup_name">backup.zip</string>
+    <string name="error_export_failed">Falha na exportação</string>
+    <string name="action_retry">Tentar novamente</string>
+    <string name="msg_backup_saved">Backup salvo com sucesso</string>
+    <string name="error_save_failed">Falha ao salvar</string>
+    <string name="msg_profiles_imported">Perfis importados com sucesso</string>
+    <string name="error_import_failed">Falha na importação</string>
 </resources>

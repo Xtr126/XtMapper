@@ -47,10 +47,17 @@ To share your thoughts on XtMapper/ ask any questions please create a post at ht
 
 ## Using on waydroid
 https://xtr126.github.io/XtMapper-docs/waydroid/1-overview/
+
 ## Credits
-@guobao2333 - [Chinese translation](https://github.com/Xtr126/XtMapper/pull/101)  
-@muhammadbahaa2001 - [Arabic translation](https://github.com/Xtr126/XtMapper/pull/106)  
-@KSMaan45 - [Punjabi translation](https://github.com/Xtr126/XtMapper/pull/109)  
+
+<div style="font-size: 1.1em;">
+
+- <img src="https://github.com/guobao2333.png" width="40" height="40" /> [@guobao2333](https://github.com/guobao2333) — [Chinese translation](https://github.com/Xtr126/XtMapper/pull/101)
+- <img src="https://github.com/muhammadbahaa2001.png" width="40" height="40" /> [@muhammadbahaa2001](https://github.com/muhammadbahaa2001) — [Arabic translation](https://github.com/Xtr126/XtMapper/pull/106)
+- <img src="https://github.com/KSMaan45.png" width="40" height="40" /> [@KSMaan45](https://github.com/KSMaan45) — [Punjabi translation](https://github.com/Xtr126/XtMapper/pull/109)
+- <img src="https://github.com/SoufianoDev.png" width="40" height="40" /> [@SoufianoDev](https://github.com/SoufianoDev) — [Active codebase improvements, bug fixes, ongoing maintenance, and continuous translation updates](https://github.com/SoufianoDev/XtMapper)
+
+</div>
 
 
 Help us translate on [Crowdin](https://crowdin.com/project/xtmapper/) or GitHub  

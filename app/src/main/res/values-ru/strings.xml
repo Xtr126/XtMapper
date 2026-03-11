@@ -122,5 +122,14 @@
     <string name="opacity">Непрозрачность</string>
     <string name="floating_keys_size">Размер плавающих клавиш</string>
     <string name="mouse_walk">Прогулка мышью</string>
-    <string name="reset">Reset</string>
+    <string name="reset">Сбросить</string>
+
+    <!-- Import/Export functionality -->
+    <string name="default_backup_name">backup.zip</string>
+    <string name="error_export_failed">Экспорт не удался</string>
+    <string name="action_retry">Повторить</string>
+    <string name="msg_backup_saved">Резервная копия успешно сохранена</string>
+    <string name="error_save_failed">Ошибка сохранения</string>
+    <string name="msg_profiles_imported">Профили успешно импортированы</string>
+    <string name="error_import_failed">Импорт не удался</string>
 </resources>

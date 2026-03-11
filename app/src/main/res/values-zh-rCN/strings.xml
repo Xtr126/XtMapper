@@ -100,11 +100,20 @@
     <string name="shizuku_not_running_message"></string>
     <string name="edit">编辑</string>
     <string name="show_controls_on_screen">在屏幕上显示控件</string>
-    <string name="select_a_display">Select a Display</string>
-    <string name="no_displays_found">No displays found</string>
-    <string name="display_id">Display #%1$s</string>
-    <string name="opacity">Opacity</string>
-    <string name="floating_keys_size">Floating keys size</string>
-    <string name="mouse_walk">Mouse walk</string>
-    <string name="reset">Reset</string>
+    <string name="select_a_display">选择显示器</string>
+    <string name="no_displays_found">未找到显示器</string>
+    <string name="display_id">显示器 #%1$s</string>
+    <string name="opacity">不透明度</string>
+    <string name="floating_keys_size">悬浮键大小</string>
+    <string name="mouse_walk">鼠标行走</string>
+    <string name="reset">重置</string>
+
+    <!-- Import/Export functionality -->
+    <string name="default_backup_name">backup.zip</string>
+    <string name="error_export_failed">导出失败</string>
+    <string name="action_retry">重试</string>
+    <string name="msg_backup_saved">备份保存成功</string>
+    <string name="error_save_failed">保存失败</string>
+    <string name="msg_profiles_imported">配置导入成功</string>
+    <string name="error_import_failed">导入失败</string>
 </resources>

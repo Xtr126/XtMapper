@@ -43,7 +43,7 @@
     <string name="root_not_found_message">ਕੀਮੈਪਰ ਨੂੰ ਕੰਮ ਕਰਨ ਲਈ ਰੂਟ ਦੀ ਲੋੜ ਹੈ। \n ਕਿਰਪਾ ਕਰਕੇ KernelSU ਪ੍ਰਬੰਧਕ ਐਪ ਤੋਂ XtMapper ਨੂੰ ਸੁਪਰਯੂਜ਼ਰ ਦਿਓ</string>
     <string name="root_no_privileges_title">ਸੇਵਾ ਰੂਟ ਵਜੋਂ ਸ਼ੁਰੂ ਕਰਨ ਵਿੱਚ ਅਸਫਲ ਰਹੀ</string>
     <string name="root_no_privileges_message">        ਵਿਸ਼ੇਸ਼ ਅਧਿਕਾਰ ਪ੍ਰਾਪਤ ਕਰਨ ਵਿੱਚ ਅਸਮਰੱਥ ਹਾ। ਕੀ ਤੁਸੀਂ ਐਪਲੀਕੇਸ਼ਨ ਤੋਂ ਬਾਹਰ ਜਾਣਾ ਚਾਹੁੰਦੇ ਹੋ?\n
-        ਜੇਕਰ ਤੁਸੀਂ ਪਹਿਲਾਂ ਹੀ ਸੁਪਰਯੂਜ਼ਰ ਵਿਸ਼ੇਸ਼ ਅਧਿਕਾਰ ਦਿੱਤੇ ਹਨ, ਤਾਂ ਇਹ ਐਪ ਨੂੰ ਬੰਦ ਕਰਨ ਅਤੇ ਖੋਲ੍ਹਣ ਤੋਂ ਬਾਅਦ ਕੰਮ ਕਰ ਸਕਦਾ ਹੈ।
+        ਜੇਕਰ ਤੁਸੀਂ ਪਹਿਲਾਂ ਹੀ ਸੁਪਰਯੂਜ਼ਰ ਵਿਸ਼ੇਸ਼ ਅਧਿਕਾਰ ਦਿੱਤੇ ਹਨ, ਤਾਂ ਇਹ ਐਪ ਨੂੰ ਬੰਦ ਕਰਨ ਅਤੇ ਖੋਲ੍ਹਣ ਤੋਂ ਬਾਹਰ ਹੋ ਸਕਦਾ ਹੈ।
     </string>
     <string name="disable_auto_profile">ਆਟੋ ਪ੍ਰੋਫਾਈਲਿੰਗ ਨੂੰ ਬੰਦ ਕਰੋ</string>
     <string name="touchpad_input">ਟੱਚਪੈਡ ਇਨਪੁਟ</string>
@@ -101,11 +101,20 @@
     <string name="shizuku_not_running_message"></string>
     <string name="edit">ਸੰਪਾਦਿਤ ਕਰੋ</string>
     <string name="show_controls_on_screen">ਸਕ੍ਰੀਨ \'ਤੇ ਕੰਟਰੋਲ ਦਿਖਾਓ</string>
-    <string name="select_a_display">Select a Display</string>
-    <string name="no_displays_found">No displays found</string>
-    <string name="display_id">Display #%1$s</string>
-    <string name="opacity">Opacity</string>
-    <string name="floating_keys_size">Floating keys size</string>
-    <string name="mouse_walk">Mouse walk</string>
-    <string name="reset">Reset</string>
+    <string name="select_a_display">ਡਿਸਪਲੇ ਚੁਣੋ</string>
+    <string name="no_displays_found">ਕੋਈ ਡਿਸਪਲੇ ਨਹੀਂ ਮਿਲਿਆ</string>
+    <string name="display_id">ਡਿਸਪਲੇ #%1$s</string>
+    <string name="opacity">ਧੁੰਦਲਾਪਨ</string>
+    <string name="floating_keys_size">ਫਲੋਟਿੰਗ ਕੁੰਜੀਆਂ ਦਾ ਆਕਾਰ</string>
+    <string name="mouse_walk">ਮਾਊਸ ਵਾਕ</string>
+    <string name="reset">ਰੀਸੈਟ ਕਰੋ</string>
+
+    <!-- Import/Export functionality -->
+    <string name="default_backup_name">backup.zip</string>
+    <string name="error_export_failed">ਐਕਸਪੋਰਟ ਅਸਫਲ ਰਿਹਾ</string>
+    <string name="action_retry">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
+    <string name="msg_backup_saved">ਬੈਕਅੱਪ ਸਫਲਤਾਪੂਰਵਕ ਸੁਰੱਖਿਅਤ ਕੀਤਾ ਗਿਆ</string>
+    <string name="error_save_failed">ਸੇਵ ਕਰਨਾ ਅਸਫਲ ਰਿਹਾ</string>
+    <string name="msg_profiles_imported">ਪ੍ਰੋਫਾਈਲ ਸਫਲਤਾਪੂਰਵਕ ਇੰਪੋਰਟ ਕੀਤੇ ਗਏ</string>
+    <string name="error_import_failed">ਇੰਪੋਰਟ ਅਸਫਲ ਰਿਹਾ</string>
 </resources>
