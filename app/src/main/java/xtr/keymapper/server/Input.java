@@ -17,11 +17,14 @@ import com.genymobile.scrcpy.PointersState;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import xtr.keymapper.server.event.MouseEventHandler;
+
 public class Input {
 
     static Method injectInputEventMethod;
     static Object inputManager;
     static Method setDisplayIdMethod;
+    static Method setActionButtonMethod;
 
     private final PointersState pointersState = new PointersState();
     private final MotionEvent.PointerProperties[] pointerProperties = new MotionEvent.PointerProperties[PointersState.MAX_POINTERS];
@@ -101,6 +104,114 @@ public class Input {
                 0, 0, source, 0);
         injectInputEvent(motionEvent);
     }
+
+    void injectRightClick(long pointerId, float x, float y, boolean pressed) {
+        long now = SystemClock.uptimeMillis();
+
+        final float pressure = 1.0f;
+        final int actionButton = MotionEvent.BUTTON_SECONDARY;
+        int action = pressed ? MotionEvent.ACTION_DOWN : MotionEvent.ACTION_UP;
+        int buttons = pressed ? MotionEvent.BUTTON_SECONDARY : 0;
+
+        Point point = new Point(x, y);
+
+        int pointerIndex = pointersState.getPointerIndex(pointerId);
+        if (pointerIndex == -1) {
+            Log.e(RemoteService.TAG, "Too many pointers for touch event");
+        }
+
+        Pointer pointer = pointersState.get(pointerIndex);
+        pointer.setPoint(point);
+        pointer.setPressure(pressure);
+
+        int source;
+        if (pointerId == MouseEventHandler.pointerId) {
+            // real mouse event, or event incompatible with a finger
+            pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_MOUSE;
+            source = InputDevice.SOURCE_MOUSE;
+            pointer.setUp(buttons == 0);
+        } else {
+            // POINTER_ID_GENERIC_FINGER, POINTER_ID_VIRTUAL_FINGER or real touch from device
+            pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_FINGER;
+            source = InputDevice.SOURCE_TOUCHSCREEN;
+            // Buttons must not be set for touch events
+            buttons = 0;
+            pointer.setUp(action == MotionEvent.ACTION_UP);
+        }
+
+        int pointerCount = pointersState.update(pointerProperties, pointerCoords);
+        if (pointerCount == 1) {
+            if (action == MotionEvent.ACTION_DOWN) {
+                lastTouchDown = now;
+            }
+        } else {
+            // secondary pointers must use ACTION_POINTER_* ORed with the pointerIndex
+            if (action == MotionEvent.ACTION_UP) {
+                action = MotionEvent.ACTION_POINTER_UP | (pointerIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
+            } else {
+                action = MotionEvent.ACTION_POINTER_DOWN | (pointerIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
+            }
+        }
+
+        /* If the input device is a mouse (on API >= 23):
+         *   - the first button pressed must first generate ACTION_DOWN;
+         *   - all button pressed (including the first one) must generate ACTION_BUTTON_PRESS;
+         *   - all button released (including the last one) must generate ACTION_BUTTON_RELEASE;
+         *   - the last button released must in addition generate ACTION_UP.
+         *
+         * Otherwise, Chrome does not work properly: <https://github.com/Genymobile/scrcpy/issues/3635>
+         */
+        if (source == InputDevice.SOURCE_MOUSE) {
+            if (action == MotionEvent.ACTION_DOWN) {
+                // First button pressed: ACTION_DOWN
+                MotionEvent downEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_DOWN, pointerCount, pointerProperties,
+                        pointerCoords, 0, buttons, 1f, 1f, 0, 0, source, 0);
+                injectInputEvent(downEvent);
+
+                // Any button pressed: ACTION_BUTTON_PRESS
+                MotionEvent pressEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_PRESS, pointerCount, pointerProperties,
+                        pointerCoords, 0, buttons, 1f, 1f, 0, 0, source, 0);
+                try {
+                    if (setActionButtonMethod != null) {
+                        setActionButtonMethod.invoke(pressEvent, actionButton);
+                    }
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    Log.e(RemoteService.TAG, e.getMessage(), e);
+                }
+
+                injectInputEvent(pressEvent);
+
+                return;
+            }
+
+            if (action == MotionEvent.ACTION_UP) {
+                // Any button released: ACTION_BUTTON_RELEASE
+                MotionEvent releaseEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_RELEASE, pointerCount, pointerProperties,
+                        pointerCoords, 0, buttons, 1f, 1f, 0, 0, source, 0);
+                try {
+                    if (setActionButtonMethod != null) {
+                        setActionButtonMethod.invoke(releaseEvent, actionButton);
+                    }
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    Log.e(RemoteService.TAG, e.getMessage(), e);
+                }
+
+                injectInputEvent(releaseEvent);
+
+                // Last button released: ACTION_UP
+                MotionEvent upEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_UP, pointerCount, pointerProperties,
+                        pointerCoords, 0, buttons, 1f, 1f, 0, 0, source, 0);
+                injectInputEvent(upEvent);
+
+                return;
+            }
+        }
+
+        MotionEvent event = MotionEvent.obtain(lastTouchDown, now, action, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f,
+                0, 0, source, 0);
+        injectInputEvent(event);
+    }
+
 
     public void onScrollEvent(float x, float y, float value){
         mScrollThread.onScrollEvent(x, y, value);
@@ -239,7 +350,8 @@ public class Input {
                  setDisplayIdMethod = MotionEvent.class.getDeclaredMethod(methodName, Integer.TYPE);
                  setDisplayIdMethod.setAccessible(true);
              }
-
+             setActionButtonMethod = MotionEvent.class.getDeclaredMethod("setActionButton", int.class);
+             setActionButtonMethod.setAccessible(true);
          } catch (Exception e) {
              Log.e(RemoteService.TAG, e.getMessage(), e);
          }

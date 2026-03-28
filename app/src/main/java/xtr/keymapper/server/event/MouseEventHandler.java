@@ -31,8 +31,7 @@ public class MouseEventHandler {
     float scroll_speed_multiplier;
     private MousePinchZoom pinchZoom;
     private MouseWheelZoom scrollZoomHandler;
-    private final int pointerId = PointerId.pid1.id;
-    private final int pointerIdRightClick = PointerId.pid3.id;
+    public static final int pointerId = PointerId.pid1.id;
     private MouseAimHandler mouseAimHandler;
     private MouseAimHandler mouseCameraHandler;
     private Key rightClick;
@@ -45,8 +44,8 @@ public class MouseEventHandler {
     private MouseAimHandler mouseAimOrCameraHandler;
     private MouseWalkHandler mouseWalkHandler;
 
-    public void triggerMouseAim() {
-        triggerMouseAimOrCamera(mouseAimHandler);
+    public boolean triggerMouseAim() {
+        return triggerMouseAimOrCamera(mouseAimHandler);
     }
 
 
@@ -54,7 +53,7 @@ public class MouseEventHandler {
         triggerMouseAimOrCamera(mouseCameraHandler);
     }
 
-    private void triggerMouseAimOrCamera(MouseAimHandler instance) {
+    private boolean triggerMouseAimOrCamera(MouseAimHandler instance) {
         mouseAimOrCameraHandler = instance;
         if (instance != null) {
             mouseAimActive = !mouseAimActive;
@@ -71,7 +70,9 @@ public class MouseEventHandler {
                 instance.stop();
                 mInput.showCursor();
             }
+            return true;
         }
+        return false;
     }
 
     public MouseEventHandler(IInputInterface mInput) {
@@ -128,7 +129,7 @@ public class MouseEventHandler {
         mInput.moveCursorY(y1);
     }
 
-    private void handleRightClick(int value) {
+    private boolean handleRightClick(int value) {
         if (value == 1) {
             if (mouseWalkHandler != null) {
                 if (mouseWalkActive) {
@@ -138,12 +139,16 @@ public class MouseEventHandler {
                     mouseWalkHandler.resetPointer();
                     mouseWalkActive = true;
                 }
+                return true;
             }
             else if (mInput.getKeymapConfig().rightClickMouseAim)
-                triggerMouseAim();
+                return triggerMouseAim();
         }
-        else if (rightClick != null)
-            mInput.injectEvent(rightClick.x, rightClick.y, value, pointerIdRightClick);
+        else if (rightClick != null) {
+            mInput.injectEvent(rightClick.x, rightClick.y, value, pointerId);
+            return true;
+        }
+        return false;
     }
 
     public void handleEvent(int code, int value) {
@@ -187,7 +192,9 @@ public class MouseEventHandler {
                 break;
 
             case BTN_RIGHT:
-                handleRightClick(value);
+                if (!handleRightClick(value)) {
+                    mInput.injectRightClickEvent(x1, y1, pointerId, value == 1);
+                }
                 break;
 
             case BTN_EXTRA:
