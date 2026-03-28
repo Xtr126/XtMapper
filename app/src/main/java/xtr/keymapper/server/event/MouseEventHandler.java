@@ -202,6 +202,8 @@ public class MouseEventHandler {
             case BTN_MIDDLE:
                 if (value == 1 && Objects.equals(mInput.getKeymapConfig().mouseAimShortcutKey, "KEY_MMB"))
                     triggerMouseAim();
+                else
+                    mInput.injectMiddleClickEvent(x1, y1, pointerId, value == 1);
 
             case REL_WHEEL:
                 if (mInput.getKeyEventHandler().ctrlKeyPressed && keymapConfig.ctrlMouseWheelZoom)

@@ -105,13 +105,12 @@ public class Input {
         injectInputEvent(motionEvent);
     }
 
-    void injectRightClick(long pointerId, float x, float y, boolean pressed) {
+    void injectMouseClick(long pointerId, float x, float y, boolean pressed, int actionButton) {
         long now = SystemClock.uptimeMillis();
 
         final float pressure = 1.0f;
-        final int actionButton = MotionEvent.BUTTON_SECONDARY;
         int action = pressed ? MotionEvent.ACTION_DOWN : MotionEvent.ACTION_UP;
-        int buttons = pressed ? MotionEvent.BUTTON_SECONDARY : 0;
+        int buttons = pressed ? actionButton : 0;
 
         Point point = new Point(x, y);
 

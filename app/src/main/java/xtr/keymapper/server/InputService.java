@@ -97,7 +97,12 @@ public class InputService implements IInputInterface {
 
     @Override
     public void injectRightClickEvent(float x, float y, int pointerId, boolean pressed) {
-        input.injectRightClick(pointerId, x, y, pressed);
+        input.injectMouseClick(pointerId, x, y, pressed, MotionEvent.BUTTON_SECONDARY);
+    }
+
+    @Override
+    public void injectMiddleClickEvent(float x, float y, int pointerId, boolean pressed) {
+        input.injectMouseClick(pointerId, x, y, pressed, MotionEvent.BUTTON_TERTIARY);
     }
 
     public void injectScroll(float x, float y, float value) {
