@@ -1,5 +1,6 @@
 package xtr.keymapper.server;
 
+import static xtr.keymapper.InputEventCodes.BTN_MIDDLE;
 import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
 import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
 import static xtr.keymapper.InputEventCodes.REL_WHEEL;
@@ -238,7 +239,7 @@ public class InputService implements IInputInterface {
         if (!stopEvents) mouseEventHandler.handleEvent(code, value);
     }
 
-    public void sendWaylandMouseEvent(String line) {
+    public void onWaylandMouseEvent(String line) {
         String[] input_event = line.split("\\s+");
         int value = Integer.parseInt(input_event[3]);
         switch (input_event[2]) {
@@ -258,6 +259,9 @@ public class InputService implements IInputInterface {
                 break;
             case "BTN_RIGHT":
                 mouseEventHandler.handleEvent(BTN_RIGHT, value);
+                break;
+            case "BTN_MIDDLE":
+                mouseEventHandler.handleEvent(BTN_MIDDLE, value);
                 break;
             case "REL_X":
                 if (mouseEventHandler.mouseAimActive)
