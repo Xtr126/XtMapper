@@ -8,3 +8,10 @@
 output*.json
 keystore.properties
 keystore.jks
+tasks/todo.md
+tasks/lessons.md
+.gitignore
+app/release/baselineProfiles/
+/build
+/src/main/assets/XtMapper-docs/
+.gitignore

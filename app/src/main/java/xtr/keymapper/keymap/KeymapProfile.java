@@ -3,7 +3,6 @@ package xtr.keymapper.keymap;
 import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;

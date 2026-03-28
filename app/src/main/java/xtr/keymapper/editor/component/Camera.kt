@@ -28,7 +28,7 @@ class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y:
         val binding = CameraBinding.inflate(layoutInflater, callback.keysContainerView, true)
         cameraView = binding.root
 
-        // SoufianoDev: Set Click Listeners For Management Buttons
+        
         binding.editButton.setOnClickListener { showSettingsDialog() }
 
         // SoufianoDev: Animate Component To Initial Position
@@ -93,7 +93,7 @@ class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y:
             setNegativeButton(R.string.cancel, null)
         }.create().apply {
             // SoufianoDev: Handle Window Type For Overlay Display Mode
-            if (callback.isOverlayOpen) {
+            if (android.provider.Settings.canDrawOverlays(context)) {
                 window?.setType(
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY

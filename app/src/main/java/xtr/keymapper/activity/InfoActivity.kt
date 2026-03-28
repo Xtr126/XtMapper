@@ -17,7 +17,7 @@ class InfoActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_info)
 
-        // SoufianoDev: Variable For Docs URL
+        // SoufianoDev:  New Docs URL
         val docsUrl = "https://xtr126.github.io/XtMapper-docs/guides/about/"
         val webView: WebView = findViewById(R.id.rootView)
 

@@ -7,6 +7,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import xtr.keymapper.R
@@ -73,29 +74,38 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
         }.data
     }
 
-    private fun onExpandButtonClicked(view: View) {
-        val options = arrayOf<CharSequence>("Limit to specified area", "Allow moving pointer out of screen")
+   private fun onExpandButtonClicked(view: View) {
+    val options = arrayOf<CharSequence>("Limit to specified area", "Allow moving pointer out of screen")
 
-        MaterialAlertDialogBuilder(context)
-            .setTitle("Adjust bounds")
-            .setItems(options) { _, which ->
-                profile.mouseAimConfig.apply {
-                    width = 0f
-                    height = 0f
-                    if (which == 0) {
-                        limitedBounds = true
-                        ResizableArea() // SoufianoDev: Trigger Resizable Overlay
-                    } else {
-                        limitedBounds = false
-                    }
+    android.widget.Toast.makeText(context, "DEBUG: Dialog opening...", android.widget.Toast.LENGTH_SHORT).show()
+
+    MaterialAlertDialogBuilder(context)
+        .setTitle("Adjust bounds")
+        .setItems(options) { _, which ->
+
+            android.widget.Toast.makeText(context, "DEBUG: Item clicked = $which", android.widget.Toast.LENGTH_SHORT).show()
+
+            profile.mouseAimConfig.apply {
+                width = 0f
+                height = 0f
+                if (which == 0) {
+                    android.widget.Toast.makeText(context, "DEBUG: Limit to area → creating ResizableArea...", android.widget.Toast.LENGTH_SHORT).show()
+                    limitedBounds = true
+                    ResizableArea()
+                    android.widget.Toast.makeText(context, "DEBUG: ResizableArea() called", android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    android.widget.Toast.makeText(context, "DEBUG: Allow pointer out → limitedBounds = false", android.widget.Toast.LENGTH_SHORT).show()
+                    limitedBounds = false
                 }
             }
-            .create()
-            .apply {
-                setupOverlayWindowType()
-                show()
-            }
-    }
+        }
+        .create()
+        .apply {
+            setupOverlayWindowType()
+            android.widget.Toast.makeText(context, "DEBUG: Dialog created, showing...", android.widget.Toast.LENGTH_SHORT).show()
+            show()
+        }
+}
 
     private fun addLeftClick(x: Float, y: Float): MovableFloatingActionKey {
         // SoufianoDev: Create And Configure The Left Click Action Button
@@ -148,17 +158,35 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
     }
 
     // SoufianoDev: Extension Helper To Set Window Type Safely
-    private fun AlertDialog.setupOverlayWindowType() {
-        if (callback.isOverlayOpen) {
-            @Suppress("DEPRECATION")
-            window?.setType(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                else
-                    WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-            )
-        }
+private fun AlertDialog.setupOverlayWindowType() {
+    val canDraw = android.provider.Settings.canDrawOverlays(context)
+    android.widget.Toast.makeText(
+        context,
+        "DEBUG: canDrawOverlays = $canDraw",
+        android.widget.Toast.LENGTH_LONG
+    ).show()
+
+    if (canDraw) {
+        @Suppress("DEPRECATION")
+        window?.setType(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
+        )
+        android.widget.Toast.makeText(
+            context,
+            "DEBUG: window type SET",
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
+    } else {
+        android.widget.Toast.makeText(
+            context,
+            "DEBUG: window type NOT SET — canDrawOverlays = false",
+            android.widget.Toast.LENGTH_LONG
+        ).show()
     }
+}
 
     fun animateLeftClick(x: Float, y: Float) {
         leftClick.frameView.animate()
@@ -230,3 +258,4 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
         }
     }
 }
+

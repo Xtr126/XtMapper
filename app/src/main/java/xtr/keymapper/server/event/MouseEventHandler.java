@@ -27,6 +27,28 @@ import xtr.keymapper.server.RemoteService;
 import xtr.keymapper.server.pid.PointerId;
 
 public class MouseEventHandler {
+
+    /* SoufianoDev:
+     * Concurrency Design – Cross-Thread Visibility
+     * =============================================
+     * The native input thread reads mouse state while the main thread updates it.
+     * Without proper memory visibility, the native thread may see stale values,
+     * leading to missed clicks, stuck pointers, or aim mode not being activated.
+     *
+     * The following fields are declared volatile to guarantee visibility:
+     *   - pointer_down: Ensures the native thread sees the latest press/release.
+     *   - mouseAimActive: Toggles aim mode; must be visible to the native thread.
+     *   - mouseAimOrCameraHandler: The handler reference assigned before the flag.
+     *     Without volatile, the compiler could reorder writes, causing the native
+     *     thread to see mouseAimActive == true but a null handler → crash.
+     *
+     * Additionally, triggerMouseAimOrCamera() uses a synchronized block to make
+     * the assignment of mouseAimOrCameraHandler and the flag flip atomic.
+     */
+    private volatile boolean pointer_down;
+    public volatile boolean mouseAimActive = false;
+    private volatile MouseAimHandler mouseAimOrCameraHandler;
+
     float sensitivity;
     float scroll_speed_multiplier;
     private MousePinchZoom pinchZoom;
@@ -37,72 +59,31 @@ public class MouseEventHandler {
     private MouseAimHandler mouseCameraHandler;
     private Key rightClick;
     int x1 = 100, y1 = 100;
-    int width; int height;
+    int width;
+    int height;
     private final IInputInterface mInput;
-    boolean pointer_down;
 
-    /* SoufianoDev:
-     * Note : This Field Is Declared volatile To Fix A Data Race Between The Main Thread
-     *        (Which Writes The Flag Via triggerMouseAimOrCamera) And The Native Input Thread
-     *        (Which Reads It Inside handleEvent). Without volatile, The JVM Provides No
-     *        Visibility Guarantee, Allowing The Native Thread To Observe A Stale False Value
-     *        Even After Aim Mode Has Been Activated — Causing handleMouseEvent To Execute
-     *        Unconstrained And Inject Hover / Cursor Events Into Active Game Touch Zones.
-     */
-    public volatile boolean mouseAimActive = false;
-    public boolean mouseWalkActive = false;
-
-    /* SoufianoDev:
-     * Note : This Field Is Also Declared volatile For The Same Cross-Thread Visibility Reason.
-     *        The Main Thread Assigns The Handler Reference Before Flipping mouseAimActive.
-     *        Without volatile, The CPU Or Compiler May Reorder These Two Writes, Letting The
-     *        Native Thread See mouseAimActive == True While mouseAimOrCameraHandler Is Still
-     *        Null Or Points To A Stale Instance — Either Crashing Or Silently Bypassing Aim Mode.
-     */
-    private volatile MouseAimHandler mouseAimOrCameraHandler;
+    private boolean mouseWalkActive = false;
     private MouseWalkHandler mouseWalkHandler;
 
-    public void triggerMouseAim() {
-        triggerMouseAimOrCamera(mouseAimHandler);
+    public boolean triggerMouseAim() {
+        return triggerMouseAimOrCamera(mouseAimHandler);
     }
-
 
     public void triggerCamera() {
         triggerMouseAimOrCamera(mouseCameraHandler);
     }
 
-   /* private void triggerMouseAimOrCamera(MouseAimHandler instance) {
-        mouseAimOrCameraHandler = instance;
-        if (instance != null) {
-            mouseAimActive = !mouseAimActive;
-            if (mouseAimActive) {
-                instance.resetPointer();
-                // Notifying user that shooting mode was activated
-                try {
-                    mInput.getCallback().alertMouseAimActivated();
-                } catch (RemoteException e) {
-                    Log.e(RemoteService.TAG, e.getMessage(), e);
-                }
-                mInput.hideCursor();
-            } else {
-                instance.stop();
-                mInput.showCursor();
-            }
-        }
-    }
-
-    */
-
-    private void triggerMouseAimOrCamera(MouseAimHandler instance) {
-        if (instance == null) return;
+    private boolean triggerMouseAimOrCamera(MouseAimHandler instance) {
+        if (instance == null) return false;
 
         synchronized (this) {
             mouseAimOrCameraHandler = instance;
             mouseAimActive = !mouseAimActive;
 
             if (mouseAimActive) {
+                stopMouseWalk();
                 instance.resetPointer();
-                // Notifying User That Shooting Mode Was Activated
                 try {
                     mInput.getCallback().alertMouseAimActivated();
                 } catch (RemoteException e) {
@@ -113,6 +94,7 @@ public class MouseEventHandler {
                 instance.stop();
                 mInput.showCursor();
             }
+            return true;
         }
     }
 
@@ -120,7 +102,7 @@ public class MouseEventHandler {
         this.mInput = mInput;
     }
 
-    public void init(){
+    public void init() {
         init(width, height);
     }
 
@@ -146,7 +128,6 @@ public class MouseEventHandler {
             mouseCameraHandler.setInterface(mInput);
             mouseCameraHandler.setDimensions(width, height);
         }
-
         if (mouseWalkHandler != null) {
             mouseWalkHandler.setInterface(mInput);
             mouseWalkHandler.setDimensions(width, height);
@@ -160,117 +141,149 @@ public class MouseEventHandler {
         scroll_speed_multiplier = keymapConfig.scrollSpeed;
     }
 
-    private void movePointerX() {
-        if (mouseWalkActive) mouseWalkHandler.onCursorPosition(x1, y1);
+    // Consolidated coordinate update – single injection per movement
+    private void updatePositionAndInject(int dx, int dy) {
+        if (dx != 0) {
+            x1 += dx;
+            x1 = Math.max(0, Math.min(width, x1));
+        }
+        if (dy != 0) {
+            y1 += dy;
+            y1 = Math.max(0, Math.min(height, y1));
+        }
+
+        if (pointer_down) {
+            mInput.injectEvent(x1, y1, MOVE, pointerId);
+        } else {
+            mInput.injectHoverEvent(x1, y1, pointerId);
+        }
+
+        if (mouseWalkActive && mouseWalkHandler != null) {
+            mouseWalkHandler.onCursorPosition(x1, y1);
+        }
+
         mInput.moveCursorX(x1);
+        mInput.moveCursorY(y1);
     }
 
-    private void movePointerY() {
-        if (mouseWalkActive) mouseWalkHandler.onCursorPosition(x1, y1);
-        mInput.moveCursorY(y1);
+    private void startMouseWalk() {
+        if (mouseAimOrCameraHandler != null && mouseAimActive) {
+            triggerMouseAimOrCamera(mouseAimOrCameraHandler);
+        }
+        if (mouseWalkHandler != null) {
+            mouseWalkHandler.resetPointer();
+            mouseWalkActive = true;
+        }
+    }
+
+    private void stopMouseWalk() {
+        if (mouseWalkActive && mouseWalkHandler != null) {
+            mouseWalkHandler.stop();
+            mouseWalkActive = false;
+        }
     }
 
     private void handleRightClick(int value) {
         if (value == 1) {
             if (mouseWalkHandler != null) {
                 if (mouseWalkActive) {
-                    mouseWalkActive = false;
-                    mouseWalkHandler.stop();
+                    stopMouseWalk();
                 } else {
-                    mouseWalkHandler.resetPointer();
-                    mouseWalkActive = true;
+                    startMouseWalk();
                 }
-            }
-            else if (mInput.getKeymapConfig().rightClickMouseAim)
+            } else if (mInput.getKeymapConfig().rightClickMouseAim) {
                 triggerMouseAim();
-        }
-        else if (rightClick != null)
+            }
+        } else if (rightClick != null) {
             mInput.injectEvent(rightClick.x, rightClick.y, value, pointerIdRightClick);
+        }
     }
 
     public void handleEvent(int code, int value) {
         if (mouseAimOrCameraHandler != null && mouseAimActive) {
             mouseAimOrCameraHandler.handleEvent(code, value, this::handleMouseEvent);
-        } else handleMouseEvent(code, value);
+        } else {
+            handleMouseEvent(code, value);
+        }
     }
 
     private void handleMouseEvent(int code, int value) {
         KeymapConfig keymapConfig = mInput.getKeymapConfig();
-        if (mInput.getKeyEventHandler().ctrlKeyPressed && pointer_down)
-            if (keymapConfig.ctrlDragMouseGesture) {
-                if (pinchZoom != null) pointer_down = pinchZoom.handleEvent(code, value);
-                return;
-            }
+        if (mInput.getKeyEventHandler().ctrlKeyPressed && pointer_down
+                && keymapConfig.ctrlDragMouseGesture) {
+            if (pinchZoom != null) pointer_down = pinchZoom.handleEvent(code, value);
+            return;
+        }
+
+        int dx = 0, dy = 0;
+
         switch (code) {
-            case REL_X: {
-                value = (int) (value*sensitivity);
-                if (value == 0) break;
-                x1 += value;
-                if (x1 > width || x1 < 0) x1 -= value;
-                if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
-                else mInput.injectHoverEvent(x1, y1, pointerId);
+            case REL_X:
+                dx = (int) (value * sensitivity);
                 break;
-            }
-            case REL_Y: {
-                value = (int) (value*sensitivity);
-                if (value == 0) break;
-                y1 += value;
-                if (y1 > height || y1 < 0) y1 -= value;
-                if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
-                else mInput.injectHoverEvent(x1, y1, pointerId);
+            case REL_Y:
+                dy = (int) (value * sensitivity);
                 break;
-            }
             case BTN_MOUSE:
-                pointer_down = value == 1;
+                pointer_down = (value == 1);
                 if (mInput.getKeyEventHandler().ctrlKeyPressed && keymapConfig.ctrlDragMouseGesture) {
                     pinchZoom = new MousePinchZoom(mInput, x1, y1);
                     pinchZoom.handleEvent(code, value);
-                } else mInput.injectEvent(x1, y1, value, pointerId);
+                } else {
+                    mInput.injectEvent(x1, y1, value, pointerId);
+                }
                 break;
-
             case BTN_RIGHT:
                 handleRightClick(value);
                 break;
-
             case BTN_EXTRA:
             case BTN_SIDE:
             case BTN_MIDDLE:
-                if (value == 1 && Objects.equals(mInput.getKeymapConfig().mouseAimShortcutKey, "KEY_MMB"))
+                if (value == 1 && Objects.equals(mInput.getKeymapConfig().mouseAimShortcutKey, "KEY_MMB")) {
                     triggerMouseAim();
-
-                /*SoufianoDev:
-                 * Note : This Break Statement Fixes A Fall-Through Bug Into The REL_WHEEL Case.
-                 *        Previously, Any BTN_MIDDLE / BTN_SIDE / BTN_EXTRA Press Would Continue
-                 *        Execution Into REL_WHEEL And Call injectScroll() At The Current Cursor
-                 *        Position (x1, y1). During Aim Mode This Produced A Spurious Scroll Event
-                 *        That Interacted With Game UI Elements Such As The Scope Toggle Or Map
-                 *        Zone — Exactly The Unintended Input Bleed Reported By Shooter Game Users.
-                 */
+                }
                 break;
-
             case REL_WHEEL:
-                if (mInput.getKeyEventHandler().ctrlKeyPressed && keymapConfig.ctrlMouseWheelZoom)
+                if (scrollZoomHandler != null && mInput.getKeyEventHandler().ctrlKeyPressed
+                        && keymapConfig.ctrlMouseWheelZoom) {
                     scrollZoomHandler.onScrollEvent(value, x1, y1);
-                else
-                    mInput.injectScroll(x1, y1, value * scroll_speed_multiplier);
+                } else {
+                    int scrollDelta = value * (int) scroll_speed_multiplier;
+                    scrollDelta = Math.max(-32, Math.min(32, scrollDelta));
+                    mInput.injectScroll(x1, y1, scrollDelta);
+                }
                 break;
         }
-        if (code == REL_X) movePointerX();
-        if (code == REL_Y) movePointerY();
+
+        if (dx != 0 || dy != 0) {
+            updatePositionAndInject(dx, dy);
+        }
     }
 
     public void evAbsY(int y) {
-        this.y1 = y;
-        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
-        else mInput.injectHoverEvent(x1, y1, pointerId);
-        movePointerY();
+        y1 = Math.max(0, Math.min(height, y));
+        if (pointer_down) {
+            mInput.injectEvent(x1, y1, MOVE, pointerId);
+        } else {
+            mInput.injectHoverEvent(x1, y1, pointerId);
+        }
+        if (mouseWalkActive && mouseWalkHandler != null) {
+            mouseWalkHandler.onCursorPosition(x1, y1);
+        }
+        mInput.moveCursorY(y1);
     }
 
     public void evAbsX(int x) {
-        this.x1 = x;
-        if (pointer_down) mInput.injectEvent(x1, y1, MOVE, pointerId);
-        else mInput.injectHoverEvent(x1, y1, pointerId);
-        movePointerX();
+        x1 = Math.max(0, Math.min(width, x));
+        if (pointer_down) {
+            mInput.injectEvent(x1, y1, MOVE, pointerId);
+        } else {
+            mInput.injectHoverEvent(x1, y1, pointerId);
+        }
+        if (mouseWalkActive && mouseWalkHandler != null) {
+            mouseWalkHandler.onCursorPosition(x1, y1);
+        }
+        mInput.moveCursorX(x1);
     }
 
     public void stop() {
