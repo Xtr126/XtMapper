@@ -40,7 +40,7 @@ public class MouseEventHandler {
     private final IInputInterface mInput;
     boolean pointer_down;
     public boolean mouseAimActive = false;
-    public boolean mouseWalkActive = false;
+    private boolean mouseWalkActive = false;
     private MouseAimHandler mouseAimOrCameraHandler;
     private MouseWalkHandler mouseWalkHandler;
 
@@ -58,6 +58,7 @@ public class MouseEventHandler {
         if (instance != null) {
             mouseAimActive = !mouseAimActive;
             if (mouseAimActive) {
+                stopMouseWalk();
                 instance.resetPointer();
                 // Notifying user that shooting mode was activated
                 try {
@@ -129,16 +130,26 @@ public class MouseEventHandler {
         mInput.moveCursorY(y1);
     }
 
+    private void startMouseWalk() {
+        // Stop mouse aim/camera prior
+        if (mouseAimOrCameraHandler != null && mouseAimActive) {
+            triggerMouseAimOrCamera(mouseAimOrCameraHandler);
+        }
+        // Makes sure that pointer is up before starting
+        mouseWalkHandler.resetPointer();
+        mouseWalkActive = true;
+    }
+
+    private void stopMouseWalk() {
+        mouseWalkActive = false;
+        mouseWalkHandler.stop();
+    }
+
     private boolean handleRightClick(int value) {
         if (value == 1) {
             if (mouseWalkHandler != null) {
-                if (mouseWalkActive) {
-                    mouseWalkActive = false;
-                    mouseWalkHandler.stop();
-                } else {
-                    mouseWalkHandler.resetPointer();
-                    mouseWalkActive = true;
-                }
+                if (mouseWalkActive) stopMouseWalk();
+                else startMouseWalk();
                 return true;
             }
             else if (mInput.getKeymapConfig().rightClickMouseAim)
