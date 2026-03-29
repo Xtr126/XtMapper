@@ -3,6 +3,8 @@ package xtr.keymapper.editor.component;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -74,7 +76,8 @@ public class Crosshair extends EditorUiComponent {
                     profile.mouseAimConfig.height = 0;
                     if (which == 0) {
                         profile.mouseAimConfig.limitedBounds = true;
-                        new ResizableArea();
+                        // Delay for 100ms to skip layout changes
+                        new Handler(Looper.getMainLooper()).postDelayed(ResizableArea::new, 100);
                     } else {
                         profile.mouseAimConfig.limitedBounds = false;
                     }
@@ -82,7 +85,6 @@ public class Crosshair extends EditorUiComponent {
         AlertDialog dialog = builder.create();
         if(getCallback().isOverlayOpen()) dialog.getWindow().setType(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
         dialog.show();
-
     }
 
     private MovableFloatingActionKey addLeftClick(float x, float y) {
