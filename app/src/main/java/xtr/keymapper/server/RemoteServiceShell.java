@@ -15,7 +15,6 @@ import java.lang.reflect.Method;
 
 import xtr.keymapper.BuildConfig;
 import xtr.keymapper.activity.MainActivity;
-import xtr.keymapper.server.windows.TouchpadDataReceiverKt;
 
 public class RemoteServiceShell {
     public static void main(String[] args) {
@@ -43,14 +42,6 @@ public class RemoteServiceShell {
                         break;
                     case "--no-logcat":
                         noLogcat = true;
-                        break;
-                    case "--touchpad-input-udp-port":
-                    case "--touchpad-input-tcp-port":
-                    case "--touchpad-input-stdin":
-                    case "--logcat":
-                    case "--verbose":
-                        TouchpadDataReceiverKt.start(args);
-                        System.exit(0);
                         break;
                     default:
                         System.out.println("Invalid argument: " + arg);
