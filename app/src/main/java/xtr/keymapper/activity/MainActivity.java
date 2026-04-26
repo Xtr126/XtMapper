@@ -244,7 +244,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
 
     private void unbindTouchPointer() {
         if (pointerOverlay != null) {
-            pointerOverlay.activityCallback = null;
+            pointerOverlay.setActivityCallback(null);
             pointerOverlay = null;
         }
         if (isServiceBound) unbindService(connection);
@@ -332,12 +332,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         this.selectedProfileName = profileName;
     }
 
-    public interface Callback {
-        void updateCmdView1(String line);
-        void stopPointer();
-    }
-
-    private final Callback mCallback = new Callback() {
+    private final TouchPointer.MainActivityCallback mCallback = new TouchPointer.MainActivityCallback() {
 
         public void updateCmdView1(String line) {
             runOnUiThread(() -> Toast.makeText(MainActivity.this, line, Toast.LENGTH_SHORT).show());
@@ -358,7 +353,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             // We've bound to Service, cast the IBinder and get TouchPointer instance
             TouchPointer.TouchPointerBinder binder = (TouchPointer.TouchPointerBinder) service;
             pointerOverlay = binder.getService();
-            pointerOverlay.activityCallback = mCallback;
+            pointerOverlay.setActivityCallback(mCallback);
         }
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
