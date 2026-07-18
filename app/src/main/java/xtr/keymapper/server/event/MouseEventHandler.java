@@ -58,7 +58,7 @@ public class MouseEventHandler {
         if (instance != null) {
             mouseAimActive = !mouseAimActive;
             if (mouseAimActive) {
-                stopMouseWalk();
+                if (mouseWalkActive) stopMouseWalk();
                 instance.resetPointer();
                 // Notifying user that shooting mode was activated
                 try {
