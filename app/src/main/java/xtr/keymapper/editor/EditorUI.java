@@ -16,7 +16,14 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 
+import androidx.compose.ui.platform.ComposeView;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.LifecycleRegistry;
+import androidx.savedstate.SavedStateRegistry;
+import androidx.savedstate.SavedStateRegistryController;
+import androidx.savedstate.SavedStateRegistryOwner;
 
 import java.util.ArrayList;
 
@@ -39,37 +46,49 @@ import xtr.keymapper.server.RemoteServiceHelper;
 
 public class EditorUI extends OnKeyEventListener.Stub {
     // When a keyboard key is pressed,
+    // Receives keyboard input while editing a key binding
     private KeyInFocusListener keyInFocus;
 
     private final Context context;
 
+    // Callback when the editor UI is hidden/closed
     private final EditorCallback editorCallback;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
+    /* Name of the currently loaded keymap profile */
     private final String profileName;
 
+    /* The active keymap config and a backup copy */
     private KeymapProfile profile;
     private KeymapProfile profileBackup;
 
     private boolean overlayOpen = false;
 
+    // The settings/catalog UI (hidden in SHOW_KEYMAP_ONLY mode)
     private final SettingsOverlay settingsOverlay;
 
+    // The main editor view and the container holding all key buttons
     private final ViewGroup mainView;
     private final ViewGroup keysContainerView;
 
     /* Start modes */
-    public static final int START_SETTINGS = 0;
-    public static final int START_EDITOR = 1;
-    public static final int SHOW_KEYMAP_ONLY = 2;
+    public static final int START_SETTINGS = 0; // Shows full editor with catalog/menu
+    public static final int START_EDITOR = 1; // Shows editor without catalog (save/reset available)
+    public static final int SHOW_KEYMAP_ONLY = 2; // Used to show an overlay with active keymapping
     private final int startMode;
 
     private MacroDialog macroDialog = null;
 
     private final EditorUiComponentList editorUiComponents = new EditorUiComponentList();
 
+    // IPC connection to the remote service that captures raw input
     private IRemoteService mService;
+
+    // Compose Dialog Management
+    private ComposeView importExportComposeView = null;
+    private LifecycleRegistry importExportLifecycle = null;
+    private SavedStateRegistryController importExportSavedStateController = null;
 
     public void unregisterOnKeyEventListener() {
         settingsOverlay.onUnRegisterKeyEventListener();
@@ -101,7 +120,7 @@ public class EditorUI extends OnKeyEventListener.Stub {
         this.profileName = profileName;
         this.startMode = startMode;
 
-        LayoutInflater layoutInflater = context.getSystemService(LayoutInflater.class);
+        LayoutInflater layoutInflater = context.<LayoutInflater>getSystemService(LayoutInflater.class);
 
         if (startMode != SHOW_KEYMAP_ONLY) {
             context.stopService(new Intent(context, ShowKeymapService.class));
@@ -157,13 +176,13 @@ public class EditorUI extends OnKeyEventListener.Stub {
             removeView(overlayView);
         }
 
-        WindowManager mWindowManager = context.getSystemService(WindowManager.class);
+        WindowManager mWindowManager = context.<WindowManager>getSystemService(WindowManager.class);
         WindowManager.LayoutParams mParams = startMode == SHOW_KEYMAP_ONLY ? Utils.getPointerLayoutParams(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) : new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                        WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
                 PixelFormat.TRANSLUCENT);
 
 
@@ -242,6 +261,8 @@ public class EditorUI extends OnKeyEventListener.Stub {
         } else if (id == R.id.reset) {
             profile = profileBackup;
             reloadKeymap();
+        } else if (id == R.id.import_export) {
+            // Show Compose-based UI from ImportExportDialog.kt
         } else {
             editorUiComponents.addMatchingComponentForId(id, mCallback, context, defaultX, defaultY, editorUiComponents::add);
         }
