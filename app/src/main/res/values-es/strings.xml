@@ -122,5 +122,6 @@
     <string name="opacity">Opacidad</string>
     <string name="floating_keys_size">Tamaño de teclas flotantes</string>
     <string name="mouse_walk">Movimiento del ratón</string>
-    <string name="reset">Reset</string>
+    <string name="reset">Restablecer</string>
+    <string name="share">Compartir</string>
 </resources>

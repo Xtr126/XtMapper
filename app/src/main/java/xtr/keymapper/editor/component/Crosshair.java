@@ -161,7 +161,7 @@ public class Crosshair extends EditorUiComponent {
         @Override
         public boolean onTouch(View v, MotionEvent event) {
             if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                EditorUI.resizeView(rootView, (int) event.getX(), (int) event.getY());
+                EditorUI.Companion.resizeView(rootView, (int) event.getX(), (int) event.getY());
                 // Resize View from center point
                 if (defaultPivotX > 0) {
                     float newPivotX = rootView.getPivotX() - defaultPivotX;

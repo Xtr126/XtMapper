@@ -1,7 +1,5 @@
 package xtr.keymapper.editor.component;
 
-import static xtr.keymapper.editor.EditorUI.resizeView;
-
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.view.MotionEvent;
@@ -69,7 +67,7 @@ public class MouseWalk extends EditorUiComponent {
         // resize dpad from saved profile configuration
         float x1 = (mouseWalk.radius*2) - rootView.getLayoutParams().width;
         float y1 = (mouseWalk.radius*2) - rootView.getLayoutParams().height;
-        resizeView(rootView, (int) x1, (int) y1);
+        EditorUI.Companion.resizeView(rootView, (int) x1, (int) y1);
     }
 
     private void onClose(View v) {
@@ -97,7 +95,7 @@ public class MouseWalk extends EditorUiComponent {
             if (event.getAction() == MotionEvent.ACTION_MOVE) {
                 // Resize View in fixed ratio
                 int newSize = ((int)event.getX() + (int)event.getY()) / 2;
-                EditorUI.resizeView(rootView, newSize, newSize);
+                EditorUI.Companion.resizeView(rootView, newSize, newSize);
 
                 // Resize View from center point
                 if (defaultPivotX > 0) {

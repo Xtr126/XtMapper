@@ -1,7 +1,5 @@
 package xtr.keymapper.editor.component;
 
-import static xtr.keymapper.editor.EditorUI.resizeView;
-
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Build;
@@ -133,7 +131,7 @@ public class Dpad extends EditorUiComponent {
         // resize dpad from saved profile configuration
         float x1 = dpad.getWidth() - dpadView.getLayoutParams().width;
         float y1 = dpad.getHeight() - dpadView.getLayoutParams().height;
-        resizeView(dpadView, (int) x1, (int) y1);
+        EditorUI.Companion.resizeView(dpadView, (int) x1, (int) y1);
     }
 
     private void onClose(View v) {
@@ -161,7 +159,7 @@ public class Dpad extends EditorUiComponent {
             if (event.getAction() == MotionEvent.ACTION_MOVE) {
                 // Resize View in fixed ratio
                 int newSize = ((int)event.getX() + (int)event.getY()) / 2;
-                EditorUI.resizeView(rootView, newSize, newSize);
+                EditorUI.Companion.resizeView(rootView, newSize, newSize);
 
                 // Resize View from center point
                 if (defaultPivotX > 0) {
