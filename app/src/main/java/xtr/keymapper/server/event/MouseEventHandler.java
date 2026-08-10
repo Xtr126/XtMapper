@@ -154,6 +154,8 @@ public class MouseEventHandler {
             }
             else if (mInput.getKeymapConfig().rightClickMouseAim)
                 return triggerMouseAim();
+            else if (Objects.equals(mInput.getKeymapConfig().mouseAimShortcutKey, "KEY_RMB"))
+                return triggerMouseAim();
         }
         else if (rightClick != null) {
             mInput.injectEvent(rightClick.x, rightClick.y, value, pointerId);

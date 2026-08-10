@@ -106,6 +106,10 @@ public class SettingsOverlay {
                         // Middle mouse button was pressed
                         ((EditText) v).setText("MMB");
                         return true;
+                    } else if (event.getActionButton() == MotionEvent.BUTTON_SECONDARY) {
+                        // Right mouse button was pressed
+                        ((EditText) v).setText("RMB");
+                        return true;
                     }
                 }
             }
