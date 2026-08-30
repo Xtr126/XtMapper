@@ -2,12 +2,10 @@ package xtr.keymapper.editor;
 
 import android.content.Context;
 import android.os.Build;
-import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -93,29 +91,12 @@ public class SettingsOverlay {
         binding.mouseAimRightClick.setChecked(keymapConfig.rightClickMouseAim);
 
         loadKeyboardShortcuts();
-        binding.launchEditor.setOnKeyListener(SettingsOverlay::onKey);
-        binding.pauseResume.setOnKeyListener(SettingsOverlay::onKey);
-        binding.switchProfile.setOnKeyListener(SettingsOverlay::onKey);
-        binding.mouseAimKey.setOnKeyListener(SettingsOverlay::onKey);
+        binding.launchEditor.setOnKeyListener(ShortcutKeyListenerKt::onKeyboardKeyPress);
+        binding.pauseResume.setOnKeyListener(ShortcutKeyListenerKt::onKeyboardKeyPress);
+        binding.switchProfile.setOnKeyListener(ShortcutKeyListenerKt::onKeyboardKeyPress);
+        binding.mouseAimKey.setOnKeyListener(ShortcutKeyListenerKt::onKeyboardKeyPress);
 
-        binding.mouseAimKey.setOnGenericMotionListener((v, event) -> {
-            // Handle middle mouse button
-            if (event.isFromSource(InputDevice.SOURCE_CLASS_POINTER)) {
-                if (event.getAction() == MotionEvent.ACTION_BUTTON_PRESS) {
-                    if (event.getActionButton() == MotionEvent.BUTTON_TERTIARY) {
-                        // Middle mouse button was pressed
-                        ((EditText) v).setText("MMB");
-                        return true;
-                    } else if (event.getActionButton() == MotionEvent.BUTTON_SECONDARY) {
-                        // Right mouse button was pressed
-                        ((EditText) v).setText("RMB");
-                        return true;
-                    }
-                }
-            }
-            return false; // Event not handled
-        });
-
+        binding.mouseAimKey.setOnGenericMotionListener(ShortcutKeyListenerKt::onMouseClick);
 
         mouseAimActions();
         loadTouchpadInputSettings();
@@ -226,12 +207,10 @@ public class SettingsOverlay {
 
 
     private void saveKeyboardShortcuts() {
-        Function<EditText, String> keyPrefix = e -> "KEY_" + e.getText();
-
-        keymapConfig.launchEditorShortcutKey = keyPrefix.apply(binding.launchEditor);
-        keymapConfig.pauseResumeShortcutKey = keyPrefix.apply(binding.pauseResume);
-        keymapConfig.switchProfileShortcutKey = keyPrefix.apply(binding.switchProfile);
-        keymapConfig.mouseAimShortcutKey = keyPrefix.apply(binding.mouseAimKey);
+        keymapConfig.launchEditorShortcutKey = ShortcutKeyListenerKt.keyCodePrefix(binding.launchEditor);
+        keymapConfig.pauseResumeShortcutKey = ShortcutKeyListenerKt.keyCodePrefix(binding.pauseResume);
+        keymapConfig.switchProfileShortcutKey = ShortcutKeyListenerKt.keyCodePrefix(binding.switchProfile);
+        keymapConfig.mouseAimShortcutKey = ShortcutKeyListenerKt.keyCodePrefix(binding.mouseAimKey);
 
         keymapConfig.launchEditorShortcutKeyModifier = binding.launchEditorModifier.getText().toString();
         keymapConfig.pauseResumeShortcutKeyModifier = binding.pauseResumeModifier.getText().toString();
@@ -320,17 +299,10 @@ public class SettingsOverlay {
 
     public void onUnRegisterKeyEventListener() {
         // Accept key events from View
-        binding.launchEditor.setOnKeyListener(SettingsOverlay::onKey);
-        binding.pauseResume.setOnKeyListener(SettingsOverlay::onKey);
-        binding.switchProfile.setOnKeyListener(SettingsOverlay::onKey);
-        binding.mouseAimKey.setOnKeyListener(SettingsOverlay::onKey);
-    }
-
-    public static boolean onKey(View view, int keyCode, KeyEvent event) {
-        String key = String.valueOf(event.getDisplayLabel());
-        if ( key.matches("[a-zA-Z0-9]+" )) ((EditText) view).setText(key);
-        else ((EditText) view).getText().clear();
-        return true;
+        binding.launchEditor.setOnKeyListener(ShortcutKeyListenerKt::onKeyboardKeyPress);
+        binding.pauseResume.setOnKeyListener(ShortcutKeyListenerKt::onKeyboardKeyPress);
+        binding.switchProfile.setOnKeyListener(ShortcutKeyListenerKt::onKeyboardKeyPress);
+        binding.mouseAimKey.setOnKeyListener(ShortcutKeyListenerKt::onKeyboardKeyPress);
     }
 
     public void onKey(String key) {

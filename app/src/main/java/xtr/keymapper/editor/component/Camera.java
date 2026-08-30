@@ -12,7 +12,7 @@ import xtr.keymapper.databinding.CameraBinding;
 import xtr.keymapper.databinding.CameraConfigBinding;
 import xtr.keymapper.editor.EditorUiComponent;
 import xtr.keymapper.editor.EditorUiComponentCallback;
-import xtr.keymapper.editor.SettingsOverlay;
+import xtr.keymapper.editor.ShortcutKeyListenerKt;
 import xtr.keymapper.keymap.KeymapProfile;
 
 public class Camera extends EditorUiComponent {
@@ -59,13 +59,14 @@ public class Camera extends EditorUiComponent {
         binding.sliderXSensitivity.setValue(camera.xSensitivity);
         binding.sliderYSensitivity.setValue(camera.ySensitivity);
 
-        binding.key.setOnKeyListener(SettingsOverlay::onKey);
+        binding.key.setOnKeyListener(ShortcutKeyListenerKt::onKeyboardKeyPress);
+        binding.key.setOnGenericMotionListener(ShortcutKeyListenerKt::onMouseClick);
 
         View view = binding.getRoot();
         builder.setView(view)
                 .setPositiveButton(R.string.ok, (dialog, which) -> {
                     if(binding.key.getText().toString().isEmpty()) binding.key.setText(" ");
-                    camera.triggerKeyCode = binding.key.getText().charAt(0);
+                    camera.triggerKeyCode = ShortcutKeyListenerKt.keyCodePrefix(binding.key);
                     camera.toggle = binding.toggleSwitch.isChecked();
                     camera.xSensitivity = binding.sliderXSensitivity.getValue();
                     camera.ySensitivity = binding.sliderYSensitivity.getValue();
