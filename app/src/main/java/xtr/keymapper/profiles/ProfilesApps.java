@@ -36,7 +36,7 @@ public class ProfilesApps {
         appsView = createView(LayoutInflater.from(context));
     }
 
-    interface OnAppsLoadedListener {
+    public interface OnAppsLoadedListener {
         void onAppsLoaded(ProfilesApps profilesApps, AppsGridAdapter adapter, AlertDialog dialog);
     }
 

@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.res.ColorStateList;
 import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,7 +15,6 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.provider.Settings;
 import android.util.Log;
-import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -25,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import com.topjohnwu.superuser.Shell;
 
 import kotlin.Unit;
@@ -34,20 +33,18 @@ import xtr.keymapper.IRemoteService;
 import xtr.keymapper.R;
 import xtr.keymapper.Server;
 import xtr.keymapper.TouchPointer;
-import xtr.keymapper.databinding.ActivityMainBinding;
 import xtr.keymapper.editor.EditorActivity;
 import xtr.keymapper.editor.EditorUI;
 import xtr.keymapper.keymap.KeymapConfig;
-import xtr.keymapper.profiles.ProfilesViewAdapter;
 import xtr.keymapper.server.RemoteServiceHelper;
+import xtr.keymapper.GameKeyMapperBridge;
 
-public class MainActivity extends AppCompatActivity implements ProfilesViewAdapter.ProfileSelectedCallback {
+public class MainActivity extends AppCompatActivity {
     public static final String SHELL_INIT = "shell";
     public TouchPointer pointerOverlay;
 
-    public ActivityMainBinding binding;
-    private ColorStateList defaultTint;
     private String selectedProfileName = null;
+    private boolean composeServiceActive = false;
 
     private boolean isServiceBound = false;
 
@@ -66,9 +63,9 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
         if (startedFromShell == null) startedFromShell = isStartedWithShell();
+
+        GameKeyMapperBridge.installGameKeyMapperContent(this);
 
         KeymapConfig keymapConfig = new KeymapConfig(this);
 
@@ -114,10 +111,10 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         }
 
         displaySelector = new DisplaySelector(this).register(this::startPointer);
-        setupButtons();
+        RemoteServiceHelper.runIfActive(this, () -> runOnUiThread(() -> composeServiceActive = true));
 
         if (startedFromShell) {
-            if (getIntent().getStringExtra("data").equals(SHELL_INIT))
+            if (SHELL_INIT.equals(getIntent().getStringExtra("data")))
                 startPointer();
         }
     }
@@ -130,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     private boolean isStartedWithShell() {
         String data = getIntent().getStringExtra("data");
         if (data != null) {
-            if (!data.equals(SHELL_INIT)) {
+            if (!SHELL_INIT.equals(data)) {
                 // Crash report
                 new MaterialAlertDialogBuilder(MainActivity.this).setTitle("Server crashed")
                         .setMessage(data)
@@ -140,21 +137,6 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             return true;
         }
         return false;
-    }
-
-    private void setupButtons() {
-        defaultTint = binding.controls.launchApp.getBackgroundTintList();
-        binding.controls.launchApp.setOnClickListener(v -> launchApp());
-        binding.controls.startPointer.setOnClickListener(v -> startPointer());
-        binding.controls.startEditor.setOnClickListener(v -> startEditor());
-        binding.controls.configButton.setOnClickListener
-                (v -> launchSettings());
-        binding.controls.aboutButton.setOnClickListener
-                (v -> startActivity(new Intent(this, InfoActivity.class)));
-        binding.controls.importExportButton.setOnClickListener
-                (v -> startActivity(new Intent(this, ImportExportActivity.class)));
-
-        RemoteServiceHelper.runIfActive(this, () -> runOnUiThread(() -> setButtonState(false)));
     }
 
     private void launchSettings() {
@@ -223,16 +205,7 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
     }
 
     private void setButtonState(boolean start) {
-        Button button = binding.controls.startPointer;
-        if (start) {
-            button.setText(R.string.start);
-            button.setOnClickListener(v -> startPointer());
-            button.setBackgroundTintList(defaultTint);
-        } else {
-            button.setText(R.string.stop);
-            button.setOnClickListener(v -> stopPointer());
-            button.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.purple_700)));
-        }
+        composeServiceActive = !start;
     }
 
     public void stopPointer(){
@@ -247,7 +220,10 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
             pointerOverlay.setActivityCallback(null);
             pointerOverlay = null;
         }
-        if (isServiceBound) unbindService(connection);
+        if (isServiceBound) {
+            unbindService(connection);
+            isServiceBound = false;
+        }
     }
 
     private void startEditor(){
@@ -321,13 +297,120 @@ public class MainActivity extends AppCompatActivity implements ProfilesViewAdapt
         runOnUiThread(() -> builder.create().show());
     }
 
+
+    // ============ COMPOSE UI BRIDGE ============
+
+    public boolean isComposeServiceActive() {
+        return composeServiceActive;
+    }
+
+    public String selectedProfileNameForCompose() {
+        return selectedProfileName;
+    }
+
+    public void toggleServiceFromCompose() {
+        if (composeServiceActive) stopPointer();
+        else startPointer();
+    }
+
+    public void fixPermissionFromCompose() {
+        checkOverlayPermission(this);
+    }
+
+    public void testInputFromCompose() {
+        Toast.makeText(this, "Input tester is not exposed by the legacy implementation.", Toast.LENGTH_SHORT).show();
+    }
+
+    public void selectProfileFromCompose(String profileName) {
+        onProfileSelected(profileName);
+    }
+
+    public void launchAppFromCompose() {
+        launchApp();
+    }
+
+    public void startEditorFromCompose() {
+        startEditor();
+    }
+
+    public void renameProfileFromCompose(String profileName, Runnable onComplete) {
+        final Context context = MainActivity.this;
+        xtr.keymapper.databinding.TextFieldBinding field =
+                xtr.keymapper.databinding.TextFieldBinding.inflate(getLayoutInflater());
+        field.getRoot().setHint(R.string.profile_name);
+        field.editText.setText(profileName);
+
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.dialog_alert_add_profile)
+                .setView(field.getRoot())
+                .setPositiveButton(R.string.ok, (dialog, which) -> {
+                    String renamed = field.editText.getText().toString();
+                    new xtr.keymapper.keymap.KeymapProfiles(context).renameProfile(profileName, renamed);
+                    if (onComplete != null) runOnUiThread(onComplete);
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    public void changeProfileAppFromCompose(String profileName, Runnable onComplete) {
+        final Context context = MainActivity.this;
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        xtr.keymapper.profiles.ProfilesApps.asyncLoadAppsAndThen(context, builder,
+                (p, adapter, loadingDialog) -> {
+                    p.binding.appsGrid.setAdapter(adapter);
+                    loadingDialog.dismiss();
+
+                    androidx.appcompat.app.AlertDialog dialog = builder.setView(p.appsView).show();
+                    p.setListener(packageName -> {
+                        new xtr.keymapper.keymap.KeymapProfiles(context)
+                                .setProfilePackageName(profileName, packageName);
+                        p.onDestroyView();
+                        dialog.dismiss();
+                        if (onComplete != null) runOnUiThread(onComplete);
+                    });
+                });
+    }
+
+    public void deleteProfileFromCompose(String profileName) {
+        new xtr.keymapper.keymap.KeymapProfiles(this).deleteProfile(profileName);
+        if (profileName != null && profileName.equals(selectedProfileName)) {
+            selectedProfileName = null;
+        }
+    }
+
+    public void stopPointerFromCompose() {
+        stopPointer();
+    }
+
+    public void openHelpFromCompose() {
+        startActivity(new Intent(this, InfoActivity.class));
+    }
+
+    public void createNewProfileFromCompose(Runnable onComplete) {
+        xtr.keymapper.profiles.ProfileSelector.createNewProfile(this, profileName -> {
+            selectedProfileName = profileName;
+            if (onComplete != null) runOnUiThread(onComplete);
+        });
+    }
+
+    public void openExportImportFromCompose() {
+        startActivity(new Intent(this, ImportExportActivity.class));
+    }
+
+    public void toggleOverlayFromCompose() {
+        if (!Settings.canDrawOverlays(this)) checkOverlayPermission(this);
+    }
+
+    public void openSettingsFromCompose() {
+        launchSettings();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unbindTouchPointer();
     }
 
-    @Override
     public void onProfileSelected(String profileName) {
         this.selectedProfileName = profileName;
     }

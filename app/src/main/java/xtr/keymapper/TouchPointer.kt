@@ -160,7 +160,7 @@ class TouchPointer : Service() {
         if (activityCallback != null) activityCallback!!.updateCmdView1("connecting to server..")
         RemoteServiceHelper.getInstance(
             this
-        ) { service: IRemoteService ->
+        ) { service: IRemoteService? ->
             mService = service
             val keymapConfig = KeymapConfig(this)
             val display =
