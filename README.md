@@ -28,7 +28,7 @@ https://xtr126.github.io/XtMapper-docs/guides/about
 
 |   |   |   |
 | ------------- | ------------- | ------------- |
-|  <img src="https://github.com/user-attachments/assets/df57855f-66a8-495e-8252-05c433933eae"/>  |  <img src="https://github.com/user-attachments/assets/d5866a7b-241f-4ab6-9f1f-79538fe116d3"/>  |  <img src="https://github.com/user-attachments/assets/b7bd4346-c22e-485e-85b0-b05659afe183"/>  |
+|  <img src="https://raw.githubusercontent.com/Xtr126/XtMapper/refs/heads/dev/fastlane/metadata/android/en-US/images/phoneScreenshots/1.png"/>  |  <img src="https://github.com/user-attachments/assets/d5866a7b-241f-4ab6-9f1f-79538fe116d3"/>  |  <img src="https://github.com/user-attachments/assets/b7bd4346-c22e-485e-85b0-b05659afe183"/>  |
 |  <img src="https://github.com/user-attachments/assets/9f8cabe9-9fea-4bf8-b215-d843bb6f15d6"/>  |  <img src="https://github.com/user-attachments/assets/a58848b0-c9a9-4c6f-a0aa-01c051dfb611"/>  |  <img src="https://github.com/user-attachments/assets/d39b871f-2554-4f71-b211-d06372f67ae9"/>  |
 <img width="2340" height="992" alt="image" src="https://github.com/user-attachments/assets/b494cd0d-5503-4b7d-8a6f-cb86adefc4e1" />
 
