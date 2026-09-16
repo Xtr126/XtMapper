@@ -35,6 +35,7 @@ public class InputService implements IInputInterface {
     private final int currentPointerMode;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
+    private boolean supportsAbsEvents = false;
 
     public InputService(KeymapProfile profile,
                         KeymapConfig keymapConfig,
@@ -249,6 +250,7 @@ public class InputService implements IInputInterface {
         int value = Integer.parseInt(input_event[3]);
         switch (input_event[2]) {
             case "ABS_X":
+                supportsAbsEvents = true;
                 if (!mouseEventHandler.mouseAimActive)
                     mouseEventHandler.evAbsX(value);
                 break;
@@ -269,11 +271,11 @@ public class InputService implements IInputInterface {
                 mouseEventHandler.handleEvent(BTN_MIDDLE, value);
                 break;
             case "REL_X":
-                if (mouseEventHandler.mouseAimActive)
+                if (mouseEventHandler.mouseAimActive || !supportsAbsEvents)
                     mouseEventHandler.handleEvent(REL_X, value);
                 break;
             case "REL_Y":
-                if (mouseEventHandler.mouseAimActive)
+                if (mouseEventHandler.mouseAimActive || !supportsAbsEvents)
                     mouseEventHandler.handleEvent(REL_Y, value);
                 break;
         }
