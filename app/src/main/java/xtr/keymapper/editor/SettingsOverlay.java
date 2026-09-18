@@ -265,6 +265,7 @@ public class SettingsOverlay {
             }
         } else if (startMode == EditorUI.START_SETTINGS) {
             binding.buttonAdd.setIconResource(R.drawable.ic_baseline_done_36);
+            binding.catalog.setVisibility(View.GONE);
         }
 
     }
