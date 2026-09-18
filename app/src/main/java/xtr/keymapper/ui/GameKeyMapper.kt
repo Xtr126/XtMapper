@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyListScope
 import xtr.keymapper.activity.MainActivity
 import android.content.pm.PackageManager
+import android.provider.Settings
 import android.view.InputDevice
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.res.painterResource
@@ -30,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import xtr.keymapper.keymap.KeymapProfiles
 
 // ============ THEME COLORS ============
 
@@ -116,9 +118,10 @@ private fun KeymapperApp(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(KeymapperTheme.Background)
+                .background(KeymapperTheme.Background),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.widthIn(max = 500.dp).fillMaxHeight()) {
 
                 // Full-width top bar
                 Surface(
@@ -215,7 +218,7 @@ object GameKeyMapperBridge {
 }
 
 private fun createComposeState(activity: MainActivity): AppState {
-    val keymapProfiles = xtr.keymapper.keymap.KeymapProfiles(activity)
+    val keymapProfiles = KeymapProfiles(activity)
     val profiles = mutableListOf<GameProfile>()
 
     keymapProfiles.getAllProfiles().forEach { (profileName, profile) ->
@@ -253,7 +256,7 @@ private fun createComposeState(activity: MainActivity): AppState {
     return AppState(
         isServiceActive = activity.isComposeServiceActive(),
         hasAccessibilityPermission = true,
-        hasOverlayPermission = android.provider.Settings.canDrawOverlays(activity),
+        hasOverlayPermission = Settings.canDrawOverlays(activity),
         connectedDevices = loadComposeDevices(),
         profiles = profiles
     )
