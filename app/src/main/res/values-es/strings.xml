@@ -132,4 +132,5 @@
     <string name="error_save_failed">Error al guardar</string>
     <string name="msg_profiles_imported">Perfiles importados con éxito</string>
     <string name="error_import_failed">Error al importar</string>
+    <string name="share">Compartir</string>
 </resources>

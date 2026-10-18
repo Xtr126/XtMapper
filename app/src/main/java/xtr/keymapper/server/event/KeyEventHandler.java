@@ -199,7 +199,7 @@ public class KeyEventHandler {
         else {
             Camera camera = mInput.getKeymapProfile().camera;
             if (camera != null && keycode.length() == 5) {
-                if (keycode.charAt(4) == camera.triggerKeyCode) {
+                if (keycode.equals(camera.triggerKeyCode)) {
                     // If not toggle then hold down key to move camera
                     if (camera.toggle && action == UP) return;
                     mInput.getMouseEventHandler().triggerCamera();

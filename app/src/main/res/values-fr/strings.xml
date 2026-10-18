@@ -126,4 +126,5 @@
     <string name="error_save_failed">Échec de l\'enregistrement</string>
     <string name="msg_profiles_imported">Profils importés avec succès</string>
     <string name="error_import_failed">Échec de l\'importation</string>
+    <string name="share">Partager</string>
 </resources>

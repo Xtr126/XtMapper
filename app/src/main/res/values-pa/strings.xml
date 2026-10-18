@@ -117,4 +117,5 @@
     <string name="error_save_failed">ਸੇਵ ਕਰਨਾ ਅਸਫਲ ਰਿਹਾ</string>
     <string name="msg_profiles_imported">ਪ੍ਰੋਫਾਈਲ ਸਫਲਤਾਪੂਰਵਕ ਇੰਪੋਰਟ ਕੀਤੇ ਗਏ</string>
     <string name="error_import_failed">ਇੰਪੋਰਟ ਅਸਫਲ ਰਿਹਾ</string>
+    <string name="share">ਸਾਂਝਾ ਕਰੋ</string>
 </resources>

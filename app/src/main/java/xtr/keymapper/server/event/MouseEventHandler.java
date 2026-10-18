@@ -53,8 +53,7 @@ public class MouseEventHandler {
     float scroll_speed_multiplier;
     private MousePinchZoom pinchZoom;
     private MouseWheelZoom scrollZoomHandler;
-    private final int pointerId = PointerId.pid1.id;
-    private final int pointerIdRightClick = PointerId.pid3.id;
+    public static final int pointerId = PointerId.pid1.id;
     private MouseAimHandler mouseAimHandler;
     private MouseAimHandler mouseCameraHandler;
     private Key rightClick;
@@ -84,6 +83,7 @@ public class MouseEventHandler {
             if (mouseAimActive) {
                 stopMouseWalk();
                 instance.resetPointer();
+                // Notifying user that shooting mode was activated
                 try {
                     mInput.getCallback().alertMouseAimActivated();
                 } catch (RemoteException e) {
@@ -170,6 +170,7 @@ public class MouseEventHandler {
         if (mouseAimOrCameraHandler != null && mouseAimActive) {
             triggerMouseAimOrCamera(mouseAimOrCameraHandler);
         }
+        // Makes sure that pointer is up before starting
         if (mouseWalkHandler != null) {
             mouseWalkHandler.resetPointer();
             mouseWalkActive = true;
@@ -183,20 +184,23 @@ public class MouseEventHandler {
         }
     }
 
-    private void handleRightClick(int value) {
+    private boolean handleRightClick(int value) {
         if (value == 1) {
             if (mouseWalkHandler != null) {
-                if (mouseWalkActive) {
-                    stopMouseWalk();
-                } else {
-                    startMouseWalk();
-                }
-            } else if (mInput.getKeymapConfig().rightClickMouseAim) {
-                triggerMouseAim();
+                if (mouseWalkActive) stopMouseWalk();
+                else startMouseWalk();
+                return true;
             }
-        } else if (rightClick != null) {
-            mInput.injectEvent(rightClick.x, rightClick.y, value, pointerIdRightClick);
+            else if (mInput.getKeymapConfig().rightClickMouseAim)
+                return triggerMouseAim();
+            else if (Objects.equals(mInput.getKeymapConfig().mouseAimShortcutKey, "KEY_RMB"))
+                return triggerMouseAim();
         }
+        else if (rightClick != null) {
+            mInput.injectEvent(rightClick.x, rightClick.y, value, pointerId);
+            return true;
+        }
+        return false;
     }
 
     public void handleEvent(int code, int value) {
@@ -234,13 +238,19 @@ public class MouseEventHandler {
                 }
                 break;
             case BTN_RIGHT:
-                handleRightClick(value);
+                if (!handleRightClick(value)) {
+                    mInput.injectRightClickEvent(x1, y1, pointerId, value == 1);
+                }
                 break;
             case BTN_EXTRA:
             case BTN_SIDE:
             case BTN_MIDDLE:
                 if (value == 1 && Objects.equals(mInput.getKeymapConfig().mouseAimShortcutKey, "KEY_MMB")) {
                     triggerMouseAim();
+                } else if (value == 1 && Objects.equals(mInput.getKeymapProfile().camera.triggerKeyCode, "KEY_MMB")) {
+                    triggerCamera();
+                } else {
+                    mInput.injectMiddleClickEvent(x1, y1, pointerId, value == 1);
                 }
                 break;
             case REL_WHEEL:

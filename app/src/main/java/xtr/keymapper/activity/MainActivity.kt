@@ -8,7 +8,6 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager.PERMISSION_GRANTED
-import android.content.res.ColorStateList
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
@@ -24,23 +23,25 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.topjohnwu.superuser.Shell
 import rikka.shizuku.Shizuku
 import xtr.keymapper.BuildConfig
+import xtr.keymapper.GameKeyMapperBridge
 import xtr.keymapper.IRemoteService
 import xtr.keymapper.R
 import xtr.keymapper.Server
 import xtr.keymapper.TouchPointer
-import xtr.keymapper.databinding.ActivityMainBinding
+import xtr.keymapper.databinding.TextFieldBinding
 import xtr.keymapper.editor.EditorActivity
 import xtr.keymapper.editor.EditorUI
 import xtr.keymapper.keymap.KeymapConfig
-import xtr.keymapper.profiles.ProfilesViewAdapter
+import xtr.keymapper.keymap.KeymapProfiles
+import xtr.keymapper.profiles.ProfileSelector
+import xtr.keymapper.profiles.ProfilesApps
 import xtr.keymapper.server.RemoteServiceHelper
 
-class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCallback {
+class MainActivity : AppCompatActivity() {
 
-    lateinit var binding: ActivityMainBinding
     var pointerOverlay: TouchPointer? = null
-    private var defaultTint: ColorStateList? = null
     private var selectedProfileName: String? = null
+    private var composeServiceActive = false
     private var isServiceBound = false
     private var displaySelector: DisplaySelector? = null
     private var startedFromShell: Boolean? = null
@@ -49,24 +50,19 @@ class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCal
         const val SHELL_INIT = "shell"
 
         init {
-            // SoufianoDev: Set Settings Before Main Shell Creation
+            // Set settings before the main shell can be created
             Shell.enableVerboseLogging = BuildConfig.DEBUG
             Shell.setDefaultBuilder(
-                    Shell.Builder.create()
-                            .setFlags(Shell.FLAG_REDIRECT_STDERR)
-                            .setTimeout(10)
+                Shell.Builder.create()
+                    .setFlags(Shell.FLAG_REDIRECT_STDERR)
+                    .setTimeout(10)
             )
         }
 
-        // SoufianoDev: fix checkOverlayPermission(android.content.@org.jetbrains.annotations.NotNull Context)' has private access in 'xtr.keymapper.activity.MainActivity'
-        @JvmStatic
         fun checkOverlayPermission(context: Context) {
             if (!Settings.canDrawOverlays(context)) {
-                // SoufianoDev: Redirect User To Device Overlay Settings
                 val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                if (context !is Activity) {
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
+                if (context !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
             }
         }
@@ -74,15 +70,16 @@ class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCal
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        // SoufianoDev: Handle Intent Data For Shell Start
         if (startedFromShell == null) startedFromShell = isStartedWithShell()
+
+        GameKeyMapperBridge.installGameKeyMapperContent(this)
 
         val keymapConfig = KeymapConfig(this)
 
-        // SoufianoDev: Reset Shizuku If Started From Shell To Prevent Crashes
+        /*
+         * If user has enabled "Use Shizuku" but this activity was started from shell (waydroid or adb)
+         * Then reset "Use Shizuku" setting to false since it crashes the app
+         */
         if (startedFromShell == true && keymapConfig.useShizuku) {
             keymapConfig.useShizuku = false
             keymapConfig.applySharedPrefs()
@@ -91,13 +88,12 @@ class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCal
         RemoteServiceHelper.useShizuku = keymapConfig.useShizuku
         Server.setupServer(this, mCallback)
 
-        // SoufianoDev: Conditional Activation Prompts
-        if (startedFromShell == false) {
-            handleActivationFlow(keymapConfig)
-        }
+        if (startedFromShell == false) handleActivationFlow(keymapConfig)
 
         displaySelector = DisplaySelector(this).register { startPointer() }
-        setupButtons()
+        RemoteServiceHelper.runIfActive(this) {
+            runOnUiThread { composeServiceActive = true }
+        }
 
         if (startedFromShell == true && intent.getStringExtra("data") == SHELL_INIT) {
             startPointer()
@@ -107,13 +103,13 @@ class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCal
     private fun handleActivationFlow(keymapConfig: KeymapConfig) {
         if (!RemoteServiceHelper.useShizuku) {
             Shell.getShell {
-                // SoufianoDev: Prompt To Enable Shizuku If App Detected
+                // Ask user to enable shizuku if shizuku app detected
                 if (Shizuku.pingBinder() || packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api") != null) {
                     showAlertDialog(R.string.detected_shizuku, R.string.use_shizuku_for_activation, { _, _ ->
-                            RemoteServiceHelper.useShizuku = true
-                            keymapConfig.useShizuku = true
-                            keymapConfig.applySharedPrefs()
-                            alertShizukuNotAuthorized()
+                        RemoteServiceHelper.useShizuku = true
+                        keymapConfig.useShizuku = true
+                        keymapConfig.applySharedPrefs()
+                        alertShizukuNotAuthorized()
                     }, R.string.ok)
                 } else if (Shell.isAppGrantedRoot() == false) {
                     alertRootAccessNotFound()
@@ -127,74 +123,53 @@ class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCal
         }
     }
 
+    /**
+     * Check if this activity was started with am shell command
+     * Also handles crash report from server and shows a dialog with crash log
+     * @return true if this activity was started with am shell command
+     */
     private fun isStartedWithShell(): Boolean {
         val data = intent.getStringExtra("data") ?: return false
         if (data != SHELL_INIT) {
-            // SoufianoDev: Display Crash Report From Server
-            MaterialAlertDialogBuilder(this)
-                    .setTitle("Server crashed")
-                    .setMessage(data)
-                    .setPositiveButton(R.string.ok, null)
-                    .show()
+            // Crash report
+            MaterialAlertDialogBuilder(this).setTitle("Server crashed")
+                .setMessage(data)
+                .setPositiveButton(R.string.ok, null)
+                .show()
         }
         return true
     }
 
-    private fun setupButtons() {
-        with(binding.controls) {
-            defaultTint = launchApp.backgroundTintList
-            launchApp.setOnClickListener { launchApp() }
-            startPointer.setOnClickListener { startPointer() }
-            startEditor.setOnClickListener { startEditor() }
-            configButton.setOnClickListener { launchSettings() }
-            aboutButton.setOnClickListener {
-                startActivity(Intent(this@MainActivity, InfoActivity::class.java))
-            }
-            importExportButton.setOnClickListener {
-                startActivity(Intent(this@MainActivity, ImportExportActivity::class.java))
-            }
-        }
-
-        RemoteServiceHelper.runIfActive(this) {
-            runOnUiThread { setButtonState(false) }
-        }
-    }
-
     private fun launchSettings() {
+        val context: Context = this
         val remoteServiceCallback = object : RemoteServiceHelper.RootRemoteServiceCallback {
-            private var editorUi: EditorUI? = EditorUI(this@MainActivity, { editorUi = null }, null, EditorUI.START_SETTINGS)
+            var editorUi: EditorUI? = EditorUI(context, { editorUi = null }, null, EditorUI.START_SETTINGS, null)
 
             override fun onConnection(remoteService: IRemoteService?) {
-                remoteService?.let { service ->
-                        editorUi?.let { ui ->
-                    try {
-                        ui.registerOnKeyEventListener(service)
-                    } catch (e: RemoteException) {
-                        Log.e("MainActivity", e.message ?: "Remote Error", e)
-                        ui.unregisterOnKeyEventListener()
-                    }
+                if (remoteService != null && editorUi != null) try {
+                    editorUi!!.registerOnKeyEventListener(remoteService)
+                } catch (e: RemoteException) {
+                    Log.e("MainActivity", e.message, e)
+                    editorUi!!.unregisterOnKeyEventListener()
                 }
-                }
-            }
-
-            init {
-                editorUi?.openSettings()
             }
         }
-        RemoteServiceHelper.getInstance(this, remoteServiceCallback)
+        remoteServiceCallback.editorUi?.openSettings()
+        RemoteServiceHelper.getInstance(context, remoteServiceCallback)
     }
 
     private fun launchApp() {
         if (selectedProfileName == null) {
             showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null, R.string.ok)
         } else {
-            if (isServiceBound) pointerOverlay?.launchProfile(selectedProfileName!!)
+            if (isServiceBound) pointerOverlay?.launchProfile(selectedProfileName)
             else startPointer()
         }
     }
 
     fun startPointer() {
-        val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val displayManager = getSystemService(DisplayManager::class.java)
+
         if (displayManager.displays.size > 1) {
             displaySelector?.launch()
         } else {
@@ -202,43 +177,30 @@ class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCal
         }
     }
 
-    private fun startPointer(displayId: Int?): Any? {
-            checkOverlayPermission(this)
-
-    // SoufianoDev: Start Service If Draw Overlay Permission Granted
-    if (Settings.canDrawOverlays(this)) {
-        val intent = Intent(this, TouchPointer::class.java).apply {
-            putExtra(EditorActivity.PROFILE_NAME, selectedProfileName)
-            displayId?.let { putExtra(TouchPointer.DISPLAY_ID, it) }
+    private fun startPointer(displayId: Int?) {
+        checkOverlayPermission(this)
+        // Start service with selected profile if display on top permission is granted
+        if (Settings.canDrawOverlays(this)) {
+            val intent = Intent(this, TouchPointer::class.java).apply {
+                putExtra(EditorActivity.PROFILE_NAME, selectedProfileName)
+                if (displayId != null) putExtra(TouchPointer.DISPLAY_ID, displayId)
+            }
+            isServiceBound = bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            ContextCompat.startForegroundService(this, intent)
+            setButtonState(false)
+            requestNotificationPermission()
         }
-        isServiceBound = bindService(intent, connection, BIND_AUTO_CREATE)
-        ContextCompat.startForegroundService(this, intent)
-        setButtonState(false)
-        requestNotificationPermission()
-    }
-
-    if (RemoteServiceHelper.useShizuku) {
-        if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)
-            alertShizukuNotAuthorized()
-    } else if (Shell.isAppGrantedRoot() == false && startedFromShell == false) {
-        alertRootAccessAndExit()
-    }
-
-    return null
+        if (RemoteServiceHelper.useShizuku) {
+            if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)
+                alertShizukuNotAuthorized()
+        } else if (Shell.isAppGrantedRoot() == false) {
+            // No need to alert about root access if started from shell
+            if (startedFromShell == false) alertRootAccessAndExit()
+        }
     }
 
     private fun setButtonState(start: Boolean) {
-        binding.controls.startPointer.apply {
-            if (start) {
-                setText(R.string.start)
-                setOnClickListener { startPointer() }
-                backgroundTintList = defaultTint
-            } else {
-                setText(R.string.stop)
-                setOnClickListener { stopPointer() }
-                backgroundTintList = ColorStateList.valueOf(getColor(R.color.purple_700))
-            }
-        }
+        composeServiceActive = !start
     }
 
     fun stopPointer() {
@@ -260,35 +222,35 @@ class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCal
         if (selectedProfileName == null) {
             showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null, R.string.ok)
         } else {
-            val intent = Intent(this, EditorActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-                putExtra(EditorActivity.PROFILE_NAME, selectedProfileName)
-            }
+            val intent = Intent(this, EditorActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfileName)
             startActivity(intent)
         }
     }
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(POST_NOTIFICATIONS) != PERMISSION_GRANTED) {
+            if (checkSelfPermission(POST_NOTIFICATIONS) != PERMISSION_GRANTED)
                 requestPermissions(arrayOf(POST_NOTIFICATIONS), 0)
-            }
         }
     }
 
     fun alertRootAccessNotFound() {
         showAlertDialog(R.string.root_not_found_title, R.string.root_not_found_message, { _, _ ->
-                packageManager.getLaunchIntentForPackage("me.weishu.kernelsu")?.let {
-                startActivity(it)
+            val launchIntent = packageManager.getLaunchIntentForPackage("me.weishu.kernelsu")
+            if (launchIntent != null) {
+                startActivity(launchIntent)
                 System.exit(0)
-        }
+            }
         }, R.string.ok)
     }
 
     fun alertRootAccessAndExit() {
         showAlertDialog(R.string.root_no_privileges_title, R.string.root_no_privileges_message, { _, _ ->
-                finishAffinity()
-                System.exit(0)
+            finishAffinity()
+            System.exit(0)
         }, R.string.ok)
     }
 
@@ -302,19 +264,119 @@ class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCal
     }
 
     private fun launchShizukuAndExit() {
-        packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")?.let {
-            startActivity(it)
+        val launchIntent = packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+        if (launchIntent != null) {
+            startActivity(launchIntent)
             System.exit(0)
         }
     }
 
     private fun showAlertDialog(@StringRes titleId: Int, @StringRes messageId: Int, listener: DialogInterface.OnClickListener?, @StringRes ok: Int) {
         val builder = MaterialAlertDialogBuilder(this)
-                .setTitle(titleId)
-                .setMessage(messageId)
-                .setPositiveButton(ok, listener)
-                .setNegativeButton(R.string.cancel, null)
-        runOnUiThread { builder.show() }
+            .setTitle(titleId)
+            .setMessage(messageId)
+            .setPositiveButton(ok, listener)
+            .setNegativeButton(R.string.cancel, null)
+        runOnUiThread { builder.create().show() }
+    }
+
+    // ============ COMPOSE UI BRIDGE ============
+
+    fun isComposeServiceActive(): Boolean = composeServiceActive
+
+    fun selectedProfileNameForCompose(): String? = selectedProfileName
+
+    fun toggleServiceFromCompose() {
+        if (composeServiceActive) stopPointer() else startPointer()
+    }
+
+    fun fixPermissionFromCompose() {
+        checkOverlayPermission(this)
+    }
+
+    fun testInputFromCompose() {
+        Toast.makeText(this, "Input tester is not exposed by the legacy implementation.", Toast.LENGTH_SHORT).show()
+    }
+
+    fun selectProfileFromCompose(profileName: String) {
+        onProfileSelected(profileName)
+    }
+
+    fun launchAppFromCompose() {
+        launchApp()
+    }
+
+    fun startEditorFromCompose() {
+        startEditor()
+    }
+
+    fun renameProfileFromCompose(profileName: String, onComplete: Runnable?) {
+        val context: Context = this
+        val field = TextFieldBinding.inflate(layoutInflater)
+        field.root.hint = getString(R.string.profile_name)
+        field.editText.setText(profileName)
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.dialog_alert_add_profile)
+            .setView(field.root)
+            .setPositiveButton(R.string.ok) { _, _ ->
+                val renamed = field.editText.text.toString()
+                KeymapProfiles(context).renameProfile(profileName, renamed)
+                if (onComplete != null) runOnUiThread(onComplete)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    fun changeProfileAppFromCompose(profileName: String, onComplete: Runnable?) {
+        val context: Context = this
+        val builder = MaterialAlertDialogBuilder(context)
+        ProfilesApps.asyncLoadAppsAndThen(context, builder) { p, adapter, loadingDialog ->
+            p.binding.appsGrid.adapter = adapter
+            loadingDialog.dismiss()
+
+            val dialog = builder.setView(p.appsView).show()
+            p.setListener { packageName ->
+                KeymapProfiles(context).setProfilePackageName(profileName, packageName)
+                p.onDestroyView()
+                dialog.dismiss()
+                if (onComplete != null) runOnUiThread(onComplete)
+            }
+        }
+    }
+
+    fun deleteProfileFromCompose(profileName: String?) {
+        KeymapProfiles(this).deleteProfile(profileName)
+        if (profileName != null && profileName == selectedProfileName) {
+            selectedProfileName = null
+        }
+    }
+
+    fun stopPointerFromCompose() {
+        stopPointer()
+    }
+
+    fun openHelpFromCompose() {
+        startActivity(Intent(this, InfoActivity::class.java))
+    }
+
+    fun createNewProfileFromCompose(onComplete: Runnable?) {
+        ProfileSelector.createNewProfile(this) { profileName ->
+            selectedProfileName = profileName
+            if (onComplete != null) runOnUiThread(onComplete)
+        }
+    }
+
+    fun openExportImportFromCompose() {
+        startActivity(Intent(this, ImportExportActivity::class.java))
+    }
+
+    fun toggleOverlayFromCompose() {
+        if (!Settings.canDrawOverlays(this)) checkOverlayPermission(this)
+    }
+
+    fun openSettingsFromCompose() {
+        launchSettings()
     }
 
     override fun onDestroy() {
@@ -322,17 +384,12 @@ class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCal
         unbindTouchPointer()
     }
 
-    override fun onProfileSelected(profileName: String) {
-        this.selectedProfileName = profileName
+    fun onProfileSelected(profileName: String) {
+        selectedProfileName = profileName
     }
 
-    interface Callback {
-        fun updateCmdView1(line: String)
-        fun stopPointer()
-    }
-
-    private val mCallback = object : Callback {
-        override fun updateCmdView1(line: String) {
+    private val mCallback = object : TouchPointer.MainActivityCallback {
+        override fun updateCmdView1(line: String?) {
             runOnUiThread { Toast.makeText(this@MainActivity, line, Toast.LENGTH_SHORT).show() }
         }
 
@@ -341,10 +398,11 @@ class MainActivity : AppCompatActivity(), ProfilesViewAdapter.ProfileSelectedCal
         }
     }
 
+    /** Defines callbacks for service binding, passed to bindService() */
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             isServiceBound = true
-            // SoufianoDev: Bind To Service And Cast IBinder To Access TouchPointer
+            // We've bound to Service, cast the IBinder and get TouchPointer instance
             val binder = service as TouchPointer.TouchPointerBinder
             pointerOverlay = binder.service.apply {
                 activityCallback = this@MainActivity.mCallback

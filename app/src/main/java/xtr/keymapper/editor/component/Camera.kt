@@ -10,7 +10,9 @@ import xtr.keymapper.databinding.CameraBinding
 import xtr.keymapper.databinding.CameraConfigBinding
 import xtr.keymapper.editor.EditorUiComponent
 import xtr.keymapper.editor.EditorUiComponentCallback
-import xtr.keymapper.editor.SettingsOverlay
+import xtr.keymapper.editor.onKeyboardKeyPress
+import xtr.keymapper.editor.onMouseClick
+import xtr.keymapper.editor.keyCodePrefix
 
 class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y: Float) :
     EditorUiComponent(callback, context, x, y) {
@@ -67,15 +69,14 @@ class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y:
             toggleSwitch.isChecked = currentCamera.toggle
             sliderXSensitivity.value = currentCamera.xSensitivity
             sliderYSensitivity.value = currentCamera.ySensitivity
-            key.setOnKeyListener { v, keyCode, event -> SettingsOverlay.onKey(v, keyCode, event) }
+            key.setOnKeyListener(::onKeyboardKeyPress)
+            key.setOnGenericMotionListener(::onMouseClick)
         }
 
         // SoufianoDev: Build And Configure Settings Dialog
         AlertDialog.Builder(context).apply {
             setView(binding.root)
             setPositiveButton(R.string.ok) { _, _ ->
-                val keyText = binding.key.text.toString()
-
                 // SoufianoDev: Save Updated Values Back To Camera Element
                 /* Note: The Conditional Check 'If (keyText.isEmpty())'
                    Is A Proactive Safety Measure To Prevent An 'IndexOutOfBoundsException'.
@@ -84,7 +85,7 @@ class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y:
                    And Robust User Input Handling.
                 */
                 currentCamera.apply {
-                    triggerKeyCode = if (keyText.isEmpty()) ' ' else keyText[0]
+                    triggerKeyCode = keyCodePrefix(binding.key)
                     toggle = binding.toggleSwitch.isChecked
                     xSensitivity = binding.sliderXSensitivity.value
                     ySensitivity = binding.sliderYSensitivity.value

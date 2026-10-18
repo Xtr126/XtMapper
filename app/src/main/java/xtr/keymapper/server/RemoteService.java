@@ -174,7 +174,7 @@ public class RemoteService extends IRemoteService.Stub {
             if (addNewDevices(data)) {
                 if (inputService != null) try {
                     if (isWaylandClient && data[0].contains("wl_pointer"))
-                        inputService.sendWaylandMouseEvent(data[1]);
+                        inputService.onWaylandMouseEvent(data[1]);
 
                     KeyEventHandler k = inputService.getKeyEventHandler();
                     if (!inputService.stopEvents) {

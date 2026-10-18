@@ -131,4 +131,5 @@
     <string name="error_save_failed">Save Failed</string>
     <string name="msg_profiles_imported">Profiles Imported Successfully</string>
     <string name="error_import_failed">Import Failed</string>
+    <string name="share">Share</string>
 </resources>

@@ -89,10 +89,9 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
                 width = 0f
                 height = 0f
                 if (which == 0) {
-                    android.widget.Toast.makeText(context, "DEBUG: Limit to area → creating ResizableArea...", android.widget.Toast.LENGTH_SHORT).show()
                     limitedBounds = true
-                    ResizableArea()
-                    android.widget.Toast.makeText(context, "DEBUG: ResizableArea() called", android.widget.Toast.LENGTH_SHORT).show()
+                    // Delay for 100ms to skip layout changes
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ ResizableArea() }, 100)
                 } else {
                     android.widget.Toast.makeText(context, "DEBUG: Allow pointer out → limitedBounds = false", android.widget.Toast.LENGTH_SHORT).show()
                     limitedBounds = false

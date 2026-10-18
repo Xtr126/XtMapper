@@ -118,4 +118,5 @@
     <string name="error_save_failed">فشل الحفظ</string>
     <string name="msg_profiles_imported">تم استيراد الملفات الشخصية بنجاح</string>
     <string name="error_import_failed">فشل الاستيراد</string>
+    <string name="share">مشاركة</string>
 </resources>

@@ -9,6 +9,10 @@ import xtr.keymapper.server.event.MouseEventHandler;
 public interface IInputInterface {
     void injectEvent(float x, float y, int action, int pointerId);
     void injectHoverEvent(float x, float y, int pointerId);
+
+    void injectRightClickEvent(float x, float y, int pointerId, boolean pressed);
+    void injectMiddleClickEvent(float x, float y, int pointerId, boolean pressed);
+
     void injectScroll(float x, float y, float value);
     void pauseResumeKeymap();
     KeymapConfig getKeymapConfig();
@@ -19,5 +23,6 @@ public interface IInputInterface {
     void moveCursorX(int x);
     void moveCursorY(int y);
     void hideCursor();
+
     void showCursor();
 }

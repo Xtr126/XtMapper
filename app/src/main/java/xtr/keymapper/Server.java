@@ -14,7 +14,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.CharBuffer;
 
-import xtr.keymapper.activity.MainActivity;
 import xtr.keymapper.server.RemoteServiceShell;
 
 public class Server {
@@ -52,7 +51,7 @@ public class Server {
         return linesToWrite;
     }
 
-    public static void setupServer(Context context, MainActivity.Callback mCallback) {
+    public static void setupServer(Context context, TouchPointer.MainActivityCallback mCallback) {
         File script = new File(context.getExternalFilesDir(null), "xtMapper.sh");
         try {
             PackageManager pm = context.getPackageManager();

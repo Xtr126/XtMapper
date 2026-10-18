@@ -1,5 +1,6 @@
 package xtr.keymapper.server;
 
+import static xtr.keymapper.InputEventCodes.BTN_MIDDLE;
 import static xtr.keymapper.InputEventCodes.BTN_MOUSE;
 import static xtr.keymapper.InputEventCodes.BTN_RIGHT;
 import static xtr.keymapper.InputEventCodes.REL_WHEEL;
@@ -34,6 +35,7 @@ public class InputService implements IInputInterface {
     private final int currentPointerMode;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
+    private boolean supportsAbsEvents = false;
 
     public InputService(KeymapProfile profile,
                         KeymapConfig keymapConfig,
@@ -92,6 +94,16 @@ public class InputService implements IInputInterface {
     public void injectHoverEvent(float x, float y, int pointerId) {
         if(input.noPointersDown() && currentPointerMode == KeymapConfig.POINTER_OVERLAY)
             input.injectTouch(MotionEvent.ACTION_HOVER_MOVE, pointerId, 1.0f, x, y);
+    }
+
+    @Override
+    public void injectRightClickEvent(float x, float y, int pointerId, boolean pressed) {
+        input.injectMouseClick(pointerId, x, y, pressed, MotionEvent.BUTTON_SECONDARY);
+    }
+
+    @Override
+    public void injectMiddleClickEvent(float x, float y, int pointerId, boolean pressed) {
+        input.injectMouseClick(pointerId, x, y, pressed, MotionEvent.BUTTON_TERTIARY);
     }
 
     public void injectScroll(float x, float y, float value) {
@@ -233,11 +245,12 @@ public class InputService implements IInputInterface {
         if (!stopEvents) mouseEventHandler.handleEvent(code, value);
     }
 
-    public void sendWaylandMouseEvent(String line) {
+    public void onWaylandMouseEvent(String line) {
         String[] input_event = line.split("\\s+");
         int value = Integer.parseInt(input_event[3]);
         switch (input_event[2]) {
             case "ABS_X":
+                supportsAbsEvents = true;
                 if (!mouseEventHandler.mouseAimActive)
                     mouseEventHandler.evAbsX(value);
                 break;
@@ -254,12 +267,15 @@ public class InputService implements IInputInterface {
             case "BTN_RIGHT":
                 mouseEventHandler.handleEvent(BTN_RIGHT, value);
                 break;
+            case "BTN_MIDDLE":
+                mouseEventHandler.handleEvent(BTN_MIDDLE, value);
+                break;
             case "REL_X":
-                if (mouseEventHandler.mouseAimActive)
+                if (mouseEventHandler.mouseAimActive || !supportsAbsEvents)
                     mouseEventHandler.handleEvent(REL_X, value);
                 break;
             case "REL_Y":
-                if (mouseEventHandler.mouseAimActive)
+                if (mouseEventHandler.mouseAimActive || !supportsAbsEvents)
                     mouseEventHandler.handleEvent(REL_Y, value);
                 break;
         }

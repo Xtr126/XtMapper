@@ -132,4 +132,5 @@
     <string name="error_save_failed">Ошибка сохранения</string>
     <string name="msg_profiles_imported">Профили успешно импортированы</string>
     <string name="error_import_failed">Импорт не удался</string>
+    <string name="share">Поделиться</string>
 </resources>

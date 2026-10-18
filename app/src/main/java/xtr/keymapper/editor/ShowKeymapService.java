@@ -36,7 +36,7 @@ public class ShowKeymapService extends Service {
         }
         KeymapConfig keymapConfig = new KeymapConfig(this);
         Context context = new ContextThemeWrapper(this, R.style.Theme_XtMapper);
-        editorUi = new EditorUI(context, editorCallback, selectedProfile, EditorUI.SHOW_KEYMAP_ONLY);
+        editorUi = new EditorUI(context, editorCallback, selectedProfile, EditorUI.SHOW_KEYMAP_ONLY, null);
         editorUi.loadKeymapAfterView();
         editorUi.showControls(keymapConfig.showControlsOpacity);
         return super.onStartCommand(intent, flags, startId);

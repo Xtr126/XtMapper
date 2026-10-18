@@ -1,7 +1,6 @@
 package xtr.keymapper.keymap.element;
 
 import android.os.Parcel;
-import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
 
@@ -10,7 +9,7 @@ import xtr.keymapper.keymap.KeymapProfileElement;
 public class Camera extends KeymapProfileElement {
     public float x;
     public float y;
-    public char triggerKeyCode = ' ';
+    public String triggerKeyCode = "KEY_ALT";
     public static final String TAG = "CAMERA";
     public boolean toggle = true;
     public float xSensitivity = 1f;
@@ -26,13 +25,13 @@ public class Camera extends KeymapProfileElement {
         xSensitivity = Float.parseFloat(data[3]);
         ySensitivity = Float.parseFloat(data[4]);
         toggle = Integer.parseInt(data[5]) != 0;
-        if (data[6].length() == 5) triggerKeyCode = data[6].charAt(4);
+        if (data[6].length() >= 5) triggerKeyCode = data[6];
     }
 
     protected Camera(Parcel in) {
         x = in.readFloat();
         y = in.readFloat();
-        triggerKeyCode = (char) in.readInt();
+        triggerKeyCode = in.readString();
         toggle = in.readByte() != 0;
         xSensitivity = in.readFloat();
         ySensitivity = in.readFloat();
@@ -76,7 +75,7 @@ public class Camera extends KeymapProfileElement {
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeFloat(x);
         dest.writeFloat(y);
-        dest.writeInt(triggerKeyCode);
+        dest.writeString(triggerKeyCode);
         dest.writeByte((byte) (toggle ? 1 : 0));
         dest.writeFloat(xSensitivity);
         dest.writeFloat(ySensitivity);
