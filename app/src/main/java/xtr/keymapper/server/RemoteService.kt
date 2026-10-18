@@ -47,6 +47,16 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     internal var context: Context = context
     internal var startedFromShell = false
 
+    // shortcut: single-user check; multi-user/work-profile installs have a different uid per user
+    private val appUid: Int by lazy {
+        context.packageManager.getPackageUid(BuildConfig.APPLICATION_ID, 0)
+    }
+
+    private fun enforceCaller() {
+        if (Binder.getCallingUid() != appUid)
+            throw SecurityException("XtMapper service access denied")
+    }
+
     init {
         loadLibraries()
         init()
@@ -226,6 +236,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         screenHeight: Int,
         displayId: Int
     ) {
+        enforceCaller()
         cb.asBinder().linkToDeath(mStartServerDeathRecipient, 0)
         mHandler.post {
             val service = inputService
@@ -273,14 +284,26 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     override fun destroy() {
+        enforceCaller()
         stopServer(true)
     }
 
     override fun stopServer() {
+        enforceCaller()
         mHandler.post { stopServer(true) }
     }
 
     private fun stopServer(exitProcess: Boolean) {
+        // Restore enforcing only if this app actually relaxed SELinux (shell entry point);
+        // startedFromShell is also set by the system-app path, which never changes SELinux
+        if (exitProcess && selinuxRelaxed) {
+            selinuxRelaxed = false
+            try {
+                ProcessBuilder("setenforce", "1").start()
+            } catch (e: Exception) {
+                Log.e(TAG, e.message, e)
+            }
+        }
         val service = inputService
         if (service != null) try {
             service.callback.disablePointer()
@@ -308,21 +331,25 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
 
     @Throws(RemoteException::class)
     override fun registerOnKeyEventListener(l: OnKeyEventListener) {
+        enforceCaller()
         l.asBinder().linkToDeath(mKeyEventListenerDeathRecipient, 0)
         mOnKeyEventListener = l
     }
 
     override fun unregisterOnKeyEventListener(l: OnKeyEventListener?) {
+        enforceCaller()
         l?.asBinder()?.unlinkToDeath(mKeyEventListenerDeathRecipient, 0)
         mOnKeyEventListener = null
     }
 
     override fun registerActivityObserver(callback: ActivityObserver) {
+        enforceCaller()
         activityObserverService?.stop()
         activityObserverService = ActivityObserverService(callback)
     }
 
     override fun unregisterActivityObserver(callback: ActivityObserver) {
+        enforceCaller()
         activityObserverService?.stop()
         activityObserverService = null
     }
@@ -331,12 +358,14 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
      * Used to temporary stop the keymapping.
      */
     override fun pauseMouse() {
+        enforceCaller()
         val service = inputService
         if (service != null)
             if (!service.stopEvents) service.pauseResumeKeymap()
     }
 
     override fun resumeMouse() {
+        enforceCaller()
         val service = inputService
         if (service != null)
             if (service.stopEvents)
@@ -347,15 +376,20 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
      * Used to refresh by requesting new keymap from the user app
      */
     override fun reloadKeymap() {
+        enforceCaller()
         inputService?.reloadKeymap()
     }
 
     override fun isActive(): Boolean {
+        enforceCaller()
         return inputService != null
     }
 
     companion object {
         const val TAG = "xtmapper-server"
+
+        // shortcut: process-wide flag; only meaningful while this server process lives (per-process state by design)
+        internal var selinuxRelaxed = false
 
         fun loadLibraries() {
             System.loadLibrary("mouse_read")

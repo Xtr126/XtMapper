@@ -42,6 +42,13 @@ object RemoteServiceShell {
                 }
             }
             ProcessBuilder("setenforce", "0").inheritIO().start()
+            RemoteService.selinuxRelaxed = true
+            // Hooks run only on System.exit (crash handler, stopServer exit) — Android does NOT
+            // run them when the process is killed with SIGTERM (e.g. pkill); a clean stop is
+            // restored by RemoteService.stopServer instead
+            Runtime.getRuntime().addShutdownHook(
+                Thread { ProcessBuilder("setenforce", "1").start() }
+            )
             ServiceManager.addService("xtmapper", mService)
 
             ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start()
