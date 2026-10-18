@@ -24,5 +24,9 @@ public abstract class EditorUiComponent {
         return mCallback;
     }
 
-    public abstract String getDataLine();
+    /**
+     * serializes component state
+     * @return the line to be included in the keymap
+     */
+    public abstract String toConfigLine();
 }

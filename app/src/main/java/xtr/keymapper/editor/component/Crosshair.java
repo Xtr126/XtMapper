@@ -57,7 +57,7 @@ public class Crosshair extends EditorUiComponent {
     }
 
     @Override
-    public String getDataLine() {
+    public String toConfigLine() {
         // Get x and y coordinates from view
         KeymapProfile profile = getCallback().getProfile();
         profile.mouseAimConfig.setCenterXY(crosshairView);

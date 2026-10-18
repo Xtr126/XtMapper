@@ -48,7 +48,7 @@ public class SwipeKey extends EditorUiComponent {
     }
 
     @Override
-    public String getDataLine() {
+    public String toConfigLine() {
         xtr.keymapper.keymap.element.SwipeKey swipeKey = new xtr.keymapper.keymap.element.SwipeKey();
         swipeKey.key1.code = swipeKeyView.button1.getText();
         swipeKey.key1.x = swipeKeyView.button1.getX();

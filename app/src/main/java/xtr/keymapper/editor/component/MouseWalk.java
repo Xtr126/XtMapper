@@ -33,7 +33,7 @@ public class MouseWalk extends EditorUiComponent {
     }
 
     @Override
-    public String getDataLine() {
+    public String toConfigLine() {
         // Create new instance for updating properties
         this.mouseWalk = new xtr.keymapper.keymap.element.MouseWalk(rootView);
         return xtr.keymapper.keymap.element.MouseWalk.TAG + " " +

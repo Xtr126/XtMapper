@@ -28,7 +28,7 @@ public class RightClick extends EditorUiComponent {
     }
 
     @Override
-    public String getDataLine() {
+    public String toConfigLine() {
         return MOUSE_RIGHT + " " + rightClick.getX() + " " + rightClick.getY();
     }
 

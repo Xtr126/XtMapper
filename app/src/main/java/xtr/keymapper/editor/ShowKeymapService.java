@@ -21,13 +21,13 @@ public class ShowKeymapService extends Service {
 
     @Override
     public void onDestroy() {
-        editorUi.hideView();
+        editorUi.closeEditor();
         super.onDestroy();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (editorUi != null) editorUi.hideView();
+        if (editorUi != null) editorUi.closeEditor();
 
         String selectedProfile = intent.getStringExtra(EditorActivity.PROFILE_NAME);
 
@@ -37,7 +37,7 @@ public class ShowKeymapService extends Service {
         KeymapConfig keymapConfig = new KeymapConfig(this);
         Context context = new ContextThemeWrapper(this, R.style.Theme_XtMapper);
         editorUi = new EditorUI(context, editorCallback, selectedProfile, EditorUI.SHOW_KEYMAP_ONLY, null);
-        editorUi.loadKeymapAfterView();
+        editorUi.loadKeymapAndObserveSizeChanges();
         editorUi.showControls(keymapConfig.showControlsOpacity);
         return super.onStartCommand(intent, flags, startId);
     }

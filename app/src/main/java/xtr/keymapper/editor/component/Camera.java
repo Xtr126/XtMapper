@@ -40,7 +40,7 @@ public class Camera extends EditorUiComponent {
     }
 
     @Override
-    public String getDataLine() {
+    public String toConfigLine() {
         xtr.keymapper.keymap.element.Camera camera = getCallback().getProfile().camera;
         camera.x = cameraView.getX();
         camera.y = cameraView.getY();

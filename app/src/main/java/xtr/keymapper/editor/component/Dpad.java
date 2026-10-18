@@ -50,7 +50,7 @@ public class Dpad extends EditorUiComponent {
     }
 
     @Override
-    public String getDataLine() {
+    public String toConfigLine() {
         // Create new dpad instance for updating properties
         if (dpad.keycodes.equals(DpadKeyCodes.ARROW_KEYS))
             this.dpad = new xtr.keymapper.keymap.element.Dpad(dpadView, DpadKeyCodes.ARROW_KEYS, xtr.keymapper.keymap.element.Dpad.TAG_ARROW_KEYS);

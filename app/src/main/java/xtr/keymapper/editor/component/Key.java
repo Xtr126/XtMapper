@@ -21,7 +21,7 @@ public class Key extends EditorUiComponent {
     }
 
     @Override
-    public String getDataLine() {
+    public String toConfigLine() {
         return floatingKey.getData();
     }
 

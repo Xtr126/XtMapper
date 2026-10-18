@@ -38,7 +38,7 @@ class EditorActivity : ComponentActivity() {
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
 
-        if (editor != null) editor!!.hideView()
+        if (editor != null) editor!!.closeEditor()
 
         setTheme(R.style.Theme_XtMapper)
 
@@ -101,7 +101,7 @@ class EditorActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (editor != null) editor!!.hideView()
+        if (editor != null) editor!!.closeEditor()
         editor = null
     }
 
