@@ -222,11 +222,6 @@ private fun createComposeState(activity: MainActivity): AppState {
     val profiles = mutableListOf<GameProfile>()
 
     keymapProfiles.getAllProfiles().forEach { (profileName, profile) ->
-        if (profileName == null) {
-            keymapProfiles.deleteProfile(null)
-            return@forEach
-        }
-
         val packageName = profile.packageName
         var appName = profileName
         var icon: Drawable? = null

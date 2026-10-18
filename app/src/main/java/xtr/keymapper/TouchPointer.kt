@@ -46,6 +46,7 @@ class TouchPointer : Service() {
     private var activityRemoteCallback = false
     private var mWindowManager: WindowManager? = null
     private var displayId = 0
+    private var displayListener: DisplayListener? = null
 
 
     interface MainActivityCallback {
@@ -120,7 +121,7 @@ class TouchPointer : Service() {
         val keymapProfile = KeymapProfiles(this).getProfile(selectedProfile, true)
         connectRemoteService(keymapProfile)
 
-        getSystemService(DisplayManager::class.java).registerDisplayListener(object :
+        if (displayListener == null) displayListener = object :
             DisplayListener {
             override fun onDisplayAdded(displayId: Int) {
             }
@@ -137,14 +138,19 @@ class TouchPointer : Service() {
                            keymap will be scaled in remote service */
 
                         // Get new instance of remote service to avoid DeadObjectException
-                        connectRemoteService(keymapProfile);
+                        connectRemoteService(
+                            KeymapProfiles(this@TouchPointer).getProfile(selectedProfile, true)
+                        )
                     }
                 }
             }
 
             override fun onDisplayRemoved(displayId: Int) {
             }
-        }, Handler(Looper.getMainLooper()))
+        }
+        getSystemService(DisplayManager::class.java).registerDisplayListener(
+            displayListener, Handler(Looper.getMainLooper())
+        )
 
 
         return super.onStartCommand(i, flags, startId)
@@ -213,6 +219,10 @@ class TouchPointer : Service() {
     }
 
     override fun onDestroy() {
+        displayListener?.let {
+            getSystemService(DisplayManager::class.java).unregisterDisplayListener(it)
+        }
+        displayListener = null
         if (mService != null) try {
             mService!!.unregisterActivityObserver(mActivityObserverCallback)
             stopServer()
@@ -294,7 +304,7 @@ class TouchPointer : Service() {
             if (keymapConfig.pointerMode == KeymapConfig.POINTER_OVERLAY) {
                 keymapConfig.pointerMode = KeymapConfig.POINTER_COMBINED
                 keymapConfig.applySharedPrefs()
-                activityCallback!!.stopPointer()
+                activityCallback?.stopPointer()
                 try {
                     stopServer()
                 } catch (_: RemoteException) {

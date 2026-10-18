@@ -101,9 +101,10 @@ class KeyEventHandler(private val mInput: IInputInterface) {
         }
 
         val keyList = mInput.keymapProfile.keys
-        for (key in keyList)
+        keyList.withIndex().forEach { (i, key) ->
             if (event.code == key.code)
-                mInput.injectEvent(key.x, key.y, event.action, keyList.indexOf(key))
+                mInput.injectEvent(key.x, key.y, event.action, i)
+        }
 
         swipeKeyHandlers?.forEach { swipeKeyHandler ->
             swipeKeyHandler.handleEvent(event, mInput, pidProvider, eventHandler, keymapConfig.swipeDelayMs)

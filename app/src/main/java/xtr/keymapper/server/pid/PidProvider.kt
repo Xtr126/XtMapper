@@ -1,17 +1,15 @@
 package xtr.keymapper.server.pid
 
-import androidx.collection.SimpleArrayMap
-
 class PidProvider {
-    private val pidList = SimpleArrayMap<String, Int>()
+    private val pidList = HashMap<String, Int>()
+    // shortcut: ids grow without bound per process lifetime (int, ~2B triggers); switch to a free-list only if that ever matters
+    private var nextId = 0
 
     // returns pointerIds on demand
-    fun getPid(keycode: String): Int {
-        if (!pidList.containsKey(keycode))
-            pidList.put(keycode, pidList.size())
-        return pidList.get(keycode)!!
-    }
+    @Synchronized
+    fun getPid(keycode: String): Int = pidList.getOrPut(keycode) { nextId++ }
 
+    @Synchronized
     fun releasePidFor(keycode: String) {
         pidList.remove(keycode)
     }

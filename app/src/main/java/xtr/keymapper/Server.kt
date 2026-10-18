@@ -3,35 +3,17 @@ package xtr.keymapper
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.os.Build
 import android.util.Log
 import xtr.keymapper.server.RemoteServiceShell
 import java.io.File
-import java.io.FileReader
 import java.io.FileWriter
 import java.io.IOException
-import java.nio.CharBuffer
 
 object Server {
 
     private fun writeScript(linesToWrite: StringBuffer, scriptFile: File) {
-        val fileWriter = FileWriter(scriptFile)
-        val fileReader = FileReader(scriptFile)
-
-        val target = CharBuffer.allocate(scriptFile.length().toInt())
-        fileReader.read(target)
-
-        // Write script to disk only if file contents are not the same.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            if (linesToWrite.compareTo(StringBuffer(target)) != 0) {
-                fileWriter.write(linesToWrite.toString())
-            }
-        } else {
-            if (linesToWrite.toString() != target.toString())
-                fileWriter.write(linesToWrite.toString())
-        }
-        fileWriter.close()
-        fileReader.close()
+        // Always rewrite: the old read-compare ran after FileWriter truncated the file, so it never matched
+        FileWriter(scriptFile).use { it.write(linesToWrite.toString()) }
     }
 
     private fun generateScript(ai: ApplicationInfo): StringBuffer {

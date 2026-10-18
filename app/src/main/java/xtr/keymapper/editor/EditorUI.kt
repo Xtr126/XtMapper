@@ -127,7 +127,7 @@ class EditorUI(
         mService!!.pauseMouse()
     }
 
-    interface KeyInFocusListener {
+    fun interface KeyInFocusListener {
         fun setText(key: String?)
     }
 
@@ -292,7 +292,7 @@ class EditorUI(
     }
 
     private fun showMacroDialog() {
-        macroDialog = MacroDialog(context, overlayOpen, profile)
+        macroDialog = MacroDialog(context, overlayOpen, profile!!)
         macroDialog!!.show(View.OnClickListener { v: View? ->
             if (v != null) addMacro()
             if (macroDialog != null) {
@@ -340,7 +340,7 @@ class EditorUI(
         // Redirect keyboard input
         mainView!!.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
             macroView.onKey(
-                event
+                event!!
             )
         })
 
@@ -437,10 +437,10 @@ class EditorUI(
     private fun saveKeymap() {
         val linesToWrite = ArrayList<String?>()
 
-        editorUiComponents.forEach { linesToWrite.add(it.dataLine) }
+        editorUiComponents.forEach { linesToWrite.add(it.getDataLine()) }
 
         // Enabled macro ids
-        MacroIdUtils.getLines(linesToWrite, profile)
+        MacroIdUtils.getLines(linesToWrite, profile!!)
 
         // Save Config
         val profiles = KeymapProfiles(context)
@@ -456,10 +456,10 @@ class EditorUI(
      * used for passing to the Compose Import/Export dialog.
      */
     private fun generateConfigString(): String {
-        val linesToWrite = ArrayList<String>()
-        editorUiComponents.forEach { linesToWrite.add(it.dataLine) }
+        val linesToWrite = ArrayList<String?>()
+        editorUiComponents.forEach { linesToWrite.add(it.getDataLine()) }
 
-        MacroIdUtils.getLines(linesToWrite, profile)
+        MacroIdUtils.getLines(linesToWrite, profile!!)
         return linesToWrite.joinToString("\n")
     }
 
@@ -531,9 +531,9 @@ class EditorUI(
             return overlayOpen
         }
 
-        override fun getProfile(): KeymapProfile? =this@EditorUI.profile
+        override val profile: KeymapProfile get() = this@EditorUI.profile!!
 
-        override fun getKeysContainerView(): ViewGroup = this@EditorUI.keysContainerView
+        override val keysContainerView: ViewGroup get() = this@EditorUI.keysContainerView
 
         override fun removeComponent(component: EditorUiComponent?, vararg viewsToRemove: View?) {
             for (view in viewsToRemove) {
