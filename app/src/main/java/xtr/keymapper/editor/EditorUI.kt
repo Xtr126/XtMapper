@@ -413,7 +413,7 @@ class EditorUI(
         editorUiComponentFactory.addDpads(profile!!.dpadArray)
 
         if (profile!!.mouseAimConfig != null) {
-            editorUiComponents.add(Crosshair(mCallback, context, profile!!.mouseAimConfig))
+            editorUiComponents.add(Crosshair(mCallback, context, profile!!.mouseAimConfig!!))
         }
         if (profile!!.rightClick != null) {
             editorUiComponents.add(RightClick(mCallback, context, profile!!.rightClick))
@@ -423,8 +423,8 @@ class EditorUI(
                 Camera(
                     mCallback,
                     context,
-                    profile!!.camera.x,
-                    profile!!.camera.y
+                    profile!!.camera!!.x,
+                    profile!!.camera!!.y
                 )
             )
         }

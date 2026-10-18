@@ -225,7 +225,7 @@ class ImportExportActivity : AppCompatActivity() {
 
         init {
             val profilesManager = KeymapProfiles(context)
-            profilesManager.allProfiles.forEach { (name, profile) ->
+            profilesManager.getAllProfiles().forEach { (name, profile) ->
                 // SoufianoDev: Safe Unwrapping Of Profile Name
                 if (name != null) {
                     items.add(RecyclerData(profile, context, name))

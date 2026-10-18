@@ -108,11 +108,11 @@ class MouseEventHandler(private val mInput: IInputInterface) {
 
         val profile: KeymapProfile = mInput.keymapProfile
         if (profile.mouseAimConfig != null)
-            mouseAimHandler = MouseAimHandler(profile.mouseAimConfig)
+            mouseAimHandler = MouseAimHandler(profile.mouseAimConfig!!)
         if (profile.camera != null)
-            mouseCameraHandler = MouseAimHandler(profile.camera)
+            mouseCameraHandler = MouseAimHandler(profile.camera!!)
         if (profile.mouseWalk != null)
-            mouseWalkHandler = MouseWalkHandler(profile.mouseWalk)
+            mouseWalkHandler = MouseWalkHandler(profile.mouseWalk!!)
 
         this.rightClick = profile.rightClick
 
@@ -133,8 +133,8 @@ class MouseEventHandler(private val mInput: IInputInterface) {
         if (keymapConfig.ctrlMouseWheelZoom)
             scrollZoomHandler = MouseWheelZoom(mInput)
 
-        sensitivity = keymapConfig.mouseSensitivity
-        scroll_speed_multiplier = keymapConfig.scrollSpeed
+        sensitivity = keymapConfig.mouseSensitivity!!
+        scroll_speed_multiplier = keymapConfig.scrollSpeed!!
     }
 
     // Consolidated coordinate update – single injection per movement
@@ -234,7 +234,7 @@ class MouseEventHandler(private val mInput: IInputInterface) {
             }
             BTN_EXTRA, BTN_SIDE, BTN_MIDDLE -> if (value == 1 && Objects.equals(mInput.keymapConfig.mouseAimShortcutKey, "KEY_MMB")) {
                 triggerMouseAim()
-            } else if (value == 1 && Objects.equals(mInput.keymapProfile.camera.triggerKeyCode, "KEY_MMB")) {
+            } else if (value == 1 && Objects.equals(mInput.keymapProfile.camera!!.triggerKeyCode, "KEY_MMB")) {
                 triggerCamera()
             } else {
                 mInput.injectMiddleClickEvent(x1.toFloat(), y1.toFloat(), pointerId, value == 1)

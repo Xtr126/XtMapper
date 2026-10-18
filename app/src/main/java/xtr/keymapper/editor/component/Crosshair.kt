@@ -33,6 +33,9 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
     private val profile: KeymapProfile
         get() = callback.profile
 
+    private val mouseAimConfig: MouseAimConfig
+        get() = profile.mouseAimConfig!!
+
     // SoufianoDev: Secondary Constructor For Convenience
     constructor(mCallback: EditorUiComponentCallback, context: Context, mouseAimConfig: MouseAimConfig) :
             this(mCallback, context, mouseAimConfig.xCenter, mouseAimConfig.yCenter)
@@ -63,12 +66,12 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
             .start()
 
         // SoufianoDev: Initialize And Add Left Click Floating Button
-        leftClick = addLeftClick(profile.mouseAimConfig.xleftClick, profile.mouseAimConfig.yleftClick)
+        leftClick = addLeftClick(mouseAimConfig.xleftClick, mouseAimConfig.yleftClick)
     }
 
     override fun getDataLine(): String {
         // SoufianoDev: Update Configuration Data With Current View Coordinates
-        return profile.mouseAimConfig.apply {
+        return mouseAimConfig.apply {
             setCenterXY(crosshairView)
             setLeftClickXY(leftClick)
         }.data
@@ -85,7 +88,7 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
 
             android.widget.Toast.makeText(context, "DEBUG: Item clicked = $which", android.widget.Toast.LENGTH_SHORT).show()
 
-            profile.mouseAimConfig.apply {
+            mouseAimConfig.apply {
                 width = 0f
                 height = 0f
                 if (which == 0) {
@@ -127,9 +130,9 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
         with(binding) {
             rightClickCheckbox.isChecked = keymapConfig.rightClickMouseAim
             graveKeyCheckbox.isChecked = keymapConfig.keyGraveMouseAim
-            applyNonLinearScalingCheckbox.isChecked = profile.mouseAimConfig.applyNonLinearScaling
-            sliderXSensitivity.value = profile.mouseAimConfig.xSensitivity
-            sliderYSensitivity.value = profile.mouseAimConfig.ySensitivity
+            applyNonLinearScalingCheckbox.isChecked = mouseAimConfig.applyNonLinearScaling
+            sliderXSensitivity.value = mouseAimConfig.xSensitivity
+            sliderYSensitivity.value = mouseAimConfig.ySensitivity
         }
 
         AlertDialog.Builder(context)
@@ -142,7 +145,7 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
                     applySharedPrefs()
                 }
 
-                profile.mouseAimConfig.apply {
+                mouseAimConfig.apply {
                     applyNonLinearScaling = binding.applyNonLinearScalingCheckbox.isChecked
                     xSensitivity = binding.sliderXSensitivity.value
                     ySensitivity = binding.sliderYSensitivity.value
@@ -242,7 +245,7 @@ private fun AlertDialog.setupOverlayWindowType() {
                 y = centerY
             }
 
-            profile.mouseAimConfig.apply {
+            mouseAimConfig.apply {
                 width = rootView.pivotX
                 height = rootView.pivotY
             }

@@ -6,10 +6,10 @@ import android.os.RemoteException
 import xtr.keymapper.Utils
 import xtr.keymapper.dpad.DpadHandler
 import xtr.keymapper.keymap.KeymapConfig
-import xtr.keymapper.keymap.KeymapConfig.KEY_ALT
-import xtr.keymapper.keymap.KeymapConfig.KEY_CTRL
+import xtr.keymapper.keymap.KeymapConfig.Companion.KEY_ALT
+import xtr.keymapper.keymap.KeymapConfig.Companion.KEY_CTRL
 import xtr.keymapper.keymap.KeymapProfile
-import xtr.keymapper.keymap.KeymapProfile.MAX_DPADS
+import xtr.keymapper.keymap.KeymapProfile.Companion.MAX_DPADS
 import xtr.keymapper.keymap.element.Camera
 import xtr.keymapper.keymap.element.Key
 import xtr.keymapper.keymap.element.SwipeKey
@@ -42,7 +42,7 @@ class KeyEventHandler(private val mInput: IInputInterface) {
         for (i in 0 until MAX_DPADS) {
             val pid = dpadpid1.id + i
             if (profile.dpadArray[i] != null) {
-                dpadHandlers!![i] = DpadHandler(profile.dpadArray[i], pid, eventHandler, keymapConfig.swipeDelayMs)
+                dpadHandlers!![i] = DpadHandler(profile.dpadArray[i]!!, pid, eventHandler, keymapConfig.swipeDelayMs)
                 dpadHandlers!![i]!!.setInterface(mInput)
             }
         }
