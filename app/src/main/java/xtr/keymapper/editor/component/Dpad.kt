@@ -44,7 +44,7 @@ class Dpad(
             addDpad(dpad.getX(), dpad.getY(), dpad.keycodes)
     }
 
-    override fun getDataLine(): String {
+    override fun toConfigLine(): String {
         // Create new dpad instance for updating properties
         this.dpad = if (dpad!!.keycodes.equals(DpadKeyCodes.ARROW_KEYS))
             xtr.keymapper.keymap.element.Dpad(

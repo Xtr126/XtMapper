@@ -30,7 +30,7 @@ class RightClick(
     constructor(mCallback: EditorUiComponentCallback, context: Context, rightClick: Key?) :
         this(mCallback, context, rightClick!!.x, rightClick.y)
 
-    override fun getDataLine(): String {
+    override fun toConfigLine(): String {
         return KeymapProfiles.MOUSE_RIGHT + " " + rightClick.getX() + " " + rightClick.getY()
     }
 }

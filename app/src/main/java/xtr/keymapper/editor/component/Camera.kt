@@ -51,7 +51,7 @@ class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y:
         }
     }
 
-    override fun getDataLine(): String {
+    override fun toConfigLine(): String {
         // SoufianoDev: Update Coordinates And Return Serialized Data String
         return cameraElement.apply {
             x = cameraView.x

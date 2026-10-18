@@ -158,7 +158,7 @@ class EditorUI(
             mainView.setFocusable(true)
         }
 
-        loadKeymapAfterView()
+        loadKeymapAndObserveSizeChanges()
     }
 
     fun openSettings() {
@@ -265,7 +265,7 @@ class EditorUI(
 
         when (id) {
             R.id.save -> {
-                hideView()
+                closeEditor()
             }
             R.id.macro -> {
                 showMacroDialog()
@@ -347,14 +347,15 @@ class EditorUI(
         settingsOverlay.binding.catalog.setOnClickListener(View.OnClickListener { v: View? -> macroView.clearCanvasAndFinish() })
     }
 
-    fun hideView() {
+    /** saves, unregisters listeners, removes views, and triggers Activity or service cleanup. */
+    fun closeEditor() {
         if (startMode == START_EDITOR) saveKeymap()
         if (startMode != SHOW_KEYMAP_ONLY) {
             unregisterOnKeyEventListener()
             settingsOverlay!!.onDestroyView()
 
             removeView(mainView!!)
-            if (editorCallback != null) editorCallback.onHideView()
+            if (editorCallback != null) editorCallback.onEditorClosed()
             else RemoteServiceHelper.reloadKeymap(context)
 
             // Load keymap config after settingsOverlay wrote config
@@ -381,8 +382,9 @@ class EditorUI(
      * Loads the profile after attaching the editor view and saves/reloads it when the container
      * changes size. See docs/editor-lifecycle.md for the launch flow and possible interaction with
      * component position animations.
+     * note: the view is NOT already attached on every call path.
      */
-    fun loadKeymapAfterView() {
+    fun loadKeymapAndObserveSizeChanges() {
         profileBackup = KeymapProfiles(context).getProfile(profileName, false)
         keysContainerView.addOnLayoutChangeListener(OnLayoutChangeListener { v: View?, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
             if (right != oldRight || left != oldLeft || top != oldTop || bottom != oldBottom) {
@@ -446,7 +448,7 @@ class EditorUI(
     private fun saveKeymap() {
         val linesToWrite = ArrayList<String?>()
 
-        editorUiComponents.forEach { linesToWrite.add(it.getDataLine()) }
+        editorUiComponents.forEach { linesToWrite.add(it.toConfigLine()) }
 
         // Enabled macro ids
         MacroIdUtils.getLines(linesToWrite, profile!!)
@@ -466,7 +468,7 @@ class EditorUI(
      */
     private fun generateConfigString(): String {
         val linesToWrite = ArrayList<String?>()
-        editorUiComponents.forEach { linesToWrite.add(it.getDataLine()) }
+        editorUiComponents.forEach { linesToWrite.add(it.toConfigLine()) }
 
         MacroIdUtils.getLines(linesToWrite, profile!!)
         return linesToWrite.joinToString("\n")

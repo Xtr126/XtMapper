@@ -8,34 +8,40 @@ root cause of components being saved at `(0,0)`.
 
 - **MainActivity:** `MainActivity.startEditor()` starts `EditorActivity` with the selected profile
   extra. `EditorActivity.onCreate()` creates an `EditorUI` in `START_EDITOR` mode and calls
-  `open()`, which attaches the editor view and calls `loadKeymapAfterView()`.
-- **Notification, overlay editor disabled:** `TouchPointer` creates an Activity PendingIntent for
-  `EditorActivity` and includes the selected profile extra. This reaches the same Activity editor
-  path as MainActivity.
-- **Notification, overlay editor enabled:** `TouchPointer` creates a Service PendingIntent for
-  `EditorService`. That PendingIntent currently does not include the selected profile extra.
-  `EditorService.onStartCommand()` therefore falls back to the profile named `Default` when the
-  extra is absent, then creates `EditorUI` in `START_EDITOR` mode and calls `open(true)`.
+  `open()`, which attaches the editor view and calls `loadKeymapAndObserveSizeChanges()`.
+- **Notification:** `TouchPointer` uses the `editorOverlay` setting to choose how the editor is
+  presented: as an application overlay through `EditorService`, or as an Activity through
+  `EditorActivity`. The Activity PendingIntent includes the selected profile. The Service
+  PendingIntent currently does not, so `EditorService.onStartCommand()` falls back to the profile
+  named `Default` when that extra is absent.
+- **Keyboard shortcut:** `KeyEventHandler.handleKeyboardShortcuts()` calls
+  `IRemoteServiceCallback.launchEditor()`, implemented by `TouchPointer` to start `EditorService`
+  with the selected profile extra. `EditorService` uses the same `editorOverlay` setting to present
+  the editor as an application overlay or forward to `EditorActivity`.
 
 ## Save call sites
 
-`EditorUI.saveKeymap()` serializes each editor component's `dataLine` and stores the resulting
-profile with the current key-container dimensions.
+`EditorUI.saveKeymap()` serializes each editor component's data with `toConfigLine()` and stores
+the resulting profile with the current key-container dimensions.
 
 It is reached in two ways:
 
-1. `hideView()` saves whenever the editor is in `START_EDITOR` mode. The Save menu action hides
-   the editor, and `EditorActivity.onDestroy()` also calls `hideView()` if its editor is still
-   present.
-2. `loadKeymapAfterView()` installs a layout-change listener. Whenever the key container's bounds
-   change and a profile has already been loaded, the listener saves the current components and
-   then calls `reloadKeymap()` to rebuild them for the new dimensions.
+1. `closeEditor()` saves whenever the editor is in `START_EDITOR` mode, then tears down the editor UI:
+   it unregisters listeners, destroys the settings view, removes the editor view, and invokes the
+   `onEditorClosed()` callback that finishes the Activity or stops the editor service. The Save
+   menu action starts this teardown, and `EditorActivity.onDestroy()` also calls `closeEditor()` if
+   its editor is still present. `closeEditor()` is not a reversible hide operation.
+2. `loadKeymapAndObserveSizeChanges()` installs a layout-change listener. Whenever the key
+   container's bounds change and a profile has already been loaded, the listener saves the current
+   components and then calls `reloadKeymap()` to rebuild them for the new dimensions. The
+   display-only `ShowKeymapService` uses this method before showing its overlay, so the view is not
+   attached on every call path.
 
 ## Possible resize and animation timing issue
 
 `loadKeymap()` builds editor components from the profile data. Components animate their views to
 their stored positions during construction; for example, regular keys animate for one second.
-Their `dataLine` implementations read positions from the live views when `saveKeymap()` runs.
+Their serialization reads positions from the live views when `saveKeymap()` runs.
 
 If the key container changes size after components have been created but before those animations
 finish, the layout listener can serialize intermediate view positions, then reload from the just-
@@ -45,4 +51,4 @@ editor launch path that triggers a later container resize. The call sequence alo
 that this timing occurs on a particular device or launch path.
 
 When investigating a reproduction, compare container size-change events, component animation
-completion, `saveKeymap()` calls, and the coordinates emitted by each component's `dataLine`.
+completion, `saveKeymap()` calls, and the coordinates emitted when each component is serialized.

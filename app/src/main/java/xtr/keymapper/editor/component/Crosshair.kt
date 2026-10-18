@@ -69,7 +69,7 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
         leftClick = addLeftClick(mouseAimConfig.xleftClick, mouseAimConfig.yleftClick)
     }
 
-    override fun getDataLine(): String {
+    override fun toConfigLine(): String {
         // SoufianoDev: Update Configuration Data With Current View Coordinates
         return mouseAimConfig.apply {
             setCenterXY(crosshairView)

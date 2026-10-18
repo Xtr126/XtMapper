@@ -14,5 +14,5 @@ abstract class EditorUiComponent(
     protected val layoutInflater: LayoutInflater
         get() = context.getSystemService(LayoutInflater::class.java)
 
-    abstract fun getDataLine(): String
+    abstract fun toConfigLine(): String
 }

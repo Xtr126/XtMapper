@@ -29,7 +29,7 @@ class Key(
         }
     )
 
-    override fun getDataLine(): String {
+    override fun toConfigLine(): String {
         return floatingKey.getData()
     }
 

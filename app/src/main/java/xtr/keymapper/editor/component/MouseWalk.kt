@@ -41,7 +41,7 @@ class MouseWalk private constructor(
         addMouseWalk(mouseWalk.x, mouseWalk.y)
     }
 
-    override fun getDataLine(): String {
+    override fun toConfigLine(): String {
         // Create new instance for updating properties
         this.mouseWalk = xtr.keymapper.keymap.element.MouseWalk(rootView!!)
         return xtr.keymapper.keymap.element.MouseWalk.TAG + " " +

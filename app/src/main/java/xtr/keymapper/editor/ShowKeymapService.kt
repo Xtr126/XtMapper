@@ -12,19 +12,19 @@ class ShowKeymapService : Service() {
     private var editorUi: EditorUI? = null
 
     override fun onDestroy() {
-        editorUi!!.hideView()
+        editorUi!!.closeEditor()
         super.onDestroy()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        editorUi?.hideView()
+        editorUi?.closeEditor()
 
         var selectedProfile = intent!!.getStringExtra(EditorActivity.PROFILE_NAME) ?: "Default"
 
         val keymapConfig = KeymapConfig(this)
         val context = ContextThemeWrapper(this, R.style.Theme_XtMapper)
         editorUi = EditorUI(context, editorCallback, selectedProfile, EditorUI.SHOW_KEYMAP_ONLY, null)
-        editorUi!!.loadKeymapAfterView()
+        editorUi!!.loadKeymapAndObserveSizeChanges()
         editorUi!!.showControls(keymapConfig.showControlsOpacity)
         return super.onStartCommand(intent, flags, startId)
     }

@@ -47,7 +47,7 @@ class SwipeKey private constructor(
         swipeKey: xtr.keymapper.keymap.element.SwipeKey?
     ) : this(mCallback, context, swipeKey, 0f, 0f)
 
-    override fun getDataLine(): String {
+    override fun toConfigLine(): String {
         val swipeKey = xtr.keymapper.keymap.element.SwipeKey()
         swipeKey.key1.code = swipeKeyView.button1.getText()
         swipeKey.key1.x = swipeKeyView.button1.getX()
