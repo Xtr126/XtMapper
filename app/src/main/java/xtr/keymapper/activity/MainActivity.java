@@ -143,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
         final Context context = MainActivity.this;
         var remoteServiceCallback = new RemoteServiceHelper.RootRemoteServiceCallback() {
 
-            private EditorUI editorUi = new EditorUI(context, this::editorCallback, null, EditorUI.START_SETTINGS);
+            private EditorUI editorUi = new EditorUI(context, this::editorCallback, null, EditorUI.START_SETTINGS, null);
 
             private void editorCallback() { editorUi = null; }
 

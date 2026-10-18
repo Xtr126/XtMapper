@@ -18,14 +18,15 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.savedstate.SavedStateRegistry
-import androidx.savedstate.SavedStateRegistryController
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.findViewTreeViewModelStoreOwner
+import androidx.savedstate.findViewTreeSavedStateRegistryOwner
 import xtr.keymapper.IRemoteService
 import xtr.keymapper.OnKeyEventListener
 import xtr.keymapper.R
@@ -47,8 +48,9 @@ import xtr.keymapper.server.RemoteServiceHelper
 class EditorUI(
     private val context: Context, // Callback when the editor UI is hidden/closed
     private val editorCallback: EditorCallback?, /* Name of the currently loaded keymap profile */
-    private val profileName: String?, private val startMode: Int
-) : OnKeyEventListener.Stub(), LifecycleOwner, SavedStateRegistryOwner {
+    private val profileName: String?, private val startMode: Int,// Compose Dialog Management
+    private val importExportComposeView: ComposeView?
+) : OnKeyEventListener.Stub() {
 
     // When a keyboard key is pressed,
     // Receives keyboard input while editing a key binding
@@ -75,19 +77,6 @@ class EditorUI(
 
     // IPC connection to the remote service that captures raw input
     private var mService: IRemoteService? = null
-
-    // Compose Dialog Management
-    private var importExportComposeView: ComposeView? = null
-    private var importExportLifecycle: LifecycleRegistry? = null
-    private var importExportSavedStateController: SavedStateRegistryController? = null
-
-    // LifecycleOwner implementation
-    private val lifecycleRegistry = LifecycleRegistry(this)
-    override val lifecycle = lifecycleRegistry
-
-    // SavedStateRegistryOwner implementation
-    private val savedStateRegistryController = SavedStateRegistryController.create(this)
-    override val savedStateRegistry: SavedStateRegistry = savedStateRegistryController.savedStateRegistry
 
     init {
         val layoutInflater = context.getSystemService(LayoutInflater::class.java)
@@ -195,14 +184,7 @@ class EditorUI(
 
         val mWindowManager = context.getSystemService(WindowManager::class.java)
         val mParams =
-            if (startMode == SHOW_KEYMAP_ONLY) Utils.getPointerLayoutParams(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) else WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
-                PixelFormat.TRANSLUCENT
-            )
+            if (startMode == SHOW_KEYMAP_ONLY) Utils.getPointerLayoutParams(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) else windowManagerLayoutParams()
 
 
         if (alpha < 1 && alpha > 0) overlayView.setAlpha(alpha)
@@ -211,6 +193,15 @@ class EditorUI(
         overlayOpen = true
         if (startMode != SHOW_KEYMAP_ONLY) hideSystemBars()
     }
+
+    private fun windowManagerLayoutParams(): WindowManager.LayoutParams = WindowManager.LayoutParams(
+        WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
+        WindowManager.LayoutParams.FLAG_FULLSCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
+        PixelFormat.TRANSLUCENT
+    )
 
     private fun hideSystemBars() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -483,24 +474,25 @@ class EditorUI(
     }
 
     private fun showImportExportDialog(configCode: String) {
-        if (importExportComposeView != null) return // Prevent duplicate overlays
 
-        // 1. Manually manage lifecycle state for Compose
-        importExportLifecycle = LifecycleRegistry(this)
-        importExportSavedStateController = SavedStateRegistryController.create(this)
-        importExportSavedStateController?.performAttach()
-        importExportSavedStateController?.performRestore(null)
-        importExportLifecycle?.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        val composeView = importExportComposeView ?: return
 
-        // 2. Instantiate and establish ComposeView context
-        importExportComposeView = ComposeView(context)
-        
-        // Bind the lifecycle providers to the view tree hierarchy
-        importExportComposeView!!.setViewTreeLifecycleOwner(this)
-        importExportComposeView!!.setViewTreeSavedStateRegistryOwner(this)
+        // Reuse the host view tree's owners so Compose uses the Activity or Service lifecycle.
+        val lifecycleOwner = (context as? LifecycleOwner)
+            ?: (mainView?.findViewTreeLifecycleOwner())
+            ?: error("Compose host must provide a LifecycleOwner")
+        val savedStateOwner = (context as? SavedStateRegistryOwner)
+            ?: (mainView?.findViewTreeSavedStateRegistryOwner())
+            ?: error("Compose host must provide a SavedStateRegistryOwner")
+        composeView.setViewTreeLifecycleOwner(lifecycleOwner)
+        composeView.setViewTreeSavedStateRegistryOwner(savedStateOwner)
+        if (context is ViewModelStoreOwner) {
+            composeView.setViewTreeViewModelStoreOwner(context)
+        } else if (mainView?.findViewTreeViewModelStoreOwner() != null) {
+            composeView.setViewTreeViewModelStoreOwner(mainView.findViewTreeViewModelStoreOwner()!!)
+        }
 
-        // 3. Attach Compose content (ImportExportDialog from Kotlin)
-        importExportComposeView!!.setContent {
+        composeView.setContent {
             // Kotlin's default parameters allow 4-arg Java signature
             ImportExportDialog(
                 configCode,
@@ -510,44 +502,28 @@ class EditorUI(
             )
         }
 
-        // 4. Attach the view tree to the window manager or Activity
-        if (context is Activity) {
+        if (context is Activity && !overlayOpen) {
             context.addContentView(
-                importExportComposeView,
+                composeView,
                 ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             )
         } else {
-            val wm = context.getSystemService(WindowManager::class.java)
-            val params = WindowManager.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-                PixelFormat.TRANSLUCENT
+            // The Activity and Service editor both own a full-screen overlay root. Add the dialog
+            // to that same root instead of opening a second application-overlay window.
+            val parent = mainView ?: error("Overlay editor has no root view")
+            parent.addView(
+                composeView,
+                ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             )
-            wm.addView(importExportComposeView, params)
         }
         
-        importExportLifecycle!!.handleLifecycleEvent(Lifecycle.Event.ON_START)
-        importExportLifecycle!!.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
     }
 
     private fun closeImportExportDialog() {
         val view = importExportComposeView ?: return
-        
-        importExportLifecycle?.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-        importExportLifecycle?.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-        importExportLifecycle?.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
 
-        try {
-            if (overlayOpen && view.isAttachedToWindow) context.getSystemService(
-                WindowManager::class.java
-            ).removeView(view)
-        } catch (_: IllegalArgumentException) {
-            // ignored
-        }
+        (view.parent as? ViewGroup)?.removeView(view)
 
-        importExportComposeView = null
     }
 
     private val mCallback: EditorUiComponentCallback = object : EditorUiComponentCallback {
