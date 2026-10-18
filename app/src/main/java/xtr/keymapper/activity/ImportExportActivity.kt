@@ -174,6 +174,7 @@ class ImportExportActivity : AppCompatActivity() {
 
     @SuppressLint("UseKtx")
     private fun importProfiles(dataUri: Uri) {
+        var imported = 0
         try {
             contentResolver.openInputStream(dataUri)?.use { inputStream ->
                 ZipInputStream(inputStream).use { zis ->
@@ -181,8 +182,13 @@ class ImportExportActivity : AppCompatActivity() {
                     val profilesManager = KeymapProfiles(this)
 
                     while (zipEntry != null) {
-                        // SoufianoDev: Safe Property Access Instead Of Non-Null Assertion
                         val profileName = zipEntry.name
+                        // Never overwrite an existing local profile with an imported one
+                        if (profilesManager.sharedPref.contains(profileName)) {
+                            zis.closeEntry()
+                            zipEntry = zis.nextEntry
+                            continue
+                        }
                         val stringSet = mutableSetOf<String>()
                         // SoufianoDev: Reader Without Closing Inner Stream
                         val reader = BufferedReader(InputStreamReader(zis))
@@ -197,14 +203,17 @@ class ImportExportActivity : AppCompatActivity() {
                         profilesManager.sharedPref.edit {
                             putStringSet(profileName, stringSet)
                         }
+                        imported++
 
                         zis.closeEntry()
                         zipEntry = zis.nextEntry
                     }
                 }
             }
-            // SoufianoDev: Localized Import Success Notification
-            Snackbar.make(binding.root, getString(R.string.msg_profiles_imported), Snackbar.LENGTH_SHORT).show()
+            val msg =
+                if (imported > 0) R.string.msg_profiles_imported
+                else R.string.msg_all_profiles_exist
+            Snackbar.make(binding.root, getString(msg), Snackbar.LENGTH_SHORT).show()
         } catch (e: IOException) {
             Log.e("ImportExport", "Import failed from URI", e)
             // SoufianoDev: Localized Fail/Retry Logic
@@ -226,13 +235,8 @@ class ImportExportActivity : AppCompatActivity() {
         init {
             val profilesManager = KeymapProfiles(context)
             profilesManager.getAllProfiles().forEach { (name, profile) ->
-                // SoufianoDev: Safe Unwrapping Of Profile Name
-                if (name != null) {
-                    items.add(RecyclerData(profile, context, name))
-                    if (allCardsChecked) selectedProfileNames.add(name)
-                } else {
-                    profilesManager.deleteProfile(null)
-                }
+                items.add(RecyclerData(profile, context, name))
+                if (allCardsChecked) selectedProfileNames.add(name)
             }
             binding.exportButton.setOnClickListener { exportProfiles(selectedProfileNames) }
         }

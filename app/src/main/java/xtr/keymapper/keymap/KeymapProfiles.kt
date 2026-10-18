@@ -64,7 +64,7 @@ class KeymapProfiles(context: Context) {
         var packageName: String? = null
         for (line in stringSet) {
             val data = line.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            if (data[0] == "APPLICATION")
+            if (data[0] == "APPLICATION" && data.size >= 2)
                 packageName = data[1]
         }
         if (packageName == null) return
@@ -115,73 +115,75 @@ class KeymapProfiles(context: Context) {
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun getProfile(lines: Set<String>?): KeymapProfile {
-        val profile = KeymapProfile()
-        profile.disabled = true
-        lines?.forEach { line ->
-
-            val data = line.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray() // Split a String like KEY_G 760.86346 426.18607
-            when (data[0]) {
-                MouseAimConfig.TAG ->
-                    profile.mouseAimConfig = MouseAimConfig(data)
-
-                Dpad.TAG,
-                Dpad.TAG_ARROW_KEYS ->
-                    if (data.size >= 12)
-                        for (i in profile.dpadArray.indices)
-                            if (profile.dpadArray[i] == null) {
-                                profile.dpadArray[i] = Dpad(data)
-                                break
-                            }
-
-                MOUSE_RIGHT -> {
-                    profile.rightClick = Key()
-                    profile.rightClick!!.x = data[1].toFloat()
-                    profile.rightClick!!.y = data[2].toFloat()
-                }
-
-                "APPLICATION" ->
-                    profile.packageName = data[1]
-
-                "ENABLED" ->
-                    profile.disabled = false
-
-                "SCREENSIZE" -> {
-                    profile.xRes = data[1].toInt()
-                    profile.yRes = data[2].toInt()
-                }
-
-                MacroIdUtils.TAG ->
-                    if (data.size >= 3) {
-                        val macroId = data[1]
-                        val macro = Macro()
-                        macro.triggerKey = data[2]
-                        profile.macroIdMap[macroId] = macro
-                    }
-
-                SwipeKey.TAG ->
-                    if (data.size > 6) profile.swipeKeys.add(SwipeKey(data))
-
-                Camera.TAG ->
-                    if (data.size >= 4)
-                        profile.camera = Camera(data)
-
-                MouseWalk.TAG ->
-                    if (data.size == 4)
-                        profile.mouseWalk = MouseWalk(data)
-
-                else -> {
-                    if (data.size == 4 && data[0].startsWith("KEY_")) {
-                        val key = Key(data)
-                        profile.keys.add(key)
-                    }
-                }
-            }
-        }
-        return profile
-    }
+    fun getProfile(lines: Set<String>?): KeymapProfile = parse(lines)
 
     companion object {
         const val MOUSE_RIGHT = "MOUSE_RIGHT"
+
+        fun parse(lines: Set<String>?): KeymapProfile {
+            val profile = KeymapProfile()
+            profile.disabled = true
+            lines?.forEach { line ->
+
+                val data = line.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray() // Split a String like KEY_G 760.86346 426.18607
+                when (data[0]) {
+                    MouseAimConfig.TAG ->
+                        profile.mouseAimConfig = MouseAimConfig(data)
+
+                    Dpad.TAG,
+                    Dpad.TAG_ARROW_KEYS ->
+                        if (data.size >= 12)
+                            for (i in profile.dpadArray.indices)
+                                if (profile.dpadArray[i] == null) {
+                                    profile.dpadArray[i] = Dpad(data)
+                                    break
+                                }
+
+                    MOUSE_RIGHT -> if (data.size >= 3) {
+                        profile.rightClick = Key()
+                        profile.rightClick!!.x = data[1].toFloat()
+                        profile.rightClick!!.y = data[2].toFloat()
+                    }
+
+                    "APPLICATION" -> if (data.size >= 2)
+                        profile.packageName = data[1]
+
+                    "ENABLED" ->
+                        profile.disabled = false
+
+                    "SCREENSIZE" -> if (data.size >= 3) {
+                        profile.xRes = data[1].toInt()
+                        profile.yRes = data[2].toInt()
+                    }
+
+                    MacroIdUtils.TAG ->
+                        if (data.size >= 3) {
+                            val macroId = data[1]
+                            val macro = Macro()
+                            macro.triggerKey = data[2]
+                            profile.macroIdMap[macroId] = macro
+                        }
+
+                    SwipeKey.TAG ->
+                        if (data.size > 6) profile.swipeKeys.add(SwipeKey(data))
+
+                    Camera.TAG ->
+                        if (data.size >= 4)
+                            profile.camera = Camera(data)
+
+                    MouseWalk.TAG ->
+                        if (data.size == 4)
+                            profile.mouseWalk = MouseWalk(data)
+
+                    else -> {
+                        if (data.size == 4 && data[0].startsWith("KEY_")) {
+                            val key = Key(data)
+                            profile.keys.add(key)
+                        }
+                    }
+                }
+            }
+            return profile
+        }
     }
 }
