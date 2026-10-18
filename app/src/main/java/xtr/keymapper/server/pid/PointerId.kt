@@ -1,6 +1,6 @@
-package xtr.keymapper.server.pid;
+package xtr.keymapper.server.pid
 
-public enum PointerId {
+enum class PointerId(i: Int) {
     // pointer id 0-35 reserved for keyboard events
 
     pid1(36), // pointer id 36, 37 and 38 reserved for mouse events
@@ -8,9 +8,6 @@ public enum PointerId {
     pid3(38),
     dpadpid1(39);
 
-    PointerId(int i) {
-        id = i;
-    }
-
-    public final int id;
+    @JvmField
+    val id: Int = i
 }
