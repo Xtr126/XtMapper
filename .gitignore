@@ -1,0 +1,13 @@
+*.iml
+*.apk
+.gradle
+/local.properties
+/.idea
+/build
+/app/build
+output*.json
+keystore.properties
+keystore.jks
+tasks/todo.md
+tasks/lessons.md
+app/release/baselineProfiles/

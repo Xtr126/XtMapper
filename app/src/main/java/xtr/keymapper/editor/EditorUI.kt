@@ -377,6 +377,11 @@ class EditorUI(
         view.invalidate()
     }
 
+    /**
+     * Loads the profile after attaching the editor view and saves/reloads it when the container
+     * changes size. See docs/editor-lifecycle.md for the launch flow and possible interaction with
+     * component position animations.
+     */
     fun loadKeymapAfterView() {
         profileBackup = KeymapProfiles(context).getProfile(profileName, false)
         keysContainerView.addOnLayoutChangeListener(OnLayoutChangeListener { v: View?, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
@@ -434,6 +439,10 @@ class EditorUI(
     }
 
 
+    /**
+     * Persists positions read from the live editor component views. See
+     * docs/editor-lifecycle.md for the save call sites and the resize/animation timing risk.
+     */
     private fun saveKeymap() {
         val linesToWrite = ArrayList<String?>()
 
