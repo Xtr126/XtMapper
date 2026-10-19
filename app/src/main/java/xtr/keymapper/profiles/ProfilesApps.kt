@@ -125,7 +125,7 @@ class ProfilesApps private constructor(context: Context) {
         }
 
         override fun onClick(view: View) {
-            onItemClicked(adapterPosition)
+            onItemClicked(bindingAdapterPosition)
         }
     }
 
