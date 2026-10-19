@@ -39,7 +39,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     private var mOnKeyEventListener: OnKeyEventListener? = null
     internal var isWaylandClient = false
     private var activityObserverService: ActivityObserverService? = null
-    internal var nativeLibraryDir: String = System.getProperty("java.library.path")
+    internal var nativeLibraryDir: String = System.getProperty("java.library.path").orEmpty()
     private var cursorView: View? = null
     private var TYPE_SECURE_SYSTEM_OVERLAY = 0
     private val mHandler = Handler(Looper.getMainLooper())
