@@ -27,6 +27,7 @@
             android:background="@drawable/baseline_360_24"
             app:layout_constraintCircle="@id/background"
             android:id="@+id/camera"
+            tools:ignore="MissingConstraints"
             />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton

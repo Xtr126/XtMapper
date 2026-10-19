@@ -148,7 +148,7 @@ class Dpad(
         // resize dpad from saved profile configuration
         val x1 = dpad!!.getWidth() - dpadView!!.layoutParams.width
         val y1 = dpad!!.getHeight() - dpadView!!.layoutParams.height
-        EditorUI.resizeView(dpadView!!, x1.toInt(), y1.toInt())
+        EditorUI.resizeView(dpadView!!, x1, y1)
     }
 
     private fun onClose(v: View) {

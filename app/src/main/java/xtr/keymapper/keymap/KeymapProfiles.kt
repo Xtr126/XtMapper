@@ -19,6 +19,7 @@ class KeymapProfiles(context: Context) {
 
     private val context: Context = context
 
+    @Suppress("UNCHECKED_CAST")
     fun getAllProfiles(): Map<String, KeymapProfile> {
         val allProfiles = HashMap<String, KeymapProfile>()
         sharedPref.all.forEach { (key, lines) ->
@@ -27,6 +28,7 @@ class KeymapProfiles(context: Context) {
         return allProfiles
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun getAllProfilesForApp(packageName: String): Map<String, KeymapProfile> {
         val appProfiles = HashMap<String, KeymapProfile>()
         sharedPref.all.forEach { (key, lines) ->
@@ -59,6 +61,7 @@ class KeymapProfiles(context: Context) {
         return getAllProfilesForApp(packageName).isNotEmpty()
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun setProfileEnabled(profileName: String, enabled: Boolean) {
         val stringSet = sharedPref.getStringSet(profileName, null)!!
         var packageName: String? = null
@@ -114,7 +117,6 @@ class KeymapProfiles(context: Context) {
         return keymapProfile
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun getProfile(lines: Set<String>?): KeymapProfile = parse(lines)
 
     companion object {

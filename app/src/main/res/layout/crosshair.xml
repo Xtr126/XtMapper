@@ -26,7 +26,9 @@
             android:layout_height="60dp"
             android:background="@drawable/crosshair"
             app:layout_constraintCircle="@id/background"
-            android:id="@+id/cross" />
+            android:id="@+id/cross"
+            tools:ignore="MissingConstraints"
+            />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/editButton"
