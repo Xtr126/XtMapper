@@ -13,11 +13,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.View.OnLayoutChangeListener
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.ui.platform.ComposeView
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
@@ -127,7 +127,7 @@ class EditorUI(
         mService!!.pauseMouse()
     }
 
-    interface KeyInFocusListener {
+    fun interface KeyInFocusListener {
         fun setText(key: String?)
     }
 
@@ -210,7 +210,7 @@ class EditorUI(
             val windowInsetsController = overlayView.getWindowInsetsController()
             if (windowInsetsController != null) {
                 windowInsetsController.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+                windowInsetsController.hide(WindowInsets.Type.systemBars())
             }
         }
     }
@@ -292,7 +292,7 @@ class EditorUI(
     }
 
     private fun showMacroDialog() {
-        macroDialog = MacroDialog(context, overlayOpen, profile)
+        macroDialog = MacroDialog(context, overlayOpen, profile!!)
         macroDialog!!.show(View.OnClickListener { v: View? ->
             if (v != null) addMacro()
             if (macroDialog != null) {
@@ -340,7 +340,7 @@ class EditorUI(
         // Redirect keyboard input
         mainView!!.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
             macroView.onKey(
-                event
+                event!!
             )
         })
 
@@ -418,7 +418,7 @@ class EditorUI(
         editorUiComponentFactory.addDpads(profile!!.dpadArray)
 
         if (profile!!.mouseAimConfig != null) {
-            editorUiComponents.add(Crosshair(mCallback, context, profile!!.mouseAimConfig))
+            editorUiComponents.add(Crosshair(mCallback, context, profile!!.mouseAimConfig!!))
         }
         if (profile!!.rightClick != null) {
             editorUiComponents.add(RightClick(mCallback, context, profile!!.rightClick))
@@ -428,8 +428,8 @@ class EditorUI(
                 Camera(
                     mCallback,
                     context,
-                    profile!!.camera.x,
-                    profile!!.camera.y
+                    profile!!.camera!!.x,
+                    profile!!.camera!!.y
                 )
             )
         }
@@ -446,10 +446,10 @@ class EditorUI(
     private fun saveKeymap() {
         val linesToWrite = ArrayList<String?>()
 
-        editorUiComponents.forEach { linesToWrite.add(it.dataLine) }
+        editorUiComponents.forEach { linesToWrite.add(it.getDataLine()) }
 
         // Enabled macro ids
-        MacroIdUtils.getLines(linesToWrite, profile)
+        MacroIdUtils.getLines(linesToWrite, profile!!)
 
         // Save Config
         val profiles = KeymapProfiles(context)
@@ -465,10 +465,10 @@ class EditorUI(
      * used for passing to the Compose Import/Export dialog.
      */
     private fun generateConfigString(): String {
-        val linesToWrite = ArrayList<String>()
-        editorUiComponents.forEach { linesToWrite.add(it.dataLine) }
+        val linesToWrite = ArrayList<String?>()
+        editorUiComponents.forEach { linesToWrite.add(it.getDataLine()) }
 
-        MacroIdUtils.getLines(linesToWrite, profile)
+        MacroIdUtils.getLines(linesToWrite, profile!!)
         return linesToWrite.joinToString("\n")
     }
 
@@ -540,9 +540,9 @@ class EditorUI(
             return overlayOpen
         }
 
-        override fun getProfile(): KeymapProfile? =this@EditorUI.profile
+        override val profile: KeymapProfile get() = this@EditorUI.profile!!
 
-        override fun getKeysContainerView(): ViewGroup = this@EditorUI.keysContainerView
+        override val keysContainerView: ViewGroup get() = this@EditorUI.keysContainerView
 
         override fun removeComponent(component: EditorUiComponent?, vararg viewsToRemove: View?) {
             for (view in viewsToRemove) {

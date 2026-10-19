@@ -47,16 +47,36 @@ To share your thoughts on XtMapper/ ask any questions please create a post at ht
 
 ## Using on waydroid
 https://xtr126.github.io/XtMapper-docs/waydroid/1-overview/
+
 ## Credits
-@guobao2333 - [Chinese translation](https://github.com/Xtr126/XtMapper/pull/101)  
-@muhammadbahaa2001 - [Arabic translation](https://github.com/Xtr126/XtMapper/pull/106)  
-@KSMaan45 - [Punjabi translation](https://github.com/Xtr126/XtMapper/pull/109)  
 
+### Code contributors
 
-Help us translate on [Crowdin](https://crowdin.com/project/xtmapper/) or GitHub  
+| Contributor | Contributions |
+| --- | --- |
+| [@Xtr126](https://github.com/Xtr126) | Project creator and primary maintainer; core input mapping, editor, and service implementation |
+| [@SoufianoDev](https://github.com/SoufianoDev) | **Secondary maintainer**; Kotlin migration, codebase improvements, bug fixes, and translation updates |
+| [@guobao2333](https://github.com/guobao2333) | Application settings and pointer-mode configuration logic, alongside Chinese localization |
+| [@ilhan-athn7](https://github.com/ilhan-athn7) | Android 13 notification permission handling |
 
+See the [GitHub contributors graph](https://github.com/Xtr126/XtMapper/graphs/contributors) for the broader contribution history.
 
-And everyone else not mentioned here who took their time reporting bugs and making suggestions.
+### Translations
+
+| Contributor | Languages |
+| --- | --- |
+| [@guobao2333](https://github.com/guobao2333) | Simplified Chinese |
+| [@muhammadbahaa2001](https://github.com/muhammadbahaa2001) | Arabic |
+| [@KSMaan45](https://github.com/KSMaan45) | Punjabi |
+| [@SoufianoDev](https://github.com/SoufianoDev) | Spanish, French, Russian, and Portuguese |
+
+Help us translate on [Crowdin](https://crowdin.com/project/xtmapper/) or GitHub.
+
+### Release metadata
+
+- [@IzzySoft](https://github.com/IzzySoft) — Initial Fastlane metadata structures for IzzyOnDroid.
+
+Thanks to everyone who reports bugs, suggests improvements, contributes documentation, or helps make XtMapper better.
 
 Open source libraries used:
 - [Starlight](https://github.com/withastro/starlight) - Documentation framework  

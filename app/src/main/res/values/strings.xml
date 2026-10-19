@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">XtMapper</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
@@ -122,5 +122,15 @@
     <string name="floating_keys_size">Floating keys size</string>
     <string name="mouse_walk">Mouse walk</string>
     <string name="reset">Reset</string>
+
+    <!-- Import/Export functionality -->
+    <string name="default_backup_name">backup.zip</string>
+    <string name="error_export_failed">Export Failed</string>
+    <string name="action_retry">Retry</string>
+    <string name="msg_backup_saved">Backup Saved Successfully</string>
+    <string name="error_save_failed">Save Failed</string>
+    <string name="msg_profiles_imported">Profiles Imported Successfully</string>
+    <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">All profiles already exist, nothing imported</string>
+    <string name="error_import_failed">Import Failed</string>
     <string name="share">Share</string>
 </resources>
