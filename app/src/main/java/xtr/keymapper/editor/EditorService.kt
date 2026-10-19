@@ -22,6 +22,7 @@ class EditorService : ComposeLifecycleService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
         var selectedProfile = intent!!.getStringExtra(EditorActivity.PROFILE_NAME) ?: "Default"
 
         val keymapConfig = KeymapConfig(this)
@@ -70,6 +71,7 @@ class EditorService : ComposeLifecycleService() {
     }
 
     override fun onBind(intent: Intent): IBinder? {
+        super.onBind(intent)
         return null
     }
 }
