@@ -41,8 +41,7 @@ object RemoteServiceShell {
                     else -> println("Invalid argument: $arg")
                 }
             }
-            ProcessBuilder("setenforce", "0").inheritIO().start()
-            RemoteService.selinuxRelaxed = true
+            Selinux.real.relax()
             // Hooks run only on System.exit (crash handler, stopServer exit) — Android does NOT
             // run them when the process is killed with SIGTERM (e.g. pkill); a clean stop is
             // restored by RemoteService.stopServer instead
