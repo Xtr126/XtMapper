@@ -1,38 +1,59 @@
 package xtr.keymapper.server
 
 /**
- * Tracks whether THIS process put SELinux into permissive mode and only restores
- * enforcing if it did. Command execution and mode verification are injected so
- * JVM tests never run real setenforce/getenforce commands.
+ * Tracks whether THIS process changed SELinux from a positively known Enforcing start
+ * state, and restores Enforcing only when it is positively verified. Command execution
+ * and mode verification are injected so JVM tests never run real commands.
+ *
+ * SELinux state is system-wide: another privileged process can flip it at any moment and
+ * its changes cannot be distinguished from ours. That is why we only ever act from a
+ * positively known Enforcing start state (so restoring Enforcing cannot overwrite an
+ * unrelated pre-existing state) and keep a pending flag on any uncertain outcome instead
+ * of guessing.
  */
 internal class Selinux(
     private val setenforce: (Int) -> Boolean,
     private val getenforce: () -> String?
 ) {
-    var isRelaxed: Boolean = false
+    /** True while this instance may have left the device Permissive (restore pending). */
+    var restorationPending: Boolean = false
         private set
 
-    /** Puts SELinux permissive. Returns true only when this call is what relaxed it. */
+    /**
+     * Puts SELinux permissive. Returns true only when the Permissive state was
+     * positively verified after a successful command.
+     */
     fun relax(): Boolean {
-        if (isRelaxed) return true
-        if (getenforce() == PERMISSIVE) return false // already permissive before us
+        // Only a positively known Enforcing start state may be changed; Permissive,
+        // unknown or invalid readings fail safely without running setenforce 0
+        if (getenforce() != ENFORCING) return false
         if (!setenforce(0)) return false
-        // Unreadable mode after a successful command: trust the exit code.
-        // Only a positive "Enforcing" answer contradicts it.
-        if (getenforce() == ENFORCING) return false
-        isRelaxed = true
-        return true
+        return when (getenforce()) {
+            PERMISSIVE -> {
+                restorationPending = true
+                true
+            }
+            ENFORCING -> false // command exited 0 but no change happened
+            // Unknown after a successful command: keep pending so a later restore
+            // returns to the known Enforcing start state, but report no verified
+            // transition — the command merely launched, nothing is confirmed
+            else -> {
+                restorationPending = true
+                false
+            }
+        }
     }
 
     /**
-     * Restores enforcing; no-op unless this instance relaxed SELinux.
-     * Keeps isRelaxed=true on failure so a later stop retries.
+     * Restores enforcing; no-op unless a change is pending. Success requires the state
+     * to be positively verified as Enforcing. On any failure the pending flag stays set
+     * so a subsequent cleanup attempt can retry.
      */
     fun restore(): Boolean {
-        if (!isRelaxed) return true
+        if (!restorationPending) return true
         if (!setenforce(1)) return false
-        if (getenforce() == PERMISSIVE) return false
-        isRelaxed = false
+        if (getenforce() != ENFORCING) return false // Permissive or unreadable: unverified
+        restorationPending = false
         return true
     }
 
