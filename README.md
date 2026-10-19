@@ -50,20 +50,33 @@ https://xtr126.github.io/XtMapper-docs/waydroid/1-overview/
 
 ## Credits
 
-<div style="font-size: 1.1em;">
+### Code contributors
 
-- <img src="https://github.com/guobao2333.png" width="40" height="40" /> [@guobao2333](https://github.com/guobao2333) — [Chinese translation](https://github.com/Xtr126/XtMapper/pull/101)
-- <img src="https://github.com/muhammadbahaa2001.png" width="40" height="40" /> [@muhammadbahaa2001](https://github.com/muhammadbahaa2001) — [Arabic translation](https://github.com/Xtr126/XtMapper/pull/106)
-- <img src="https://github.com/KSMaan45.png" width="40" height="40" /> [@KSMaan45](https://github.com/KSMaan45) — [Punjabi translation](https://github.com/Xtr126/XtMapper/pull/109)
-- <img src="https://github.com/SoufianoDev.png" width="40" height="40" /> [@SoufianoDev](https://github.com/SoufianoDev) — [Active codebase improvements, bug fixes, ongoing maintenance, and continuous translation updates](https://github.com/SoufianoDev/XtMapper)
+| Contributor | Contributions |
+| --- | --- |
+| [@Xtr126](https://github.com/Xtr126) | Project creator and primary maintainer; core input mapping, editor, and service implementation |
+| [@SoufianoDev](https://github.com/SoufianoDev) | **Secondary maintainer**; Kotlin migration, codebase improvements, bug fixes, and translation updates |
+| [@guobao2333](https://github.com/guobao2333) | Application settings and pointer-mode configuration logic, alongside Chinese localization |
+| [@ilhan-athn7](https://github.com/ilhan-athn7) | Android 13 notification permission handling |
 
-</div>
+See the [GitHub contributors graph](https://github.com/Xtr126/XtMapper/graphs/contributors) for the broader contribution history.
 
+### Translations
 
-Help us translate on [Crowdin](https://crowdin.com/project/xtmapper/) or GitHub  
+| Contributor | Languages |
+| --- | --- |
+| [@guobao2333](https://github.com/guobao2333) | Simplified Chinese |
+| [@muhammadbahaa2001](https://github.com/muhammadbahaa2001) | Arabic |
+| [@KSMaan45](https://github.com/KSMaan45) | Punjabi |
+| [@SoufianoDev](https://github.com/SoufianoDev) | Spanish, French, Russian, and Portuguese |
 
+Help us translate on [Crowdin](https://crowdin.com/project/xtmapper/) or GitHub.
 
-And everyone else not mentioned here who took their time reporting bugs and making suggestions.
+### Release metadata
+
+- [@IzzySoft](https://github.com/IzzySoft) — Initial Fastlane metadata structures for IzzyOnDroid.
+
+Thanks to everyone who reports bugs, suggests improvements, contributes documentation, or helps make XtMapper better.
 
 Open source libraries used:
 - [Starlight](https://github.com/withastro/starlight) - Documentation framework  
