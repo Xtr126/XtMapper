@@ -42,7 +42,6 @@ import xtr.keymapper.keymap.KeymapProfiles
 import xtr.keymapper.macro.MacroIdUtils
 import xtr.keymapper.macro.MacroStatus
 import xtr.keymapper.macro.MacroView
-import xtr.keymapper.macro.MacroView.OnFinishListener
 import xtr.keymapper.server.RemoteServiceHelper
 
 class EditorUI(
@@ -177,7 +176,7 @@ class EditorUI(
 
     private fun openOverlayWindow(alpha: Float = -1f) {
         val overlayView =
-            (if (startMode == EditorUI.Companion.SHOW_KEYMAP_ONLY) keysContainerView else mainView)!!
+            (if (startMode == SHOW_KEYMAP_ONLY) keysContainerView else mainView)!!
         if (overlayOpen) {
             removeView(overlayView)
         }
@@ -245,11 +244,11 @@ class EditorUI(
         val key = input_event[2].substring(4)
 
         // Incoming calls are not guaranteed to be executed on the main thread
-        mHandler.post(Runnable {
+        mHandler.post {
             if (macroDialog != null) macroDialog!!.onKey(key)
             else if (keyInFocus != null) keyInFocus!!.setText(key)
             settingsOverlay!!.onKey(key)
-        })
+        }
     }
 
 
@@ -293,13 +292,13 @@ class EditorUI(
 
     private fun showMacroDialog() {
         macroDialog = MacroDialog(context, overlayOpen, profile)
-        macroDialog!!.show(View.OnClickListener { v: View? ->
+        macroDialog!!.show { v: View? ->
             if (v != null) addMacro()
             if (macroDialog != null) {
                 macroDialog!!.dismiss()
                 macroDialog = null
             }
-        })
+        }
     }
 
     /**
@@ -312,7 +311,7 @@ class EditorUI(
             mainView!!.setFocusable(true)
         }
         val macroStatus = MacroStatus(context, settingsOverlay!!.binding.catalog)
-        val macroView = MacroView(context, OnFinishListener { macroView_: MacroView? ->
+        val macroView = MacroView(context) { macroView_: MacroView? ->
             // Stop counting time in stopwatch
             macroStatus.stop()
 
@@ -321,30 +320,30 @@ class EditorUI(
             macroView_!!.invalidate()
 
             // Redirect keyboard input
-            mainView!!.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
+            mainView!!.setOnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
                 this@EditorUI.onKey(
                     v,
                     keyCode,
                     event!!
                 )
-            })
+            }
             settingsOverlay.unHideButtons()
             if (mService == null) mainView.setFocusable(false)
             showMacroDialog()
-        })
+        }
         // Hide existing buttons in catalog till macro finish
         settingsOverlay.hideButtons()
         macroStatus.start()
 
         keysContainerView.addView(macroView)
         // Redirect keyboard input
-        mainView!!.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
+        mainView!!.setOnKeyListener { v, keyCode: Int, event: KeyEvent? ->
             macroView.onKey(
                 event
             )
-        })
+        }
 
-        settingsOverlay.binding.catalog.setOnClickListener(View.OnClickListener { v: View? -> macroView.clearCanvasAndFinish() })
+        settingsOverlay.binding.catalog.setOnClickListener { _: View? -> macroView.clearCanvasAndFinish() }
     }
 
     /** saves, unregisters listeners, removes views, and triggers Activity or service cleanup. */
@@ -361,9 +360,9 @@ class EditorUI(
             // Load keymap config after settingsOverlay wrote config
             val keymapConfig = KeymapConfig(context)
             // We stopped the service, so we must restart it
-            RemoteServiceHelper.runIfActive(context, Runnable {
+            RemoteServiceHelper.runIfActive(context) {
                 if (keymapConfig.showControls) ShowKeymapService.start(context, profileName)
-            })
+            }
         } else removeView(keysContainerView)
         
         // Cleanup Compose Dialog if it's open
@@ -386,7 +385,7 @@ class EditorUI(
      */
     fun loadKeymapAndObserveSizeChanges() {
         profileBackup = KeymapProfiles(context).getProfile(profileName, false)
-        keysContainerView.addOnLayoutChangeListener(OnLayoutChangeListener { v: View?, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
+        keysContainerView.addOnLayoutChangeListener { v: View?, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
             if (right != oldRight || left != oldLeft || top != oldTop || bottom != oldBottom) {
                 if (profile != null) {
                     // Save previous state before wiping
@@ -394,8 +393,8 @@ class EditorUI(
                     reloadKeymap()
                 }
             }
-        })
-        keysContainerView.post(Runnable { this.loadKeymap() })
+        }
+        keysContainerView.post { this.loadKeymap() }
     }
 
     private fun reloadKeymap() {
