@@ -39,6 +39,11 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">تأخير السحب %d مللي ثانية</string>
+    <string name="shift_transition_ms">انتقال التبديل: %d مللي ثانية</string>
+    <string name="shift_transition_title">سرعة انتقال التبديل</string>
+    <string name="use_global_default">الافتراضي العام (%d مللي ثانية)</string>
+    <string name="block_keyboard_input">منع مدخلات لوحة المفاتيح</string>
+    <string name="block_keyboard_input_summary">منع الألعاب والتطبيقات المستهدفة من قراءة أحداث لوحة المفاتيح مباشرة</string>
     <string name="profile_name">اسم ملف التعريف</string>
     <string name="root_not_found_title">لم يتم العثور على وصول الروت</string>
     <string name="root_not_found_message">يتطلب الوصول إلى الروت لكي يعمل برنامج تعيين المفاتيح. \n يرجى منح صلاحيات المستخدم الخارق لـ XtMapper من تطبيق KernelSU</string>

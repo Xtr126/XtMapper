@@ -6,6 +6,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := getevent
 LOCAL_SRC_FILES := $(JNI_SRC_PATH)/getevent.c
+LOCAL_LDLIBS := -ldl
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)

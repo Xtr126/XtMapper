@@ -59,6 +59,9 @@ class KeymapConfig : Parcelable {
     var swipeDelayMs = 0
 
     @JvmField
+    var shiftTransitionMs = 100
+
+    @JvmField
     var pauseResumeShortcutKeyModifier: String? = null
 
     @JvmField
@@ -84,6 +87,9 @@ class KeymapConfig : Parcelable {
 
     @JvmField
     var touchJitterSpread = 15f
+
+    @JvmField
+    var blockKeyboardInput = false
 
     @JvmField
     var inputMode = MODE_ROOT
@@ -141,6 +147,8 @@ class KeymapConfig : Parcelable {
         touchJitter = parcel.readByte().toInt() != 0
         touchJitterSpread = parcel.readFloat()
         inputMode = parcel.readInt()
+        shiftTransitionMs = if (parcel.dataAvail() > 0) parcel.readInt() else 100
+        blockKeyboardInput = if (parcel.dataAvail() > 0) parcel.readByte().toInt() != 0 else false
     }
 
     override fun writeToParcel(dest: Parcel, flags: Int) {
@@ -180,6 +188,8 @@ class KeymapConfig : Parcelable {
         dest.writeByte((if (touchJitter) 1 else 0).toByte())
         dest.writeFloat(touchJitterSpread)
         dest.writeInt(inputMode)
+        dest.writeInt(shiftTransitionMs)
+        dest.writeByte((if (blockKeyboardInput) 1 else 0).toByte())
     }
 
     override fun describeContents(): Int {
@@ -220,6 +230,8 @@ class KeymapConfig : Parcelable {
         floatingKeysSize = sharedPref.getFloat("floating_keys_size", 1f)
         touchJitter = sharedPref.getBoolean("touch_jitter", false)
         touchJitterSpread = sharedPref.getFloat("touch_jitter_spread", 15f)
+        shiftTransitionMs = sharedPref.getInt("shift_transition_ms", 100)
+        blockKeyboardInput = sharedPref.getBoolean("block_keyboard_input", false)
         inputMode = sharedPref.getInt("input_mode", if (useShizuku) MODE_SHIZUKU else MODE_ROOT)
     }
 
@@ -245,10 +257,12 @@ class KeymapConfig : Parcelable {
             .putString("switch_profile_shortcut_modifier", switchProfileShortcutKeyModifier)
             .putInt("touchpad_input_mode", touchpadInputMode)
             .putInt("swipe_delay_ms", swipeDelayMs)
+            .putInt("shift_transition_ms", shiftTransitionMs)
             .putInt("pointer_mode", pointerMode)
             .putFloat("floating_keys_size", floatingKeysSize)
             .putBoolean("touch_jitter", touchJitter)
             .putFloat("touch_jitter_spread", touchJitterSpread)
+            .putBoolean("block_keyboard_input", blockKeyboardInput)
             .putInt("input_mode", inputMode)
             .apply()
     }

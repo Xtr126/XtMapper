@@ -28,16 +28,21 @@ class ActivityObserverService(observer: ActivityObserver) : Runnable {
     override fun run() {
         try {
             val taskInfo = am.getTasks(1)
-            val packageName = taskInfo[0].topActivity!!.packageName
-            val callback = mCallback
-            if (callback != null) {
-                callback.onForegroundActivitiesChanged(packageName)
-                mHandler?.postDelayed(this, 5000)
+            if (taskInfo != null && taskInfo.isNotEmpty() && taskInfo[0].topActivity != null) {
+                val packageName = taskInfo[0].topActivity!!.packageName
+                val callback = mCallback
+                if (callback != null) {
+                    callback.onForegroundActivitiesChanged(packageName)
+                    mHandler?.postDelayed(this, 1000)
+                } else {
+                    stop()
+                }
             } else {
-                stop()
+                mHandler?.postDelayed(this, 1000)
             }
         } catch (e: RemoteException) {
             Log.e(RemoteService.TAG, e.message, e)
+            mHandler?.postDelayed(this, 1000)
         }
     }
 

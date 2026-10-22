@@ -213,7 +213,13 @@ class TouchPointer : Service() {
             mWindowManager =
                 this.displayContext?.getSystemService(WindowManager::class.java)
             try {
-                if (keymapConfig.disableAutoProfiling) {
+                if (!keymapConfig.disableAutoProfiling) {
+                    if (!activityRemoteCallback) {
+                        service.registerActivityObserver(mActivityObserverCallback)
+                        activityRemoteCallback = true
+                    }
+                }
+                if (!profile.disabled) {
                     service.startServer(
                         profile,
                         keymapConfig,
@@ -222,20 +228,6 @@ class TouchPointer : Service() {
                         size.y,
                         displayId
                     )
-                } else {
-                    if (!activityRemoteCallback) {
-                        service.registerActivityObserver(mActivityObserverCallback)
-                        activityRemoteCallback = true
-                    } else if (!profile.disabled) {
-                        service.startServer(
-                            profile,
-                            keymapConfig,
-                            mCallback,
-                            size.x,
-                            size.y,
-                            displayId
-                        )
-                    }
                 }
                 if (keymapConfig.showControls) {
                     ShowKeymapService.start(this, selectedProfile)

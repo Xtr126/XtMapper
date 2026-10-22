@@ -46,6 +46,11 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">Swipe delay %d milliseconds</string>
+    <string name="shift_transition_ms">Shift transition: %d ms</string>
+    <string name="shift_transition_title">Shift Transition Speed</string>
+    <string name="use_global_default">Global default (%d ms)</string>
+    <string name="block_keyboard_input">Block keyboard input</string>
+    <string name="block_keyboard_input_summary">Prevent target games and apps from reading raw keyboard events</string>
     <string name="profile_name">Profile Name</string>
     <string name="root_not_found_title">Root access not found</string>
     <string name="root_not_found_message">Root access is required for the keymapper to function. \n Please grant superuser to XtMapper from KernelSU manager app</string>

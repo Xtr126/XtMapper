@@ -38,6 +38,11 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">滑动延迟 %d 毫秒</string>
+    <string name="shift_transition_ms">切换过渡: %d 毫秒</string>
+    <string name="shift_transition_title">切换过渡速度</string>
+    <string name="use_global_default">全局默认 (%d 毫秒)</string>
+    <string name="block_keyboard_input">阻止应用读取键盘输入</string>
+    <string name="block_keyboard_input_summary">阻止目标游戏和应用直接读取原始键盘事件</string>
     <string name="profile_name">配置名称</string>
     <string name="root_not_found_title">未获取root权限</string>
     <string name="root_not_found_message">键映射需要获取root权限才能运行。\n请在您的root管理器中为XtMapper授予权限</string>

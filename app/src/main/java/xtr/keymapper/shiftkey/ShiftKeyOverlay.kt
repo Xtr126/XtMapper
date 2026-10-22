@@ -45,7 +45,9 @@ class ShiftKeyOverlay @JvmOverloads constructor(
     private val lineMidPointY get() = (lineStartY + lineStopY) / 2
 
     fun centerViewOnLine(view: View) {
-        view.x = lineMidPointX - view.pivotX
-        view.y = lineMidPointY - view.pivotY
+        val halfW = if (view.width > 0) view.width / 2f else if (view.measuredWidth > 0) view.measuredWidth / 2f else view.pivotX
+        val halfH = if (view.height > 0) view.height / 2f else if (view.measuredHeight > 0) view.measuredHeight / 2f else view.pivotY
+        view.x = lineMidPointX - halfW
+        view.y = lineMidPointY - halfH
     }
 }

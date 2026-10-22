@@ -103,6 +103,9 @@ class InputService @Throws(RemoteException::class) constructor(
         if (!isWaylandClient) {
             setMouseLock(!stopEvents)
         }
+        if (keymapConfig.blockKeyboardInput) {
+            RemoteService.instance?.setKeyboardGrab(!stopEvents)
+        }
     }
 
     override fun moveCursorX(x: Int) {
@@ -170,6 +173,7 @@ class InputService @Throws(RemoteException::class) constructor(
             this.stop()
             keyEventHandler.init()
             mouseEventHandler.init()
+            RemoteService.instance?.setKeyboardGrab(!stopEvents && keymapConfig.blockKeyboardInput)
         } catch (e: Exception) {
             Log.e(RemoteService.TAG, e.message, e)
         }

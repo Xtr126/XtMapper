@@ -47,6 +47,11 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">Задержка скольжения %d миллисекунд</string>
+    <string name="shift_transition_ms">Переход переключения: %d мс</string>
+    <string name="shift_transition_title">Скорость перехода</string>
+    <string name="use_global_default">По умолчанию (%d мс)</string>
+    <string name="block_keyboard_input">Блокировать ввод с клавиатуры</string>
+    <string name="block_keyboard_input_summary">Предотвратить чтение событий клавиатуры целевыми играми и приложениями</string>
     <string name="profile_name">Имя профиля</string>
     <string name="root_not_found_title">Доступ суперпользователя не найден</string>
     <string name="root_not_found_message">Для работы переназначителя клавиш требуется доступ суперпользователя. \n Пожалуйста, предоставьте права суперпользователя XtMapper из приложения KernelSU</string>

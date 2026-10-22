@@ -116,7 +116,7 @@ class KeyEventHandler(private val mInput: IInputInterface) {
         }
 
         shiftKeyHandlers?.forEach { shiftKeyHandler ->
-            shiftKeyHandler.handleEvent(event, mInput, pidProvider)
+            shiftKeyHandler.handleEvent(event, mInput, pidProvider, eventHandler, keymapConfig.shiftTransitionMs)
         }
 
         val macroIdMap = mInput.keymapProfile.macroIdMap

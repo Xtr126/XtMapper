@@ -30,6 +30,7 @@ import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import java.lang.reflect.Method
 
@@ -47,6 +48,9 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     internal var context: Context = context
     internal var startedFromShell = false
 
+    private var geteventProcess: Process? = null
+    private var isBlockKeyboardActive = false
+
     // shortcut: single-user check; multi-user/work-profile installs have a different uid per user
     private val appUid: Int by lazy {
         context.packageManager.getPackageUid(BuildConfig.APPLICATION_ID, 0)
@@ -58,6 +62,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     init {
+        instance = this
         loadLibraries()
         init()
     }
@@ -156,6 +161,37 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         return windowManager
     }
 
+    fun setKeyboardGrab(grab: Boolean) {
+        Thread {
+            try {
+                val pidFile = File("/data/local/tmp/xtmapper_getevent.pid")
+                var retries = 0
+                while (!pidFile.exists() && retries < 10) {
+                    Thread.sleep(50)
+                    retries++
+                }
+                if (pidFile.exists()) {
+                    val pid = pidFile.readText().trim()
+                    if (pid.isNotEmpty()) {
+                        val sig = if (grab) "USR1" else "USR2"
+                        Runtime.getRuntime().exec(arrayOf("kill", "-$sig", pid)).waitFor()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to toggle keyboard grab: ${e.message}")
+            }
+        }.start()
+    }
+
+    private fun stop_getevent() {
+        try {
+            setKeyboardGrab(false)
+            geteventProcess?.destroy()
+            geteventProcess = null
+            File("/data/local/tmp/xtmapper_getevent.pid").delete()
+        } catch (_: Exception) {}
+    }
+
     /**
      * Executes getevent command and processes the output or reads from stdin if wayland client
      */
@@ -165,7 +201,11 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
             if (isWaylandClient) {
                 getevent = BufferedReader(InputStreamReader(System.`in`))
             } else {
-                getevent = Utils.geteventStream(nativeLibraryDir)
+                val blockKb = inputService?.keymapConfig?.blockKeyboardInput ?: false
+                isBlockKeyboardActive = blockKb
+                val proc = Utils.geteventStream(nativeLibraryDir, blockKb)
+                geteventProcess = proc
+                getevent = BufferedReader(InputStreamReader(proc.inputStream))
             }
             var line: String?
             while (getevent.readLine().also { line = it } != null) {
@@ -264,6 +304,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                     newService.setMouseLock(true)
                     newService.openDevice(currentDevice)
                 }
+                setKeyboardGrab(keymapConfig.blockKeyboardInput)
             } catch (e: RemoteException) {
                 throw RuntimeException(e)
             }
@@ -294,6 +335,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     private fun stopServer(exitProcess: Boolean) {
+        setKeyboardGrab(false)
         // Restore enforcing only if this app actually relaxed SELinux (shell entry
         // point); startedFromShell is also set by the system-app path, which never does
         if (exitProcess && !Selinux.real.restore()) {
@@ -307,6 +349,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         }
 
         if (!startedFromShell && exitProcess) {
+            stop_getevent()
             System.exit(0)
         } else if (service != null && !isWaylandClient) {
             service.stopEvents = true
@@ -382,6 +425,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
 
     companion object {
         const val TAG = "xtmapper-server"
+        var instance: RemoteService? = null
 
         fun loadLibraries() {
             System.loadLibrary("mouse_read")

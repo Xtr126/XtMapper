@@ -47,6 +47,11 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">Retraso de deslizamiento %d milisegundos</string>
+    <string name="shift_transition_ms">Transición de cambio: %d ms</string>
+    <string name="shift_transition_title">Velocidad de transición</string>
+    <string name="use_global_default">Predeterminado global (%d ms)</string>
+    <string name="block_keyboard_input">Bloquear entrada de teclado</string>
+    <string name="block_keyboard_input_summary">Evitar que los juegos y apps de destino lean eventos de teclado sin procesar</string>
     <string name="profile_name">Nombre del perfil</string>
     <string name="root_not_found_title">Acceso raíz no encontrado</string>
     <string name="root_not_found_message">Se requiere acceso raíz para que el remapeador de teclas funcione. \n Otorgue permisos de superusuario a XtMapper desde la aplicación del administrador de KernelSU</string>

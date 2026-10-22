@@ -12,6 +12,9 @@ class ShiftKey : KeymapProfileElement {
     @JvmField
     val key2: Key
 
+    @JvmField
+    var durationMs: Int = -1
+
     override fun scale(scaleX: Float, scaleY: Float) {
         key1.x *= scaleX
         key1.y *= scaleY
@@ -28,6 +31,10 @@ class ShiftKey : KeymapProfileElement {
         key2.code = data[4]
         key2.x = data[5].toFloat()
         key2.y = data[6].toFloat()
+
+        if (data.size > 7) {
+            durationMs = data[7].toIntOrNull() ?: -1
+        }
     }
 
     constructor() {
@@ -38,17 +45,22 @@ class ShiftKey : KeymapProfileElement {
     protected constructor(parcel: Parcel) {
         key1 = parcel.readParcelable(Key::class.java.classLoader)!!
         key2 = parcel.readParcelable(Key::class.java.classLoader)!!
+        durationMs = if (parcel.dataAvail() > 0) parcel.readInt() else -1
     }
 
     val data: String
         get() {
-            return TAG + " " +
+            var line = TAG + " " +
                     key1.code + " " +
                     key1.x + " " +
                     key1.y + " " +
                     key2.code + " " +
                     key2.x + " " +
                     key2.y
+            if (durationMs >= 0) {
+                line += " " + durationMs
+            }
+            return line
         }
 
     override fun describeContents(): Int {
@@ -58,6 +70,7 @@ class ShiftKey : KeymapProfileElement {
     override fun writeToParcel(dest: Parcel, flags: Int) {
         dest.writeParcelable(key1, flags)
         dest.writeParcelable(key2, flags)
+        dest.writeInt(durationMs)
     }
 
     companion object {

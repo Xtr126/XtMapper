@@ -172,6 +172,24 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:id="@+id/shift_transition_text"
+                    android:text="@string/shift_transition_ms" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_shift_transition"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="500"
+                    android:stepSize="10"
+                    app:trackIconInactiveEnd="@drawable/ic_baseline_swap_horiz_24"
+                    app:trackStopIndicatorSize="0dp"
+                    app:trackIconSize="14dp"
+                    />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:text="@string/floating_keys_size" />
 
                 <com.google.android.material.slider.Slider

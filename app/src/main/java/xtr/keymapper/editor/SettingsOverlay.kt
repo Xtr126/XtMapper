@@ -22,6 +22,7 @@ import xtr.keymapper.databinding.KeymapEditorItemBinding
 import xtr.keymapper.databinding.KeymapEditorLayoutBinding
 import xtr.keymapper.databinding.SettingsBinding
 import xtr.keymapper.keymap.KeymapConfig
+import xtr.keymapper.server.RemoteServiceHelper
 
 class SettingsOverlay(private val context: Context, private val startMode: Int) {
 
@@ -70,6 +71,14 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         )
         binding.sliderSwipeDelay.addOnChangeListener { _, value, _ ->
             binding.swipeDelayText.setText(context.getString(R.string.swipe_delay_ms, value.toInt()))
+        }
+
+        binding.sliderShiftTransition.setValue(keymapConfig.shiftTransitionMs.toFloat())
+        binding.shiftTransitionText.setText(
+            context.getString(R.string.shift_transition_ms, keymapConfig.shiftTransitionMs)
+        )
+        binding.sliderShiftTransition.addOnChangeListener { _, value, _ ->
+            binding.shiftTransitionText.setText(context.getString(R.string.shift_transition_ms, value.toInt()))
         }
 
         val jitterSpread = if (keymapConfig.touchJitter) keymapConfig.touchJitterSpread else 0f
@@ -140,6 +149,7 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         settingsBinding.autoProfileSwitch.isChecked = keymapConfig.disableAutoProfiling
         settingsBinding.useShizuku.isChecked = keymapConfig.isShizukuMode
         settingsBinding.editorOverlay.isChecked = keymapConfig.editorOverlay
+        settingsBinding.blockKeyboardSwitch.isChecked = keymapConfig.blockKeyboardInput
 
         settingsBinding.touchJitterSwitch.isChecked = keymapConfig.touchJitter
         settingsBinding.touchJitterSpread.value = keymapConfig.touchJitterSpread
@@ -151,22 +161,28 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         settingsBinding.showControls.isChecked = keymapConfig.showControls
         settingsBinding.showControlsOpacity.setValue(keymapConfig.showControlsOpacity)
 
+        val saveSettings = {
+            keymapConfig.disableAutoProfiling = settingsBinding.autoProfileSwitch.isChecked
+            val shizuku = settingsBinding.useShizuku.isChecked
+            keymapConfig.useShizuku = shizuku
+            keymapConfig.inputMode = if (shizuku) KeymapConfig.MODE_SHIZUKU else KeymapConfig.MODE_ROOT
+            keymapConfig.editorOverlay = settingsBinding.editorOverlay.isChecked
+            keymapConfig.blockKeyboardInput = settingsBinding.blockKeyboardSwitch.isChecked
+            keymapConfig.touchJitter = settingsBinding.touchJitterSwitch.isChecked
+            keymapConfig.touchJitterSpread = settingsBinding.touchJitterSpread.value
+            keymapConfig.showControls = settingsBinding.showControls.isChecked
+            keymapConfig.showControlsOpacity = settingsBinding.showControlsOpacity.value
+            keymapConfig.applySharedPrefs()
+            RemoteServiceHelper.reloadKeymap(context)
+        }
+
         val dialog: AlertDialog = MaterialAlertDialogBuilder(context, R.style.MaterialAlertDialog_Centered)
             .setView(settingsBinding.root)
             .setTitle(R.string.advanced)
             .setIcon(R.drawable.ic_baseline_settings_24)
             .setCancelable(true)
-            .setOnCancelListener {
-                keymapConfig.disableAutoProfiling = settingsBinding.autoProfileSwitch.isChecked
-                val shizuku = settingsBinding.useShizuku.isChecked
-                keymapConfig.useShizuku = shizuku
-                keymapConfig.inputMode = if (shizuku) KeymapConfig.MODE_SHIZUKU else KeymapConfig.MODE_ROOT
-                keymapConfig.editorOverlay = settingsBinding.editorOverlay.isChecked
-                keymapConfig.touchJitter = settingsBinding.touchJitterSwitch.isChecked
-                keymapConfig.touchJitterSpread = settingsBinding.touchJitterSpread.value
-                keymapConfig.showControls = settingsBinding.showControls.isChecked
-                keymapConfig.showControlsOpacity = settingsBinding.showControlsOpacity.value
-                keymapConfig.applySharedPrefs()
+            .setOnDismissListener {
+                saveSettings()
             }
             .create()
         if (overlayWindow) dialog.window!!.setType(
@@ -245,6 +261,7 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         keymapConfig.mouseSensitivity = binding.sliderMouse.value
         keymapConfig.scrollSpeed = binding.sliderScrollSpeed.value
         keymapConfig.swipeDelayMs = binding.sliderSwipeDelay.value.toInt()
+        keymapConfig.shiftTransitionMs = binding.sliderShiftTransition.value.toInt()
         keymapConfig.floatingKeysSize = binding.sliderFloatingKeysSize.value
 
         keymapConfig.ctrlMouseWheelZoom = binding.mouseWheelToggle.isChecked

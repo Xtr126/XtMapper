@@ -38,6 +38,11 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">ਸਵਾਈਪ ਦੇਰੀ %d ਮਿਲੀਸਕਿੰਟ</string>
+    <string name="shift_transition_ms">ਸ਼ਿਫਟ ਤਬਦੀਲੀ: %d ਮਿਲੀਸਕਿੰਟ</string>
+    <string name="shift_transition_title">ਸ਼ਿਫਟ ਤਬਦੀਲੀ ਦੀ ਗਤੀ</string>
+    <string name="use_global_default">ਗਲੋਬਲ ਪੂਰਵ-ਨਿਰਧਾਰਤ (%d ਮਿਲੀਸਕਿੰਟ)</string>
+    <string name="block_keyboard_input">ਕੀਬੋਰਡ ਇਨਪੁਟ ਬਲਾਕ ਕਰੋ</string>
+    <string name="block_keyboard_input_summary">ਟਾਰਗੇਟ ਗੇਮਾਂ ਅਤੇ ਐਪਾਂ ਨੂੰ ਸਿੱਧੇ ਕੀਬੋਰਡ ਇਵੈਂਟ ਪੜ੍ਹਨ ਤੋਂ ਰੋਕੋ</string>
     <string name="profile_name">ਪ੍ਰੋਫਾਈਲ ਨਾਮ</string>
     <string name="root_not_found_title">ਰੂਟ ਨਹੀਂ ਮਿਲੀ</string>
     <string name="root_not_found_message">ਕੀਮੈਪਰ ਨੂੰ ਕੰਮ ਕਰਨ ਲਈ ਰੂਟ ਦੀ ਲੋੜ ਹੈ। \n ਕਿਰਪਾ ਕਰਕੇ KernelSU ਪ੍ਰਬੰਧਕ ਐਪ ਤੋਂ XtMapper ਨੂੰ ਸੁਪਰਯੂਜ਼ਰ ਦਿਓ</string>
