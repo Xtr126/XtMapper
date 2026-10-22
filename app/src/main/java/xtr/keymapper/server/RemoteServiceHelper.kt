@@ -131,6 +131,9 @@ object RemoteServiceHelper {
      */
     @JvmStatic
     fun getInstance(context: Context, callback: RootRemoteServiceCallback) {
+        if (!useShizuku && xtr.keymapper.keymap.KeymapConfig(context).isShizukuMode) {
+            useShizuku = true
+        }
         if (isSystemApp(context)) {
             getInstanceAsSystemApp(context, callback)
         } else {

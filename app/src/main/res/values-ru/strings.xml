@@ -67,6 +67,7 @@
     <string name="crosshair">Перекрестие</string>
     <string name="left_click">Щелчок левой кнопкой</string>
     <string name="swipe_key">Клавиша скольжения</string>
+    <string name="shift_key">Клавиша переключения</string>
     <string name="add_key">Добавить клавишу</string>
     <string name="save">Сохранить</string>
 

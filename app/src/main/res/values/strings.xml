@@ -66,6 +66,7 @@
     <string name="crosshair">CrossHair</string>
     <string name="left_click">Left Click</string>
     <string name="swipe_key">Swipe Key</string>
+    <string name="shift_key">Shift Key</string>
     <string name="add_key">Add Key</string>
     <string name="save">Save</string>
 

@@ -67,6 +67,7 @@
     <string name="crosshair">Retícula</string>
     <string name="left_click">Clic izquierdo</string>
     <string name="swipe_key">Tecla de deslizamiento</string>
+    <string name="shift_key">Tecla de cambio</string>
     <string name="add_key">Agregar tecla</string>
     <string name="save">Guardar</string>
 

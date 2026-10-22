@@ -12,12 +12,14 @@ import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.keymap.KeymapProfile.Companion.MAX_DPADS
 import xtr.keymapper.keymap.element.Camera
 import xtr.keymapper.keymap.element.Key
+import xtr.keymapper.keymap.element.ShiftKey
 import xtr.keymapper.keymap.element.SwipeKey
 import xtr.keymapper.macro.Macro
 import xtr.keymapper.server.IInputInterface
 import xtr.keymapper.server.InputService
 import xtr.keymapper.server.pid.PidProvider
 import xtr.keymapper.server.pid.PointerId.dpadpid1
+import xtr.keymapper.shiftkey.ShiftKeyHandler
 import xtr.keymapper.swipekey.SwipeKeyHandler
 
 class KeyEventHandler(private val mInput: IInputInterface) {
@@ -27,6 +29,7 @@ class KeyEventHandler(private val mInput: IInputInterface) {
     var altKeyPressed = false
     private var dpadHandlers: Array<DpadHandler?>? = null
     private var swipeKeyHandlers: ArrayList<SwipeKeyHandler>? = null
+    private var shiftKeyHandlers: ArrayList<ShiftKeyHandler>? = null
     private val pidProvider = PidProvider()
     private var mHandlerThread: HandlerThread? = null
     private var eventHandler: Handler? = null
@@ -53,11 +56,17 @@ class KeyEventHandler(private val mInput: IInputInterface) {
         for (key in profile.swipeKeys) {
             swipeKeyHandlers!!.add(SwipeKeyHandler(key))
         }
+
+        shiftKeyHandlers = ArrayList()
+        for (key in profile.shiftKeys) {
+            shiftKeyHandlers!!.add(ShiftKeyHandler(key))
+        }
     }
 
     fun stop() {
         dpadHandlers = null
         swipeKeyHandlers = null
+        shiftKeyHandlers = null
         mHandlerThread?.quit()
         mHandlerThread = null
         eventHandler = null
@@ -104,6 +113,10 @@ class KeyEventHandler(private val mInput: IInputInterface) {
 
         swipeKeyHandlers?.forEach { swipeKeyHandler ->
             swipeKeyHandler.handleEvent(event, mInput, pidProvider, eventHandler, keymapConfig.swipeDelayMs)
+        }
+
+        shiftKeyHandlers?.forEach { shiftKeyHandler ->
+            shiftKeyHandler.handleEvent(event, mInput, pidProvider)
         }
 
         val macroIdMap = mInput.keymapProfile.macroIdMap

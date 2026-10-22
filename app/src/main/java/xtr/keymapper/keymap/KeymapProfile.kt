@@ -9,6 +9,7 @@ import xtr.keymapper.keymap.element.Dpad
 import xtr.keymapper.keymap.element.Key
 import xtr.keymapper.keymap.element.MouseAimConfig
 import xtr.keymapper.keymap.element.MouseWalk
+import xtr.keymapper.keymap.element.ShiftKey
 import xtr.keymapper.keymap.element.SwipeKey
 import xtr.keymapper.macro.Macro
 import xtr.keymapper.macro.MacroSharedPreferences
@@ -32,6 +33,9 @@ class KeymapProfile : Parcelable {
 
     @JvmField
     var swipeKeys = ArrayList<SwipeKey>()
+
+    @JvmField
+    var shiftKeys = ArrayList<ShiftKey>()
 
     @JvmField
     var rightClick: Key? = null
@@ -79,6 +83,7 @@ class KeymapProfile : Parcelable {
             }
             keys.forEach { scaler(it) }
             swipeKeys.forEach { scaler(it) }
+            shiftKeys.forEach { scaler(it) }
             for (dpad in dpadArray) {
                 scaler(dpad)
             }
@@ -98,6 +103,7 @@ class KeymapProfile : Parcelable {
         mouseAimConfig = parcel.readParcelable(MouseAimConfig::class.java.classLoader)
         keys = parcel.createTypedArrayList(Key.CREATOR) as ArrayList<Key>
         swipeKeys = parcel.createTypedArrayList(SwipeKey.CREATOR) as ArrayList<SwipeKey>
+        shiftKeys = parcel.createTypedArrayList(ShiftKey.CREATOR) as ArrayList<ShiftKey>
         rightClick = parcel.readParcelable(Key::class.java.classLoader)
         disabled = parcel.readByte().toInt() != 0
         xRes = parcel.readInt()
@@ -114,6 +120,7 @@ class KeymapProfile : Parcelable {
         dest.writeParcelable(mouseAimConfig, flags)
         dest.writeTypedList(keys)
         dest.writeTypedList(swipeKeys)
+        dest.writeTypedList(shiftKeys)
         dest.writeParcelable(rightClick, flags)
         dest.writeByte((if (disabled) 1 else 0).toByte())
         dest.writeInt(xRes)

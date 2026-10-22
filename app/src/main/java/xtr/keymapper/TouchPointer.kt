@@ -89,29 +89,7 @@ class TouchPointer : Service() {
         val notificationManager = NotificationManagerCompat.from(this)
         notificationManager.createNotificationChannel(channel)
 
-        val keymapConfig = KeymapConfig(this)
-
-        val pendingIntent: PendingIntent?
-
-        if (keymapConfig.editorOverlay) {
-            val intent = Intent(this, EditorService::class.java)
-            pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-        } else {
-            val intent = Intent(this, EditorActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-                .putExtra(EditorActivity.PROFILE_NAME, selectedProfile)
-            pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-        }
-
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-        val notification = builder.setOngoing(true)
-            .setContentTitle("Keymapper service running")
-            .setContentText("Touch to launch editor")
-            .setContentIntent(pendingIntent)
-            .setSmallIcon(R.mipmap.ic_launcher_foreground)
-            .setCategory(Notification.CATEGORY_SERVICE)
-            .build()
+        val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(2, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
@@ -163,10 +141,53 @@ class TouchPointer : Service() {
         return super.onStartCommand(i, flags, startId)
     }
 
+    private fun buildNotification(): android.app.Notification {
+        val keymapConfig = KeymapConfig(this)
+        val pendingIntent: PendingIntent?
+
+        if (keymapConfig.editorOverlay) {
+            val intent = Intent(this, EditorService::class.java).apply {
+                putExtra(EditorActivity.PROFILE_NAME, selectedProfile)
+            }
+            pendingIntent = PendingIntent.getService(
+                this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            val intent = Intent(this, EditorActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                putExtra(EditorActivity.PROFILE_NAME, selectedProfile)
+            }
+            pendingIntent = PendingIntent.getActivity(
+                this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+        return builder.setOngoing(true)
+            .setContentTitle("Keymapper service running")
+            .setContentText("Touch to launch editor ($selectedProfile)")
+            .setContentIntent(pendingIntent)
+            .setSmallIcon(R.mipmap.ic_launcher_foreground)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .build()
+    }
+
+    private fun updateNotification() {
+        val notificationManager = NotificationManagerCompat.from(this)
+        try {
+            notificationManager.notify(2, buildNotification())
+        } catch (_: SecurityException) {
+        }
+    }
+
     fun launchProfile(profileName: String?) {
         this.selectedProfile = profileName
         currentSelectedProfile = profileName
         KeymapperTileService.updateTile(this)
+        updateNotification()
         val keymapProfile = KeymapProfiles(this).getProfile(selectedProfile, true)
         connectRemoteService(keymapProfile)
     }

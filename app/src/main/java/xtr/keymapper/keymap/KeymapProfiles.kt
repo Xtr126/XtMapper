@@ -8,6 +8,7 @@ import xtr.keymapper.keymap.element.Dpad
 import xtr.keymapper.keymap.element.Key
 import xtr.keymapper.keymap.element.MouseAimConfig
 import xtr.keymapper.keymap.element.MouseWalk
+import xtr.keymapper.keymap.element.ShiftKey
 import xtr.keymapper.keymap.element.SwipeKey
 import xtr.keymapper.macro.Macro
 import xtr.keymapper.macro.MacroIdUtils
@@ -200,6 +201,9 @@ class KeymapProfiles(context: Context) {
 
                     SwipeKey.TAG ->
                         if (data.size > 6) profile.swipeKeys.add(SwipeKey(data))
+
+                    ShiftKey.TAG ->
+                        if (data.size > 6) profile.shiftKeys.add(ShiftKey(data))
 
                     Camera.TAG ->
                         if (data.size >= 4)

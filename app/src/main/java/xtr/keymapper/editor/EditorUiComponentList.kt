@@ -29,6 +29,7 @@ internal class EditorUiComponentList : ArrayList<EditorUiComponent>() {
         R.id.add -> Key(callback, context, x, y)
         R.id.crosshair -> Crosshair(callback, context, x, y)
         R.id.swipe_key -> SwipeKey(callback, context, x, y)
+        R.id.shift_key -> ShiftKey(callback, context, x, y)
         R.id.mouse_right -> RightClick(callback, context, x, y)
         R.id.camera -> Camera(callback, context, x, y)
         R.id.mouse_walk -> MouseWalk(callback, context, x, y)
@@ -70,6 +71,12 @@ internal class EditorUiComponentList : ArrayList<EditorUiComponent>() {
         fun addSwipeKeys(swipeKeys: ArrayList<xtr.keymapper.keymap.element.SwipeKey>) {
             swipeKeys.forEach { swipeKey ->
                 if (swipeKey != null) add(SwipeKey(mCallback, context, swipeKey))
+            }
+        }
+
+        fun addShiftKeys(shiftKeys: ArrayList<xtr.keymapper.keymap.element.ShiftKey>) {
+            shiftKeys.forEach { shiftKey ->
+                if (shiftKey != null) add(ShiftKey(mCallback, context, shiftKey))
             }
         }
 

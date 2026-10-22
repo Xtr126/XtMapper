@@ -55,6 +55,7 @@
     <string name="crosshair">十字线</string>
     <string name="left_click">左键单击</string>
     <string name="swipe_key">滑动键</string>
+    <string name="shift_key">切换键</string>
     <string name="add_key">添加键</string>
     <string name="save">保存</string>
     <!--  Mouse Aim  -->

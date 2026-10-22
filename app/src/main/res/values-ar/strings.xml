@@ -57,6 +57,7 @@
     <string name="crosshair">هدف التصويب</string>
     <string name="left_click">النقر بزر الماوس الأيسر</string>
     <string name="swipe_key">مفتاح السحب</string>
+    <string name="shift_key">مفتاح التبديل</string>
     <string name="add_key">إضافة مفتاح</string>
     <string name="save">حفظ</string>
     <!--  Mouse Aim  -->

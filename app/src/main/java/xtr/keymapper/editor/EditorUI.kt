@@ -448,6 +448,7 @@ class EditorUI(
 
         editorUiComponentFactory.addKeys(profile!!.keys)
         editorUiComponentFactory.addSwipeKeys(profile!!.swipeKeys)
+        editorUiComponentFactory.addShiftKeys(profile!!.shiftKeys)
         editorUiComponentFactory.addDpads(profile!!.dpadArray)
 
         if (profile!!.mouseAimConfig != null) {
@@ -512,13 +513,28 @@ class EditorUI(
     }
 
     private fun handleImportAction() {
-        // TODO: Implement import logic (parse string back to KeymapProfile)
-        // Example: KeymapProfile newProfile = new KeymapProfiles(context).parseProfile(configString);
-        // Then call reloadKeymap();
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        val clipData = clipboard?.primaryClip
+        if (clipData != null && clipData.itemCount > 0) {
+            val text = clipData.getItemAt(0).text?.toString()
+            if (!text.isNullOrBlank()) {
+                val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                profile = KeymapProfiles.parse(lines)
+                reloadKeymap()
+                android.widget.Toast.makeText(context, "Keymap imported from clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                closeImportExportDialog()
+                return
+            }
+        }
+        android.widget.Toast.makeText(context, "No valid config found on clipboard", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun handleExportAction() {
-        // TODO: Implement export logic (e.g., share file, copy to clipboard)
+        val configString = generateConfigString()
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("XtMapper Config", configString)
+        clipboard?.setPrimaryClip(clip)
+        android.widget.Toast.makeText(context, "Configuration copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun showImportExportDialog(configCode: String) {

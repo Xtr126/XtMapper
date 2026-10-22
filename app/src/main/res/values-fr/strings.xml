@@ -61,6 +61,7 @@
     <string name="crosshair">Réticule</string>
     <string name="left_click">Clic gauche</string>
     <string name="swipe_key">Touche de balayage</string>
+    <string name="shift_key">Touche de décalage</string>
     <string name="add_key">Ajouter une touche</string>
     <string name="save">Enregistrer</string>
 

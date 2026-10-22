@@ -67,6 +67,7 @@
     <string name="crosshair">Mira</string>
     <string name="left_click">Clique Esquerdo</string>
     <string name="swipe_key">Tecla de Deslize</string>
+    <string name="shift_key">Tecla de Alternância</string>
     <string name="add_key">Adicionar Tecla</string>
     <string name="save">Salvar</string>
 
