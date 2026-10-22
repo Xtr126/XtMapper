@@ -114,7 +114,7 @@
     <string name="msg_backup_saved">备份保存成功</string>
     <string name="error_save_failed">保存失败</string>
     <string name="msg_profiles_imported">配置导入成功</string>
-    <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">All profiles already exist, nothing imported</string>
+    <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">所有配置均已存在，未导入任何内容</string>
     <string name="error_import_failed">导入失败</string>
     <string name="share">分享</string>
 </resources>
