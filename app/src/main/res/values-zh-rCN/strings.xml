@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="start">开始</string>
     <string name="stop">停止</string>
     <string name="configure">设置</string>
@@ -113,7 +113,6 @@
     <string name="floating_keys_size">悬浮键大小</string>
     <string name="mouse_walk">鼠标行走</string>
     <string name="reset">重置</string>
-
     <!-- Import/Export functionality -->
     <string name="default_backup_name">backup.zip</string>
     <string name="error_export_failed">导出失败</string>
@@ -121,6 +120,8 @@
     <string name="msg_backup_saved">备份保存成功</string>
     <string name="error_save_failed">保存失败</string>
     <string name="msg_profiles_imported">配置导入成功</string>
+    <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">所有配置均已存在，未导入任何内容</string>
+    <string name="error_import_failed">导入失败</string>
     <string name="share">分享</string>
     <string name="touch_jitter">触控坐标抖动</string>
     <string name="touch_jitter_spread">抖动范围</string>

@@ -8,6 +8,8 @@ on:
 
 jobs:
   synchronize-with-crowdin:
+    # forks lack the Crowdin secrets; keep CI green by only running on upstream
+    if: github.repository == 'Xtr126/XtMapper'
     runs-on: ubuntu-latest
 
     steps:

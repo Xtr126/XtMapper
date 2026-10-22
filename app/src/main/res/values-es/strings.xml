@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">XtMapper</string>
     <string name="start">Empezar</string>
     <string name="stop">Detener</string>
@@ -137,6 +137,7 @@
     <string name="msg_backup_saved">Copia de seguridad guardada con éxito</string>
     <string name="error_save_failed">Error al guardar</string>
     <string name="msg_profiles_imported">Perfiles importados con éxito</string>
+    <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">Todos los perfiles ya existen, no se importó nada</string>
     <string name="share">Compartir</string>
     <string name="touch_jitter">Vibración de coordenadas táctiles</string>
     <string name="touch_jitter_spread">Dispersión de vibración</string>
