@@ -116,7 +116,7 @@
     <string name="msg_backup_saved">تم حفظ النسخة الاحتياطية بنجاح</string>
     <string name="error_save_failed">فشل الحفظ</string>
     <string name="msg_profiles_imported">تم استيراد الملفات الشخصية بنجاح</string>
-    <string name="msg_all_profiles_exist">جميع الملفات الشخصية موجودة بالفعل، لم يتم استيراد أي شيء</string>
+    <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">جميع الملفات الشخصية موجودة بالفعل، لم يتم استيراد أي شيء</string>
     <string name="error_import_failed">فشل الاستيراد</string>
     <string name="share">مشاركة</string>
 </resources>
