@@ -78,6 +78,9 @@ android {
         buildConfig true
         compose true
     }
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
     packagingOptions.jniLibs.useLegacyPackaging true
 
     ndkVersion '28.0.13004108'

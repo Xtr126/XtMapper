@@ -80,8 +80,9 @@ class MainActivity : AppCompatActivity() {
          * If user has enabled "Use Shizuku" but this activity was started from shell (waydroid or adb)
          * Then reset "Use Shizuku" setting to false since it crashes the app
          */
-        if (startedFromShell == true && keymapConfig.useShizuku && !keymapConfig.isShizukuMode) {
+        if (startedFromShell == true && keymapConfig.isShizukuMode) {
             keymapConfig.useShizuku = false
+            keymapConfig.inputMode = KeymapConfig.MODE_ROOT
             keymapConfig.applySharedPrefs()
         }
 

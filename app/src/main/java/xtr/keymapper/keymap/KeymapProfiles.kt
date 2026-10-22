@@ -13,10 +13,10 @@ import xtr.keymapper.keymap.element.SwipeKey
 import xtr.keymapper.macro.Macro
 import xtr.keymapper.macro.MacroIdUtils
 
-class KeymapProfiles(context: Context) {
-
-    @JvmField
-    val sharedPref: SharedPreferences = context.getSharedPreferences("profiles", MODE_PRIVATE)
+class KeymapProfiles @JvmOverloads constructor(
+    context: Context,
+    @JvmField val sharedPref: SharedPreferences = context.getSharedPreferences("profiles", MODE_PRIVATE)
+) {
 
     private val context: Context = context
 
@@ -48,16 +48,20 @@ class KeymapProfiles(context: Context) {
 
     fun getDesignatedProfileForApp(packageName: String?): String? {
         if (packageName.isNullOrEmpty()) return null
-        val designated = sharedPref.getString("designated_profile_$packageName", null)
-        if (designated != null && sharedPref.contains(designated)) {
-            return designated
-        }
         val profiles = getAllProfilesForApp(packageName)
         if (profiles.isEmpty()) return null
+
+        val designated = sharedPref.getString("designated_profile_$packageName", null)
+        if (designated != null && profiles.containsKey(designated)) {
+            val profile = profiles[designated]
+            if (profile != null && !profile.disabled) {
+                return designated
+            }
+        }
         for ((name, profile) in profiles) {
             if (!profile.disabled) return name
         }
-        return profiles.keys.firstOrNull()
+        return if (designated != null && profiles.containsKey(designated)) designated else profiles.keys.firstOrNull()
     }
 
     fun setDesignatedProfileForApp(packageName: String?, profileName: String?) {
@@ -75,13 +79,13 @@ class KeymapProfiles(context: Context) {
     }
 
     fun setProfilePackageName(profileName: String?, packageName: String) {
-        val stringSet = sharedPref.getStringSet(profileName, null)!!
+        val stringSet = sharedPref.getStringSet(profileName, null) ?: return
         saveProfile(profileName, ArrayList<String?>(stringSet), packageName, stringSet.contains("ENABLED"), 0, 0)
     }
 
     fun isProfileEnabled(profileName: String?): Boolean {
-        val stringSet = sharedPref.getStringSet(profileName, null)!!
-        return stringSet.contains("ENABLED")
+        val stringSet = sharedPref.getStringSet(profileName, null)
+        return stringSet?.contains("ENABLED") == true
     }
 
     fun profileExistsWithPackageName(packageName: String): Boolean {
@@ -90,7 +94,7 @@ class KeymapProfiles(context: Context) {
 
     @Suppress("UNCHECKED_CAST")
     fun setProfileEnabled(profileName: String, enabled: Boolean) {
-        val stringSet = sharedPref.getStringSet(profileName, null)!!
+        val stringSet = sharedPref.getStringSet(profileName, null) ?: return
         var packageName: String? = null
         for (line in stringSet) {
             val data = line.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
@@ -100,10 +104,12 @@ class KeymapProfiles(context: Context) {
         if (packageName == null) return
 
         for ((key, value) in sharedPref.all) {
+            if (key.startsWith("designated_profile_")) continue
+            if (value !is Set<*>) continue
             // disable or enable all profiles for app for consistency
             val profile = getProfile(value as Set<String>)
             if (profile.packageName == packageName) {
-                val lines = sharedPref.getStringSet(key, null)!!
+                val lines = sharedPref.getStringSet(key, null) ?: continue
                 saveProfile(key, ArrayList<String?>(lines), packageName, enabled, profile.xRes, profile.yRes)
             }
         }

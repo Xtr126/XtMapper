@@ -137,6 +137,12 @@
     <string name="msg_backup_saved">Copia de seguridad guardada con éxito</string>
     <string name="error_save_failed">Error al guardar</string>
     <string name="msg_profiles_imported">Perfiles importados con éxito</string>
-    <string name="error_import_failed">Error al importar</string>
     <string name="share">Compartir</string>
+    <string name="touch_jitter">Vibración de coordenadas táctiles</string>
+    <string name="touch_jitter_spread">Dispersión de vibración</string>
+    <string name="touch_jitter_spread_px">Dispersión de vibración: %d px</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">Modo de entrada</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

@@ -137,6 +137,12 @@
     <string name="msg_backup_saved">Backup salvo com sucesso</string>
     <string name="error_save_failed">Falha ao salvar</string>
     <string name="msg_profiles_imported">Perfis importados com sucesso</string>
-    <string name="error_import_failed">Falha na importação</string>
     <string name="share">Compartilhar</string>
+    <string name="touch_jitter">Oscilação de coordenadas de toque</string>
+    <string name="touch_jitter_spread">Dispersão da oscilação</string>
+    <string name="touch_jitter_spread_px">Dispersão da oscilação: %d px</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">Modo de entrada</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

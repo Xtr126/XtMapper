@@ -121,6 +121,12 @@
     <string name="msg_backup_saved">备份保存成功</string>
     <string name="error_save_failed">保存失败</string>
     <string name="msg_profiles_imported">配置导入成功</string>
-    <string name="error_import_failed">导入失败</string>
-        <string name="share">分享</string>
+    <string name="share">分享</string>
+    <string name="touch_jitter">触控坐标抖动</string>
+    <string name="touch_jitter_spread">抖动范围</string>
+    <string name="touch_jitter_spread_px">触控抖动范围: %d 像素</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">输入模式</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

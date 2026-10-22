@@ -123,6 +123,12 @@
     <string name="msg_backup_saved">تم حفظ النسخة الاحتياطية بنجاح</string>
     <string name="error_save_failed">فشل الحفظ</string>
     <string name="msg_profiles_imported">تم استيراد الملفات الشخصية بنجاح</string>
-    <string name="error_import_failed">فشل الاستيراد</string>
     <string name="share">مشاركة</string>
+    <string name="touch_jitter">ارتعاش إحداثيات اللمس</string>
+    <string name="touch_jitter_spread">نطاق الارتعاش</string>
+    <string name="touch_jitter_spread_px">نطاق ارتعاش اللمس: %d بكسل</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">وضع الإدخال</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

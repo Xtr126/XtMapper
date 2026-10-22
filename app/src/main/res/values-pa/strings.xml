@@ -122,6 +122,12 @@
     <string name="msg_backup_saved">ਬੈਕਅੱਪ ਸਫਲਤਾਪੂਰਵਕ ਸੁਰੱਖਿਅਤ ਕੀਤਾ ਗਿਆ</string>
     <string name="error_save_failed">ਸੇਵ ਕਰਨਾ ਅਸਫਲ ਰਿਹਾ</string>
     <string name="msg_profiles_imported">ਪ੍ਰੋਫਾਈਲ ਸਫਲਤਾਪੂਰਵਕ ਇੰਪੋਰਟ ਕੀਤੇ ਗਏ</string>
-    <string name="error_import_failed">ਇੰਪੋਰਟ ਅਸਫਲ ਰਿਹਾ</string>
     <string name="share">ਸਾਂਝਾ ਕਰੋ</string>
+    <string name="touch_jitter">ਟਚ ਕੋਆਰਡੀਨੇਟ ਜਿਟਰ</string>
+    <string name="touch_jitter_spread">ਜਿਟਰ ਫੈਲਾਓ</string>
+    <string name="touch_jitter_spread_px">ਟਚ ਜਿਟਰ ਫੈਲਾਓ: %d ਪਿਕਸਲ</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">ਇਨਪੁਟ ਮੋਡ</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

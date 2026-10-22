@@ -137,6 +137,12 @@
     <string name="msg_backup_saved">Резервная копия успешно сохранена</string>
     <string name="error_save_failed">Ошибка сохранения</string>
     <string name="msg_profiles_imported">Профили успешно импортированы</string>
-    <string name="error_import_failed">Импорт не удался</string>
     <string name="share">Поделиться</string>
+    <string name="touch_jitter">Дрожание координат касания</string>
+    <string name="touch_jitter_spread">Разброс дрожания</string>
+    <string name="touch_jitter_spread_px">Разброс дрожания: %d пикс</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">Режим ввода</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>
