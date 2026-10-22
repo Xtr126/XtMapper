@@ -72,6 +72,21 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
             binding.swipeDelayText.setText(context.getString(R.string.swipe_delay_ms, value.toInt()))
         }
 
+        val jitterSpread = if (keymapConfig.touchJitter) keymapConfig.touchJitterSpread else 0f
+        binding.sliderTouchJitter.value = jitterSpread
+        binding.touchJitterText.text = if (keymapConfig.touchJitter) {
+            context.getString(R.string.touch_jitter_spread_px, jitterSpread.toInt())
+        } else {
+            context.getString(R.string.touch_jitter_spread)
+        }
+        binding.sliderTouchJitter.addOnChangeListener { _, value, _ ->
+            if (value > 0f) {
+                binding.touchJitterText.text = context.getString(R.string.touch_jitter_spread_px, value.toInt())
+            } else {
+                binding.touchJitterText.text = context.getString(R.string.touch_jitter_spread)
+            }
+        }
+
         binding.mouseDragToggle.isChecked = keymapConfig.ctrlDragMouseGesture
         binding.mouseWheelToggle.isChecked = keymapConfig.ctrlMouseWheelZoom
 
@@ -123,8 +138,15 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         val settingsBinding = SettingsBinding.inflate(LayoutInflater.from(context))
 
         settingsBinding.autoProfileSwitch.isChecked = keymapConfig.disableAutoProfiling
-        settingsBinding.useShizuku.isChecked = keymapConfig.useShizuku
+        settingsBinding.useShizuku.isChecked = keymapConfig.isShizukuMode
         settingsBinding.editorOverlay.isChecked = keymapConfig.editorOverlay
+
+        settingsBinding.touchJitterSwitch.isChecked = keymapConfig.touchJitter
+        settingsBinding.touchJitterSpread.value = keymapConfig.touchJitterSpread
+        settingsBinding.touchJitterSpreadText.text = context.getString(R.string.touch_jitter_spread_px, keymapConfig.touchJitterSpread.toInt())
+        settingsBinding.touchJitterSpread.addOnChangeListener { _, value, _ ->
+            settingsBinding.touchJitterSpreadText.text = context.getString(R.string.touch_jitter_spread_px, value.toInt())
+        }
 
         settingsBinding.showControls.isChecked = keymapConfig.showControls
         settingsBinding.showControlsOpacity.setValue(keymapConfig.showControlsOpacity)
@@ -136,10 +158,15 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
             .setCancelable(true)
             .setOnCancelListener {
                 keymapConfig.disableAutoProfiling = settingsBinding.autoProfileSwitch.isChecked
-                keymapConfig.useShizuku = settingsBinding.useShizuku.isChecked
+                val shizuku = settingsBinding.useShizuku.isChecked
+                keymapConfig.useShizuku = shizuku
+                keymapConfig.inputMode = if (shizuku) KeymapConfig.MODE_SHIZUKU else KeymapConfig.MODE_ROOT
                 keymapConfig.editorOverlay = settingsBinding.editorOverlay.isChecked
+                keymapConfig.touchJitter = settingsBinding.touchJitterSwitch.isChecked
+                keymapConfig.touchJitterSpread = settingsBinding.touchJitterSpread.value
                 keymapConfig.showControls = settingsBinding.showControls.isChecked
                 keymapConfig.showControlsOpacity = settingsBinding.showControlsOpacity.value
+                keymapConfig.applySharedPrefs()
             }
             .create()
         if (overlayWindow) dialog.window!!.setType(
@@ -225,6 +252,14 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
 
         keymapConfig.rightClickMouseAim = binding.mouseAimRightClick.isChecked
         keymapConfig.keyGraveMouseAim = binding.mouseAimKeyGrave.isChecked
+
+        val jitterVal = binding.sliderTouchJitter.value
+        if (jitterVal > 0f) {
+            keymapConfig.touchJitter = true
+            keymapConfig.touchJitterSpread = jitterVal
+        } else {
+            keymapConfig.touchJitter = false
+        }
 
         keymapConfig.applySharedPrefs()
     }

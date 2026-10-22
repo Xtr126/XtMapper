@@ -23,7 +23,10 @@ class KeymapProfiles(context: Context) {
     fun getAllProfiles(): Map<String, KeymapProfile> {
         val allProfiles = HashMap<String, KeymapProfile>()
         sharedPref.all.forEach { (key, lines) ->
-            allProfiles[key] = getProfile(lines as Set<String>)
+            if (key.startsWith("designated_profile_")) return@forEach
+            if (lines is Set<*>) {
+                allProfiles[key] = getProfile(lines as Set<String>)
+            }
         }
         return allProfiles
     }
@@ -32,11 +35,34 @@ class KeymapProfiles(context: Context) {
     fun getAllProfilesForApp(packageName: String): Map<String, KeymapProfile> {
         val appProfiles = HashMap<String, KeymapProfile>()
         sharedPref.all.forEach { (key, lines) ->
-            val profile = getProfile(lines as Set<String>)
-            if (profile.packageName == packageName)
-                appProfiles[key] = profile
+            if (key.startsWith("designated_profile_")) return@forEach
+            if (lines is Set<*>) {
+                val profile = getProfile(lines as Set<String>)
+                if (profile.packageName == packageName)
+                    appProfiles[key] = profile
+            }
         }
         return appProfiles
+    }
+
+    fun getDesignatedProfileForApp(packageName: String?): String? {
+        if (packageName.isNullOrEmpty()) return null
+        val designated = sharedPref.getString("designated_profile_$packageName", null)
+        if (designated != null && sharedPref.contains(designated)) {
+            return designated
+        }
+        val profiles = getAllProfilesForApp(packageName)
+        if (profiles.isEmpty()) return null
+        for ((name, profile) in profiles) {
+            if (!profile.disabled) return name
+        }
+        return profiles.keys.firstOrNull()
+    }
+
+    fun setDesignatedProfileForApp(packageName: String?, profileName: String?) {
+        if (!packageName.isNullOrEmpty() && profileName != null) {
+            sharedPref.edit().putString("designated_profile_$packageName", profileName).apply()
+        }
     }
 
     fun renameProfile(profileName: String, newProfile: String) {
@@ -104,6 +130,12 @@ class KeymapProfiles(context: Context) {
         sharedPref.edit()
             .putStringSet(profileName, stringSet)
             .apply()
+
+        if (!packageName.isNullOrEmpty()) {
+            if (sharedPref.getString("designated_profile_$packageName", null) == null) {
+                setDesignatedProfileForApp(packageName, profileName)
+            }
+        }
     }
 
     fun deleteProfile(profileName: String?) {

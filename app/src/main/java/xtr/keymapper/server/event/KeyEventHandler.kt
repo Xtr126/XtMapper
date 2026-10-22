@@ -47,11 +47,7 @@ class KeyEventHandler(private val mInput: IInputInterface) {
             }
         }
 
-        // Correction of x and y deviation from center
-        for (key in profile.keys) {
-            key.x += key.offset
-            key.y += key.offset
-        }
+        // Center offset is applied non-destructively in handleEvent when injecting touch
 
         swipeKeyHandlers = ArrayList()
         for (key in profile.swipeKeys) {
@@ -103,7 +99,7 @@ class KeyEventHandler(private val mInput: IInputInterface) {
         val keyList = mInput.keymapProfile.keys
         keyList.withIndex().forEach { (i, key) ->
             if (event.code == key.code)
-                mInput.injectEvent(key.x, key.y, event.action, i)
+                mInput.injectEvent(key.x + key.offset, key.y + key.offset, event.action, i)
         }
 
         swipeKeyHandlers?.forEach { swipeKeyHandler ->

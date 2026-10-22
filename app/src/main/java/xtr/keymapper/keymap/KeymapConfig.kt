@@ -79,6 +79,21 @@ class KeymapConfig : Parcelable {
     @JvmField
     var touchpadInputMode = TOUCHPAD_DISABLED
 
+    @JvmField
+    var touchJitter = false
+
+    @JvmField
+    var touchJitterSpread = 15f
+
+    @JvmField
+    var inputMode = MODE_ROOT
+
+    val isShizukuMode: Boolean
+        get() = inputMode == MODE_SHIZUKU || useShizuku
+
+    val isRootMode: Boolean
+        get() = !isShizukuMode
+
     constructor(context: Context?) {
         if (context != null) {
             sharedPref = context.getSharedPreferences("settings", MODE_PRIVATE)
@@ -123,6 +138,9 @@ class KeymapConfig : Parcelable {
         mouseAimToggle = parcel.readByte().toInt() != 0
         touchpadInputMode = parcel.readInt()
         floatingKeysSize = parcel.readFloat()
+        touchJitter = parcel.readByte().toInt() != 0
+        touchJitterSpread = parcel.readFloat()
+        inputMode = parcel.readInt()
     }
 
     override fun writeToParcel(dest: Parcel, flags: Int) {
@@ -159,6 +177,9 @@ class KeymapConfig : Parcelable {
         dest.writeByte((if (mouseAimToggle) 1 else 0).toByte())
         dest.writeInt(touchpadInputMode)
         dest.writeFloat(floatingKeysSize)
+        dest.writeByte((if (touchJitter) 1 else 0).toByte())
+        dest.writeFloat(touchJitterSpread)
+        dest.writeInt(inputMode)
     }
 
     override fun describeContents(): Int {
@@ -197,6 +218,9 @@ class KeymapConfig : Parcelable {
         pointerMode = sharedPref.getInt("pointer_mode", POINTER_OVERLAY)
 
         floatingKeysSize = sharedPref.getFloat("floating_keys_size", 1f)
+        touchJitter = sharedPref.getBoolean("touch_jitter", false)
+        touchJitterSpread = sharedPref.getFloat("touch_jitter_spread", 15f)
+        inputMode = sharedPref.getInt("input_mode", if (useShizuku) MODE_SHIZUKU else MODE_ROOT)
     }
 
     fun applySharedPrefs() {
@@ -223,10 +247,16 @@ class KeymapConfig : Parcelable {
             .putInt("swipe_delay_ms", swipeDelayMs)
             .putInt("pointer_mode", pointerMode)
             .putFloat("floating_keys_size", floatingKeysSize)
+            .putBoolean("touch_jitter", touchJitter)
+            .putFloat("touch_jitter_spread", touchJitterSpread)
+            .putInt("input_mode", inputMode)
             .apply()
     }
 
     companion object {
+        const val MODE_ROOT = 0
+        const val MODE_SHIZUKU = 1
+
         const val KEY_CTRL = "Ctrl"
         const val KEY_ALT = "Alt"
         const val TOUCHPAD_DIRECT = 3

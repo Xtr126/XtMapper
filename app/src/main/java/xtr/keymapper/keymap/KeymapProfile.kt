@@ -60,6 +60,19 @@ class KeymapProfile : Parcelable {
         val scaleY = if (yRes > 0) newHeight / yRes else 1f
 
         if (xRes > 0 && yRes > 0) {
+            // Guard: don't scale if dimensions are virtually identical
+            if (Math.abs(scaleX - 1f) < 0.001f && Math.abs(scaleY - 1f) < 0.001f) {
+                return
+            }
+            // Guard against inset-induced false scaling:
+            // If xRes matches newWidth and the difference between yRes and newHeight is just system insets (< 15%),
+            // this is an inset mismatch between fullscreen and windowed on the same device, not a different resolution.
+            if (Math.abs(scaleX - 1f) < 0.01f && Math.abs(scaleY - 1f) < 0.15f) {
+                xRes = newWidth.toInt()
+                yRes = newHeight.toInt()
+                return
+            }
+
             val scaler = { element: KeymapProfileElement? ->
                 if (element != null)
                     element.scale(scaleX, scaleY)

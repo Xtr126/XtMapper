@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.RemoteException
+import android.util.DisplayMetrics
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -175,6 +176,19 @@ class EditorUI(
         openOverlayWindow(alpha)
     }
 
+    private fun getRealScreenDimensions(): Pair<Int, Int> {
+        val wm = context.getSystemService(WindowManager::class.java)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = wm.maximumWindowMetrics.bounds
+            Pair(bounds.width(), bounds.height())
+        } else {
+            val display = wm.defaultDisplay
+            val metrics = DisplayMetrics()
+            display.getRealMetrics(metrics)
+            Pair(metrics.widthPixels, metrics.heightPixels)
+        }
+    }
+
     private fun openOverlayWindow(alpha: Float = -1f) {
         val overlayView =
             (if (startMode == EditorUI.Companion.SHOW_KEYMAP_ONLY) keysContainerView else mainView)!!
@@ -186,8 +200,18 @@ class EditorUI(
         val mParams =
             if (startMode == SHOW_KEYMAP_ONLY) Utils.getPointerLayoutParams(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) else windowManagerLayoutParams()
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            mParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        }
 
-        if (alpha < 1 && alpha > 0) overlayView.setAlpha(alpha)
+        if (startMode == SHOW_KEYMAP_ONLY) {
+            val targetAlpha = if (alpha > 0f && alpha <= 0.8f) alpha else 0.2f
+            mParams.alpha = targetAlpha
+            overlayView.setAlpha(1.0f)
+            Utils.applyEmptyTouchableRegion(overlayView)
+        } else {
+            if (alpha < 1 && alpha > 0) overlayView.setAlpha(alpha)
+        }
 
         mWindowManager.addView(overlayView, mParams)
         overlayOpen = true
@@ -259,9 +283,10 @@ class EditorUI(
      * @param id the relevant id of the menu item for the card.
      */
     fun onActionSelected(id: Int) {
-        // X y coordinates of center of root view
-        val defaultX = mainView!!.pivotX
-        val defaultY = mainView.pivotY
+        // X y coordinates of center of container/screen
+        val (realWidth, realHeight) = getRealScreenDimensions()
+        val defaultX = if (keysContainerView.width > 0) keysContainerView.width / 2f else realWidth / 2f
+        val defaultY = if (keysContainerView.height > 0) keysContainerView.height / 2f else realHeight / 2f
 
         when (id) {
             R.id.save -> {
@@ -386,15 +411,17 @@ class EditorUI(
      */
     fun loadKeymapAndObserveSizeChanges() {
         profileBackup = KeymapProfiles(context).getProfile(profileName, false)
-        keysContainerView.addOnLayoutChangeListener(OnLayoutChangeListener { v: View?, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
-            if (right != oldRight || left != oldLeft || top != oldTop || bottom != oldBottom) {
-                if (profile != null) {
-                    // Save previous state before wiping
-                    saveKeymap()
-                    reloadKeymap()
-                }
+        keysContainerView.addOnLayoutChangeListener { _, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
+            val oldWidth = oldRight - oldLeft
+            val oldHeight = oldBottom - oldTop
+            val newWidth = right - left
+            val newHeight = bottom - top
+            // Only reload if screen orientation genuinely flipped between portrait and landscape
+            val orientationChanged = oldWidth > 0 && oldHeight > 0 && (oldWidth > oldHeight) != (newWidth > newHeight)
+            if (orientationChanged && profile != null) {
+                reloadKeymap()
             }
-        })
+        }
         keysContainerView.post(Runnable { this.loadKeymap() })
     }
 
@@ -407,10 +434,14 @@ class EditorUI(
     private fun loadKeymap() {
         profile = KeymapProfiles(context).getProfile(profileName, false)
 
+        val (realWidth, realHeight) = getRealScreenDimensions()
+        val targetWidth = if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth.toFloat() else if (keysContainerView.width > 0) keysContainerView.width.toFloat() else realWidth.toFloat()
+        val targetHeight = if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight.toFloat() else if (keysContainerView.height > 0) keysContainerView.height.toFloat() else realHeight.toFloat()
+
         // Scale to current display size
         profile!!.scale(
-            keysContainerView.width.toFloat(),
-            keysContainerView.height.toFloat()
+            targetWidth,
+            targetHeight
         )
 
         val editorUiComponentFactory = editorUiComponents.newFactory(mCallback, context)
@@ -446,6 +477,8 @@ class EditorUI(
      * docs/editor-lifecycle.md for the save call sites and the resize/animation timing risk.
      */
     private fun saveKeymap() {
+        if (startMode == SHOW_KEYMAP_ONLY) return
+
         val linesToWrite = ArrayList<String?>()
 
         editorUiComponents.forEach { linesToWrite.add(it.toConfigLine()) }
@@ -455,10 +488,14 @@ class EditorUI(
 
         // Save Config
         val profiles = KeymapProfiles(context)
+        val (realWidth, realHeight) = getRealScreenDimensions()
+
+        val saveWidth = if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth else if (keysContainerView.width > 0) keysContainerView.width else realWidth
+        val saveHeight = if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight else if (keysContainerView.height > 0) keysContainerView.height else realHeight
 
         profiles.saveProfile(
             profileName, linesToWrite, profile!!.packageName, !profile!!.disabled,
-            keysContainerView.width, keysContainerView.height
+            saveWidth, saveHeight
         )
     }
 

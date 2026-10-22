@@ -133,4 +133,12 @@
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">All profiles already exist, nothing imported</string>
     <string name="error_import_failed">Import Failed</string>
     <string name="share">Share</string>
+    <string name="touch_jitter">Touch Coordinate Jitter</string>
+    <string name="touch_jitter_summary">Add random error to touch coordinates</string>
+    <string name="touch_jitter_spread">Touch Jitter Spread</string>
+    <string name="touch_jitter_spread_px">Touch jitter spread: %d px</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">Input Mode</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

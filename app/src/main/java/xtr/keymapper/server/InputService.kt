@@ -42,6 +42,7 @@ class InputService @Throws(RemoteException::class) constructor(
     private var supportsAbsEvents = false
 
     internal var stopEvents = false
+    val touchJitter = TouchJitter(keymapConfig.touchJitter, keymapConfig.touchJitterSpread)
 
     init {
         profile.scale(screenWidth.toFloat(), screenHeight.toFloat())
@@ -68,13 +69,15 @@ class InputService @Throws(RemoteException::class) constructor(
         keyEventHandler = KeyEventHandler(this)
         keyEventHandler.init()
         input = Input(displayId)
+        touchJitter.setScreenDimensions(screenWidth, screenHeight)
     }
 
     override fun injectEvent(x: Float, y: Float, action: Int, pointerId: Int) {
+        val target = touchJitter.wrapCoordinates(x, y, action, pointerId)
         when (action) {
-            UP -> input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y)
-            DOWN -> input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y)
-            MOVE -> input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 0.0f, x, y)
+            UP -> input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, target.x, target.y)
+            DOWN -> input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, target.x, target.y)
+            MOVE -> input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 0.0f, target.x, target.y)
         }
     }
 

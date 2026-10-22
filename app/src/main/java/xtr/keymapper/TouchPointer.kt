@@ -36,6 +36,7 @@ import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.keymap.KeymapProfiles
 import xtr.keymapper.profiles.ProfileSelector
 import xtr.keymapper.server.RemoteServiceHelper
+import xtr.keymapper.service.KeymapperTileService
 
 class TouchPointer : Service() {
     private val binder: IBinder = TouchPointerBinder()
@@ -47,6 +48,7 @@ class TouchPointer : Service() {
     private var mWindowManager: WindowManager? = null
     private var displayId = 0
     private var displayListener: DisplayListener? = null
+    private var lastForegroundPackage: String? = null
 
 
     interface MainActivityCallback {
@@ -66,9 +68,9 @@ class TouchPointer : Service() {
     }
 
     override fun onStartCommand(i: Intent?, flags: Int, startId: Int): Int {
-        if (i == null) {
-            stopSelf()
-            return super.onStartCommand(null, flags, startId)
+        if (i == null || ACTION_STOP == i.action) {
+            stopKeymapper()
+            return START_NOT_STICKY
         }
 
         // Launch default profile
@@ -118,6 +120,11 @@ class TouchPointer : Service() {
 
         this.displayId = i.getIntExtra(DISPLAY_ID, Display.DEFAULT_DISPLAY)
 
+        isRunning = true
+        currentSelectedProfile = this.selectedProfile
+        activeInstance = this
+        KeymapperTileService.updateTile(this)
+
         val keymapProfile = KeymapProfiles(this).getProfile(selectedProfile, true)
         connectRemoteService(keymapProfile)
 
@@ -158,28 +165,35 @@ class TouchPointer : Service() {
 
     fun launchProfile(profileName: String?) {
         this.selectedProfile = profileName
+        currentSelectedProfile = profileName
+        KeymapperTileService.updateTile(this)
         val keymapProfile = KeymapProfiles(this).getProfile(selectedProfile, true)
         connectRemoteService(keymapProfile)
     }
 
     private fun connectRemoteService(profile: KeymapProfile) {
         if (activityCallback != null) activityCallback!!.updateCmdView1("connecting to server..")
+        val config = KeymapConfig(this)
+        RemoteServiceHelper.useShizuku = config.isShizukuMode
         RemoteServiceHelper.getInstance(
             this
         ) { service: IRemoteService? ->
+            if (service == null) {
+                Log.w("TouchPointer", "Remote service is null, cannot start server")
+                activityCallback?.updateCmdView1("Failed to connect to server (root/shizuku not available)")
+                return@getInstance
+            }
             mService = service
             val keymapConfig = KeymapConfig(this)
-            val display =
-                getSystemService(DisplayManager::class.java).getDisplay(
-                    displayId
-                )
+            val displayManager = getSystemService(DisplayManager::class.java)
+            val display = displayManager.getDisplay(displayId) ?: displayManager.getDisplay(Display.DEFAULT_DISPLAY)
             val size = Point()
-            display.getRealSize(size) // TODO: getRealSize() deprecated in API level 31
+            display?.getRealSize(size)
             mWindowManager =
                 this.displayContext?.getSystemService(WindowManager::class.java)
             try {
                 if (keymapConfig.disableAutoProfiling) {
-                    mService!!.startServer(
+                    service.startServer(
                         profile,
                         keymapConfig,
                         mCallback,
@@ -189,10 +203,10 @@ class TouchPointer : Service() {
                     )
                 } else {
                     if (!activityRemoteCallback) {
-                        mService!!.registerActivityObserver(mActivityObserverCallback)
+                        service.registerActivityObserver(mActivityObserverCallback)
                         activityRemoteCallback = true
                     } else if (!profile.disabled) {
-                        mService!!.startServer(
+                        service.startServer(
                             profile,
                             keymapConfig,
                             mCallback,
@@ -218,11 +232,16 @@ class TouchPointer : Service() {
         }
     }
 
-    override fun onDestroy() {
+    fun stopKeymapper() {
+        if (!isRunning && activeInstance == null) return
+        isRunning = false
+        activeInstance = null
+
         displayListener?.let {
             getSystemService(DisplayManager::class.java).unregisterDisplayListener(it)
         }
         displayListener = null
+
         if (mService != null) try {
             mService!!.unregisterActivityObserver(mActivityObserverCallback)
             stopServer()
@@ -230,6 +249,18 @@ class TouchPointer : Service() {
             Log.e("stopServer", e.toString(), e)
         }
         mService = null
+
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (_: Exception) {}
+
+        activityCallback?.stopPointer()
+        KeymapperTileService.updateTile(this)
+        stopSelf()
+    }
+
+    override fun onDestroy() {
+        stopKeymapper()
         activityCallback = null
         super.onDestroy()
     }
@@ -376,9 +407,22 @@ class TouchPointer : Service() {
 
         override fun onForegroundActivitiesChanged(packageName: String) {
             if (packageName == lastPackageName) return
+            if (packageName == applicationContext.packageName || packageName.startsWith("xtr.keymapper")) return
             lastPackageName = packageName
             val context: Context = this@TouchPointer
             val keymapProfiles = KeymapProfiles(context)
+            val designated = keymapProfiles.getDesignatedProfileForApp(packageName)
+
+            if (designated != null) {
+                if (designated != selectedProfile) {
+                    mHandler.post {
+                        launchProfile(designated)
+                        Toast.makeText(this@TouchPointer, "Switched to profile: $designated", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                return
+            }
+
             if (!keymapProfiles.profileExistsWithPackageName(packageName)) {
                 // No profile found, prompt user to create a new profile
                 mHandler.post {
@@ -429,5 +473,15 @@ class TouchPointer : Service() {
     companion object {
         const val CHANNEL_ID: String = "pointer_service"
         const val DISPLAY_ID: String = "display_id"
+        const val ACTION_STOP: String = "xtr.keymapper.action.STOP"
+
+        @Volatile
+        var isRunning: Boolean = false
+
+        @Volatile
+        var currentSelectedProfile: String? = null
+
+        @Volatile
+        var activeInstance: TouchPointer? = null
     }
 }

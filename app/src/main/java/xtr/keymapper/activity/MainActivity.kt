@@ -80,12 +80,12 @@ class MainActivity : AppCompatActivity() {
          * If user has enabled "Use Shizuku" but this activity was started from shell (waydroid or adb)
          * Then reset "Use Shizuku" setting to false since it crashes the app
          */
-        if (startedFromShell == true && keymapConfig.useShizuku) {
+        if (startedFromShell == true && keymapConfig.useShizuku && !keymapConfig.isShizukuMode) {
             keymapConfig.useShizuku = false
             keymapConfig.applySharedPrefs()
         }
 
-        RemoteServiceHelper.useShizuku = keymapConfig.useShizuku
+        RemoteServiceHelper.useShizuku = keymapConfig.isShizukuMode
         Server.setupServer(this, mCallback)
 
         if (startedFromShell == false) handleActivationFlow(keymapConfig)
@@ -190,7 +190,8 @@ class MainActivity : AppCompatActivity() {
             setButtonState(false)
             requestNotificationPermission()
         }
-        if (RemoteServiceHelper.useShizuku) {
+        val keymapConfig = KeymapConfig(this)
+        if (keymapConfig.isShizukuMode) {
             if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)
                 alertShizukuNotAuthorized()
         } else if (Shell.isAppGrantedRoot() == false) {
@@ -203,9 +204,18 @@ class MainActivity : AppCompatActivity() {
         composeServiceActive = !start
     }
 
+    override fun onResume() {
+        super.onResume()
+        composeServiceActive = TouchPointer.isRunning
+    }
+
     fun stopPointer() {
+        TouchPointer.activeInstance?.stopKeymapper()
         unbindTouchPointer()
-        stopService(Intent(this, TouchPointer::class.java))
+        val intent = Intent(this, TouchPointer::class.java).apply {
+            action = TouchPointer.ACTION_STOP
+        }
+        stopService(intent)
         setButtonState(true)
     }
 
@@ -282,20 +292,50 @@ class MainActivity : AppCompatActivity() {
 
     // ============ COMPOSE UI BRIDGE ============
 
-    fun isComposeServiceActive(): Boolean = composeServiceActive
+    fun isComposeServiceActive(): Boolean = composeServiceActive || TouchPointer.isRunning
 
     fun selectedProfileNameForCompose(): String? = selectedProfileName
 
     fun toggleServiceFromCompose() {
-        if (composeServiceActive) stopPointer() else startPointer()
+        if (isComposeServiceActive()) stopPointer() else startPointer()
     }
 
     fun fixPermissionFromCompose() {
-        checkOverlayPermission(this)
+        val config = KeymapConfig(this)
+        if (config.isShizukuMode && (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)) {
+            if (Shizuku.pingBinder()) Shizuku.requestPermission(0)
+            else alertShizukuNotRunning()
+        } else if (!Settings.canDrawOverlays(this)) {
+            checkOverlayPermission(this)
+        }
+    }
+
+    fun toggleInputModeFromCompose() {
+        val config = KeymapConfig(this)
+        val nextMode = if (config.inputMode == KeymapConfig.MODE_ROOT) {
+            KeymapConfig.MODE_SHIZUKU
+        } else {
+            KeymapConfig.MODE_ROOT
+        }
+        config.inputMode = nextMode
+        config.useShizuku = (nextMode == KeymapConfig.MODE_SHIZUKU)
+        RemoteServiceHelper.useShizuku = config.useShizuku
+        config.applySharedPrefs()
+        val modeStr = if (nextMode == KeymapConfig.MODE_SHIZUKU) "Shizuku (ADB)" else "Root"
+        Toast.makeText(this, "Input Mode: $modeStr", Toast.LENGTH_SHORT).show()
+        if (config.isShizukuMode) {
+            if (!Shizuku.pingBinder()) alertShizukuNotRunning()
+            else if (Shizuku.checkSelfPermission() != PERMISSION_GRANTED) alertShizukuNotAuthorized()
+        }
+        if (isServiceBound && pointerOverlay != null) {
+            pointerOverlay?.launchProfile(selectedProfileName)
+        }
     }
 
     fun testInputFromCompose() {
-        Toast.makeText(this, "Input tester is not exposed by the legacy implementation.", Toast.LENGTH_SHORT).show()
+        val config = KeymapConfig(this)
+        val modeName = if (config.isShizukuMode) "Shizuku (ADB)" else "Root"
+        Toast.makeText(this, "$modeName mode active. Connect keyboard/mouse to test.", Toast.LENGTH_SHORT).show()
     }
 
     fun selectProfileFromCompose(profileName: String) {
@@ -386,6 +426,11 @@ class MainActivity : AppCompatActivity() {
 
     fun onProfileSelected(profileName: String) {
         selectedProfileName = profileName
+        val profiles = KeymapProfiles(this)
+        val p = profiles.getProfile(profileName, false)
+        if (p != null && !p.packageName.isNullOrEmpty()) {
+            profiles.setDesignatedProfileForApp(p.packageName, profileName)
+        }
     }
 
     private val mCallback = object : TouchPointer.MainActivityCallback {

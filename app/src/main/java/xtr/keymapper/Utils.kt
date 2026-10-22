@@ -60,4 +60,48 @@ object Utils {
         }
         return mParams
     }
+
+    @JvmStatic
+    fun applyEmptyTouchableRegion(view: android.view.View?) {
+        if (view == null) return
+        val listener = object : android.view.View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: android.view.View) {
+                registerEmptyTouchableRegion(v)
+            }
+            override fun onViewDetachedFromWindow(v: android.view.View) {}
+        }
+        view.addOnAttachStateChangeListener(listener)
+        if (view.isAttachedToWindow) {
+            registerEmptyTouchableRegion(view)
+        }
+    }
+
+    private fun registerEmptyTouchableRegion(view: android.view.View) {
+        try {
+            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+            val infoClass = Class.forName("android.view.ViewTreeObserver\$InternalInsetsInfo")
+            val touchableRegionField = infoClass.getField("touchableRegion")
+            val setTouchableInsetsMethod = infoClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType)
+            val touchableInsetsRegionField = infoClass.getField("TOUCHABLE_INSETS_REGION")
+            val touchableInsetsRegion = touchableInsetsRegionField.getInt(null)
+
+            val listener = java.lang.reflect.Proxy.newProxyInstance(
+                listenerClass.classLoader,
+                arrayOf(listenerClass)
+            ) { _, method, args ->
+                if ("onComputeInternalInsets" == method.name && args != null && args.isNotEmpty()) {
+                    val info = args[0]
+                    val region = touchableRegionField.get(info) as? android.graphics.Region
+                    region?.setEmpty()
+                    setTouchableInsetsMethod.invoke(info, touchableInsetsRegion)
+                }
+                null
+            }
+
+            val addListenerMethod = android.view.ViewTreeObserver::class.java.getMethod("addOnComputeInternalInsetsListener", listenerClass)
+            addListenerMethod.invoke(view.viewTreeObserver, listener)
+        } catch (t: Throwable) {
+            android.util.Log.w("Utils", "Failed to register empty touchable region", t)
+        }
+    }
 }
