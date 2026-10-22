@@ -115,7 +115,7 @@
     <string name="msg_backup_saved">ਬੈਕਅੱਪ ਸਫਲਤਾਪੂਰਵਕ ਸੁਰੱਖਿਅਤ ਕੀਤਾ ਗਿਆ</string>
     <string name="error_save_failed">ਸੇਵ ਕਰਨਾ ਅਸਫਲ ਰਿਹਾ</string>
     <string name="msg_profiles_imported">ਪ੍ਰੋਫਾਈਲ ਸਫਲਤਾਪੂਰਵਕ ਇੰਪੋਰਟ ਕੀਤੇ ਗਏ</string>
-    <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">All profiles already exist, nothing imported</string>
+    <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">ਸਾਰੇ ਪ੍ਰੋਫਾਈਲ ਪਹਿਲਾਂ ਤੋਂ ਮੌਜੂਦ ਹਨ, ਕੁਝ ਵੀ ਇੰਪੋਰਟ ਨਹੀਂ ਹੋਇਆ</string>
     <string name="error_import_failed">ਇੰਪੋਰਟ ਅਸਫਲ ਰਿਹਾ</string>
     <string name="share">ਸਾਂਝਾ ਕਰੋ</string>
 </resources>
