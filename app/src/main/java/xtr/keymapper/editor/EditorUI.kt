@@ -176,11 +176,17 @@ class EditorUI(
     }
 
     private fun getRealScreenDimensions(): Pair<Int, Int> {
-        val wm = context.getSystemService(WindowManager::class.java)
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val bounds = wm.maximumWindowMetrics.bounds
+            val windowContext = context.createWindowContext(
+                context.display,
+                WindowManager.LayoutParams.TYPE_APPLICATION,
+                null
+            )
+            val bounds = windowContext.getSystemService(WindowManager::class.java)
+                .maximumWindowMetrics.bounds
             Pair(bounds.width(), bounds.height())
         } else {
+            val wm = context.getSystemService(WindowManager::class.java)
             val display = wm.defaultDisplay
             val metrics = DisplayMetrics()
             display.getRealMetrics(metrics)
