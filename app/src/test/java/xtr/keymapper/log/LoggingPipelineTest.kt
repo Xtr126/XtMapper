@@ -157,7 +157,11 @@ class LoggingPipelineTest {
         val third = factory3.start()
         third.info("Server", "third run")
         assertTrue(third.flush(5_000))
-        // no third.close(): the process "died"
+        // Simulated process death: in production the kernel releases the
+        // POSIX lock at process exit while no SESSION END gets written.
+        // Within one JVM the equivalent is closing the dead writer's file
+        // handle (releases its lock, writes no marker).
+        third.sessionWriter.close()
 
         val factory4 = TestPipelineFactory(store, clock)
         val fourth = factory4.start()

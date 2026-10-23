@@ -3,6 +3,7 @@ package xtr.keymapper.log
 import java.io.Closeable
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.RandomAccessFile
@@ -41,7 +42,12 @@ interface LogStore {
 
     /**
      * Opens an append-mode writer for [name], creating the file if missing.
-     * Throwing signals a storage failure; the persistent sink treats it as
+     * Throwing signals a storage failure or a refusal: the file is already
+     * coordinated by an active handler in this or another process (see
+     * [FileSystemLogStore]). Refusing beats writing un-protected — an
+     * un-protected writer no longer uses a lock retention can detect, so its
+     * records could be stranded after the referenced pathname is deleted.
+     * The persistent sink treats every throw as
      * unavailability and keeps the Logcat path functional.
      */
     fun openAppendWriter(name: String): LogFileWriter
@@ -83,14 +89,26 @@ interface LogFileWriter : Closeable {
 /**
  * Direct-filesystem implementation (shell/root roles and unit tests).
  *
- * Cross-process safety: each opened writer holds an exclusive advisory lock on
- * its file for the handle's whole lifetime, and [delete] refuses any file that
- * is still locked. Advisory locks are verified to work across processes on
- * Android's shared storage (device probe on Android 16 / API 36: contention is
- * detected and locks are released by the kernel on process death); on a
- * filesystem without lock support the activity state cannot be determined and
- * deletion fails closed — files are kept, possibly over-retaining (reported by
- * the pipeline), instead of deleting a possibly-active file.
+ * File-lifecycle protocol — one exclusive advisory lock per log file, held by
+ * exactly the handler that may currently write it (the same platform behavior
+ * as the device probe on Android 16 / API 36 shared storage):
+ *
+ * - every writer locks its file for the handle's whole lifetime. A duplicate or
+ *   cross-process open observes the held lock and REFUSES (throws) instead of
+ *   continuing un-protected, so no writer can exist whose records retention
+ *   does not know to protect;
+ * - [delete] unlinks a pathname only while it holds the exclusive lock. A file
+ *   held by an active writer — in this or any other process, even one that has
+ *   written nothing for days — stays locked and is skipped (fail-closed).
+ * - on a filesystem without lock support the activity state cannot be
+ *   determined anywhere: writers proceed (logging keeps working) and deletion
+ *   fails closed — files are kept, possibly over-retaining (reported by the
+ *   pipeline), instead of deleting a possibly-active file.
+ *
+ * Consequence: a pathname is only ever unlinked while its exclusive lock is
+ * held at that instant, so records written through this store never vanish
+ * into a still-open, already-unlinked inode (POSIX deletes the name while
+ * other file descriptors stay open — unlink(2) semantics).
  */
 class FileSystemLogStore(private val rootDirectory: File) : LogStore {
 
@@ -116,19 +134,42 @@ class FileSystemLogStore(private val rootDirectory: File) : LogStore {
         file.parentFile?.mkdirs()
         val stream: FileOutputStream = FileOutputStream(file, true)
         // Advisory cross-process coordination (verified on Android 16 shared
-        // storage; see the class KDoc): the writer holds the file's exclusive
-        // lock for the whole lifetime of this handle, so the retention gate in
-        // ANY process can recognize an actively written file even after days
-        // without records. POSIX locks are held while open, released on close,
-        // and released by the kernel when the process dies — no stale markers.
-        // Best-effort on the writer side: contention (a duplicate handle) or
-        // unsupported-filesystem errors never block writing; the retention
-        // grace day remains a secondary protection for that degraded case.
+        // storage; see the class KDoc): an acquired lock guards this handle's
+        // whole lifetime, so the retention gate in ANY process can recognize
+        // an actively written file even after days without records. POSIX
+        // locks are held while open, released on close, and released by the
+        // kernel when the process dies — no stale markers.
+        //
+        // Per FileChannel.tryLock (Java SE contract): null means another
+        // program holds the lock; OverlappingFileLockException means THIS JVM
+        // already holds it (duplicate handle); any other exception means the
+        // lock facility itself failed on this filesystem.
         var lock: FileLock? = null
+        var lockUnsupported = false
         try {
             lock = stream.channel.tryLock()
-        } catch (e: Exception) {
-            lock = null
+        } catch (e: OverlappingFileLockException) {
+            // Coordinated by this JVM's duplicate handle: refuse below.
+        } catch (e: IOException) {
+            // shortcut: lock facility unavailable (e.g. ENOLCK-style "locks
+            // not supported") — this writer proceeds un-protected instead of
+            // losing all file logging on exotic storage; safety rests on
+            // `delete` seeing the same exception and refusing every deletion
+            // there, so retention can never unlink under this writer.
+            lockUnsupported = true
+        }
+        if (lock == null && !lockUnsupported) {
+            // Actively coordinated elsewhere (contending foreign process or
+            // this JVM's duplicate handle). Proceeding un-protected would
+            // route records into a file retention may unlink once that other
+            // coordination disappears (POSIX: unlink succeeds while other fds
+            // are open, stranding them). Fail this open instead; SessionLogWriter
+            // treats the throw as sink unavailability, Logcat stays
+            // up. Every production open path closes its previous handle
+            // first (rotation, rollover, session end), so refusing breaks no
+            // legitimate flow.
+            stream.close()
+            throw IOException("$name is already open for writing by an active handler")
         }
         return object : LogFileWriter {
             // The on-disk size realigns handles reopened after previous sessions;

@@ -265,6 +265,34 @@ class SessionLogWriterTest {
     }
 
     @Test
+    fun `a contended file sink fails once and gracefully without touching the held file`() {
+        // Production consumption of the refusal protocol: when the session's
+        // daily file already has an active handler (same or other process),
+        // the session writer goes down cleanly (one bounded report, no lines
+        // written into a file it does not protect) instead of appending
+        // un-locked into it.
+        val clock = MutableClock.at("2026-10-22T09:00:00Z")
+        val store = newStore()
+
+        val foreign = store.openAppendWriter("xtmapper-2026-10-22.log")
+        try {
+            val events = mutableListOf<String>()
+            val writer = makeWriter(store, clock, "sess-contended", onEvent = { events.add(it) })
+            writer.writeSessionStartMarker()
+            writer.write(listOf(record(clock), record(clock, "second")))
+            writer.endSession(clock.instant(), 0, "Clean shutdown", 0) // must not throw
+
+            assertTrue("contended open must take the sink down", writer.unavailable)
+            assertEquals("exactly one failure report", 1, events.count { it.contains("file sink unavailable") })
+            assertTrue("report names the refused file", events.any { it.contains("already open") })
+            // Nothing was appended to the foreign holder's file.
+            assertEquals("", LogFiles.readAll(store, "xtmapper-2026-10-22.log"))
+        } finally {
+            foreign.close()
+        }
+    }
+
+    @Test
     fun `closing after midnight without post-midnight events emits CONTINUED then END`() {
         // Session starts 23:58 local on the 22nd and stays idle across midnight;
         // the process closes cleanly the next morning.

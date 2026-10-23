@@ -88,6 +88,9 @@ class LoggingPipeline(
     /** True while the persistent file sink can still accept writes. */
     val fileSinkAvailable: Boolean get() = !writer.unavailable
 
+    /** Test/inspection seam: the session writer owning the file lifecycle. */
+    internal val sessionWriter: SessionLogWriter get() = writer
+
     private val worker: AsyncLogWorker
 
     init {

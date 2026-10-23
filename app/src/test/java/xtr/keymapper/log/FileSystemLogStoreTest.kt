@@ -2,7 +2,9 @@ package xtr.keymapper.log
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -106,17 +108,64 @@ class FileSystemLogStoreTest {
     }
 
     @Test
-    fun `duplicate handles on one file never break the write path`() {
-        // Writer-side coordination is best-effort: a second handle on the same
-        // file cannot take the lock (JVM overlap) but must open and write fine.
-        val store = FileSystemLogStore(tmp.newFolder())
-        val first = store.openAppendWriter("xtmapper-2026-10-22.log")
-        val second = store.openAppendWriter("xtmapper-2026-10-22.log")
-        second.write("two\n".toByteArray())
-        second.close()
-        first.write("one\n".toByteArray())
-        first.close()
-        assertEquals("two\none\n", store.readTail("xtmapper-2026-10-22.log", 8).joinToString("\n", postfix = "\n"))
+    fun `a contended open is refused instead of returning an un-protected writer`() {
+        // Original defect sequence: writer B opened the same file WITHOUT a
+        // lock and kept writing; once writer A closed, retention could acquire
+        // the lock and unlink the pathname while B was still writing,
+        // stranding B's records inside a still-open but unlinked inode
+        // (POSIX unlink(2): the name is deleted while open fds stay alive).
+        // The protocol now refuses the contended open — the same-JVM overlap
+        // direction here; the cross-process direction (tryLock → null) is the
+        // same code path one exception earlier.
+        val dir = tmp.newFolder()
+        val store = FileSystemLogStore(dir)
+        val name = "xtmapper-2026-10-22.log"
+        val first = store.openAppendWriter(name)
+        try {
+            try {
+                store.openAppendWriter(name)
+                fail("a contended open must not return an un-protected writer")
+            } catch (expected: java.io.IOException) {
+                // Refusal semantics — see the FileSystemLogStore KDoc.
+            }
+            // The refused open left no side effects on the coordination holder.
+            first.write("one\n".toByteArray())
+        } finally {
+            first.close()
+        }
+        // After the holder closes, opening and appending is normal again.
+        store.openAppendWriter(name).use { it.write("two\n".toByteArray()) }
+        assertEquals("one\ntwo\n", java.io.File(dir, name).readText())
+    }
+
+    @Test
+    fun `an open during an in-flight delete gate is refused, never un-protected`() {
+        // Retention holds the exclusive lock while it works on the pathname; a
+        // writer racing to open the same pathname must fail instead of writing
+        // into a file the gate is about to remove (reciprocal direction of
+        // `delete skips a file held by an active writer`).
+        val dir = tmp.newFolder()
+        val store = FileSystemLogStore(dir)
+        val name = "xtmapper-2026-10-21.log"
+        java.io.File(dir, name).writeText("kept old content\n")
+
+        val gate = java.io.RandomAccessFile(java.io.File(dir, name), "rw")
+        val held = gate.channel.tryLock()
+        assertNotNull("test needs the gate to hold the lock", held)
+        try {
+            try {
+                store.openAppendWriter(name)
+                fail("open must not proceed while the delete gate holds the file")
+            } catch (expected: java.io.IOException) {
+                // Refused: a writer starting here cannot outlive the delete.
+            }
+        } finally {
+            held?.release()
+            gate.close()
+        }
+        // The gate released and the racing writer never touched the file.
+        assertEquals("kept old content\n", java.io.File(dir, name).readText())
+        assertTrue(store.delete(name))
     }
 
     @Test
