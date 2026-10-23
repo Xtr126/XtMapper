@@ -7,9 +7,13 @@ import android.view.View
 import android.widget.EditText
 
 fun onKeyboardKeyPress(view: View, keyCode: Int, event: KeyEvent): Boolean {
-    val key = event.getDisplayLabel().toString()
-    if (key.matches("[a-zA-Z0-9]+".toRegex())) (view as EditText).setText(key)
-    else (view as EditText).getText().clear()
+    if (event.action != KeyEvent.ACTION_DOWN) return false
+    val key = KeyUtils.resolveKeyName(keyCode, event)
+    if (key != null) {
+        (view as EditText).setText(key)
+    } else {
+        (view as EditText).text.clear()
+    }
     return true
 }
 

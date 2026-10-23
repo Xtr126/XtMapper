@@ -15,9 +15,12 @@ import com.topjohnwu.superuser.ipc.RootService
 import rikka.shizuku.Shizuku
 import xtr.keymapper.BuildConfig
 import xtr.keymapper.IRemoteService
+import xtr.keymapper.TouchPointer
+import xtr.keymapper.keymap.KeymapConfig
 
 object RemoteServiceHelper {
 
+    @Volatile
     private var service: IRemoteService? = null
 
     @JvmStatic
@@ -61,7 +64,7 @@ object RemoteServiceHelper {
         getInstance(context) { service ->
             try {
                 if (service != null && service.isActive) runnable.run()
-            } catch (e: RemoteException) {
+            } catch (_: RemoteException) {
             }
         }
     }
@@ -72,10 +75,21 @@ object RemoteServiceHelper {
 
     class RemoteServiceConnection(private val cb: RootRemoteServiceCallback) : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            cb.onConnection(IRemoteService.Stub.asInterface(service))
+            val remote = IRemoteService.Stub.asInterface(service)
+            RemoteServiceHelper.service = remote
+            try {
+                service.linkToDeath({
+                    if (RemoteServiceHelper.service?.asBinder() == service) {
+                        RemoteServiceHelper.service = null
+                    }
+                }, 0)
+            } catch (_: RemoteException) {}
+            cb.onConnection(remote)
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
+            RemoteServiceHelper.service = null
+            cb.onConnection(null)
         }
     }
 
@@ -84,7 +98,7 @@ object RemoteServiceHelper {
             service = IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"))
             try {
                 service?.asBinder()?.linkToDeath({ service = null }, 0)
-            } catch (ignored: RemoteException) {
+            } catch (_: RemoteException) {
             }
         }
     }
@@ -105,7 +119,7 @@ object RemoteServiceHelper {
             val pm = context.packageManager
             val ai = pm.getApplicationInfo(packageName, 0)
             (ai.flags and (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
-        } catch (e: PackageManager.NameNotFoundException) {
+        } catch (_: PackageManager.NameNotFoundException) {
             false
         }
     }
@@ -123,33 +137,54 @@ object RemoteServiceHelper {
      * Get instance of remote service
      * @param context App context
      * @param callback Callback when instance of remote service is obtained
-     * Check if we are a system app
-     * If system app -> create instance of service in same process
-     * If not -> Try to get instance from xtmapper binder service added with ServiceManager
-     * Or if Shizuku is available try to obtain service instance
-     * Or if root is available try to start server and obtain instance
      */
     @JvmStatic
     fun getInstance(context: Context, callback: RootRemoteServiceCallback) {
+        useShizuku = KeymapConfig(context).isShizukuMode
+
+        // 1. Check if TouchPointer has an active, running service instance
+        val activePointerService = TouchPointer.activeInstance?.mService
+        if (activePointerService != null && activePointerService.asBinder().isBinderAlive) {
+            service = activePointerService
+            callback.onConnection(activePointerService)
+            return
+        }
+
+        // 2. Check if we are a system app
         if (isSystemApp(context)) {
             getInstanceAsSystemApp(context, callback)
-        } else {
-            getInstance()
-            val s = service
-            if (s != null) {
-                callback.onConnection(s)
+            return
+        }
+
+        // 3. Check existing live cached service
+        val existing = service
+        if (existing != null && existing.asBinder().isBinderAlive) {
+            callback.onConnection(existing)
+            return
+        }
+
+        // 4. Try ServiceManager (shell started service)
+        getInstance()
+        val smService = service
+        if (smService != null && smService.asBinder().isBinderAlive) {
+            callback.onConnection(smService)
+            return
+        }
+
+        // 5. Connect via Shizuku or Root
+        val connection = RemoteServiceConnection(callback)
+        if (useShizuku) {
+            if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                bindShizukuService(context, connection)
             } else {
-                val connection = RemoteServiceConnection(callback)
-                if (useShizuku) {
-                    if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED)
-                        bindShizukuService(context, connection)
-                    else callback.onConnection(null)
-                } else {
-                    if (Shell.isAppGrantedRoot() == true) {
-                        val intent = Intent(context, RootRemoteService::class.java)
-                        RootService.bind(intent, connection)
-                    } else callback.onConnection(null)
-                }
+                callback.onConnection(null)
+            }
+        } else {
+            if (Shell.isAppGrantedRoot() != false) {
+                val intent = Intent(context, RootRemoteService::class.java)
+                RootService.bind(intent, connection)
+            } else {
+                callback.onConnection(null)
             }
         }
     }

@@ -78,6 +78,9 @@ android {
         buildConfig true
         compose true
     }
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
     packagingOptions.jniLibs.useLegacyPackaging true
 
     ndkVersion '28.0.13004108'
@@ -118,5 +121,5 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-tooling'
 
     compileOnly project(path: ':app:hidden-api')
-
+    testImplementation 'junit:junit:4.13.2'
 }

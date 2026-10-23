@@ -25,4 +25,6 @@ interface IInputInterface {
     fun hideCursor()
 
     fun showCursor()
+    fun toggleKeyboardBlock()
+    val isKeyboardBlocked: Boolean
 }

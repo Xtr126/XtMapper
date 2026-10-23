@@ -38,6 +38,9 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">滑动延迟 %d 毫秒</string>
+    <string name="shift_transition_ms">切换过渡: %d 毫秒</string>
+    <string name="shift_transition_title">切换过渡速度</string>
+    <string name="use_global_default">全局默认 (%d 毫秒)</string>
     <string name="profile_name">配置名称</string>
     <string name="root_not_found_title">未获取root权限</string>
     <string name="root_not_found_message">键映射需要获取root权限才能运行。\n请在您的root管理器中为XtMapper授予权限</string>
@@ -55,6 +58,7 @@
     <string name="crosshair">十字线</string>
     <string name="left_click">左键单击</string>
     <string name="swipe_key">滑动键</string>
+    <string name="shift_key">切换键</string>
     <string name="add_key">添加键</string>
     <string name="save">保存</string>
     <!--  Mouse Aim  -->
@@ -117,4 +121,11 @@
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">所有配置均已存在，未导入任何内容</string>
     <string name="error_import_failed">导入失败</string>
     <string name="share">分享</string>
+    <string name="touch_jitter">触控坐标抖动</string>
+    <string name="touch_jitter_spread">抖动范围</string>
+    <string name="touch_jitter_spread_px">触控抖动范围: %d 像素</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">输入模式</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

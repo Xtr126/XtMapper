@@ -1,10 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="24dp"
-    >
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="24dp">
 
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/auto_profile_switch"
@@ -21,12 +23,41 @@
             android:text="@string/use_shizuku" />
 
         <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/block_keyboard_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/block_keyboard_input" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/editor_overlay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:checked="false"
             android:text="@string/open_editor_as_overlay" />
 
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/touch_jitter_switch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/touch_jitter" />
+
+        <TextView
+            android:id="@+id/touch_jitter_spread_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/touch_jitter_spread" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/touch_jitter_spread"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="1"
+            android:valueTo="50"
+            android:stepSize="1"
+            android:value="15" />
 
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/show_controls"
@@ -47,4 +78,5 @@
             android:layout_height="wrap_content"
             android:valueFrom="0"
             android:valueTo="1" />
-</LinearLayout>
+    </LinearLayout>
+</ScrollView>

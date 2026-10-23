@@ -9,6 +9,7 @@ import xtr.keymapper.keymap.element.Dpad
 import xtr.keymapper.keymap.element.Key
 import xtr.keymapper.keymap.element.MouseAimConfig
 import xtr.keymapper.keymap.element.MouseWalk
+import xtr.keymapper.keymap.element.ShiftKey
 import xtr.keymapper.keymap.element.SwipeKey
 import xtr.keymapper.macro.Macro
 import xtr.keymapper.macro.MacroSharedPreferences
@@ -32,6 +33,9 @@ class KeymapProfile : Parcelable {
 
     @JvmField
     var swipeKeys = ArrayList<SwipeKey>()
+
+    @JvmField
+    var shiftKeys = ArrayList<ShiftKey>()
 
     @JvmField
     var rightClick: Key? = null
@@ -60,12 +64,26 @@ class KeymapProfile : Parcelable {
         val scaleY = if (yRes > 0) newHeight / yRes else 1f
 
         if (xRes > 0 && yRes > 0) {
+            // Guard: don't scale if dimensions are virtually identical
+            if (Math.abs(scaleX - 1f) < 0.001f && Math.abs(scaleY - 1f) < 0.001f) {
+                return
+            }
+            // Guard against inset-induced false scaling:
+            // If xRes matches newWidth and the difference between yRes and newHeight is just system insets (< 15%),
+            // this is an inset mismatch between fullscreen and windowed on the same device, not a different resolution.
+            if (Math.abs(scaleX - 1f) < 0.01f && Math.abs(scaleY - 1f) < 0.15f) {
+                xRes = newWidth.toInt()
+                yRes = newHeight.toInt()
+                return
+            }
+
             val scaler = { element: KeymapProfileElement? ->
                 if (element != null)
                     element.scale(scaleX, scaleY)
             }
             keys.forEach { scaler(it) }
             swipeKeys.forEach { scaler(it) }
+            shiftKeys.forEach { scaler(it) }
             for (dpad in dpadArray) {
                 scaler(dpad)
             }
@@ -85,6 +103,7 @@ class KeymapProfile : Parcelable {
         mouseAimConfig = parcel.readParcelable(MouseAimConfig::class.java.classLoader)
         keys = parcel.createTypedArrayList(Key.CREATOR) as ArrayList<Key>
         swipeKeys = parcel.createTypedArrayList(SwipeKey.CREATOR) as ArrayList<SwipeKey>
+        shiftKeys = parcel.createTypedArrayList(ShiftKey.CREATOR) as ArrayList<ShiftKey>
         rightClick = parcel.readParcelable(Key::class.java.classLoader)
         disabled = parcel.readByte().toInt() != 0
         xRes = parcel.readInt()
@@ -101,6 +120,7 @@ class KeymapProfile : Parcelable {
         dest.writeParcelable(mouseAimConfig, flags)
         dest.writeTypedList(keys)
         dest.writeTypedList(swipeKeys)
+        dest.writeTypedList(shiftKeys)
         dest.writeParcelable(rightClick, flags)
         dest.writeByte((if (disabled) 1 else 0).toByte())
         dest.writeInt(xRes)

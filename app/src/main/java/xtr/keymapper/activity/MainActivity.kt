@@ -75,17 +75,21 @@ class MainActivity : AppCompatActivity() {
         GameKeyMapperBridge.installGameKeyMapperContent(this)
 
         val keymapConfig = KeymapConfig(this)
+        val profiles = KeymapProfiles(this)
+        selectedProfileName = profiles.getLastSelectedProfile()
+        TouchPointer.currentSelectedProfile = selectedProfileName
 
         /*
          * If user has enabled "Use Shizuku" but this activity was started from shell (waydroid or adb)
          * Then reset "Use Shizuku" setting to false since it crashes the app
          */
-        if (startedFromShell == true && keymapConfig.useShizuku) {
+        if (startedFromShell == true && keymapConfig.isShizukuMode) {
             keymapConfig.useShizuku = false
+            keymapConfig.inputMode = KeymapConfig.MODE_ROOT
             keymapConfig.applySharedPrefs()
         }
 
-        RemoteServiceHelper.useShizuku = keymapConfig.useShizuku
+        RemoteServiceHelper.useShizuku = keymapConfig.isShizukuMode
         Server.setupServer(this, mCallback)
 
         if (startedFromShell == false) handleActivationFlow(keymapConfig)
@@ -117,6 +121,7 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             when {
+                !isShizukuInstalled() -> alertShizukuNotInstalled()
                 !Shizuku.pingBinder() -> alertShizukuNotRunning()
                 Shizuku.checkSelfPermission() != PERMISSION_GRANTED -> alertShizukuNotAuthorized()
             }
@@ -178,7 +183,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startPointer(displayId: Int?) {
+        val keymapConfig = KeymapConfig(this)
+        if (keymapConfig.isShizukuMode) {
+            when {
+                !isShizukuInstalled() -> {
+                    alertShizukuNotInstalled()
+                    return
+                }
+                !Shizuku.pingBinder() -> {
+                    alertShizukuNotRunning()
+                    return
+                }
+                Shizuku.checkSelfPermission() != PERMISSION_GRANTED -> {
+                    alertShizukuNotAuthorized()
+                    return
+                }
+            }
+        } else if (startedFromShell == false && Shell.isAppGrantedRoot() == false) {
+            alertRootAccessAndExit()
+            return
+        }
+
         checkOverlayPermission(this)
+        val profiles = KeymapProfiles(this)
+        if (selectedProfileName == null) {
+            selectedProfileName = profiles.getLastSelectedProfile()
+        }
+        profiles.setLastSelectedProfile(selectedProfileName)
+        TouchPointer.currentSelectedProfile = selectedProfileName
         // Start service with selected profile if display on top permission is granted
         if (Settings.canDrawOverlays(this)) {
             val intent = Intent(this, TouchPointer::class.java).apply {
@@ -190,22 +222,24 @@ class MainActivity : AppCompatActivity() {
             setButtonState(false)
             requestNotificationPermission()
         }
-        if (RemoteServiceHelper.useShizuku) {
-            if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)
-                alertShizukuNotAuthorized()
-        } else if (Shell.isAppGrantedRoot() == false) {
-            // No need to alert about root access if started from shell
-            if (startedFromShell == false) alertRootAccessAndExit()
-        }
     }
 
     private fun setButtonState(start: Boolean) {
         composeServiceActive = !start
     }
 
+    override fun onResume() {
+        super.onResume()
+        composeServiceActive = TouchPointer.isRunning
+    }
+
     fun stopPointer() {
+        TouchPointer.activeInstance?.stopKeymapper()
         unbindTouchPointer()
-        stopService(Intent(this, TouchPointer::class.java))
+        val intent = Intent(this, TouchPointer::class.java).apply {
+            action = TouchPointer.ACTION_STOP
+        }
+        stopService(intent)
         setButtonState(true)
     }
 
@@ -255,12 +289,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun alertShizukuNotAuthorized() {
+        if (!isShizukuInstalled()) {
+            alertShizukuNotInstalled()
+            return
+        }
         if (Shizuku.pingBinder()) Shizuku.requestPermission(0)
         showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, { _, _ -> launchShizukuAndExit() }, R.string.ok)
     }
 
     private fun alertShizukuNotRunning() {
+        if (!isShizukuInstalled()) {
+            alertShizukuNotInstalled()
+            return
+        }
         showAlertDialog(R.string.shizuku_not_running_title, R.string.shizuku_not_running_message, { _, _ -> launchShizukuAndExit() }, R.string.start)
+    }
+
+    private fun alertShizukuNotInstalled() {
+        showAlertDialog(R.string.shizuku_not_installed_title, R.string.shizuku_not_installed_message, null, R.string.ok)
+    }
+
+    fun isShizukuInstalled(): Boolean = try {
+        packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
+        true
+    } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+        false
     }
 
     private fun launchShizukuAndExit() {
@@ -268,6 +321,8 @@ class MainActivity : AppCompatActivity() {
         if (launchIntent != null) {
             startActivity(launchIntent)
             System.exit(0)
+        } else {
+            alertShizukuNotInstalled()
         }
     }
 
@@ -282,20 +337,77 @@ class MainActivity : AppCompatActivity() {
 
     // ============ COMPOSE UI BRIDGE ============
 
-    fun isComposeServiceActive(): Boolean = composeServiceActive
+    fun isComposeServiceActive(): Boolean = composeServiceActive || TouchPointer.isRunning
 
     fun selectedProfileNameForCompose(): String? = selectedProfileName
 
     fun toggleServiceFromCompose() {
-        if (composeServiceActive) stopPointer() else startPointer()
+        if (isComposeServiceActive()) stopPointer() else startPointer()
     }
 
     fun fixPermissionFromCompose() {
-        checkOverlayPermission(this)
+        val config = KeymapConfig(this)
+        if (config.isShizukuMode && !isShizukuInstalled()) {
+            alertShizukuNotInstalled()
+        } else if (config.isShizukuMode && (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)) {
+            if (Shizuku.pingBinder()) alertShizukuNotAuthorized()
+            else alertShizukuNotRunning()
+        } else if (!Settings.canDrawOverlays(this)) {
+            checkOverlayPermission(this)
+        }
+    }
+
+    fun toggleInputModeFromCompose() {
+        val config = KeymapConfig(this)
+        val nextMode = if (config.inputMode == KeymapConfig.MODE_ROOT) {
+            KeymapConfig.MODE_SHIZUKU
+        } else {
+            KeymapConfig.MODE_ROOT
+        }
+        config.inputMode = nextMode
+        config.useShizuku = (nextMode == KeymapConfig.MODE_SHIZUKU)
+        RemoteServiceHelper.useShizuku = config.useShizuku
+        config.applySharedPrefs()
+        val modeStr = if (nextMode == KeymapConfig.MODE_SHIZUKU) "Shizuku (ADB)" else "Root"
+        Toast.makeText(this, getString(R.string.input_mode_changed, modeStr), Toast.LENGTH_SHORT).show()
+        if (config.isShizukuMode) {
+            if (!isShizukuInstalled()) alertShizukuNotInstalled()
+            else if (!Shizuku.pingBinder()) alertShizukuNotRunning()
+            else if (Shizuku.checkSelfPermission() != PERMISSION_GRANTED) alertShizukuNotAuthorized()
+        }
+        if (isServiceBound && pointerOverlay != null) {
+            pointerOverlay?.launchProfile(selectedProfileName)
+        }
     }
 
     fun testInputFromCompose() {
-        Toast.makeText(this, "Input tester is not exposed by the legacy implementation.", Toast.LENGTH_SHORT).show()
+        val config = KeymapConfig(this)
+        if (config.isShizukuMode) {
+            when {
+                !isShizukuInstalled() -> {
+                    alertShizukuNotInstalled()
+                    return
+                }
+                !Shizuku.pingBinder() -> {
+                    alertShizukuNotRunning()
+                    return
+                }
+                Shizuku.checkSelfPermission() != PERMISSION_GRANTED -> {
+                    alertShizukuNotAuthorized()
+                    return
+                }
+            }
+        } else if (Shell.isAppGrantedRoot() == false) {
+            Toast.makeText(this, R.string.test_input_root_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (!isComposeServiceActive()) {
+            Toast.makeText(this, R.string.test_input_service_inactive, Toast.LENGTH_LONG).show()
+            return
+        }
+        val modeName = if (config.isShizukuMode) "Shizuku (ADB)" else "Root"
+        Toast.makeText(this, getString(R.string.test_input_ready, modeName), Toast.LENGTH_SHORT).show()
     }
 
     fun selectProfileFromCompose(profileName: String) {
@@ -321,7 +433,12 @@ class MainActivity : AppCompatActivity() {
             .setView(field.root)
             .setPositiveButton(R.string.ok) { _, _ ->
                 val renamed = field.editText.text.toString()
-                KeymapProfiles(context).renameProfile(profileName, renamed)
+                val profiles = KeymapProfiles(context)
+                profiles.renameProfile(profileName, renamed)
+                if (selectedProfileName == profileName) {
+                    selectedProfileName = renamed
+                    TouchPointer.currentSelectedProfile = renamed
+                }
                 if (onComplete != null) runOnUiThread(onComplete)
             }
             .setNegativeButton(R.string.cancel, null)
@@ -346,9 +463,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun deleteProfileFromCompose(profileName: String?) {
-        KeymapProfiles(this).deleteProfile(profileName)
+        val profiles = KeymapProfiles(this)
+        profiles.deleteProfile(profileName)
         if (profileName != null && profileName == selectedProfileName) {
-            selectedProfileName = null
+            selectedProfileName = profiles.getLastSelectedProfile()
+            TouchPointer.currentSelectedProfile = selectedProfileName
         }
     }
 
@@ -363,6 +482,9 @@ class MainActivity : AppCompatActivity() {
     fun createNewProfileFromCompose(onComplete: Runnable?) {
         ProfileSelector.createNewProfile(this) { profileName ->
             selectedProfileName = profileName
+            val profiles = KeymapProfiles(this)
+            profiles.setLastSelectedProfile(profileName)
+            TouchPointer.currentSelectedProfile = profileName
             if (onComplete != null) runOnUiThread(onComplete)
         }
     }
@@ -386,6 +508,13 @@ class MainActivity : AppCompatActivity() {
 
     fun onProfileSelected(profileName: String) {
         selectedProfileName = profileName
+        val profiles = KeymapProfiles(this)
+        profiles.setLastSelectedProfile(profileName)
+        TouchPointer.currentSelectedProfile = profileName
+        val p = profiles.getProfile(profileName, false)
+        if (!p.packageName.isNullOrEmpty()) {
+            profiles.setDesignatedProfileForApp(p.packageName, profileName)
+        }
     }
 
     private val mCallback = object : TouchPointer.MainActivityCallback {

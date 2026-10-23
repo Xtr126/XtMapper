@@ -42,6 +42,12 @@ class InputService @Throws(RemoteException::class) constructor(
     private var supportsAbsEvents = false
 
     internal var stopEvents = false
+    val touchJitter = TouchJitter(keymapConfig.touchJitter, keymapConfig.touchJitterSpread)
+    var keyListener: ((String) -> Unit)? = null
+    var isKeyboardGrabbed: Boolean = false
+        private set
+    override var isKeyboardBlocked: Boolean = false
+        private set
 
     init {
         profile.scale(screenWidth.toFloat(), screenHeight.toFloat())
@@ -68,13 +74,24 @@ class InputService @Throws(RemoteException::class) constructor(
         keyEventHandler = KeyEventHandler(this)
         keyEventHandler.init()
         input = Input(displayId)
+        touchJitter.setScreenDimensions(screenWidth, screenHeight)
+
+        if (keymapConfig.isRootMode && keymapConfig.blockKeyboardInput && !isWaylandClient) {
+            try {
+                isKeyboardGrabbed = startKeyboardGrab()
+                isKeyboardBlocked = isKeyboardGrabbed
+            } catch (e: Exception) {
+                Log.e(RemoteService.TAG, "Failed to start keyboard grab", e)
+            }
+        }
     }
 
     override fun injectEvent(x: Float, y: Float, action: Int, pointerId: Int) {
+        val target = touchJitter.wrapCoordinates(x, y, action, pointerId)
         when (action) {
-            UP -> input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, x, y)
-            DOWN -> input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, x, y)
-            MOVE -> input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 0.0f, x, y)
+            UP -> input.injectTouch(MotionEvent.ACTION_UP, pointerId, 0.0f, target.x, target.y)
+            DOWN -> input.injectTouch(MotionEvent.ACTION_DOWN, pointerId, 1.0f, target.x, target.y)
+            MOVE -> input.injectTouch(MotionEvent.ACTION_MOVE, pointerId, 0.0f, target.x, target.y)
         }
     }
 
@@ -99,6 +116,34 @@ class InputService @Throws(RemoteException::class) constructor(
         stopEvents = !stopEvents
         if (!isWaylandClient) {
             setMouseLock(!stopEvents)
+            if (isKeyboardGrabbed) {
+                setKeyboardGrabLock(!stopEvents && isKeyboardBlocked)
+            }
+        }
+    }
+
+    override fun toggleKeyboardBlock() {
+        if (!keymapConfig.isRootMode || isWaylandClient) return
+        if (!isKeyboardGrabbed) {
+            try {
+                isKeyboardGrabbed = startKeyboardGrab()
+                if (!isKeyboardGrabbed) {
+                    Log.w(RemoteService.TAG, "startKeyboardGrab returned false, no keyboard device grabbed")
+                    return
+                }
+                isKeyboardBlocked = true
+            } catch (e: Exception) {
+                Log.e(RemoteService.TAG, "Failed to start keyboard grab", e)
+                return
+            }
+        } else {
+            isKeyboardBlocked = !isKeyboardBlocked
+            setKeyboardGrabLock(isKeyboardBlocked && !stopEvents)
+        }
+        try {
+            mCallback.alertKeyboardBlocked(isKeyboardBlocked && !stopEvents)
+        } catch (e: RemoteException) {
+            Log.e(RemoteService.TAG, "Failed to send alertKeyboardBlocked", e)
         }
     }
 
@@ -167,12 +212,29 @@ class InputService @Throws(RemoteException::class) constructor(
             this.stop()
             keyEventHandler.init()
             mouseEventHandler.init()
+            if (keymapConfig.isRootMode && keymapConfig.blockKeyboardInput && !isWaylandClient) {
+                try {
+                    isKeyboardGrabbed = startKeyboardGrab()
+                    isKeyboardBlocked = isKeyboardGrabbed
+                } catch (e: Exception) {
+                    Log.e(RemoteService.TAG, "Failed to start keyboard grab", e)
+                }
+            }
         } catch (e: Exception) {
             Log.e(RemoteService.TAG, e.message, e)
         }
     }
 
     fun stop() {
+        if (isKeyboardGrabbed) {
+            try {
+                stopKeyboardGrab()
+            } catch (e: Exception) {
+                Log.e(RemoteService.TAG, "Failed to stop keyboard grab", e)
+            }
+            isKeyboardGrabbed = false
+            isKeyboardBlocked = false
+        }
         keyEventHandler.stop()
         mouseEventHandler.stop()
     }
@@ -195,6 +257,12 @@ class InputService @Throws(RemoteException::class) constructor(
 
     external fun setMouseLock(lock: Boolean)
 
+    // keyboard_grab.cpp
+    external fun startKeyboardGrab(): Boolean
+    external fun stopKeyboardGrab()
+    external fun setKeyboardGrabLock(lock: Boolean)
+    external fun grabKeyboardDevice(device: String): Boolean
+
     // touchpad_direct.cpp
     private external fun startTouchpadDirect()
     external fun stopTouchpadDirect()
@@ -207,6 +275,28 @@ class InputService @Throws(RemoteException::class) constructor(
      */
     fun sendMouseEvent(code: Int, value: Int) {
         if (!stopEvents) mouseEventHandler.handleEvent(code, value)
+    }
+
+    /*
+     * Called from native code when keyboard is grabbed
+     */
+    fun sendKeyboardEvent(codeName: String, action: Int) {
+        val actionStr = if (action == DOWN) "DOWN" else "UP"
+        val line = "EV_KEY $codeName $actionStr"
+        try {
+            if (shouldHandleMappedKeyboardEvent(stopEvents, isKeyboardBlocked)) {
+                keyEventHandler.handleEvent(line)
+            } else {
+                keyEventHandler.handleKeyboardShortcutEvent(line)
+            }
+        } catch (e: Exception) {
+            Log.e(RemoteService.TAG, "Error handling keyboard event", e)
+        }
+        try {
+            keyListener?.invoke(line)
+        } catch (e: Exception) {
+            Log.e(RemoteService.TAG, "Error invoking keyListener", e)
+        }
     }
 
     fun onWaylandMouseEvent(line: String) {
@@ -236,3 +326,6 @@ class InputService @Throws(RemoteException::class) constructor(
         const val MOVE = 2
     }
 }
+
+internal fun shouldHandleMappedKeyboardEvent(stopEvents: Boolean, isKeyboardBlocked: Boolean): Boolean =
+    !stopEvents && isKeyboardBlocked

@@ -39,6 +39,9 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">تأخير السحب %d مللي ثانية</string>
+    <string name="shift_transition_ms">انتقال التبديل: %d مللي ثانية</string>
+    <string name="shift_transition_title">سرعة انتقال التبديل</string>
+    <string name="use_global_default">الافتراضي العام (%d مللي ثانية)</string>
     <string name="profile_name">اسم ملف التعريف</string>
     <string name="root_not_found_title">لم يتم العثور على وصول الروت</string>
     <string name="root_not_found_message">يتطلب الوصول إلى الروت لكي يعمل برنامج تعيين المفاتيح. \n يرجى منح صلاحيات المستخدم الخارق لـ XtMapper من تطبيق KernelSU</string>
@@ -57,6 +60,7 @@
     <string name="crosshair">هدف التصويب</string>
     <string name="left_click">النقر بزر الماوس الأيسر</string>
     <string name="swipe_key">مفتاح السحب</string>
+    <string name="shift_key">مفتاح التبديل</string>
     <string name="add_key">إضافة مفتاح</string>
     <string name="save">حفظ</string>
     <!--  Mouse Aim  -->
@@ -119,4 +123,11 @@
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">جميع الملفات الشخصية موجودة بالفعل، لم يتم استيراد أي شيء</string>
     <string name="error_import_failed">فشل الاستيراد</string>
     <string name="share">مشاركة</string>
+    <string name="touch_jitter">ارتعاش إحداثيات اللمس</string>
+    <string name="touch_jitter_spread">نطاق الارتعاش</string>
+    <string name="touch_jitter_spread_px">نطاق ارتعاش اللمس: %d بكسل</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">وضع الإدخال</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

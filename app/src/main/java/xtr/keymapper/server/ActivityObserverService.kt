@@ -27,17 +27,34 @@ class ActivityObserverService(observer: ActivityObserver) : Runnable {
 
     override fun run() {
         try {
-            val taskInfo = am.getTasks(1)
-            val packageName = taskInfo[0].topActivity!!.packageName
-            val callback = mCallback
-            if (callback != null) {
-                callback.onForegroundActivitiesChanged(packageName)
-                mHandler?.postDelayed(this, 5000)
+            val taskInfo = am.getTasks(5)
+            var targetPackage: String? = null
+            if (taskInfo != null && taskInfo.isNotEmpty()) {
+                for (task in taskInfo) {
+                    val pkg = task.topActivity?.packageName ?: continue
+                    if (pkg != "com.android.systemui" && !pkg.startsWith("xtr.keymapper")) {
+                        targetPackage = pkg
+                        break
+                    }
+                }
+                if (targetPackage == null && taskInfo[0].topActivity != null) {
+                    targetPackage = taskInfo[0].topActivity!!.packageName
+                }
+            }
+            if (targetPackage != null) {
+                val callback = mCallback
+                if (callback != null) {
+                    callback.onForegroundActivitiesChanged(targetPackage)
+                    mHandler?.postDelayed(this, 5000)
+                } else {
+                    stop()
+                }
             } else {
-                stop()
+                mHandler?.postDelayed(this, 5000)
             }
         } catch (e: RemoteException) {
             Log.e(RemoteService.TAG, e.message, e)
+            mHandler?.postDelayed(this, 5000)
         }
     }
 

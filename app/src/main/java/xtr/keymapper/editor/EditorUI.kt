@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.RemoteException
+import android.util.DisplayMetrics
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -147,16 +148,15 @@ class EditorUI(
                 )
         }
 
-        if (mService == null) {
-            mainView.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
-                this.onKey(
-                    v,
-                    keyCode,
-                    event!!
-                )
-            })
-            mainView.setFocusable(true)
-        }
+        mainView.isFocusable = true
+        mainView.isFocusableInTouchMode = true
+        mainView.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
+            this.onKey(
+                v,
+                keyCode,
+                event!!
+            )
+        })
 
         loadKeymapAndObserveSizeChanges()
     }
@@ -175,6 +175,25 @@ class EditorUI(
         openOverlayWindow(alpha)
     }
 
+    private fun getRealScreenDimensions(): Pair<Int, Int> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowContext = context.createWindowContext(
+                context.display,
+                WindowManager.LayoutParams.TYPE_APPLICATION,
+                null
+            )
+            val bounds = windowContext.getSystemService(WindowManager::class.java)
+                .maximumWindowMetrics.bounds
+            Pair(bounds.width(), bounds.height())
+        } else {
+            val wm = context.getSystemService(WindowManager::class.java)
+            val display = wm.defaultDisplay
+            val metrics = DisplayMetrics()
+            display.getRealMetrics(metrics)
+            Pair(metrics.widthPixels, metrics.heightPixels)
+        }
+    }
+
     private fun openOverlayWindow(alpha: Float = -1f) {
         val overlayView =
             (if (startMode == EditorUI.Companion.SHOW_KEYMAP_ONLY) keysContainerView else mainView)!!
@@ -186,8 +205,18 @@ class EditorUI(
         val mParams =
             if (startMode == SHOW_KEYMAP_ONLY) Utils.getPointerLayoutParams(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) else windowManagerLayoutParams()
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            mParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        }
 
-        if (alpha < 1 && alpha > 0) overlayView.setAlpha(alpha)
+        if (startMode == SHOW_KEYMAP_ONLY) {
+            val targetAlpha = if (alpha > 0f && alpha <= 0.8f) alpha else 0.2f
+            mParams.alpha = targetAlpha
+            overlayView.setAlpha(1.0f)
+            Utils.applyEmptyTouchableRegion(overlayView)
+        } else {
+            if (alpha < 1 && alpha > 0) overlayView.setAlpha(alpha)
+        }
 
         mWindowManager.addView(overlayView, mParams)
         overlayOpen = true
@@ -220,12 +249,14 @@ class EditorUI(
      * @return true if we consume the event
      */
     fun onKey(v: View?, keyCode: Int, event: KeyEvent): Boolean {
-        if (keyInFocus != null) {
-            val key = event.displayLabel.toString()
-            if (key.matches("[a-zA-Z0-9]+".toRegex())) {
-                keyInFocus!!.setText(key)
-                return true
-            }
+        if (event.action != KeyEvent.ACTION_DOWN) return false
+        val key = KeyUtils.resolveKeyName(keyCode, event) ?: return false
+        if (macroDialog != null) {
+            macroDialog!!.onKey(key)
+            return true
+        } else if (keyInFocus != null) {
+            keyInFocus!!.setText(key)
+            return true
         }
         return false
     }
@@ -235,21 +266,26 @@ class EditorUI(
      * @param event A line of output from getevent -ql
      */
     override fun onKeyEvent(event: String) {
-        // line: /dev/input/event3 EV_KEY KEY_X DOWN
-        val input_event =
+        // e.g.: /dev/input/event3: EV_KEY KEY_X DOWN
+        val inputEvent =
             event.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-        val code = input_event[2]
+        val evIndex = inputEvent.indexOf("EV_KEY")
+        if (evIndex == -1 || evIndex + 2 >= inputEvent.size) return
+        val code = inputEvent[evIndex + 1]
+        val action = inputEvent[evIndex + 2]
 
-        // Ignore non-key events
-        if (input_event[1] != "EV_KEY" || !code.contains("KEY_")) return
-        val key = input_event[2].substring(4)
+        // Ignore non-key events and releases (UP)
+        if (!code.contains("KEY_")) return
+        if (action != "DOWN" && action != "00000001") return
+
+        val key = if (code.startsWith("KEY_")) code.substring(4) else code
 
         // Incoming calls are not guaranteed to be executed on the main thread
-        mHandler.post(Runnable {
+        mHandler.post {
             if (macroDialog != null) macroDialog!!.onKey(key)
             else if (keyInFocus != null) keyInFocus!!.setText(key)
             settingsOverlay!!.onKey(key)
-        })
+        }
     }
 
 
@@ -259,9 +295,10 @@ class EditorUI(
      * @param id the relevant id of the menu item for the card.
      */
     fun onActionSelected(id: Int) {
-        // X y coordinates of center of root view
-        val defaultX = mainView!!.pivotX
-        val defaultY = mainView.pivotY
+        // X y coordinates of center of container/screen
+        val (realWidth, realHeight) = getRealScreenDimensions()
+        val defaultX = if (keysContainerView.width > 0) keysContainerView.width / 2f else realWidth / 2f
+        val defaultY = if (keysContainerView.height > 0) keysContainerView.height / 2f else realHeight / 2f
 
         when (id) {
             R.id.save -> {
@@ -386,15 +423,17 @@ class EditorUI(
      */
     fun loadKeymapAndObserveSizeChanges() {
         profileBackup = KeymapProfiles(context).getProfile(profileName, false)
-        keysContainerView.addOnLayoutChangeListener(OnLayoutChangeListener { v: View?, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
-            if (right != oldRight || left != oldLeft || top != oldTop || bottom != oldBottom) {
-                if (profile != null) {
-                    // Save previous state before wiping
-                    saveKeymap()
-                    reloadKeymap()
-                }
+        keysContainerView.addOnLayoutChangeListener { _, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
+            val oldWidth = oldRight - oldLeft
+            val oldHeight = oldBottom - oldTop
+            val newWidth = right - left
+            val newHeight = bottom - top
+            // Only reload if screen orientation genuinely flipped between portrait and landscape
+            val orientationChanged = oldWidth > 0 && oldHeight > 0 && (oldWidth > oldHeight) != (newWidth > newHeight)
+            if (orientationChanged && profile != null) {
+                reloadKeymap()
             }
-        })
+        }
         keysContainerView.post(Runnable { this.loadKeymap() })
     }
 
@@ -407,16 +446,21 @@ class EditorUI(
     private fun loadKeymap() {
         profile = KeymapProfiles(context).getProfile(profileName, false)
 
+        val (realWidth, realHeight) = getRealScreenDimensions()
+        val targetWidth = if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth.toFloat() else if (keysContainerView.width > 0) keysContainerView.width.toFloat() else realWidth.toFloat()
+        val targetHeight = if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight.toFloat() else if (keysContainerView.height > 0) keysContainerView.height.toFloat() else realHeight.toFloat()
+
         // Scale to current display size
         profile!!.scale(
-            keysContainerView.width.toFloat(),
-            keysContainerView.height.toFloat()
+            targetWidth,
+            targetHeight
         )
 
         val editorUiComponentFactory = editorUiComponents.newFactory(mCallback, context)
 
         editorUiComponentFactory.addKeys(profile!!.keys)
         editorUiComponentFactory.addSwipeKeys(profile!!.swipeKeys)
+        editorUiComponentFactory.addShiftKeys(profile!!.shiftKeys)
         editorUiComponentFactory.addDpads(profile!!.dpadArray)
 
         if (profile!!.mouseAimConfig != null) {
@@ -446,6 +490,8 @@ class EditorUI(
      * docs/editor-lifecycle.md for the save call sites and the resize/animation timing risk.
      */
     private fun saveKeymap() {
+        if (startMode == SHOW_KEYMAP_ONLY) return
+
         val linesToWrite = ArrayList<String?>()
 
         editorUiComponents.forEach { linesToWrite.add(it.toConfigLine()) }
@@ -455,10 +501,14 @@ class EditorUI(
 
         // Save Config
         val profiles = KeymapProfiles(context)
+        val (realWidth, realHeight) = getRealScreenDimensions()
+
+        val saveWidth = if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth else if (keysContainerView.width > 0) keysContainerView.width else realWidth
+        val saveHeight = if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight else if (keysContainerView.height > 0) keysContainerView.height else realHeight
 
         profiles.saveProfile(
             profileName, linesToWrite, profile!!.packageName, !profile!!.disabled,
-            keysContainerView.width, keysContainerView.height
+            saveWidth, saveHeight
         )
     }
 
@@ -475,13 +525,28 @@ class EditorUI(
     }
 
     private fun handleImportAction() {
-        // TODO: Implement import logic (parse string back to KeymapProfile)
-        // Example: KeymapProfile newProfile = new KeymapProfiles(context).parseProfile(configString);
-        // Then call reloadKeymap();
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        val clipData = clipboard?.primaryClip
+        if (clipData != null && clipData.itemCount > 0) {
+            val text = clipData.getItemAt(0).text?.toString()
+            if (!text.isNullOrBlank()) {
+                val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                profile = KeymapProfiles.parse(lines)
+                reloadKeymap()
+                android.widget.Toast.makeText(context, "Keymap imported from clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                closeImportExportDialog()
+                return
+            }
+        }
+        android.widget.Toast.makeText(context, "No valid config found on clipboard", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun handleExportAction() {
-        // TODO: Implement export logic (e.g., share file, copy to clipboard)
+        val configString = generateConfigString()
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("XtMapper Config", configString)
+        clipboard?.setPrimaryClip(clip)
+        android.widget.Toast.makeText(context, "Configuration copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun showImportExportDialog(configCode: String) {
@@ -555,6 +620,11 @@ class EditorUI(
 
         override fun setOnKeyListener(keyInFocusListener: KeyInFocusListener?) {
             keyInFocus = keyInFocusListener
+            if (keyInFocusListener != null) {
+                mainView?.isFocusable = true
+                mainView?.isFocusableInTouchMode = true
+                mainView?.requestFocus()
+            }
         }
     }
 

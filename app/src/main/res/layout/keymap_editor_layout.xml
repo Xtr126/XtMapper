@@ -7,10 +7,12 @@
 
     <FrameLayout
         android:id="@+id/keyContainer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-    </FrameLayout>
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="wrap_content"
@@ -108,79 +110,120 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintTop_toTopOf="parent">
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/mouse_sensitivity" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/slider_mouse"
+        <ScrollView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:scrollbars="none">
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:valueFrom="0"
-                android:valueTo="5"
-                android:value="1"
-                app:trackIconInactiveEnd="@drawable/ic_baseline_mouse_36"
-                app:trackStopIndicatorSize="0dp"
-                app:trackIconSize="14dp"
-                />
+                android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/scroll_speed" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/mouse_sensitivity" />
 
-            <com.google.android.material.slider.Slider
-                android:id="@+id/slider_scroll_speed"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:valueFrom="0"
-                android:valueTo="5"
-                app:trackIconInactiveEnd="@drawable/ic_baseline_speed_24"
-                app:trackStopIndicatorSize="0dp"
-                app:trackIconSize="14dp"
-                />
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_mouse"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="5"
+                    android:value="1"
+                    app:trackIconInactiveEnd="@drawable/ic_baseline_mouse_36"
+                    app:trackStopIndicatorSize="0dp"
+                    app:trackIconSize="14dp"
+                    />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/swipe_delay_text"
-                android:text="@string/swipe_delay_ms" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/scroll_speed" />
 
-            <com.google.android.material.slider.Slider
-                android:id="@+id/slider_swipe_delay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:valueFrom="0"
-                android:valueTo="500"
-                app:trackIconInactiveEnd="@drawable/ic_baseline_touch_app_24"
-                app:trackStopIndicatorSize="0dp"
-                app:trackIconSize="14dp"
-                />
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_scroll_speed"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="5"
+                    app:trackIconInactiveEnd="@drawable/ic_baseline_speed_24"
+                    app:trackStopIndicatorSize="0dp"
+                    app:trackIconSize="14dp"
+                    />
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/swipe_delay_text"
+                    android:text="@string/swipe_delay_ms" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/floating_keys_size" />
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_swipe_delay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="500"
+                    app:trackIconInactiveEnd="@drawable/ic_baseline_touch_app_24"
+                    app:trackStopIndicatorSize="0dp"
+                    app:trackIconSize="14dp"
+                    />
 
-            <com.google.android.material.slider.Slider
-                android:id="@+id/slider_floating_keys_size"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:valueFrom="0"
-                android:valueTo="1"
-                app:trackIconInactiveEnd="@drawable/ic_baseline_zoom_out_map_24"
-                app:trackStopIndicatorSize="0dp"
-                app:trackIconSize="14dp"
-                />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/shift_transition_text"
+                    android:text="@string/shift_transition_ms" />
 
-        </LinearLayout>
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_shift_transition"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="500"
+                    android:stepSize="10"
+                    app:trackIconInactiveEnd="@drawable/ic_baseline_swap_horiz_24"
+                    app:trackStopIndicatorSize="0dp"
+                    app:trackIconSize="14dp"
+                    />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/floating_keys_size" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_floating_keys_size"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    app:trackIconInactiveEnd="@drawable/ic_baseline_zoom_out_map_24"
+                    app:trackStopIndicatorSize="0dp"
+                    app:trackIconSize="14dp"
+                    />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/touch_jitter_text"
+                    android:text="@string/touch_jitter_spread" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_touch_jitter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="50"
+                    android:stepSize="1"
+                    android:value="0"
+                    app:trackIconInactiveEnd="@drawable/ic_baseline_touch_app_24"
+                    app:trackStopIndicatorSize="0dp"
+                    app:trackIconSize="14dp"
+                    />
+
+            </LinearLayout>
+        </ScrollView>
     </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.card.MaterialCardView
@@ -434,6 +477,45 @@
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/switch_profile"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/block_keyboard_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="10dp"
+                    android:text="@string/block_keyboard" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/block_keyboard_modifier"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/key">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/block_keyboard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="none" />
