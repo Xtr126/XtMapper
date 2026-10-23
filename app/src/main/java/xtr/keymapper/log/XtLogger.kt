@@ -245,6 +245,7 @@ object XtLogger {
             androidVersion = android.os.Build.VERSION.RELEASE,
             sdkInt = android.os.Build.VERSION.SDK_INT,
             deviceModel = android.os.Build.MODEL,
+            environment = xtr.keymapper.Environment.name,
         )
         val newPipeline = LoggingPipeline(
             role = role,

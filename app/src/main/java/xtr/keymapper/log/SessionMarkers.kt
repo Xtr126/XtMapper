@@ -150,6 +150,8 @@ class SessionMetadata(
     val androidVersion: String? = null,
     val sdkInt: Int? = null,
     val deviceModel: String? = null,
+    /** `waydroid` or `android`; omitted when the environment is unknown. */
+    val environment: String? = null,
 ) {
     internal fun renderInto(sb: StringBuilder) {
         appVersion?.let { sb.append("App Version: ").append(it).append('\n') }
@@ -160,6 +162,7 @@ class SessionMetadata(
             sb.append('\n')
         }
         deviceModel?.let { sb.append("Device: ").append(it).append('\n') }
+        environment?.let { sb.append("Environment: ").append(it).append('\n') }
     }
 }
 
