@@ -284,7 +284,7 @@ class InputService @Throws(RemoteException::class) constructor(
         val actionStr = if (action == DOWN) "DOWN" else "UP"
         val line = "EV_KEY $codeName $actionStr"
         try {
-            if (!stopEvents && isKeyboardBlocked) {
+            if (shouldHandleMappedKeyboardEvent(stopEvents, isKeyboardBlocked)) {
                 keyEventHandler.handleEvent(line)
             } else {
                 keyEventHandler.handleKeyboardShortcutEvent(line)
@@ -326,3 +326,6 @@ class InputService @Throws(RemoteException::class) constructor(
         const val MOVE = 2
     }
 }
+
+internal fun shouldHandleMappedKeyboardEvent(stopEvents: Boolean, isKeyboardBlocked: Boolean): Boolean =
+    !stopEvents && isKeyboardBlocked
