@@ -2,6 +2,7 @@ package xtr.keymapper.log
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Process
 import android.util.Log
 import xtr.keymapper.BuildConfig
@@ -181,7 +182,7 @@ object XtLogger {
      */
     @JvmStatic
     fun enableFileLogging(context: Context) {
-        if (!android.os.Environment.isExternalStorageManager()) return
+        if (!hasAllFilesAccess()) return
         if (isFileSinkAvailable) return
         rebuildAppPipeline(FileSystemLogStore(File(logDirectory(context))))
     }
@@ -206,8 +207,21 @@ object XtLogger {
     fun logDirectory(context: Context): String =
         prefs(context).getString(KEY_LOG_DIR, null) ?: CANONICAL_LOGS_DIR.absolutePath
 
+    /**
+     * All-files access exists only since Android 11 (the method needs API 30
+     * and the appops grant is an API 30 concept). Below Android 11 the call
+     * must not be made at all: a targetSdk-34 app cannot obtain this grant on
+     * API 29 (scoped storage without MANAGE_EXTERNAL_STORAGE), and API ≤ 28
+     * would need the legacy `WRITE_EXTERNAL_STORAGE` runtime permission this
+     * manifest does not declare. On these runtimes persistent logging stays
+     * Logcat-only — a documented platform limitation, never a startup crash.
+     */
+    private fun hasAllFilesAccess(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            android.os.Environment.isExternalStorageManager()
+
     private fun storeForAppProcess(context: Context): LogStore? {
-        if (!android.os.Environment.isExternalStorageManager()) return null
+        if (!hasAllFilesAccess()) return null
         // shortcut: a user-edited directory applies to the app role only; the
         // shell/shizuku/root processes cannot read app prefs. Upgrade: pass the
         // directory through the server startup command line.

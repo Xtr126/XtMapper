@@ -547,6 +547,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun launchAllFilesAccess() {
+        // All-files access is an Android 11+ concept; below API 30 there is no
+        // such Settings screen and both intents would be unresolvable.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         val intent = Intent(
             Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
             Uri.parse("package:$packageName"),
@@ -562,8 +565,11 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // The user may have granted All-files access in Settings just now;
-        // finish the pending file-logging setup without a restart.
-        if (android.os.Environment.isExternalStorageManager()) XtLogger.enableFileLogging(this)
+        // finish the pending file-logging setup without a restart. Guarded:
+        // the check is an API 30 call (crashes every resume below Android 11).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            android.os.Environment.isExternalStorageManager()
+        ) XtLogger.enableFileLogging(this)
     }
 
     override fun onDestroy() {
