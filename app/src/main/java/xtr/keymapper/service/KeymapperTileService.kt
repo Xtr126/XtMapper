@@ -16,6 +16,7 @@ import xtr.keymapper.TouchPointer
 import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.editor.EditorActivity
 import xtr.keymapper.keymap.KeymapConfig
+import xtr.keymapper.keymap.KeymapProfiles
 
 class KeymapperTileService : TileService() {
 
@@ -47,7 +48,8 @@ class KeymapperTileService : TileService() {
                 return
             }
 
-            val selectedProfile = TouchPointer.currentSelectedProfile ?: "Default"
+            val selectedProfile = TouchPointer.currentSelectedProfile
+                ?: KeymapProfiles(this).getLastSelectedProfile()
             val startIntent = Intent(this, TouchPointer::class.java).apply {
                 putExtra(EditorActivity.PROFILE_NAME, selectedProfile)
             }
@@ -72,7 +74,7 @@ class KeymapperTileService : TileService() {
 
     private fun updateTileState(
         isActive: Boolean = TouchPointer.isRunning,
-        profileName: String? = TouchPointer.currentSelectedProfile
+        profileName: String? = TouchPointer.currentSelectedProfile ?: KeymapProfiles(this).getLastSelectedProfile()
     ) {
         val tile = qsTile ?: return
         tile.state = if (isActive) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE

@@ -75,6 +75,9 @@ class MainActivity : AppCompatActivity() {
         GameKeyMapperBridge.installGameKeyMapperContent(this)
 
         val keymapConfig = KeymapConfig(this)
+        val profiles = KeymapProfiles(this)
+        selectedProfileName = profiles.getLastSelectedProfile()
+        TouchPointer.currentSelectedProfile = selectedProfileName
 
         /*
          * If user has enabled "Use Shizuku" but this activity was started from shell (waydroid or adb)
@@ -202,12 +205,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         checkOverlayPermission(this)
+        val profiles = KeymapProfiles(this)
         if (selectedProfileName == null) {
-            val all = KeymapProfiles(this).getAllProfiles()
-            if (all.isNotEmpty()) {
-                selectedProfileName = all.keys.first()
-            }
+            selectedProfileName = profiles.getLastSelectedProfile()
         }
+        profiles.setLastSelectedProfile(selectedProfileName)
+        TouchPointer.currentSelectedProfile = selectedProfileName
         // Start service with selected profile if display on top permission is granted
         if (Settings.canDrawOverlays(this)) {
             val intent = Intent(this, TouchPointer::class.java).apply {
@@ -430,7 +433,12 @@ class MainActivity : AppCompatActivity() {
             .setView(field.root)
             .setPositiveButton(R.string.ok) { _, _ ->
                 val renamed = field.editText.text.toString()
-                KeymapProfiles(context).renameProfile(profileName, renamed)
+                val profiles = KeymapProfiles(context)
+                profiles.renameProfile(profileName, renamed)
+                if (selectedProfileName == profileName) {
+                    selectedProfileName = renamed
+                    TouchPointer.currentSelectedProfile = renamed
+                }
                 if (onComplete != null) runOnUiThread(onComplete)
             }
             .setNegativeButton(R.string.cancel, null)
@@ -455,9 +463,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun deleteProfileFromCompose(profileName: String?) {
-        KeymapProfiles(this).deleteProfile(profileName)
+        val profiles = KeymapProfiles(this)
+        profiles.deleteProfile(profileName)
         if (profileName != null && profileName == selectedProfileName) {
-            selectedProfileName = null
+            selectedProfileName = profiles.getLastSelectedProfile()
+            TouchPointer.currentSelectedProfile = selectedProfileName
         }
     }
 
@@ -472,6 +482,9 @@ class MainActivity : AppCompatActivity() {
     fun createNewProfileFromCompose(onComplete: Runnable?) {
         ProfileSelector.createNewProfile(this) { profileName ->
             selectedProfileName = profileName
+            val profiles = KeymapProfiles(this)
+            profiles.setLastSelectedProfile(profileName)
+            TouchPointer.currentSelectedProfile = profileName
             if (onComplete != null) runOnUiThread(onComplete)
         }
     }
@@ -496,8 +509,10 @@ class MainActivity : AppCompatActivity() {
     fun onProfileSelected(profileName: String) {
         selectedProfileName = profileName
         val profiles = KeymapProfiles(this)
+        profiles.setLastSelectedProfile(profileName)
+        TouchPointer.currentSelectedProfile = profileName
         val p = profiles.getProfile(profileName, false)
-        if (p != null && !p.packageName.isNullOrEmpty()) {
+        if (!p.packageName.isNullOrEmpty()) {
             profiles.setDesignatedProfileForApp(p.packageName, profileName)
         }
     }

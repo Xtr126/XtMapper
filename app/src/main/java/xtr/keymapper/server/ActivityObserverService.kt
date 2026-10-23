@@ -27,12 +27,24 @@ class ActivityObserverService(observer: ActivityObserver) : Runnable {
 
     override fun run() {
         try {
-            val taskInfo = am.getTasks(1)
-            if (taskInfo != null && taskInfo.isNotEmpty() && taskInfo[0].topActivity != null) {
-                val packageName = taskInfo[0].topActivity!!.packageName
+            val taskInfo = am.getTasks(5)
+            var targetPackage: String? = null
+            if (taskInfo != null && taskInfo.isNotEmpty()) {
+                for (task in taskInfo) {
+                    val pkg = task.topActivity?.packageName ?: continue
+                    if (pkg != "com.android.systemui" && !pkg.startsWith("xtr.keymapper")) {
+                        targetPackage = pkg
+                        break
+                    }
+                }
+                if (targetPackage == null && taskInfo[0].topActivity != null) {
+                    targetPackage = taskInfo[0].topActivity!!.packageName
+                }
+            }
+            if (targetPackage != null) {
                 val callback = mCallback
                 if (callback != null) {
-                    callback.onForegroundActivitiesChanged(packageName)
+                    callback.onForegroundActivitiesChanged(targetPackage)
                     mHandler?.postDelayed(this, 5000)
                 } else {
                     stop()

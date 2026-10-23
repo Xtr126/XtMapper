@@ -24,7 +24,7 @@ class KeymapProfiles @JvmOverloads constructor(
     fun getAllProfiles(): Map<String, KeymapProfile> {
         val allProfiles = HashMap<String, KeymapProfile>()
         sharedPref.all.forEach { (key, lines) ->
-            if (key.startsWith("designated_profile_")) return@forEach
+            if (key.startsWith("designated_profile_") || key == KEY_LAST_SELECTED_PROFILE) return@forEach
             if (lines is Set<*>) {
                 allProfiles[key] = getProfile(lines as Set<String>)
             }
@@ -36,7 +36,7 @@ class KeymapProfiles @JvmOverloads constructor(
     fun getAllProfilesForApp(packageName: String): Map<String, KeymapProfile> {
         val appProfiles = HashMap<String, KeymapProfile>()
         sharedPref.all.forEach { (key, lines) ->
-            if (key.startsWith("designated_profile_")) return@forEach
+            if (key.startsWith("designated_profile_") || key == KEY_LAST_SELECTED_PROFILE) return@forEach
             if (lines is Set<*>) {
                 val profile = getProfile(lines as Set<String>)
                 if (profile.packageName == packageName)
@@ -76,6 +76,9 @@ class KeymapProfiles @JvmOverloads constructor(
         sharedPref.edit()
             .putStringSet(newProfile, stringSet)
             .apply()
+        if (sharedPref.getString(KEY_LAST_SELECTED_PROFILE, null) == profileName) {
+            setLastSelectedProfile(newProfile)
+        }
     }
 
     fun setProfilePackageName(profileName: String?, packageName: String) {
@@ -88,8 +91,27 @@ class KeymapProfiles @JvmOverloads constructor(
         return stringSet?.contains("ENABLED") == true
     }
 
+    fun profileExists(profileName: String?): Boolean {
+        if (profileName.isNullOrEmpty()) return false
+        return sharedPref.contains(profileName) && sharedPref.getStringSet(profileName, null) != null
+    }
+
     fun profileExistsWithPackageName(packageName: String): Boolean {
         return getAllProfilesForApp(packageName).isNotEmpty()
+    }
+
+    fun getLastSelectedProfile(): String {
+        val last = sharedPref.getString(KEY_LAST_SELECTED_PROFILE, null)
+        if (last != null && profileExists(last)) {
+            return last
+        }
+        return getAllProfiles().keys.firstOrNull() ?: "Default"
+    }
+
+    fun setLastSelectedProfile(profileName: String?) {
+        if (!profileName.isNullOrEmpty()) {
+            sharedPref.edit().putString(KEY_LAST_SELECTED_PROFILE, profileName).apply()
+        }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -104,7 +126,7 @@ class KeymapProfiles @JvmOverloads constructor(
         if (packageName == null) return
 
         for ((key, value) in sharedPref.all) {
-            if (key.startsWith("designated_profile_")) continue
+            if (key.startsWith("designated_profile_") || key == KEY_LAST_SELECTED_PROFILE) continue
             if (value !is Set<*>) continue
             // disable or enable all profiles for app for consistency
             val profile = getProfile(value as Set<String>)
@@ -147,6 +169,9 @@ class KeymapProfiles @JvmOverloads constructor(
 
     fun deleteProfile(profileName: String?) {
         sharedPref.edit().remove(profileName).apply()
+        if (profileName != null && sharedPref.getString(KEY_LAST_SELECTED_PROFILE, null) == profileName) {
+            sharedPref.edit().remove(KEY_LAST_SELECTED_PROFILE).apply()
+        }
     }
 
     fun getProfile(profileName: String?, loadMacros: Boolean): KeymapProfile {
@@ -160,6 +185,7 @@ class KeymapProfiles @JvmOverloads constructor(
 
     companion object {
         const val MOUSE_RIGHT = "MOUSE_RIGHT"
+        const val KEY_LAST_SELECTED_PROFILE = "last_selected_profile"
 
         fun parse(lines: Set<String>?): KeymapProfile {
             val profile = KeymapProfile()

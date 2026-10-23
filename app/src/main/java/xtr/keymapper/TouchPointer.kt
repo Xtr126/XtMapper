@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Point
 import android.hardware.display.DisplayManager
@@ -76,7 +77,7 @@ class TouchPointer : Service() {
         // Launch default profile
         this.selectedProfile = i.getStringExtra(EditorActivity.PROFILE_NAME)
         if (this.selectedProfile == null) {
-            this.selectedProfile = "Default"
+            this.selectedProfile = KeymapProfiles(this).getLastSelectedProfile()
         }
 
 
@@ -103,7 +104,7 @@ class TouchPointer : Service() {
         activeInstance = this
         KeymapperTileService.updateTile(this)
 
-        val targetProfile = selectedProfile ?: KeymapProfiles(this).getAllProfiles().keys.firstOrNull()
+        val targetProfile = selectedProfile ?: KeymapProfiles(this).getLastSelectedProfile()
         val keymapProfile = KeymapProfiles(this).getProfile(targetProfile, true)
         connectRemoteService(keymapProfile)
 
@@ -187,6 +188,7 @@ class TouchPointer : Service() {
     fun launchProfile(profileName: String?) {
         this.selectedProfile = profileName
         currentSelectedProfile = profileName
+        KeymapProfiles(this).setLastSelectedProfile(profileName)
         KeymapperTileService.updateTile(this)
         updateNotification()
         val keymapProfile = KeymapProfiles(this).getProfile(selectedProfile, true)
@@ -214,7 +216,11 @@ class TouchPointer : Service() {
             mWindowManager =
                 this.displayContext?.getSystemService(WindowManager::class.java)
             try {
-                if (keymapConfig.disableAutoProfiling) {
+                if (!activityRemoteCallback && !keymapConfig.disableAutoProfiling) {
+                    service.registerActivityObserver(mActivityObserverCallback)
+                    activityRemoteCallback = true
+                }
+                if (!profile.disabled) {
                     service.startServer(
                         profile,
                         keymapConfig,
@@ -223,20 +229,6 @@ class TouchPointer : Service() {
                         size.y,
                         displayId
                     )
-                } else {
-                    if (!activityRemoteCallback) {
-                        service.registerActivityObserver(mActivityObserverCallback)
-                        activityRemoteCallback = true
-                    } else if (!profile.disabled) {
-                        service.startServer(
-                            profile,
-                            keymapConfig,
-                            mCallback,
-                            size.x,
-                            size.y,
-                            displayId
-                        )
-                    }
                 }
                 if (keymapConfig.showControls) {
                     ShowKeymapService.start(this, selectedProfile)
@@ -430,6 +422,27 @@ class TouchPointer : Service() {
             return context
         }
 
+    private fun isLauncherOrSystem(packageName: String): Boolean {
+        if (packageName == "com.android.systemui" ||
+            packageName == applicationContext.packageName ||
+            packageName.startsWith("xtr.keymapper") ||
+            packageName == "android"
+        ) {
+            return true
+        }
+        return try {
+            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+            val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            if (resolveInfo?.activityInfo?.packageName == packageName) {
+                return true
+            }
+            val homeActivities = packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
+            homeActivities.any { it.activityInfo?.packageName == packageName }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     /**
      * This implementation is used to receive callbacks from the remote
      * service.
@@ -438,8 +451,11 @@ class TouchPointer : Service() {
         private var lastPackageName: String? = null
 
         override fun onForegroundActivitiesChanged(packageName: String) {
+            if (isLauncherOrSystem(packageName)) {
+                lastPackageName = null
+                return
+            }
             if (packageName == lastPackageName) return
-            if (packageName == applicationContext.packageName || packageName.startsWith("xtr.keymapper")) return
             lastPackageName = packageName
             val context: Context = this@TouchPointer
             val keymapProfiles = KeymapProfiles(context)

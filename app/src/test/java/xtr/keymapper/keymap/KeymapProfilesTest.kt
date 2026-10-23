@@ -141,4 +141,57 @@ class KeymapProfilesTest {
 
         assertNull(keymapProfiles.getDesignatedProfileForApp("com.unknown.app"))
     }
+
+    @Test
+    fun testLastSelectedProfilePersistenceAndFallback() {
+        val initialData = mutableMapOf<String, Any?>(
+            "SingleProfile" to setOf("APPLICATION com.example.game", "ENABLED")
+        )
+        val (context, prefs) = createFakeContextAndPrefs(initialData)
+        val keymapProfiles = KeymapProfiles(context, prefs)
+
+        // Initial fallback when none selected
+        assertEquals("SingleProfile", keymapProfiles.getLastSelectedProfile())
+
+        // Set last selected profile
+        initialData["Profile2"] = setOf("APPLICATION com.example.game", "ENABLED")
+        keymapProfiles.setLastSelectedProfile("Profile2")
+        assertEquals("Profile2", keymapProfiles.getLastSelectedProfile())
+
+        // If saved profile doesn't exist, fall back to first available
+        keymapProfiles.setLastSelectedProfile("NonExistent")
+        assertTrue(keymapProfiles.getLastSelectedProfile() in setOf("SingleProfile", "Profile2"))
+
+        // When no profiles exist, fall back to Default
+        initialData.clear()
+        assertEquals("Default", keymapProfiles.getLastSelectedProfile())
+    }
+
+    @Test
+    fun testRenameProfileUpdatesLastSelectedProfile() {
+        val initialData = mutableMapOf<String, Any?>(
+            "OldName" to setOf("APPLICATION com.example.game", "ENABLED"),
+            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "OldName"
+        )
+        val (context, prefs) = createFakeContextAndPrefs(initialData)
+        val keymapProfiles = KeymapProfiles(context, prefs)
+
+        keymapProfiles.renameProfile("OldName", "NewName")
+        assertEquals("NewName", keymapProfiles.getLastSelectedProfile())
+    }
+
+    @Test
+    fun testDeleteProfileClearsLastSelectedProfile() {
+        val initialData = mutableMapOf<String, Any?>(
+            "ProfileToDelete" to setOf("APPLICATION com.example.game", "ENABLED"),
+            "OtherProfile" to setOf("APPLICATION com.example.game", "ENABLED"),
+            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "ProfileToDelete"
+        )
+        val (context, prefs) = createFakeContextAndPrefs(initialData)
+        val keymapProfiles = KeymapProfiles(context, prefs)
+
+        keymapProfiles.deleteProfile("ProfileToDelete")
+        // After deletion of last selected, falls back to remaining profile
+        assertEquals("OtherProfile", keymapProfiles.getLastSelectedProfile())
+    }
 }
