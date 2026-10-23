@@ -233,6 +233,69 @@ class SessionLogWriterTest {
     }
 
     @Test
+    fun `session end after the part limit writes END into the final part and stays available`() {
+        val clock = MutableClock.at("2026-10-22T09:00:00Z")
+        val store = newStore()
+        val events = mutableListOf<String>()
+        val config = LoggingConfig(
+            queueCapacity = 8,
+            maxFileBytes = 100,
+            maxPartsPerDay = 2, // base + one part
+        )
+        val writer = makeWriter(store, clock, "sess-limit-end", config = config, onEvent = { events.add(it) })
+        writer.writeSessionStartMarker()
+        repeat(12) { writer.write(listOf(record(clock, "event $it"))) }
+        // The budget is exhausted; further records are dropped and counted.
+        writer.write(listOf(record(clock, "past-limit")))
+        assertTrue("records dropped by day limit", writer.recordsDroppedByDayLimit.get() > 0)
+
+        // Closing the session must neither throw nor claim a sink failure, and
+        // the END marker lands in the day's final part without a ninth part.
+        writer.endSession(clock.instant(), 1_500_000_000L, "Service stopped", 0)
+        writer.endSession(clock.instant(), 9_000_000_000L, "ignored second call", 0) // idempotent
+        assertFalse("healthy sink must not be flagged unavailable", writer.unavailable)
+        assertEquals("no spurious sink-failure event", 0, events.count { it.contains("file sink unavailable") })
+
+        val finalPartText = LogFiles.readAll(store, "xtmapper-2026-10-22-part002.log")
+        assertTrue(finalPartText.contains("SESSION END"))
+        assertTrue(finalPartText.contains("Status: Service stopped"))
+        assertEquals(1, Regex("SESSION END").findAll(finalPartText).count())
+        assertEquals("still exactly base + one part", 2, store.listFiles().size)
+        writer.close()
+    }
+
+    @Test
+    fun `closing after midnight without post-midnight events emits CONTINUED then END`() {
+        // Session starts 23:58 local on the 22nd and stays idle across midnight;
+        // the process closes cleanly the next morning.
+        val clock = MutableClock.at("2026-10-22T21:58:00Z")
+        val store = newStore()
+        val writer = makeWriter(store, clock, "sess-midnight-close")
+        writer.writeSessionStartMarker()
+
+        clock.advanceSeconds(60 * 60 + 1) // → 00:58:01 local on 2026-10-23, no events written
+        writer.endSession(clock.instant(), 3_601_000_000_000L, "Clean shutdown", 0)
+        writer.close()
+
+        val day1 = LogFiles.readAll(store, "xtmapper-2026-10-22.log")
+        val day2 = LogFiles.readAll(store, "xtmapper-2026-10-23.log")
+        assertTrue(day1.contains("SESSION START"))
+        assertEquals("START is the only marker in day 1", 1, Regex("SESSION START").findAll(day1).count())
+
+        // The new day's file explains the session before ending it.
+        assertTrue(day2.contains("SESSION CONTINUED"))
+        assertTrue(day2.contains("Session ID: sess-midnight-close"))
+        assertTrue(day2.contains("Continuation Time: 2026-10-23T00:58:01.000+02:00"))
+        assertTrue(day2.contains("SESSION END"))
+        assertTrue("CONTINUED precedes END", day2.indexOf("SESSION CONTINUED") < day2.indexOf("SESSION END"))
+        assertEquals(1, Regex("SESSION CONTINUED").findAll(day2).count())
+        assertEquals(1, Regex("SESSION END").findAll(day2).count())
+
+        // The clean close is recognizable by the next session's detection.
+        assertFalse(writer.unavailable)
+    }
+
+    @Test
     fun `previous session detection distinguishes closed and unclean and first`() {
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
         val store = newStore()

@@ -16,12 +16,19 @@ import java.util.concurrent.atomic.AtomicInteger
  *   every new part uses the next free index taken from the store listing.
  * - A session keeps its id across midnight: the first write into a new day inside
  *   the same session emits a `SESSION CONTINUED` block into the next daily file.
+ *   This includes the session's own end-write: [endSession] rolls the day over
+ *   while the session is still open, so a session that crosses midnight without
+ *   an intermediate event still gets its continuation marker before `SESSION END`.
  * - Rotation happens inside the canonical directory only; part files follow
  *   `xtmapper[-role-]day-partNNN.log` and keep `.log` as their final extension.
  * - After one storage failure the sink stops (`unavailable`) and reports once via
  *   [onEvent]; storage failures never escape upwards, never recursively.
  * - When a day has exhausted its part budget, further records for that day are
  *   dropped (counted in [recordsDroppedByDayLimit]), never unbounded growth.
+ *   The session END marker is the one exception: it is appended to the day's
+ *   final part (no new part is opened and the rotation budget is not broken),
+ *   so closing a session never pretends the sink failed when it only hit the
+ *   configured limit.
  */
 class SessionLogWriter(
     /** Backing store; exposed for session-state detection and retention. */
@@ -105,9 +112,15 @@ class SessionLogWriter(
     /** Best-effort `SESSION END` block into the end-day file; idempotent. */
     fun endSession(endInstant: Instant, durationNanos: Long, status: String, droppedRecords: Int) {
         if (unavailable || sessionEnded) return
-        sessionEnded = true
         try {
-            writerFor(dayOf(endInstant), endInstant)
+            // Day rollover first, while the session is still open: a session
+            // that crosses midnight without a post-midnight event must still
+            // emit its SESSION CONTINUED block into the new day's file before
+            // the END marker. Setting sessionEnded before this call would
+            // suppress the continuation marker (the writer chooses markers
+            // based on sessionEnded).
+            writerFor(dayOf(endInstant), endInstant, allowFullPart = true)
+            sessionEnded = true
             writeBlock(
                 SessionMarkers.block(
                     SessionMarkers.endLine(sessionId, endInstant, zone, durationNanos, status, droppedRecords)
@@ -139,20 +152,22 @@ class SessionLogWriter(
     /**
      * Prepares the writer for [day]. On a day change inside the same session the
      * continuously same session id is marked with a `SESSION CONTINUED` block
-     * before the file receives new events.
+     * before the file receives new events. [allowFullPart] is used only by the
+     * session-end path: it reopens the day's final part for the END marker when
+     * the part budget is exhausted instead of giving up the marker.
      */
-    private fun writerFor(day: String, atInstant: Instant) {
+    private fun writerFor(day: String, atInstant: Instant, allowFullPart: Boolean = false) {
         val writer: LogFileWriter?
         val isDayChange = currentDay != day
         if (!isDayChange) {
             val active = currentWriter
             if (active != null && active.writtenBytes < config.maxFileBytes) return
             closeCurrent()
-            writer = activeWriterFor(day)
+            writer = activeWriterFor(day, allowFullPart)
         } else {
             closeCurrent()
             currentDay = day
-            writer = activeWriterFor(day)
+            writer = activeWriterFor(day, allowFullPart)
         }
         currentWriter = writer
         if (writer != null && isDayChange) {
@@ -177,8 +192,11 @@ class SessionLogWriter(
      * rotation threshold (chronological: only this one is considered), otherwise
      * the next part index from the store listing (never an index already in use,
      * never below 2), otherwise the base file when the day has no files yet.
+     * Returns null only when the day's part budget is exhausted — except with
+     * [allowFullPart], which then reopens the final part so the bounded session
+     * END marker can still be appended without creating a part beyond the limit.
      */
-    private fun activeWriterFor(day: String): LogFileWriter? {
+    private fun activeWriterFor(day: String, allowFullPart: Boolean = false): LogFileWriter? {
         val maxExistingPart = store.listFiles()
             .mapNotNull { LogFileNames.parse(it.name) }
             .filter { it.date == day && it.role == role }
@@ -205,7 +223,11 @@ class SessionLogWriter(
                         "${config.maxFileBytes / (1 shl 20)}MiB); further records dropped today"
                 )
             }
-            return null
+            if (!allowFullPart) return null
+            // Session close only: append the (small) END marker to the final
+            // part rather than losing the marker or flagging the sink down.
+            currentFileName = highestName
+            return store.openAppendWriter(highestName)
         }
         val nextName = LogFileNames.partName(day, role, nextPart)
         currentFileName = nextName
