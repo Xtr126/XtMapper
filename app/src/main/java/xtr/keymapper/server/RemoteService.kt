@@ -65,7 +65,29 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     init {
-        loadLibraries()
+        // Logging must exist before any native library load: the Shizuku user
+        // service constructs this class directly (uid 2000; uid 0 on the root
+        // fallback path) and no Application.onCreate runs there — a load
+        // failure escaping this constructor could otherwise never be recorded
+        // persistently. Processes that already initialized the logger (app
+        // process, shell entry point's earlier init) are untouched no-ops.
+        // The UID mapping mirrors init()'s own fallback below; no security
+        // check is weakened or moved.
+        if (!XtLogger.isInitialized) {
+            when (Process.myUid()) {
+                2000 -> XtLogger.initStandalone(Role.SHIZUKU)
+                0 -> XtLogger.initStandalone(Role.ROOT)
+                else -> Unit
+            }
+        }
+        try {
+            loadLibraries()
+        } catch (t: Throwable) {
+            // Bounded flush so the record outlives the process; then the
+            // original failure still propagates exactly as before.
+            XtLogger.fatal(TAG, "native library load failed", t)
+            throw t
+        }
         init()
     }
 

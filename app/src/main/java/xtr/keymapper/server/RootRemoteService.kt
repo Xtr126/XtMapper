@@ -18,7 +18,16 @@ internal class RootRemoteService : RootService() {
             // Logging must be available before the native library load so a load
             // failure is recorded in the canonical user-visible log directory.
             XtLogger.initStandalone(Role.ROOT)
-            RemoteService.loadLibraries()
+            try {
+                RemoteService.loadLibraries()
+            } catch (t: Throwable) {
+                // Same diagnostic + propagation contract as the shell entry
+                // point: fatal record with a bounded flush, then the original
+                // failure still propagates (libsu reports the service failure
+                // as before; nothing is swallowed).
+                XtLogger.fatal(TAG, "native library load failed", t)
+                throw t
+            }
         }
     }
 
