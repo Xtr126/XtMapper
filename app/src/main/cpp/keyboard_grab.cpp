@@ -13,6 +13,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cassert>
+#include <cerrno>
 #include "evdev_common.h"
 #include "linux_key_table.h"
 
