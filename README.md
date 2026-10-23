@@ -20,6 +20,12 @@
 https://xtr126.github.io/XtMapper-docs/guides/about  
 [Watch video on YouTube](https://www.youtube.com/watch?v=Slcu43xBV3M)  
 
+Persistent logs: daily log files are written to `XtMapper/Logs` on shared storage
+(user-visible, enabled once from the main screen by granting that folder).
+Each running process role (app, shell, shizuku, root) logs into its own
+`xtmapper[-role]-YYYY-MM-DD.log` file, wrapped in `SESSION START`/`SESSION END`
+markers, with bounded size, rotation and retention.
+
  ## Screenshots
 
 <details>

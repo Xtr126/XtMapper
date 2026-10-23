@@ -122,5 +122,7 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-tooling'
 
     compileOnly project(path: ':app:hidden-api')
+
+    // JVM unit tests for the XtLogger subsystem (pure-kotlin core, no android.jar).
     testImplementation 'junit:junit:4.13.2'
 }

@@ -2,6 +2,7 @@ package xtr.keymapper.activity
 
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.DialogInterface
@@ -33,6 +34,7 @@ import xtr.keymapper.editor.EditorActivity
 import xtr.keymapper.editor.EditorUI
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfiles
+import xtr.keymapper.log.XtLogger
 import xtr.keymapper.profiles.ProfileSelector
 import xtr.keymapper.profiles.ProfilesApps
 import xtr.keymapper.server.RemoteServiceHelper
@@ -50,6 +52,9 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val SHELL_INIT = "shell"
         const val SHELL_SERVICE_BINDER = "xtr.keymapper.extra.SHELL_SERVICE_BINDER"
+
+        /** Request code for the persisted SAF log-folder grant. */
+        private const val REQUEST_LOG_FOLDER = 4231
 
         init {
             // Set settings before the main shell can be created
@@ -513,6 +518,56 @@ class MainActivity : AppCompatActivity() {
 
     fun openSettingsFromCompose() {
         launchSettings()
+    }
+
+    // ------------------------------------------------------------------
+    // XtLogger: one-time user grant of the canonical log folder (XtMapper/Logs)
+    // on shared storage. Android's scoped storage requires this user interaction;
+    // the grant is persisted so the picker never appears again. Logger
+    // initialization itself stays non-interactive.
+    // ------------------------------------------------------------------
+
+    fun openLogFolderFromCompose() {
+        val messageRes = if (XtLogger.isFileSinkAvailable) R.string.log_folder_ready_desc
+        else R.string.log_folder_missing_desc
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.log_folder_title)
+            .setMessage(messageRes)
+            .setPositiveButton(R.string.log_folder_pick) { _, _ -> launchLogFolderPicker() }
+            .setNegativeButton(R.string.ok, null)
+            .show()
+    }
+
+    private fun launchLogFolderPicker() {
+        try {
+            // The user picks the XtMapper folder in shared storage (create it from
+            // the picker if needed); the folder picker is documented to return a
+            // tree URI persistable through takePersistableUriPermission.
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+            )
+            startActivityForResult(intent, REQUEST_LOG_FOLDER)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(this, R.string.log_folder_picker_unavailable, Toast.LENGTH_LONG).show()
+            XtLogger.warn("MainActivity", "no folder picker available on this device")
+        }
+    }
+
+    @Deprecated("Deprecated in Java", ReplaceWith("registerForActivityResult"))
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_LOG_FOLDER && resultCode == RESULT_OK) {
+            val uri = data?.data
+            if (uri != null && XtLogger.enableSafLogging(applicationContext, uri)) {
+                Toast.makeText(this, R.string.log_folder_enabled, Toast.LENGTH_SHORT).show()
+                XtLogger.info("MainActivity", "log folder granted: $uri")
+            } else {
+                Toast.makeText(this, R.string.log_folder_failed, Toast.LENGTH_LONG).show()
+                XtLogger.warn("MainActivity", "log folder grant failed")
+            }
+        }
     }
 
     override fun onDestroy() {

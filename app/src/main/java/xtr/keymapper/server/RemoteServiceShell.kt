@@ -17,14 +17,25 @@ import android.util.Log
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import xtr.keymapper.BuildConfig
 import xtr.keymapper.activity.MainActivity
+import xtr.keymapper.log.Role
+import xtr.keymapper.log.XtLogger
 import java.lang.reflect.Method
 import kotlin.system.exitProcess
 
 object RemoteServiceShell {
+
+    private const val TAG = "xtmapper-server"
+
     @JvmStatic
     fun main(args: Array<String>) {
+        // First statement: logging is available before anything else so even
+        // startup failures below can be recorded (uid/role based storage).
+        XtLogger.initStandalone(Role.SHELL)
+        XtLogger.debug(TAG, "app_process server starting (args=${args.joinToString(",")})")
+
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             println("Unsupported Android version")
+            XtLogger.endSession("Unsupported Android version")
             return
         }
 
@@ -45,6 +56,13 @@ object RemoteServiceShell {
                     else -> println("Invalid argument: $arg")
                 }
             }
+            // Session close best effort: runs when the JVM exits normally and when
+            // stopServer ends the process via System.exit. SIGKILL/SIGTERM kill the
+            // process without running hooks; the next session reports that as
+            // "did not close cleanly".
+            Runtime.getRuntime().addShutdownHook(
+                Thread { XtLogger.endSession("Shell server exiting") }
+            )
             val fakeTouch = SystemProperties.get("persist.waydroid.fake_touch", null)
             if (fakeTouch != null && !fakeTouch.isBlank()) {
                 val ANSI_RED = "\u001B[31m"
@@ -57,11 +75,21 @@ object RemoteServiceShell {
             }
 
             // Do everything after logcat
-            RemoteService.loadLibraries()
+            try {
+                RemoteService.loadLibraries()
+            } catch (t: Throwable) {
+                // Native load failure kills the process in existing behavior;
+                // rethrowing preserves that while the failure is now logged.
+                XtLogger.fatal(TAG, "native library load failed", t)
+                throw t
+            }
+            XtLogger.info(TAG, "native libraries loaded")
 
             val mService = RemoteService(getContext())
             mService.startedFromShell = true
             mService.isWaylandClient = isWaylandClient
+
+            XtLogger.info(TAG, "server configuration ready wayland=${mService.isWaylandClient}")
 
             ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start()
             val settingsArgs = "settings put system alert_window_bypass_low_ram 1".split(Regex("\\s+"))
@@ -84,6 +112,10 @@ object RemoteServiceShell {
 
         } catch (e: Exception) {
             Log.e(RemoteService.TAG, e.message, e)
+            XtLogger.error(TAG, "server startup failed", e)
+            // Bounded flush before the existing exit(1) behavior.
+            XtLogger.flush(2_000)
+            XtLogger.endSession("Startup failed")
             exitProcess(1)
         }
         Looper.loop()
