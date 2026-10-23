@@ -89,6 +89,9 @@
 
     <string name="shizuku_not_authorized_title">Shizuku not authorized</string>
     <string name="shizuku_not_authorized_message">Authorize XtMapper from Shizuku manager app to continue</string>
+    <string name="test_input_service_inactive">Start the keymapper service before testing input.</string>
+    <string name="test_input_root_unavailable">Root access is unavailable. Grant XtMapper root access before testing input.</string>
+    <string name="test_input_ready">%1$s mode is active. Connect a keyboard or mouse to test.</string>
     <string name="activate_with">Activate with</string>
     <string name="grave_key">~ key</string>
     <string name="x_sensitivity">X-Sensitivity</string>

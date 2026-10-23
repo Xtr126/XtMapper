@@ -341,8 +341,32 @@ class MainActivity : AppCompatActivity() {
 
     fun testInputFromCompose() {
         val config = KeymapConfig(this)
+        if (config.isShizukuMode) {
+            when {
+                !isShizukuInstalled() -> {
+                    alertShizukuNotInstalled()
+                    return
+                }
+                !Shizuku.pingBinder() -> {
+                    alertShizukuNotRunning()
+                    return
+                }
+                Shizuku.checkSelfPermission() != PERMISSION_GRANTED -> {
+                    alertShizukuNotAuthorized()
+                    return
+                }
+            }
+        } else if (Shell.isAppGrantedRoot() == false) {
+            Toast.makeText(this, R.string.test_input_root_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (!isComposeServiceActive()) {
+            Toast.makeText(this, R.string.test_input_service_inactive, Toast.LENGTH_LONG).show()
+            return
+        }
         val modeName = if (config.isShizukuMode) "Shizuku (ADB)" else "Root"
-        Toast.makeText(this, "$modeName mode active. Connect keyboard/mouse to test.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.test_input_ready, modeName), Toast.LENGTH_SHORT).show()
     }
 
     fun selectProfileFromCompose(profileName: String) {
