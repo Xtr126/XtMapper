@@ -33,16 +33,16 @@ class ActivityObserverService(observer: ActivityObserver) : Runnable {
                 val callback = mCallback
                 if (callback != null) {
                     callback.onForegroundActivitiesChanged(packageName)
-                    mHandler?.postDelayed(this, 1000)
+                    mHandler?.postDelayed(this, 5000)
                 } else {
                     stop()
                 }
             } else {
-                mHandler?.postDelayed(this, 1000)
+                mHandler?.postDelayed(this, 5000)
             }
         } catch (e: RemoteException) {
             Log.e(RemoteService.TAG, e.message, e)
-            mHandler?.postDelayed(this, 1000)
+            mHandler?.postDelayed(this, 5000)
         }
     }
 

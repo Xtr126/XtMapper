@@ -148,16 +148,15 @@ class EditorUI(
                 )
         }
 
-        if (mService == null) {
-            mainView.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
-                this.onKey(
-                    v,
-                    keyCode,
-                    event!!
-                )
-            })
-            mainView.setFocusable(true)
-        }
+        mainView.isFocusable = true
+        mainView.isFocusableInTouchMode = true
+        mainView.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
+            this.onKey(
+                v,
+                keyCode,
+                event!!
+            )
+        })
 
         loadKeymapAndObserveSizeChanges()
     }
@@ -244,12 +243,14 @@ class EditorUI(
      * @return true if we consume the event
      */
     fun onKey(v: View?, keyCode: Int, event: KeyEvent): Boolean {
-        if (keyInFocus != null) {
-            val key = event.displayLabel.toString()
-            if (key.matches("[a-zA-Z0-9]+".toRegex())) {
-                keyInFocus!!.setText(key)
-                return true
-            }
+        if (event.action != KeyEvent.ACTION_DOWN) return false
+        val key = KeyUtils.resolveKeyName(keyCode, event) ?: return false
+        if (macroDialog != null) {
+            macroDialog!!.onKey(key)
+            return true
+        } else if (keyInFocus != null) {
+            keyInFocus!!.setText(key)
+            return true
         }
         return false
     }
@@ -259,21 +260,26 @@ class EditorUI(
      * @param event A line of output from getevent -ql
      */
     override fun onKeyEvent(event: String) {
-        // line: /dev/input/event3 EV_KEY KEY_X DOWN
-        val input_event =
+        // e.g.: /dev/input/event3: EV_KEY KEY_X DOWN
+        val inputEvent =
             event.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-        val code = input_event[2]
+        val evIndex = inputEvent.indexOf("EV_KEY")
+        if (evIndex == -1 || evIndex + 2 >= inputEvent.size) return
+        val code = inputEvent[evIndex + 1]
+        val action = inputEvent[evIndex + 2]
 
-        // Ignore non-key events
-        if (input_event[1] != "EV_KEY" || !code.contains("KEY_")) return
-        val key = input_event[2].substring(4)
+        // Ignore non-key events and releases (UP)
+        if (!code.contains("KEY_")) return
+        if (action != "DOWN" && action != "00000001") return
+
+        val key = if (code.startsWith("KEY_")) code.substring(4) else code
 
         // Incoming calls are not guaranteed to be executed on the main thread
-        mHandler.post(Runnable {
+        mHandler.post {
             if (macroDialog != null) macroDialog!!.onKey(key)
             else if (keyInFocus != null) keyInFocus!!.setText(key)
             settingsOverlay!!.onKey(key)
-        })
+        }
     }
 
 
@@ -608,6 +614,11 @@ class EditorUI(
 
         override fun setOnKeyListener(keyInFocusListener: KeyInFocusListener?) {
             keyInFocus = keyInFocusListener
+            if (keyInFocusListener != null) {
+                mainView?.isFocusable = true
+                mainView?.isFocusableInTouchMode = true
+                mainView?.requestFocus()
+            }
         }
     }
 

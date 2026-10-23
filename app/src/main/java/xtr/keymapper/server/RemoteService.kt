@@ -49,7 +49,6 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     internal var startedFromShell = false
 
     private var geteventProcess: Process? = null
-    private var isBlockKeyboardActive = false
 
     // shortcut: single-user check; multi-user/work-profile installs have a different uid per user
     private val appUid: Int by lazy {
@@ -161,34 +160,10 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         return windowManager
     }
 
-    fun setKeyboardGrab(grab: Boolean) {
-        Thread {
-            try {
-                val pidFile = File("/data/local/tmp/xtmapper_getevent.pid")
-                var retries = 0
-                while (!pidFile.exists() && retries < 10) {
-                    Thread.sleep(50)
-                    retries++
-                }
-                if (pidFile.exists()) {
-                    val pid = pidFile.readText().trim()
-                    if (pid.isNotEmpty()) {
-                        val sig = if (grab) "USR1" else "USR2"
-                        Runtime.getRuntime().exec(arrayOf("kill", "-$sig", pid)).waitFor()
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to toggle keyboard grab: ${e.message}")
-            }
-        }.start()
-    }
-
     private fun stop_getevent() {
         try {
-            setKeyboardGrab(false)
             geteventProcess?.destroy()
             geteventProcess = null
-            File("/data/local/tmp/xtmapper_getevent.pid").delete()
         } catch (_: Exception) {}
     }
 
@@ -201,9 +176,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
             if (isWaylandClient) {
                 getevent = BufferedReader(InputStreamReader(System.`in`))
             } else {
-                val blockKb = inputService?.keymapConfig?.blockKeyboardInput ?: false
-                isBlockKeyboardActive = blockKb
-                val proc = Utils.geteventStream(nativeLibraryDir, blockKb)
+                val proc = Utils.geteventStream(nativeLibraryDir)
                 geteventProcess = proc
                 getevent = BufferedReader(InputStreamReader(proc.inputStream))
             }
@@ -217,15 +190,25 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                         if (isWaylandClient && data[0].contains("wl_pointer"))
                             service.onWaylandMouseEvent(data[1])
 
-                        val k: KeyEventHandler = service.keyEventHandler
-                        if (!service.stopEvents) {
-                            k.handleEvent(data[1])
-                        } else {
-                            k.handleKeyboardShortcutEvent(data[1])
+                        if (!service.isKeyboardGrabbed) {
+                            val k: KeyEventHandler = service.keyEventHandler
+                            if (!service.stopEvents) {
+                                k.handleEvent(data[1])
+                            } else {
+                                k.handleKeyboardShortcutEvent(data[1])
+                            }
                         }
-                        mOnKeyEventListener?.onKeyEvent(line)
-                    } catch (e: RemoteException) {
-                        throw RuntimeException(e)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error handling input event", e)
+                    }
+                    if (service == null || !service.isKeyboardGrabbed) {
+                        try {
+                            mOnKeyEventListener?.onKeyEvent(line)
+                        } catch (e: RemoteException) {
+                            mOnKeyEventListener = null
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error notifying key listener", e)
+                        }
                     }
                 }
             }
@@ -244,6 +227,11 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
 
         val input_event = data[1].split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         if (isWaylandClient) return true
+        if (inputService?.isKeyboardGrabbed == true) {
+            if (input_event.size > 1 && input_event[1] == "EV_KEY") {
+                inputService?.grabKeyboardDevice(evdev)
+            }
+        }
         if (currentDevice != evdev)
             if (input_event[1] == "EV_REL") {
                 println("add mouse device: $evdev")
@@ -299,12 +287,18 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                     profile, keymapConfig, cb, screenWidth, screenHeight,
                     cursorView, isWaylandClient, displayId
                 )
+                newService.keyListener = { line ->
+                    try {
+                        mOnKeyEventListener?.onKeyEvent(line)
+                    } catch (e: RemoteException) {
+                        mOnKeyEventListener = null
+                    }
+                }
                 inputService = newService
                 if (!isWaylandClient) {
                     newService.setMouseLock(true)
                     newService.openDevice(currentDevice)
                 }
-                setKeyboardGrab(keymapConfig.blockKeyboardInput)
             } catch (e: RemoteException) {
                 throw RuntimeException(e)
             }
@@ -335,7 +329,6 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     private fun stopServer(exitProcess: Boolean) {
-        setKeyboardGrab(false)
         // Restore enforcing only if this app actually relaxed SELinux (shell entry
         // point); startedFromShell is also set by the system-app path, which never does
         if (exitProcess && !Selinux.real.restore()) {
@@ -432,6 +425,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
             System.loadLibrary("mouse_cursor")
             System.loadLibrary("touchpad_direct")
             System.loadLibrary("touchpad_relative")
+            System.loadLibrary("keyboard_grab")
         }
     }
 }

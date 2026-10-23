@@ -49,8 +49,6 @@
     <string name="shift_transition_ms">Shift transition: %d ms</string>
     <string name="shift_transition_title">Shift Transition Speed</string>
     <string name="use_global_default">Global default (%d ms)</string>
-    <string name="block_keyboard_input">Block keyboard input</string>
-    <string name="block_keyboard_input_summary">Prevent target games and apps from reading raw keyboard events</string>
     <string name="profile_name">Profile Name</string>
     <string name="root_not_found_title">Root access not found</string>
     <string name="root_not_found_message">Root access is required for the keymapper to function. \n Please grant superuser to XtMapper from KernelSU manager app</string>
@@ -146,4 +144,8 @@
     <string name="input_mode">Input Mode</string>
     <string name="input_mode_root">Root</string>
     <string name="input_mode_shizuku">Shizuku (ADB)</string>
+    <string name="block_keyboard_input">Block raw keyboard input</string>
+    <string name="block_keyboard">Block Keyboard</string>
+    <string name="keyboard_blocked">Keyboard input blocked</string>
+    <string name="keyboard_unblocked">Keyboard input unblocked</string>
 </resources>

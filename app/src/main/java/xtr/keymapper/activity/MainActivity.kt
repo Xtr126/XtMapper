@@ -180,6 +180,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun startPointer(displayId: Int?) {
         checkOverlayPermission(this)
+        if (selectedProfileName == null) {
+            val all = KeymapProfiles(this).getAllProfiles()
+            if (all.isNotEmpty()) {
+                selectedProfileName = all.keys.first()
+            }
+        }
         // Start service with selected profile if display on top permission is granted
         if (Settings.canDrawOverlays(this)) {
             val intent = Intent(this, TouchPointer::class.java).apply {

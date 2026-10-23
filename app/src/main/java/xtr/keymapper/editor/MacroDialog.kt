@@ -6,6 +6,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -147,14 +148,16 @@ class MacroDialog(
             val isMacroEnabled = macroIdMap.containsKey(macroId)
             holder.binding.toggle.isChecked = isMacroEnabled
 
-            holder.binding.key.setOnKeyListener { view, _, event ->
-                val macro = macroIdMap[macroId]
-                if (macro != null) {
-                    val key = event.displayLabel.toString()
-                    if (key.matches("[a-zA-Z0-9]+".toRegex())) {
-                        macro.triggerKey = key
-                        (view as EditText).setText(key)
-                    } else (view as EditText).text.clear()
+            holder.binding.key.setOnKeyListener { view, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    val macro = macroIdMap[macroId]
+                    if (macro != null) {
+                        val key = KeyUtils.resolveKeyName(keyCode, event)
+                        if (key != null) {
+                            macro.triggerKey = key
+                            (view as EditText).setText(key)
+                        } else (view as EditText).text.clear()
+                    }
                 }
                 true
             }

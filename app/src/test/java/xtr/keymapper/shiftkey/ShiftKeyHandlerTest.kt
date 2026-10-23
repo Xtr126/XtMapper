@@ -47,6 +47,8 @@ class ShiftKeyHandlerTest {
         override fun moveCursorY(y: Int) {}
         override fun hideCursor() {}
         override fun showCursor() {}
+        override fun toggleKeyboardBlock() {}
+        override val isKeyboardBlocked: Boolean get() = false
     }
 
     private fun createShiftKey(
@@ -386,6 +388,8 @@ class ShiftKeyHandlerTest {
             override fun moveCursorY(y: Int) {}
             override fun hideCursor() {}
             override fun showCursor() {}
+            override fun toggleKeyboardBlock() {}
+            override val isKeyboardBlocked: Boolean get() = false
         }
 
         // 1. Press Key 1 -> DOWN with jitter offset

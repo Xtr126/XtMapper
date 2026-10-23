@@ -20,14 +20,16 @@ using std::string;
 std::vector<string> ListInputDevices() {
     const string input_directory = "/dev/input";
     std::vector<string> filenames;
-    struct DIR * directory = opendir(input_directory.c_str());
+    DIR * directory = opendir(input_directory.c_str());
+    if (!directory) return filenames;
 
     struct dirent *entry;
     while ((entry = readdir(directory))) {
         if (entry->d_name[0] == 'e') // is eventX
           filenames.push_back(input_directory + "/" + entry->d_name);
     }
-  return filenames;
+    closedir(directory);
+    return filenames;
 }
 
 std::vector<int> scanTouchpadDevices() {

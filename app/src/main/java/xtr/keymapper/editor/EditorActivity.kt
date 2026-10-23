@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.RemoteException
 import android.provider.Settings
 import android.util.Log
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.ComposeView
@@ -76,20 +77,17 @@ class EditorActivity : ComponentActivity() {
         if (editor != null) {
             val keymapConfig = KeymapConfig(this)
 
-            if (service != null)  // Can receive key events from remote service
+            if (service != null) {
                 try {
                     editor!!.registerOnKeyEventListener(service)
                 } catch (e: RemoteException) {
                     Log.e("editorActivity", e.message, e)
                 }
-            else {
+            } else if (!xtr.keymapper.TouchPointer.isRunning) {
                 val builder = MaterialAlertDialogBuilder(this)
 
                 builder.setMessage(R.string.dialog_alert_editor)
-                    .setPositiveButton(
-                        R.string.ok,
-                        { _, _ -> }
-                    )
+                    .setPositiveButton(R.string.ok, null)
                     .setTitle(R.string.dialog_alert_editor_title)
                 val dialog = builder.create()
                 if (keymapConfig.editorOverlay) dialog.window!!
@@ -103,6 +101,13 @@ class EditorActivity : ComponentActivity() {
         super.onDestroy()
         if (editor != null) editor!!.closeEditor()
         editor = null
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (editor?.onKey(null, event.keyCode, event) == true) {
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     companion object {

@@ -107,6 +107,8 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         binding.pauseResume.setOnKeyListener(::onKeyboardKeyPress)
         binding.switchProfile.setOnKeyListener(::onKeyboardKeyPress)
         binding.mouseAimKey.setOnKeyListener(::onKeyboardKeyPress)
+        binding.blockKeyboard.setOnKeyListener(::onKeyboardKeyPress)
+        binding.blockKeyboardRow.visibility = if (keymapConfig.isRootMode) View.VISIBLE else View.GONE
 
         binding.mouseAimKey.setOnGenericMotionListener(::onMouseClick)
 
@@ -149,7 +151,17 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         settingsBinding.autoProfileSwitch.isChecked = keymapConfig.disableAutoProfiling
         settingsBinding.useShizuku.isChecked = keymapConfig.isShizukuMode
         settingsBinding.editorOverlay.isChecked = keymapConfig.editorOverlay
-        settingsBinding.blockKeyboardSwitch.isChecked = keymapConfig.blockKeyboardInput
+
+        val isRoot = keymapConfig.isRootMode
+        settingsBinding.blockKeyboardInput.visibility = if (isRoot) View.VISIBLE else View.GONE
+        settingsBinding.blockKeyboardInput.isChecked = isRoot && keymapConfig.blockKeyboardInput
+
+        settingsBinding.useShizuku.setOnCheckedChangeListener { _, isChecked ->
+            settingsBinding.blockKeyboardInput.visibility = if (isChecked) View.GONE else View.VISIBLE
+            if (isChecked) {
+                settingsBinding.blockKeyboardInput.isChecked = false
+            }
+        }
 
         settingsBinding.touchJitterSwitch.isChecked = keymapConfig.touchJitter
         settingsBinding.touchJitterSpread.value = keymapConfig.touchJitterSpread
@@ -166,8 +178,8 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
             val shizuku = settingsBinding.useShizuku.isChecked
             keymapConfig.useShizuku = shizuku
             keymapConfig.inputMode = if (shizuku) KeymapConfig.MODE_SHIZUKU else KeymapConfig.MODE_ROOT
+            keymapConfig.blockKeyboardInput = !shizuku && settingsBinding.blockKeyboardInput.isChecked
             keymapConfig.editorOverlay = settingsBinding.editorOverlay.isChecked
-            keymapConfig.blockKeyboardInput = settingsBinding.blockKeyboardSwitch.isChecked
             keymapConfig.touchJitter = settingsBinding.touchJitterSwitch.isChecked
             keymapConfig.touchJitterSpread = settingsBinding.touchJitterSpread.value
             keymapConfig.showControls = settingsBinding.showControls.isChecked
@@ -202,6 +214,7 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         binding.launchEditor.setText(removekeyPrefix(keymapConfig.launchEditorShortcutKey))
         binding.switchProfile.setText(removekeyPrefix(keymapConfig.switchProfileShortcutKey))
         binding.mouseAimKey.setText(removekeyPrefix(keymapConfig.mouseAimShortcutKey))
+        binding.blockKeyboard.setText(removekeyPrefix(keymapConfig.blockKeyboardShortcutKey))
 
         loadModifierKeys()
     }
@@ -210,11 +223,13 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         binding.launchEditorModifier.setText(keymapConfig.launchEditorShortcutKeyModifier)
         binding.pauseResumeModifier.setText(keymapConfig.pauseResumeShortcutKeyModifier)
         binding.switchProfileModifier.setText(keymapConfig.switchProfileShortcutKeyModifier)
+        binding.blockKeyboardModifier.setText(keymapConfig.blockKeyboardShortcutKeyModifier)
 
         val modifierKeys = arrayOf(KeymapConfig.KEY_CTRL, KeymapConfig.KEY_ALT)
         binding.launchEditorModifier.setSimpleItems(modifierKeys)
         binding.pauseResumeModifier.setSimpleItems(modifierKeys)
         binding.switchProfileModifier.setSimpleItems(modifierKeys)
+        binding.blockKeyboardModifier.setSimpleItems(modifierKeys)
     }
 
     private fun mouseAimActions() {
@@ -245,10 +260,12 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         keymapConfig.pauseResumeShortcutKey = keyCodePrefix(binding.pauseResume)
         keymapConfig.switchProfileShortcutKey = keyCodePrefix(binding.switchProfile)
         keymapConfig.mouseAimShortcutKey = keyCodePrefix(binding.mouseAimKey)
+        keymapConfig.blockKeyboardShortcutKey = keyCodePrefix(binding.blockKeyboard)
 
         keymapConfig.launchEditorShortcutKeyModifier = binding.launchEditorModifier.text.toString()
         keymapConfig.pauseResumeShortcutKeyModifier = binding.pauseResumeModifier.text.toString()
         keymapConfig.switchProfileShortcutKeyModifier = binding.switchProfileModifier.text.toString()
+        keymapConfig.blockKeyboardShortcutKeyModifier = binding.blockKeyboardModifier.text.toString()
     }
 
     fun onDestroyView() {

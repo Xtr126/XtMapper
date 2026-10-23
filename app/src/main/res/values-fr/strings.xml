@@ -47,8 +47,6 @@
     <string name="shift_transition_ms">Transition de décalage: %d ms</string>
     <string name="shift_transition_title">Vitesse de transition</string>
     <string name="use_global_default">Par défaut global (%d ms)</string>
-    <string name="block_keyboard_input">Bloquer la saisie au clavier</string>
-    <string name="block_keyboard_input_summary">Empêcher les jeux et applications de lire directement les événements du clavier</string>
     <string name="profile_name">Nom du profil</string>
     <string name="root_not_found_title">Accès root non trouvé</string>
     <string name="root_not_found_message">L\'accès root est nécessaire pour que le remappeur de touches fonctionne.&#10;Veuillez accorder des privilèges de superutilisateur à XtMapper à partir de l\'application du gestionnaire KernelSU</string>

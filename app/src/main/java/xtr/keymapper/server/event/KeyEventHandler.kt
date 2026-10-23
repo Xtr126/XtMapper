@@ -136,15 +136,16 @@ class KeyEventHandler(private val mInput: IInputInterface) {
 
     private fun getEvent(line: String): KeyEvent? {
         val event = KeyEvent()
-        // line: EV_KEY KEY_X DOWN
-        val input_event = line.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-        if (input_event[1] != "EV_KEY") return null
-        event.code = input_event[2]
+        // line: EV_KEY KEY_X DOWN (or with device prefix e.g. /dev/input/eventX: EV_KEY KEY_X DOWN)
+        val tokens = line.split("\\s+".toRegex()).filter { it.isNotEmpty() }
+        val evIndex = tokens.indexOf("EV_KEY")
+        if (evIndex == -1 || evIndex + 2 >= tokens.size) return null
+        event.code = tokens[evIndex + 1]
         if (!event.code.contains("KEY_")) return null
 
-        when (input_event[3]) {
-            "UP" -> event.action = InputService.UP
-            "DOWN" -> event.action = InputService.DOWN
+        when (tokens[evIndex + 2]) {
+            "UP", "00000000" -> event.action = InputService.UP
+            "DOWN", "00000001" -> event.action = InputService.DOWN
             else -> return null
         }
         return event
@@ -171,6 +172,12 @@ class KeyEventHandler(private val mInput: IInputInterface) {
         if (keymapConfig.switchProfileShortcutKeyModifier == modifier)
             if (keycode == keymapConfig.switchProfileShortcutKey) {
                 mInput.callback.switchProfiles()
+                return true
+            }
+
+        if (keymapConfig.isRootMode && keymapConfig.blockKeyboardShortcutKeyModifier == modifier)
+            if (keycode == keymapConfig.blockKeyboardShortcutKey) {
+                mInput.toggleKeyboardBlock()
                 return true
             }
         return false

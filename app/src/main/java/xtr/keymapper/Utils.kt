@@ -33,11 +33,10 @@ object Utils {
 
     @JvmStatic
     @Throws(IOException::class)
-    fun geteventStream(nativeLibraryDir: String, blockKeyboard: Boolean = false): Process {
+    fun geteventStream(nativeLibraryDir: String): Process {
         val sh = Runtime.getRuntime().exec("sh")
         val outputStream = DataOutputStream(sh.outputStream)
-        val envBlock = if (blockKeyboard) "BLOCK_KEYBOARD=1 " else ""
-        outputStream.writeBytes("exec env ${envBlock}LD_PRELOAD=$nativeLibraryDir/libgetevent.so getevent -ql\n")
+        outputStream.writeBytes("exec env LD_PRELOAD=$nativeLibraryDir/libgetevent.so getevent -ql\n")
         outputStream.flush()
         return sh
     }

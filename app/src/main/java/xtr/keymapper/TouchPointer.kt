@@ -103,7 +103,8 @@ class TouchPointer : Service() {
         activeInstance = this
         KeymapperTileService.updateTile(this)
 
-        val keymapProfile = KeymapProfiles(this).getProfile(selectedProfile, true)
+        val targetProfile = selectedProfile ?: KeymapProfiles(this).getAllProfiles().keys.firstOrNull()
+        val keymapProfile = KeymapProfiles(this).getProfile(targetProfile, true)
         connectRemoteService(keymapProfile)
 
         if (displayListener == null) displayListener = object :
@@ -213,13 +214,7 @@ class TouchPointer : Service() {
             mWindowManager =
                 this.displayContext?.getSystemService(WindowManager::class.java)
             try {
-                if (!keymapConfig.disableAutoProfiling) {
-                    if (!activityRemoteCallback) {
-                        service.registerActivityObserver(mActivityObserverCallback)
-                        activityRemoteCallback = true
-                    }
-                }
-                if (!profile.disabled) {
+                if (keymapConfig.disableAutoProfiling) {
                     service.startServer(
                         profile,
                         keymapConfig,
@@ -228,6 +223,20 @@ class TouchPointer : Service() {
                         size.y,
                         displayId
                     )
+                } else {
+                    if (!activityRemoteCallback) {
+                        service.registerActivityObserver(mActivityObserverCallback)
+                        activityRemoteCallback = true
+                    } else if (!profile.disabled) {
+                        service.startServer(
+                            profile,
+                            keymapConfig,
+                            mCallback,
+                            size.x,
+                            size.y,
+                            displayId
+                        )
+                    }
                 }
                 if (keymapConfig.showControls) {
                     ShowKeymapService.start(this, selectedProfile)
@@ -390,6 +399,16 @@ class TouchPointer : Service() {
         override fun setCursorY(y: Int) {
             mHandler.post {
                 if (cursorView != null) cursorView!!.y = y.toFloat()
+            }
+        }
+
+        override fun alertKeyboardBlocked(blocked: Boolean) {
+            mHandler.post {
+                Toast.makeText(
+                    this@TouchPointer,
+                    if (blocked) R.string.keyboard_blocked else R.string.keyboard_unblocked,
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }

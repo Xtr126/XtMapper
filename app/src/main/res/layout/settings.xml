@@ -23,18 +23,19 @@
             android:text="@string/use_shizuku" />
 
         <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/block_keyboard_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/block_keyboard_input" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/editor_overlay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:checked="false"
             android:text="@string/open_editor_as_overlay" />
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/block_keyboard_switch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:checked="false"
-            android:text="@string/block_keyboard_input" />
 
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/touch_jitter_switch"
