@@ -3,7 +3,11 @@ package xtr.keymapper.log
 import java.io.Closeable
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.io.OutputStream
+import java.io.RandomAccessFile
+import java.nio.channels.FileLock
+import java.nio.channels.OverlappingFileLockException
 
 /** Name and size of one existing log file as seen by the store. */
 data class LogFileInfo(
@@ -52,8 +56,11 @@ interface LogStore {
 
     /**
      * Deletes [name] when this store owns deletion rights. Returns false (never
-     * throws) when unavailable. Callers only pass `LogFileNames.parse`-matched
-     * names, so deletion cannot escape the canonical log directory.
+     * throws) when unavailable or when the file is still actively locked by a
+     * writer, in this or any other process (see [FileSystemLogStore] for the
+     * verified/degraded platform behavior). Callers only pass
+     * `LogFileNames.parse`-matched names, so deletion cannot escape the
+     * canonical log directory.
      */
     fun delete(name: String): Boolean
 }
@@ -73,7 +80,18 @@ interface LogFileWriter : Closeable {
     fun write(chunk: ByteArray)
 }
 
-/** Direct-filesystem implementation (shell/root roles and unit tests). */
+/**
+ * Direct-filesystem implementation (shell/root roles and unit tests).
+ *
+ * Cross-process safety: each opened writer holds an exclusive advisory lock on
+ * its file for the handle's whole lifetime, and [delete] refuses any file that
+ * is still locked. Advisory locks are verified to work across processes on
+ * Android's shared storage (device probe on Android 16 / API 36: contention is
+ * detected and locks are released by the kernel on process death); on a
+ * filesystem without lock support the activity state cannot be determined and
+ * deletion fails closed — files are kept, possibly over-retaining (reported by
+ * the pipeline), instead of deleting a possibly-active file.
+ */
 class FileSystemLogStore(private val rootDirectory: File) : LogStore {
 
     init {
@@ -96,7 +114,22 @@ class FileSystemLogStore(private val rootDirectory: File) : LogStore {
         val file = File(rootDirectory, name)
         // The parent directory may not exist yet in tests and fresh installs.
         file.parentFile?.mkdirs()
-        val stream: OutputStream = FileOutputStream(file, true)
+        val stream: FileOutputStream = FileOutputStream(file, true)
+        // Advisory cross-process coordination (verified on Android 16 shared
+        // storage; see the class KDoc): the writer holds the file's exclusive
+        // lock for the whole lifetime of this handle, so the retention gate in
+        // ANY process can recognize an actively written file even after days
+        // without records. POSIX locks are held while open, released on close,
+        // and released by the kernel when the process dies — no stale markers.
+        // Best-effort on the writer side: contention (a duplicate handle) or
+        // unsupported-filesystem errors never block writing; the retention
+        // grace day remains a secondary protection for that degraded case.
+        var lock: FileLock? = null
+        try {
+            lock = stream.channel.tryLock()
+        } catch (e: Exception) {
+            lock = null
+        }
         return object : LogFileWriter {
             // The on-disk size realigns handles reopened after previous sessions;
             // rotation thresholds therefore see pre-existing content. The counter
@@ -113,6 +146,7 @@ class FileSystemLogStore(private val rootDirectory: File) : LogStore {
             }
 
             override fun close() {
+                try { lock?.release() } catch (e: Exception) {}
                 stream.close()
             }
         }
@@ -126,7 +160,7 @@ class FileSystemLogStore(private val rootDirectory: File) : LogStore {
             val bytes = file.inputStream().use { input ->
                 val size = file.length()
                 if (size > budget) input.skip(size - budget)
-                input.readNBytes(budget.toInt())
+                readUpTo(input, budget)
             }
             decodeTrailingLines(bytes, maxLines)
         } catch (e: Exception) {
@@ -134,10 +168,46 @@ class FileSystemLogStore(private val rootDirectory: File) : LogStore {
         }
     }
 
+    /**
+     * Reads up to [maxBytes] bytes (fewer at EOF) — the bounded, compatible
+     * equivalent of `InputStream#readNBytes(int)`, which is unavailable below
+     * Android 13 (API 33) while `InputStream#read(byte[], int, int)` (API 1) is
+     * not. A zero-length input yields an empty array.
+     */
+    private fun readUpTo(input: InputStream, maxBytes: Long): ByteArray {
+        val buffer = ByteArray(maxBytes.toInt())
+        var read = 0
+        while (read < buffer.size) {
+            val count = input.read(buffer, read, buffer.size - read)
+            if (count < 0) break
+            read += count
+        }
+        return if (read == buffer.size) buffer else buffer.copyOf(read)
+    }
+
+    /**
+     * Deletes [name] only when its active status can be reliably determined.
+     * An exclusive advisory lock is attempted first: a file currently held by a
+     * writer — in this or any other process, even one that has written nothing
+     * for days — stays locked, so deletion is skipped (fail-closed). The lock
+     * is held until after the unlink, shrinking the open-then-delete race to a
+     * writer that started opening before we could lock.
+     */
     override fun delete(name: String): Boolean = try {
         val file = File(rootDirectory, name)
-        file.isFile && file.delete()
+        if (!file.isFile) false else RandomAccessFile(file, "rw").use { raf ->
+            when (raf.channel.tryLock()) {
+                null -> false // held elsewhere (or this JVM already locks it)
+                else -> {     // acquired: nobody was writing at this instant
+                    file.delete()
+                }
+            }
+        }
+    } catch (e: OverlappingFileLockException) {
+        false // this JVM holds it already (active writer handle)
     } catch (e: Exception) {
+        // Includes ENOLCK-style "locks unsupported" failures: activity cannot
+        // be determined, so retention loses the file (budget may overshoot).
         false
     }
 

@@ -50,12 +50,15 @@ class RetentionPolicyTest {
     fun `the newest date is always protected even if the budget forces pruning elsewhere`() {
         val deleted = run(
             listOf(
-                entry("xtmapper-2026-10-22.log", size = 100 * 1024 * 1024L),
-                entry("xtmapper-2026-10-23.log", size = 100 * 1024 * 1024L),
+                entry("xtmapper-2026-10-19.log", size = 9 * 1024 * 1024L),
+                entry("xtmapper-2026-10-20.log", size = 1024 * 1024L),
+                entry("xtmapper-2026-10-23.log", size = 1024 * 1024L),
             )
         )
-        // The newest day is never deleted; the older day pays the budget bill.
-        assertEquals(listOf("xtmapper-2026-10-22.log"), deleted)
+        // The newest day is never deleted; the previous day (cross-midnight
+        // grace) is protected too; the oldest day pays the budget bill.
+        assertEquals(listOf("xtmapper-2026-10-19.log"), deleted)
+        assertTrue(deleted.none { it.startsWith("xtmapper-2026-10-20") })
     }
 
     @Test
@@ -88,13 +91,13 @@ class RetentionPolicyTest {
         val deleted = run(
             listOf(
                 entry("xtmapper-2026-09-01.log"),
-                entry("xtmapper-2026-10-22-part002.log", size = 9_000_000L),
+                entry("xtmapper-2026-10-21-part002.log", size = 9_000_000L),
                 entry("xtmapper-2026-10-23.log"),
             ),
             activeNames = setOf("xtmapper-2026-09-01.log"), // another role still appending
         )
         // Budget pressure lands on the unprotected old part, not on the active file.
-        assertEquals(listOf("xtmapper-2026-10-22-part002.log"), deleted)
+        assertEquals(listOf("xtmapper-2026-10-21-part002.log"), deleted)
     }
 
     @Test
@@ -120,6 +123,35 @@ class RetentionPolicyTest {
             )
         )
         // The 10-22 file is within retention and under caps → nothing is deleted.
+        assertEquals(emptyList<String>(), deleted)
+    }
+
+    @Test
+    fun `the previous day is protected for cross-midnight sessions of other roles`() {
+        val deleted = run(
+            listOf(
+                entry("xtmapper-shizuku-2026-10-22.log", size = 20 * 1024 * 1024L),
+                entry("xtmapper-shizuku-2026-10-21.log", size = 20 * 1024 * 1024L),
+                entry("xtmapper-2026-10-23.log"),
+            )
+        )
+        // A shizuku session that is still open across midnight may still hold
+        // its 10-22 file open: it is never pruned. The day before pays.
+        assertTrue(deleted.none { it.contains("2026-10-22") })
+        assertTrue(deleted.any { it == "xtmapper-shizuku-2026-10-21.log" })
+    }
+
+    @Test
+    fun `grace day is protected even when it alone exceeds the budget`() {
+        val deleted = run(
+            listOf(
+                entry("xtmapper-shell-2026-10-22.log", size = 20 * 1024 * 1024L),
+                entry("xtmapper-2026-10-23.log"),
+            )
+        )
+        // Budget-8MiB cannot force out the grace day: temporary overshoot is
+        // the documented trade-off for not deleting files another process may
+        // still be writing.
         assertEquals(emptyList<String>(), deleted)
     }
 

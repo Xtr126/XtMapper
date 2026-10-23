@@ -21,6 +21,35 @@ class LoggingPipelineTest {
     }
 
     @Test
+    fun `retention cannot delete a foreign process's active file beyond the grace day`() {
+        // APP pipeline scans/prunes the shared directory; a shizuku-role file
+        // opened weeks ago is still held open by its "foreign" writer handle
+        // (same-JVM helper stands in for the other process — the cross-process
+        // behavior itself is device-verified). The lock gate must keep it, and
+        // closing it must make it prunable again; each scan reports skips once.
+        val clock = MutableClock.at("2026-10-22T09:00:00Z")
+        val store = FileSystemLogStore(tmp.newFolder())
+        val factory = TestPipelineFactory(store, clock)
+        val pipeline = factory.start()
+        try {
+            val foreign = store.openAppendWriter("xtmapper-shizuku-2026-10-01.log")
+            val today = java.time.LocalDate.of(2026, 10, 23)
+            val config = LoggingConfig(maxAgeDays = 14, maxTotalBytes = 8L * 1024 * 1024, maxFiles = 8)
+
+            pipeline.applyRetention(store, config, today)
+            assertTrue("active foreign file survives retention", store.listFiles().any { it.name == "xtmapper-shizuku-2026-10-01.log" })
+            assertEquals(1, factory.failureEvents.count { it.contains("retention skipped 1 candidate files") })
+
+            foreign.close() // the foreign session ended normally
+            pipeline.applyRetention(store, config, today)
+            assertFalse("prunable after its writer released", store.listFiles().any { it.name == "xtmapper-shizuku-2026-10-01.log" })
+            assertEquals(1, factory.failureEvents.count { it.contains("retention skipped") })
+        } finally {
+            pipeline.close("Clean shutdown")
+        }
+    }
+
+    @Test
     fun `session lifecycle produces start, events and end markers in one daily file`() {
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
         val store = FileSystemLogStore(tmp.newFolder())
@@ -181,7 +210,7 @@ class LoggingPipelineTest {
         // 8 of the 10 burst records overflow (drop-oldest).
         repeat(10) { pipeline.info("Burst", "event $it") }
         assertEquals(8, pipeline.droppedCount)
-        assertEquals(1, factory.failureEvents.count { it.contains("queue capacity") })
+        assertEquals(1, factory.failureEvents.count { it.contains("records are being dropped") })
 
         release.countDown()
         assertTrue(pipeline.flush(5_000))

@@ -174,7 +174,10 @@ class LoggingPipeline(
     /**
      * Writes the session END marker (clean closes only), stops the worker and
      * releases the file sink. Idempotent. [status] appears in the marker's
-     * `Status:` line after the queue is drained (no batch/end race).
+     * `Status:` line after the queue is drained (no batch/end race). The
+     * marker's `Dropped:` count is the session's total loss: queue-overflow
+     * drops plus records the sink could not persist (day-limit and failed
+     * batches), so a reader never mistakes lost records for persisted ones.
      */
     fun close(status: String = SessionStates.STATUS_CLEAN) {
         if (!started.get()) return
@@ -182,7 +185,10 @@ class LoggingPipeline(
         // 1) bounded flush + stop the consumer thread (no pending races left)
         worker.stopDraining(config.flushTimeoutMillis)
         // 2) then write the END marker directly on the caller thread
-        writer.endSession(clock.instant(), durationNanos(), status, queue.droppedCount.get())
+        writer.endSession(
+            clock.instant(), durationNanos(), status,
+            queue.droppedCount.get() + writer.recordsDroppedByDayLimit.get(),
+        )
         // 3) release the file handle
         worker.closeFile()
     }
@@ -211,8 +217,8 @@ class LoggingPipeline(
     private fun reportFirstDropIfNeeded() {
         if (queue.droppedCount.get() > 0 && dropReported.compareAndSet(false, true)) {
             onFailure(
-                "XtLogger: queue capacity ${config.queueCapacity} exceeded; oldest records are " +
-                    "being dropped (total is reported in the session END marker)"
+                "XtLogger: records are being dropped (queue overflow or file-sink failure); " +
+                    "the total is reported in the session END marker"
             )
         }
     }
@@ -245,7 +251,16 @@ class LoggingPipeline(
             today = today,
             activeNames = activeNames,
         )
-        for (name in deletions) store.delete(name)
+        // store.delete fails closed on still-locked files (active writers in
+        // any process) and on files gone in the meantime; one bounded report
+        // per scan keeps the budget overshoot visible without per-file spam.
+        val skipped = deletions.count { !store.delete(it) }
+        if (skipped > 0) {
+            onFailure(
+                "XtLogger: retention skipped $skipped candidate files " +
+                    "(actively locked or already removed; kept list may overshoot its budget)"
+            )
+        }
     }
 
     /** Names this process currently holds open; protected from pruning. */

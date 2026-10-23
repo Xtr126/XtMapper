@@ -75,6 +75,51 @@ class FileSystemLogStoreTest {
     }
 
     @Test
+    fun `retention deletes unlocked files even when far beyond the grace day`() {
+        // The lock gate must never overprotect: inactive old files that no
+        // writer holds are exactly the candidates retention is for.
+        val store = FileSystemLogStore(tmp.newFolder())
+        store.openAppendWriter("xtmapper-2026-10-01.log").close()
+        assertTrue(store.delete("xtmapper-2026-10-01.log"))
+        assertFalse(store.delete("xtmapper-2026-10-01.log")) // and once again idempotently false
+    }
+
+    @Test
+    fun `delete skips a file held by an active writer, even far beyond the grace day`() {
+        // Deterministic in-JVM equivalent of another process keeping the file
+        // open: a live writer handle holds the exclusive advisory lock (JVM
+        // overlap detection rejects the second try — verified the same on
+        // device and host JVM). The file's date being weeks old must not
+        // matter: being open for writing is the only protection that counts.
+        val store = FileSystemLogStore(tmp.newFolder())
+        val foreign = store.openAppendWriter("xtmapper-shizuku-2026-10-01.log")
+        foreign.write("still writing\n".toByteArray())
+        try {
+            assertFalse("active file must survive retention", store.delete("xtmapper-shizuku-2026-10-01.log"))
+            assertEquals(listOf("xtmapper-shizuku-2026-10-01.log"), store.listFiles().map { it.name })
+        } finally {
+            foreign.close()
+        }
+        // Normal close released the coordination state: now prunable.
+        assertTrue(store.delete("xtmapper-shizuku-2026-10-01.log"))
+        assertTrue(store.listFiles().isEmpty())
+    }
+
+    @Test
+    fun `duplicate handles on one file never break the write path`() {
+        // Writer-side coordination is best-effort: a second handle on the same
+        // file cannot take the lock (JVM overlap) but must open and write fine.
+        val store = FileSystemLogStore(tmp.newFolder())
+        val first = store.openAppendWriter("xtmapper-2026-10-22.log")
+        val second = store.openAppendWriter("xtmapper-2026-10-22.log")
+        second.write("two\n".toByteArray())
+        second.close()
+        first.write("one\n".toByteArray())
+        first.close()
+        assertEquals("two\none\n", store.readTail("xtmapper-2026-10-22.log", 8).joinToString("\n", postfix = "\n"))
+    }
+
+    @Test
     fun `decodeTrailingLines tolerates a truncated leading line`() {
         val partial = "…xx20:15:32.510+01:00 [INFO] message=\"late\"\n".toByteArray()
         // Simulated truncated leading line (leading bytes cut off).

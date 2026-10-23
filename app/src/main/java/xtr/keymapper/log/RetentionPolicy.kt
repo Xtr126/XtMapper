@@ -10,9 +10,15 @@ import java.time.temporal.ChronoUnit
  * log directory (only `LogFileNames.parse`-matched names can ever appear here).
  *
  * Policy:
- * - The newest calendar day present is always protected: any role's session may
- *   still be appending to that day's file; [activeNames] additionally protects
- *   files the caller currently holds open.
+ * - Deletion candidates are selected here; the store's `delete` then applies a
+ *   fail-closed advisory-lock gate, so a candidate is removed only when no
+ *   process (any role, idle writers included) still holds the file open. That
+ *   lock gate is the primary active-file guarantee.
+ * - What remains here is the temporal filter: the newest calendar day and the
+ *   day before it are always kept regardless of locks. This grace day is a
+ *   secondary defense for filesystems without lock support — it is a
+ *   heuristic, not proof that any file is inactive, and its budget overshoot
+ *   (holding up to an extra day of files) is accepted by design.
  * - Files older than [LoggingConfig.maxAgeDays] days are dropped first.
  * - Then the oldest survivors are dropped until the kept-file count and kept
  *   total size fit [LoggingConfig.maxFiles] / [LoggingConfig.maxTotalBytes].
@@ -29,10 +35,24 @@ object Retention {
     ): List<String> {
         if (entries.isEmpty()) return emptyList()
         fun dateKey(e: LogFileEntry): Long = e.year * 10_000L + e.month * 100L + e.day
+        fun dateKeyOf(date: LocalDate): Long =
+            date.year * 10_000L + date.monthValue * 100L + date.dayOfMonth
 
+        // One full calendar day of grace: the newest day's protection already
+        // covers same-day writers, but a cross-midnight session of ANY role can
+        // still be appending to (or just have rotated within) its previous-day
+        // file, and filenames cannot reveal which process still holds a file
+        // open. Fingerprints of open files are not available, so the grace day
+        // is treated as active too.
         val newestKey = entries.maxOf { dateKey(it) }
+        val newestDate = LocalDate.of(
+            (newestKey / 10_000L).toInt(),
+            ((newestKey / 100L) % 100L).toInt(),
+            (newestKey % 100L).toInt(),
+        )
+        val protectKey = dateKeyOf(newestDate.minusDays(1))
         val deletable = entries
-            .filter { dateKey(it) < newestKey && it.baseName !in activeNames }
+            .filter { dateKey(it) < protectKey && it.baseName !in activeNames }
             .sorted() // ascending: oldest first
         val deletions = LinkedHashSet<String>()
 
