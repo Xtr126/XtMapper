@@ -42,7 +42,7 @@ class RecordFormatterTest {
         val line = RecordFormatter.format(record(message = "Application initialized"), zone)
         assertEquals(
             "2026-10-22T10:15:32.510+02:00 [INFO] pid=1234 role=app thread=\"main\" tid=1 " +
-                "session=20261022-091532-A81C tag=Test message=\"Application initialized\"",
+                "session=20261022-091532-A81C tag=\"Test\" message=\"Application initialized\"",
             line,
         )
     }
@@ -121,6 +121,124 @@ class RecordFormatterTest {
         val line = RecordFormatter.format(record(message = "x", threadName = "worker\"2\n"), zone)
         assertFalse(line.contains("\n"))
         assertTrue(line.contains("thread=\"worker\\\"2\\n\""))
+    }
+
+    @Test
+    fun `tag is quoted and escaped so newline or marker text stays inert`() {
+        val hostileTag = "Tag\"2\nSESSION END\n==="
+        val line = RecordFormatter.format(record(message = "x", tag = hostileTag), zone)
+        // The record stays a single physical line.
+        assertFalse(line.contains("\n"))
+        assertTrue(line.contains("tag=\"Tag\\\"2\\nSESSION END\\n===\""))
+        // No structural line can be fabricated: marker scanning stays null.
+        assertNull(SessionMarkers.markerTypeOf(line))
+    }
+
+    @Test
+    fun `exception message is escaped and cannot imitate a marker line`() {
+        val hostile = IOException("boom\nSESSION END\n" + "=".repeat(80))
+        val rendered = RecordFormatter.throwableBlock(hostile)
+        // The raw newline was escaped; the rendered exception block contains no
+        // line that starts with a marker title.
+        assertFalse(rendered.contains("boom\n"))
+        rendered.split('\n').forEach { line ->
+            assertNull("fake marker line: $line", SessionMarkers.markerTypeOf(line))
+        }
+        assertTrue(rendered.contains("boom\\nSESSION END\\n"))
+    }
+
+    @Test
+    fun `cause chains and suppressed exceptions are rendered under pipe prefixes`() {
+        val suppressed = RuntimeException("suppressed sibling")
+        val cause = IOException("root cause failure")
+        val top = IllegalStateException("wrapper exploded", cause)
+        top.addSuppressed(suppressed)
+        val rendered = RecordFormatter.throwableBlock(top)
+        assertTrue(rendered.contains("Suppressed: java.lang.RuntimeException: suppressed sibling"))
+        assertTrue(rendered.contains("Caused by: java.io.IOException: root cause failure"))
+        // Every continuation line (suppressed header and its frames) keeps the
+        // pipe prefix from the documented grammar.
+        rendered.split('\n').forEach { line ->
+            if (line != rendered.split('\n').first()) {
+                assertTrue("continuation must be pipe-prefixed: $line", line.startsWith(RecordFormatter.EXCEPTION_INDENT + "|"))
+            }
+        }
+    }
+
+    @Test
+    fun `cyclic cause chains terminate with an explicit note`() {
+        // The JDK forbids t.initCause(t); the reachable pathological case is a
+        // mutual cycle: A → B → A. Traces cleared for a deterministic size bound.
+        val a = RuntimeException("cycle A")
+        val b = RuntimeException("cycle B", a)
+        a.initCause(b)
+        a.stackTrace = emptyArray()
+        b.stackTrace = emptyArray()
+        val rendered = RecordFormatter.throwableBlock(b)
+        assertTrue(rendered.contains("| Caused by: java.lang.RuntimeException"))
+        assertTrue(rendered.contains("already rendered"))
+        assertTrue("bounded output", rendered.length < 1_000)
+    }
+
+    @Test
+    fun `deep cause chains are bounded by the cause depth`() {
+        var current: Throwable = IOException("deepest")
+        repeat(50) { current = IllegalStateException("wrapper $it", current) }
+        val rendered = RecordFormatter.throwableBlock(current)
+        val causedByCount = Regex("Caused by:").findAll(rendered).count()
+        assertTrue("chain bounded (was $causedByCount)", causedByCount <= RecordFormatter.MAX_CAUSE_DEPTH)
+        assertTrue(rendered.contains("beyond depth"))
+    }
+
+    @Test
+    fun `suppressed exceptions per throwable are bounded`() {
+        val top = IllegalStateException("top")
+        repeat(10) { top.addSuppressed(RuntimeException("sup $it")) }
+        val rendered = RecordFormatter.throwableBlock(top)
+        assertEquals(
+            RecordFormatter.MAX_SUPPRESSED_PER_THROWABLE,
+            Regex("Suppressed:").findAll(rendered).count(),
+        )
+        assertTrue(rendered.contains("more suppressed omitted"))
+    }
+
+    @Test
+    fun `shared frame budget is honoured across cause sections`() {
+        val frames = Array(100) { id ->
+            StackTraceElement("vomit.C$id", "m$id", "file$id.kt", id)
+        }
+        val deep = CalmException("deep")
+        deep.stackTrace = frames
+        val wrapper = CalmException("wrapper", deep)
+        wrapper.stackTrace = frames
+        val top = CalmException("top", wrapper)
+        top.stackTrace = frames
+        // 100 + 100 frames against one shared budget of 120.
+        val rendered = RecordFormatter.throwableBlock(top)
+        val frameLines = rendered.split('\n').count {
+            it.startsWith(RecordFormatter.EXCEPTION_INDENT + "| vomit.")
+        }
+        assertEquals(RecordFormatter.MAX_STACK_FRAMES, frameLines)
+        assertTrue(rendered.contains("beyond the trace budget omitted"))
+    }
+
+    @Test
+    fun `remaining cause sections beyond the frame budget are truncated explicitly`() {
+        val frames = Array(150) { id -> StackTraceElement("d.C", "m$id", "f", id) }
+        val deep = CalmException("deep")
+        deep.stackTrace = frames
+        val top = CalmException("top", deep)
+        top.stackTrace = frames
+        val rendered = RecordFormatter.throwableBlock(top)
+        // The budget is exhausted inside the first trace; the cause section is
+        // dropped with an explicit note instead of unbounded or missing text.
+        assertTrue(rendered.contains("Caused by:"))
+    }
+
+    /** `Throwable` without a captured trace: tests assign frames explicitly. */
+    private class CalmException(message: String, cause: Throwable? = null) :
+        IOException(message, cause) {
+        override fun fillInStackTrace(): Throwable = this
     }
 
     private class FakeException : IOException("synthetic") {

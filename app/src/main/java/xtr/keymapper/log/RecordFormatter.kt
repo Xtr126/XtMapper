@@ -14,24 +14,32 @@ import java.util.Locale
  * Every event is one physical line (plus continuation lines for a stack trace):
  *
  * ```
- * <timestamp> [<LEVEL>] pid=<pid> role=<role> thread="<name>" tid=<tid> session=<id> tag=<tag> message="<escaped>"
+ * <timestamp> [<LEVEL>] pid=<pid> role=<role> thread="<name>" tid=<tid> session=<id> tag="<tag>" message="<escaped>"
  * ```
  *
  * - `timestamp` is ISO-8601 with millisecond precision and an explicit UTC offset
  *   (`2026-10-22T09:15:32.510+01:00`) so times remain unambiguous across DST and
  *   local-time changes.
- * - quoted values (`thread=`, `message=`) are escaped: `\`, `"`, newline, carriage
- *   return and tab use backslash escapes (`\\`, `\"`, `\n`, `\r`, `\t`); other
- *   control characters are emitted as `\uXXXX`. A record therefore always stays a
- *   single unambiguous line.
+ * - quoted values (`thread=`, `tag=`, `message=`) are escaped: `\`, `"`, newline,
+ *   carriage return and tab use backslash escapes (`\\`, `\"`, `\n`, `\r`, `\t`);
+ *   other control characters are emitted as `\uXXXX`. A record therefore always
+ *   stays a single unambiguous line, and no free-form field can introduce a line
+ *   that imitates a structural session marker.
  *
  * A `Throwable` is rendered after its event line as additional indentation-prefixed
- * continuation lines:
+ * continuation lines. `Caused by:` and `Suppressed:` sections follow the standard
+ * `printStackTrace` order; cyclic, redundant or deeper-than-bound chains are
+ * truncated with an explicit note, and all frames share one bounded budget:
  *
  * ```
- *     exception=<Throwable class[: message]>
+ *     exception=<class[: escaped message]>
  *     | <stack frame 0>
  *     | <stack frame n>
+ *     | Suppressed: <class[: escaped message]>
+ *     | <frames…>
+ *     | Caused by: <class[: escaped message]>
+ *     | <frames…>
+ *     | …(+ more sections or frames omitted)
  * ```
  *
  * Session markers ([SessionMarkers]) use full-width `=` separator lines and are
@@ -46,8 +54,14 @@ object RecordFormatter {
     /** Longest rendered message; anything longer is truncated with a marker. */
     const val MAX_MESSAGE_CHARS = 8_000
 
-    /** Longest stack trace rendered per record. */
+    /** Longest stack trace rendered per record (shared across cause sections). */
     const val MAX_STACK_FRAMES = 120
+
+    /** Deepest `Caused by:` / `Suppressed:` nesting rendered (1-based root). */
+    const val MAX_CAUSE_DEPTH = 8
+
+    /** Suppressed exceptions rendered per throwable; the rest is counted. */
+    const val MAX_SUPPRESSED_PER_THROWABLE = 4
 
     /** Indentation used for exception continuation lines. */
     const val EXCEPTION_INDENT = "    "
@@ -70,7 +84,7 @@ object RecordFormatter {
             .append(" thread=\"").append(escapeInline(record.threadName)).append('"')
             .append(" tid=").append(record.threadId)
         record.sessionId?.let { sb.append(" session=").append(it) }
-        sb.append(" tag=").append(record.tag)
+        sb.append(" tag=\"").append(escapeInline(record.tag)).append('"')
         sb.append(" message=\"")
             .append(escapeInline(clip(record.message, MAX_MESSAGE_CHARS))).append('"')
         record.throwable?.let {
@@ -80,22 +94,97 @@ object RecordFormatter {
     }
 
     /**
-     * `Throwable` content for one record: exception class (+ message) on the first
-     * line, then stack frames each on its own `| `-prefixed line.
+     * `Throwable` content for one record: the exception class (+ escaped message)
+     * on the first line, then stack frames each on its own `| `-prefixed line,
+     * followed by `Suppressed:` and `Caused by:` sections in `printStackTrace`
+     * order. All frames share one budget of [MAX_STACK_FRAMES]; chains are
+     * bounded by [MAX_CAUSE_DEPTH] levels and [MAX_SUPPRESSED_PER_THROWABLE]
+     * siblings per level, and self- or cross-referencing causes are truncated
+     * with an explicit note instead of looping.
      */
     fun throwableBlock(throwable: Throwable): String {
-        val sb = StringBuilder(256).append(throwable.javaClass.name)
-        val message = throwable.message
-        if (!message.isNullOrBlank()) sb.append(": ").append(clip(message, MAX_MESSAGE_CHARS))
-        val frames = throwable.stackTrace
-        if (frames.isEmpty()) {
-            sb.append('\n').append(EXCEPTION_INDENT).append("| (no stack trace)")
-        } else {
-            for (frame in frames.take(MAX_STACK_FRAMES)) {
-                sb.append('\n').append(EXCEPTION_INDENT).append("| ").append(frame.toString())
-            }
+        val framesBudget = intArrayOf(MAX_STACK_FRAMES)
+        val seen: MutableSet<Throwable> =
+            java.util.Collections.newSetFromMap(java.util.IdentityHashMap())
+        return StringBuilder(256).apply {
+            renderThrowable(throwable, this, framesBudget, seen, 0)
+        }.toString()
+    }
+
+    /**
+     * Renders one throwable (header + frames) into [out], then its suppressed
+     * children and cause — each child level recurses with [depth] + 1. Text
+     * always stays inline-safe: the header's message is escaped so an embedded
+     * newline or marker-like string can never fabricate a structural line.
+     */
+    private fun renderThrowable(
+        throwable: Throwable,
+        out: StringBuilder,
+        framesBudget: IntArray,
+        seen: MutableSet<Throwable>,
+        depth: Int,
+    ) {
+        if (!seen.add(throwable)) {
+            // Self-cause (t.cause === t) or an already-rendered chain member;
+            // the enclosing `Caused by:`/`Suppressed:` prefix plus this note
+            // keeps the block syntactically complete without recursing forever.
+            out.append(throwable.javaClass.name).append(" (already rendered — cyclic chain truncated)")
+            return
         }
-        return sb.toString()
+        out.append(throwable.javaClass.name)
+        val message = throwable.message
+        if (!message.isNullOrBlank()) {
+            out.append(": ").append(escapeInline(clip(message, MAX_MESSAGE_CHARS)))
+        }
+        appendFrames(throwable.stackTrace, out, framesBudget)
+        if (depth + 1 > MAX_CAUSE_DEPTH) {
+            val more = throwable.suppressed.size + (if (throwable.cause != null) 1 else 0)
+            if (more > 0) {
+                out.append('\n').append(EXCEPTION_INDENT).append("| …(").append(more)
+                    .append(" suppressed/cause sections beyond depth ").append(MAX_CAUSE_DEPTH)
+                    .append(" omitted)")
+            }
+            return
+        }
+        var suppressedShown = 0
+        for (suppressed in throwable.suppressed) {
+            if (suppressedShown >= MAX_SUPPRESSED_PER_THROWABLE) {
+                out.append('\n').append(EXCEPTION_INDENT).append("| …(+")
+                    .append(throwable.suppressed.size - suppressedShown)
+                    .append(" more suppressed omitted)")
+                break
+            }
+            out.append('\n').append(EXCEPTION_INDENT).append("| Suppressed: ")
+            renderThrowable(suppressed, out, framesBudget, seen, depth + 1)
+            suppressedShown++
+        }
+        val cause = throwable.cause
+        if (cause != null) {
+            out.append('\n').append(EXCEPTION_INDENT).append("| Caused by: ")
+            renderThrowable(cause, out, framesBudget, seen, depth + 1)
+        }
+    }
+
+    private fun appendFrames(
+        frames: Array<java.lang.StackTraceElement>,
+        out: StringBuilder,
+        budget: IntArray,
+    ) {
+        if (frames.isEmpty()) {
+            out.append('\n').append(EXCEPTION_INDENT).append("| (no stack trace)")
+            return
+        }
+        var printed = 0
+        for (frame in frames) {
+            if (budget[0] <= 0) break
+            out.append('\n').append(EXCEPTION_INDENT).append("| ").append(frame.toString())
+            budget[0]--
+            printed++
+        }
+        if (printed < frames.size) {
+            out.append('\n').append(EXCEPTION_INDENT).append("| …(+")
+                .append(frames.size - printed).append(" more frames beyond the trace budget omitted)")
+        }
     }
 
     private fun clip(text: String, max: Int): String =
