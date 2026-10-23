@@ -1,0 +1,46 @@
+name: Waydroid detection CI
+
+# Validates the Waydroid detection rule in CI without booting a real
+# Waydroid container (see shortcut: in Environment.kt). Stock fingerprints
+# from upstream crash reports are exercised by pure-JVM unit tests; the
+# probe step only reports whether the runner kernel could host Waydroid
+# at all (binder/KVM), it never fails the build.
+
+on:
+  push:
+    branches: [ ci-waydroid-detection ]
+  pull_request:
+    branches: [ ci-waydroid-detection ]
+
+jobs:
+  detect-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Unit tests (incl. Environment fingerprint rule)
+        run: ./gradlew :app:testDebugUnitTest --rerun-tasks --stacktrace
+
+      - name: Probe runner kernel for Waydroid feasibility (informational)
+        if: always()
+        run: |
+          echo "=== Waydroid kernel feasibility probe (informational only) ==="
+          echo "kernel: $(uname -r) ($(uname -m))"
+          echo -n "binder support: ";  grep -q binder /proc/filesystems && echo "yes" || echo "NO (Waydroid/redroid cannot run here)"
+          echo -n "ashmem support: ";   grep -q ashmem /proc/misc 2>/dev/null && echo "yes" || echo "no"
+          echo -n "/dev/kvm present: "; test -e /dev/kvm && echo "yes" || echo "no"
+          echo "Full Waydroid boot needs systemd + weston + ~2GB image; not attempted in CI."
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
