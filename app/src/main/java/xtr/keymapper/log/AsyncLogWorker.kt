@@ -13,6 +13,11 @@ import java.util.concurrent.atomic.AtomicReference
  * - the worker catches every `Throwable` from the sink; failures neither
  *   propagate to producers nor kill the thread ([lastError] keeps the most
  *   recent failure for tests and diagnostics).
+ * - Every record removed from the queue is accounted exactly once: a batch the
+ *   sink accepted closes out via [LoggingQueue.markProcessed]; a batch whose
+ *   write failed (or that the fail-soft sink absorbed without persisting)
+ *   closes out via [LoggingQueue.markFailed] and is counted as dropped — never
+ *   reported as written — so [flush] still completes after a failure.
  * - [flush] is bounded by the queue's exact drain condition
  *   ([LoggingQueue.awaitDrained]): it waits until every offered record is
  *   written or dropped, never indefinitely.
@@ -44,19 +49,35 @@ class AsyncLogWorker(
 
     private fun loop() {
         while (running.get()) {
+            // Declared outside the try so the catch can still account a failure
+            // thrown while the batch was being written.
+            var batch: List<LogRecord> = emptyList()
             try {
                 val first = queue.poll(POLL_MILLIS)
                 if (first == null) continue
-                val batch = ArrayList<LogRecord>(config.batchMaxRecords)
-                batch.add(first)
-                queue.drainUpTo(config.batchMaxRecords - batch.size)?.let { batch.addAll(it) }
+                val collected = ArrayList<LogRecord>(config.batchMaxRecords)
+                collected.add(first)
+                queue.drainUpTo(config.batchMaxRecords - collected.size)?.let { collected.addAll(it) }
+                batch = collected
                 writer.write(batch)
-                queue.markProcessed(batch.size)
+                if (writer.unavailable) {
+                    // The fail-soft writer absorbed the failure (no exception
+                    // escaped): the batch was NOT persisted. Accounting it as
+                    // written would hide the loss; it is dropped and counted.
+                    queue.markFailed(batch.size)
+                } else {
+                    queue.markProcessed(batch.size)
+                }
                 recordSinkState()
             } catch (e: Throwable) {
-                // Keep serving: a failing sink must not kill the worker. Records
-                // in the failed batch are closed out below to unblock flushes.
-                queue.markProcessed(queue.drainUpTo(Int.MAX_VALUE)?.size ?: 0)
+                // The write threw: the in-flight batch above plus everything
+                // still queued are closed out as one dropped event. Draining and
+                // dropping the backlog is deliberate — the sink rejected work
+                // right now and a dead sink would only spin — but neither the
+                // failed batch nor a drain may be counted as successful writes,
+                // and pendingWrites must reach 0 so flush() still completes.
+                val discarded = queue.drainUpTo(Int.MAX_VALUE) ?: emptyList()
+                queue.markFailed(batch.size + discarded.size)
                 lastError.set(e)
             }
         }

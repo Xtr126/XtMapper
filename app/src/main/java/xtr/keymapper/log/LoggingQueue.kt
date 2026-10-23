@@ -15,8 +15,9 @@ import kotlin.concurrent.withLock
  *   the drop is counted in [droppedCount]; reporting happens once per session in
  *   the pipeline, preventing an unbounded warning stream.
  * - [pendingWrites] counts records queued-or-being-written; it is decremented the
- *   moment a record is either written or evicted, so [awaitDrained] is exact and
- *   drop-safe (a dropped record can never stall a flush).
+ *   moment a record is either written, evicted or failed (without persistence),
+ *   so [awaitDrained] is exact and neither a dropped nor a failed record can
+ *   ever stall a flush.
  *
  * Lock scope is intentionally small (offer + drain), so latency-sensitive
  * producers never block on disk I/O.
@@ -43,6 +44,26 @@ class LoggingQueue(private val capacity: Int) {
         if (left <= 0) {
             pendingWrites.set(0)
             drained.signalAll()
+        }
+    }
+
+    /**
+     * Called by the consumer when [count] already-removed records cannot be
+     * written (write failure, or the fail-soft sink absorbed them without
+     * persisting). They are counted as dropped — never as written — and their
+     * pending credit is released, so a failed record can never stall [awaitDrained]
+     * and the session END marker reports the real loss. Exactly-once accounting:
+     * every record removed from this queue is closed out either by
+     * [markProcessed] or by this method, never by both.
+     */
+    fun markFailed(count: Int) = lock.withLock {
+        if (count > 0) {
+            droppedCount.addAndGet(count)
+            val left = pendingWrites.addAndGet(-count)
+            if (left <= 0) {
+                pendingWrites.set(0)
+                drained.signalAll()
+            }
         }
     }
 

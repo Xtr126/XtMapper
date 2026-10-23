@@ -80,6 +80,30 @@ class LoggingQueueTest {
     }
 
     @Test
+    fun `markFailed drops counted exactly once and releases pendingWrites`() {
+        val queue = LoggingQueue(4)
+        repeat(3) { queue.offer(record(it)) }
+        assertEquals(3, queue.pendingWrites.get())
+        // Consumer removed all three, then the write failed: drop-accounting.
+        assertEquals(listOf("m0", "m1", "m2"), queue.drainUpTo(3)!!.map { it.message })
+        queue.markFailed(3)
+        assertEquals(0, queue.pendingWrites.get())
+        assertEquals(3, queue.droppedCount.get())
+        // Drained-but-failed records complete an awaitDrained (contract: never stall).
+        assertTrue(queue.awaitDrained(200))
+
+        // Exactly once: further accounting cannot resurrect pending or over-drop.
+        queue.markFailed(1)
+        assertEquals(0, queue.pendingWrites.get())
+        assertEquals(4, queue.droppedCount.get())
+
+        // New offers drain normally afterwards — no permanent inflation.
+        queue.offer(record(9))
+        queue.markProcessed(1)
+        assertEquals(0, queue.pendingWrites.get())
+    }
+
+    @Test
     fun `poll respects the timeout while empty`() {
         val queue = LoggingQueue(2)
         val start = System.nanoTime()
