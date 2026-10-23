@@ -2,7 +2,6 @@ package xtr.keymapper.activity
 
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.DialogInterface
@@ -10,6 +9,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.hardware.display.DisplayManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
@@ -52,9 +52,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val SHELL_INIT = "shell"
         const val SHELL_SERVICE_BINDER = "xtr.keymapper.extra.SHELL_SERVICE_BINDER"
-
-        /** Request code for the persisted SAF log-folder grant. */
-        private const val REQUEST_LOG_FOLDER = 4231
 
         init {
             // Set settings before the main shell can be created
@@ -521,53 +518,52 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ------------------------------------------------------------------
-    // XtLogger: one-time user grant of the canonical log folder (XtMapper/Logs)
-    // on shared storage. Android's scoped storage requires this user interaction;
-    // the grant is persisted so the picker never appears again. Logger
-    // initialization itself stays non-interactive.
+    // XtLogger: the log directory lives on shared storage. Android 11+
+    // scoped storage denies direct writes there without the All-files
+    // permission (MANAGE_EXTERNAL_STORAGE), so the dialog offers the
+    // Settings toggle next to an editable directory path.
     // ------------------------------------------------------------------
 
     fun openLogFolderFromCompose() {
-        val messageRes = if (XtLogger.isFileSinkAvailable) R.string.log_folder_ready_desc
-        else R.string.log_folder_missing_desc
+        val input = android.widget.EditText(this)
+        input.setText(XtLogger.logDirectory(this))
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.log_folder_title)
-            .setMessage(messageRes)
-            .setPositiveButton(R.string.log_folder_pick) { _, _ -> launchLogFolderPicker() }
+            .setMessage(R.string.log_folder_desc)
+            .setView(input)
+            .setPositiveButton(R.string.log_folder_save) { _, _ ->
+                val path = input.text.toString()
+                if (XtLogger.setLogDirectory(applicationContext, path)) {
+                    Toast.makeText(this, R.string.log_folder_saved, Toast.LENGTH_SHORT).show()
+                    XtLogger.info("MainActivity", "log directory set to $path")
+                } else {
+                    Toast.makeText(this, R.string.log_folder_invalid, Toast.LENGTH_LONG).show()
+                    XtLogger.warn("MainActivity", "log directory rejected: $path")
+                }
+            }
+            .setNeutralButton(R.string.log_folder_grant) { _, _ -> launchAllFilesAccess() }
             .setNegativeButton(R.string.ok, null)
             .show()
     }
 
-    private fun launchLogFolderPicker() {
+    private fun launchAllFilesAccess() {
+        val intent = Intent(
+            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+            Uri.parse("package:$packageName"),
+        )
         try {
-            // The user picks the XtMapper folder in shared storage (create it from
-            // the picker if needed); the folder picker is documented to return a
-            // tree URI persistable through takePersistableUriPermission.
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-            )
-            startActivityForResult(intent, REQUEST_LOG_FOLDER)
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, R.string.log_folder_picker_unavailable, Toast.LENGTH_LONG).show()
-            XtLogger.warn("MainActivity", "no folder picker available on this device")
+            startActivity(intent)
+        } catch (e: Exception) {
+            // Some vendor Settings builds lack the per-app view.
+            runCatching { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
         }
     }
 
-    @Deprecated("Deprecated in Java", ReplaceWith("registerForActivityResult"))
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_LOG_FOLDER && resultCode == RESULT_OK) {
-            val uri = data?.data
-            if (uri != null && XtLogger.enableSafLogging(applicationContext, uri)) {
-                Toast.makeText(this, R.string.log_folder_enabled, Toast.LENGTH_SHORT).show()
-                XtLogger.info("MainActivity", "log folder granted: $uri")
-            } else {
-                Toast.makeText(this, R.string.log_folder_failed, Toast.LENGTH_LONG).show()
-                XtLogger.warn("MainActivity", "log folder grant failed")
-            }
-        }
+    override fun onResume() {
+        super.onResume()
+        // The user may have granted All-files access in Settings just now;
+        // finish the pending file-logging setup without a restart.
+        if (android.os.Environment.isExternalStorageManager()) XtLogger.enableFileLogging(this)
     }
 
     override fun onDestroy() {

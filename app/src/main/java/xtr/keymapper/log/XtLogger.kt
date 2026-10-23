@@ -26,7 +26,7 @@ import java.time.ZoneId
  *
  * | Execution mode                                      | Entry point                       | Role   | Storage backend |
  * |-----------------------------------------------------|-----------------------------------|--------|-----------------|
- * | app process (activities, FGS, IME, system-app server)| `App.onCreate`                    | APP    | SAF persisted tree (`SafLogStore`), needs a one-time user grant; absent grant → Logcat-only |
+ * | app process (activities, FGS, IME, system-app server)| `App.onCreate`                    | APP    | direct filesystem write; needs `MANAGE_EXTERNAL_STORAGE` (All files access), absent permission → Logcat-only |
  * | `xtMapper.sh` server (`app_process`, uid 2000/0)    | `RemoteServiceShell.main`         | SHELL  | direct filesystem write to the canonical directory |
  * | Shizuku user service process (uid 2000)             | `RemoteService.init` fallback     | SHIZUKU| direct filesystem write |
  * | libsu `:root` process (uid 0)                       | `RootRemoteService.init`          | ROOT   | direct filesystem write |
@@ -43,13 +43,13 @@ import java.time.ZoneId
  */
 object XtLogger {
 
-    /** Canonical user-visible directory, identical in Debug and non-Debug builds. */
+    /** Per-build log directory: `XtMapper-Debug/Logs` in debug, `XtMapper/Logs` otherwise. */
     private val CANONICAL_LOGS_DIR =
-        File("/storage/emulated/0", LogDirectories.APP_FOLDER)
+        File(LogDirectories.SHARED_STORAGE_ROOT, LogDirectories.appFolder(BuildConfig.DEBUG))
             .let { File(it, LogDirectories.LOGS_FOLDER) }
 
     private const val PREFS_NAME = "xtlogger"
-    private const val KEY_LOG_TREE_URI = "log_tree_uri"
+    private const val KEY_LOG_DIR = "log_dir"
 
     private const val TAG = "XtLogger"
 
@@ -161,36 +161,38 @@ object XtLogger {
     internal fun canonicalDirectory(): File = CANONICAL_LOGS_DIR
 
     /**
-     * Rebuilds the process pipeline with a newly granted SAF tree (called by
-     * `MainActivity` after the user picks the folder). Persists the grant and,
-     * when a pipeline already runs, closes that session cleanly with a marker
-     * status and opens a new session, so the log stays consistent.
+     * Rebuilds the process pipeline with a user-edited log directory (Logs
+     * dialog). Persists the path and, when a pipeline already runs, closes
+     * that session with a marker status and opens a new session so the log
+     * stays consistent.
      */
     @JvmStatic
-    fun enableSafLogging(context: Context, treeUri: android.net.Uri): Boolean {
-        return try {
-            val uri = treeUri
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-            )
-            prefs(context).edit().putString(KEY_LOG_TREE_URI, uri.toString()).apply()
-            // Rebuild the pipeline with the new store (closes the old session).
-            val previous = pipeline
-            if (previous != null) {
-                synchronized(initLock) {
-                    pipeline = null
-                    runCatching { previous.close("Suspended after log-storage grant") }
-                    internalsStart(Role.APP, SafLogStore(context, uri))
-                }
-            } else {
-                initInternal(Role.APP, runCatching { SafLogStore(context, uri) }.getOrNull())
+    fun setLogDirectory(context: Context, rawPath: String): Boolean {
+        val path = LogDirectories.sanitizeCustomPath(rawPath) ?: return false
+        prefs(context).edit().putString(KEY_LOG_DIR, path).apply()
+        rebuildAppPipeline(FileSystemLogStore(File(path)))
+        return true
+    }
+
+    /**
+     * Turns file logging on after the All-files permission was granted (called
+     * from `MainActivity.onResume` in the app process); no-op when the
+     * permission is still missing or the sink already runs.
+     */
+    @JvmStatic
+    fun enableFileLogging(context: Context) {
+        if (!android.os.Environment.isExternalStorageManager()) return
+        if (isFileSinkAvailable) return
+        rebuildAppPipeline(FileSystemLogStore(File(logDirectory(context))))
+    }
+
+    private fun rebuildAppPipeline(store: LogStore) {
+        synchronized(initLock) {
+            pipeline?.let { current ->
+                pipeline = null
+                runCatching { current.close("Suspended after log-storage change") }
             }
-            true
-        } catch (e: Exception) {
-            Log.w(TAG, "log storage grant rejected: ${e.message}")
-            false
+            internalsStart(Role.APP, store)
         }
     }
 
@@ -199,16 +201,17 @@ object XtLogger {
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    /** Current effective log directory: saved override or the per-build default. */
+    @JvmStatic
+    fun logDirectory(context: Context): String =
+        prefs(context).getString(KEY_LOG_DIR, null) ?: CANONICAL_LOGS_DIR.absolutePath
+
     private fun storeForAppProcess(context: Context): LogStore? {
-        val uri = prefs(context).getString(KEY_LOG_TREE_URI, null)
-        if (uri == null) return null
-        return try {
-            val parsed = android.net.Uri.parse(uri)
-            val valid = context.contentResolver.persistedUriPermissions.any { it.uri == parsed && it.isWritePermission }
-            if (valid) SafLogStore(context, parsed) else null
-        } catch (e: Exception) {
-            null
-        }
+        if (!android.os.Environment.isExternalStorageManager()) return null
+        // shortcut: a user-edited directory applies to the app role only; the
+        // shell/shizuku/root processes cannot read app prefs. Upgrade: pass the
+        // directory through the server startup command line.
+        return FileSystemLogStore(File(logDirectory(context)))
     }
 
     private fun directFileStore(): LogStore = FileSystemLogStore(CANONICAL_LOGS_DIR)

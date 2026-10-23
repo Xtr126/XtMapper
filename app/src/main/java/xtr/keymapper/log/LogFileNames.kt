@@ -8,10 +8,9 @@ import java.util.Locale
  * ## Canonical destination
  *
  * All log files live in the user-visible shared-storage directory
- * `/storage/emulated/0/XtMapper/Logs/` (see [LogDirectories]). The directory names
- * derive from the user-facing application label `XtMapper`, never from the
- * application id `xtr.keymapper`; Debug and non-Debug builds share the canonical
- * directory.
+ * `XtMapper/Logs/` (`XtMapper-Debug/Logs/` in debug builds; see
+ * [LogDirectories]). The directory names derive from the user-facing
+ * application label `XtMapper`, never from the application id `xtr.keymapper`.
  *
  * ## Daily names
  *
@@ -128,11 +127,28 @@ data class LogFileEntry(
 /**
  * Canonical log directory helpers shared by all execution modes.
  *
- * The canonical directory is the same for Debug and non-Debug builds; no package
- * name appears anywhere in the path.
+ * Debug builds log into their own folder so a debug install never mixes its
+ * files into a release install's folder.
  */
 object LogDirectories {
-    /** User-facing application label used for the directory name. */
-    const val APP_FOLDER = "XtMapper"
+    /** Shared-storage root the log directory lives under. */
+    const val SHARED_STORAGE_ROOT = "/storage/emulated/0"
     const val LOGS_FOLDER = "Logs"
+
+    /** Debug and non-Debug builds must not share the same visible directory. */
+    fun appFolder(debug: Boolean): String =
+        if (debug) "XtMapper-Debug" else "XtMapper"
+
+    /**
+     * Validates a user-edited log directory. Returns the cleaned path, or null
+     * when unusable: it must stay under shared storage (deletion and rotation
+     * must not escape the shared-visible tree) and never point at a parent.
+     */
+    fun sanitizeCustomPath(raw: String): String? {
+        val path = raw.trim().trimEnd('/')
+        if (!path.startsWith("$SHARED_STORAGE_ROOT/") && path != SHARED_STORAGE_ROOT) return null
+        if (path.split('/').contains("..")) return null
+        if (path == SHARED_STORAGE_ROOT) return null
+        return path
+    }
 }

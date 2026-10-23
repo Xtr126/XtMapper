@@ -15,21 +15,15 @@ data class LogFileInfo(
 /**
  * Storage abstraction behind the persistent log sink.
  *
- * Two implementations exist because XTMapper's execution modes do not share the
- * same rights on `/storage/emulated/0/XtMapper/Logs`:
+ * [FileSystemLogStore] — direct `java.io.File` access, used by every execution
+ * mode:
  *
- * - [FileSystemLogStore] — direct `java.io.File` access. Used by the standalone
- *   `app_process` server processes (shell uid 2000 / root uid 0, see
- *   `RemoteServiceShell`, `RootRemoteService`) which have no Android `Context`
- *   or `ContentResolver`, and by unit tests. Root-created files are readable
- *   through normal file managers; uid-2000 and Waydroid behavior still require
- *   on-device verification (reported separately).
- * - [SafLogStore] — Storage Access Framework subtree grant. The only mechanism
- *   verified against Android's scoped-storage rules by which the ordinary
- *   application process (targetSdk 34, Android 11+ enforcement) can create and
- *   append files in a custom root directory such as `XtMapper/Logs` without
- *   asking for broad storage permissions; the grant is user-selected once and
- *   persisted via `takePersistableUriPermission`.
+ * - the standalone `app_process` server processes (shell uid 2000 / root uid 0,
+ *   see `RemoteServiceShell`, `RootRemoteService`) which have no Android
+ *   `Context` or `ContentResolver`;
+ * - the ordinary application process, which may write to shared storage only
+ *   after the user enabled All-files access (`MANAGE_EXTERNAL_STORAGE`);
+ * - unit tests, which pass temporary directories.
  *
  * All implementations append additively: an existing daily file is never
  * truncated or overwritten when a new session starts.

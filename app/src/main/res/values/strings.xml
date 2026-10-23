@@ -4,12 +4,11 @@
     <string name="stop">Stop</string>
     <string name="configure">Settings</string>
     <string name="log_folder_title">Logs</string>
-    <string name="log_folder_ready_desc">Persistent logs are enabled. Daily log files are written to XtMapper/Logs in shared storage and are visible in any file manager.</string>
-    <string name="log_folder_missing_desc">Enable persistent log files (one per day, per process role) in XtMapper/Logs on shared storage. Android requires a one-time folder grant: choose (or create) the "XtMapper" folder in the next dialog.</string>
-    <string name="log_folder_pick">Choose folder</string>
-    <string name="log_folder_enabled">Log folder enabled</string>
-    <string name="log_folder_failed">Could not use the selected folder. Keep the file picker selection on the XtMapper folder and try again.</string>
-    <string name="log_folder_picker_unavailable">No file manager folder picker is available on this device.</string>
+    <string name="log_folder_desc">Daily log files are written on shared storage (XtMapper-Debug/Logs in debug builds, XtMapper/Logs otherwise), visible in any file manager. Set the directory and allow All-files access if not already granted.</string>
+    <string name="log_folder_save">Save</string>
+    <string name="log_folder_saved">Log directory saved</string>
+    <string name="log_folder_grant">All files access</string>
+    <string name="log_folder_invalid">Path must be an absolute directory under /storage/emulated/0</string>
     <string name="edit_keymap">Edit keymap</string>
     <string name="help">Help</string>
     <string name="package_name">package name: </string>
