@@ -80,6 +80,8 @@ internal enum class DeviceType {
 
 internal data class AppState(
     val isServiceActive: Boolean = false,
+    val isShizukuInstalled: Boolean = true,
+    val isShizukuRunning: Boolean = true,
     val hasShizukuPermission: Boolean = true,
     val hasOverlayPermission: Boolean = false,
     val inputMode: Int = KeymapConfig.MODE_ROOT,
@@ -254,13 +256,21 @@ private fun createComposeState(activity: MainActivity): AppState {
     }
 
     val config = KeymapConfig(activity)
+    val isShizukuInstalled = activity.isShizukuInstalled()
+    val isShizukuRunning = try {
+        rikka.shizuku.Shizuku.pingBinder()
+    } catch (_: Exception) {
+        false
+    }
     val hasShizuku = try {
-        rikka.shizuku.Shizuku.pingBinder() && rikka.shizuku.Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+        isShizukuRunning && rikka.shizuku.Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
     } catch (_: Exception) {
         false
     }
     return AppState(
         isServiceActive = activity.isComposeServiceActive(),
+        isShizukuInstalled = isShizukuInstalled,
+        isShizukuRunning = isShizukuRunning,
         hasShizukuPermission = hasShizuku,
         hasOverlayPermission = Settings.canDrawOverlays(activity),
         inputMode = config.inputMode,
@@ -475,7 +485,19 @@ private fun GlobalStatusToggle(
                 )
             }
 
-            if (state.inputMode == KeymapConfig.MODE_SHIZUKU && !state.hasShizukuPermission) {
+            if (state.inputMode == KeymapConfig.MODE_SHIZUKU && !state.isShizukuInstalled) {
+                PermissionRow(
+                    icon = Icons.Default.Warning,
+                    text = stringResource(R.string.shizuku_install_required),
+                    onFixPermission = onFixPermission
+                )
+            } else if (state.inputMode == KeymapConfig.MODE_SHIZUKU && !state.isShizukuRunning) {
+                PermissionRow(
+                    icon = Icons.Default.Warning,
+                    text = stringResource(R.string.shizuku_start_required),
+                    onFixPermission = onFixPermission
+                )
+            } else if (state.inputMode == KeymapConfig.MODE_SHIZUKU && !state.hasShizukuPermission) {
                 PermissionRow(
                     icon = Icons.Default.Warning,
                     text = "Shizuku authorization required",

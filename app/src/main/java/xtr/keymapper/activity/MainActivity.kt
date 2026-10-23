@@ -118,6 +118,7 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             when {
+                !isShizukuInstalled() -> alertShizukuNotInstalled()
                 !Shizuku.pingBinder() -> alertShizukuNotRunning()
                 Shizuku.checkSelfPermission() != PERMISSION_GRANTED -> alertShizukuNotAuthorized()
             }
@@ -179,6 +180,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startPointer(displayId: Int?) {
+        val keymapConfig = KeymapConfig(this)
+        if (keymapConfig.isShizukuMode) {
+            when {
+                !isShizukuInstalled() -> {
+                    alertShizukuNotInstalled()
+                    return
+                }
+                !Shizuku.pingBinder() -> {
+                    alertShizukuNotRunning()
+                    return
+                }
+                Shizuku.checkSelfPermission() != PERMISSION_GRANTED -> {
+                    alertShizukuNotAuthorized()
+                    return
+                }
+            }
+        } else if (startedFromShell == false && Shell.isAppGrantedRoot() == false) {
+            alertRootAccessAndExit()
+            return
+        }
+
         checkOverlayPermission(this)
         if (selectedProfileName == null) {
             val all = KeymapProfiles(this).getAllProfiles()
@@ -196,14 +218,6 @@ class MainActivity : AppCompatActivity() {
             ContextCompat.startForegroundService(this, intent)
             setButtonState(false)
             requestNotificationPermission()
-        }
-        val keymapConfig = KeymapConfig(this)
-        if (keymapConfig.isShizukuMode) {
-            if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)
-                alertShizukuNotAuthorized()
-        } else if (Shell.isAppGrantedRoot() == false) {
-            // No need to alert about root access if started from shell
-            if (startedFromShell == false) alertRootAccessAndExit()
         }
     }
 
@@ -272,12 +286,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun alertShizukuNotAuthorized() {
+        if (!isShizukuInstalled()) {
+            alertShizukuNotInstalled()
+            return
+        }
         if (Shizuku.pingBinder()) Shizuku.requestPermission(0)
         showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, { _, _ -> launchShizukuAndExit() }, R.string.ok)
     }
 
     private fun alertShizukuNotRunning() {
+        if (!isShizukuInstalled()) {
+            alertShizukuNotInstalled()
+            return
+        }
         showAlertDialog(R.string.shizuku_not_running_title, R.string.shizuku_not_running_message, { _, _ -> launchShizukuAndExit() }, R.string.start)
+    }
+
+    private fun alertShizukuNotInstalled() {
+        showAlertDialog(R.string.shizuku_not_installed_title, R.string.shizuku_not_installed_message, null, R.string.ok)
+    }
+
+    fun isShizukuInstalled(): Boolean = try {
+        packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
+        true
+    } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+        false
     }
 
     private fun launchShizukuAndExit() {
@@ -285,6 +318,8 @@ class MainActivity : AppCompatActivity() {
         if (launchIntent != null) {
             startActivity(launchIntent)
             System.exit(0)
+        } else {
+            alertShizukuNotInstalled()
         }
     }
 
@@ -309,8 +344,10 @@ class MainActivity : AppCompatActivity() {
 
     fun fixPermissionFromCompose() {
         val config = KeymapConfig(this)
-        if (config.isShizukuMode && (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)) {
-            if (Shizuku.pingBinder()) Shizuku.requestPermission(0)
+        if (config.isShizukuMode && !isShizukuInstalled()) {
+            alertShizukuNotInstalled()
+        } else if (config.isShizukuMode && (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)) {
+            if (Shizuku.pingBinder()) alertShizukuNotAuthorized()
             else alertShizukuNotRunning()
         } else if (!Settings.canDrawOverlays(this)) {
             checkOverlayPermission(this)
@@ -331,7 +368,8 @@ class MainActivity : AppCompatActivity() {
         val modeStr = if (nextMode == KeymapConfig.MODE_SHIZUKU) "Shizuku (ADB)" else "Root"
         Toast.makeText(this, getString(R.string.input_mode_changed, modeStr), Toast.LENGTH_SHORT).show()
         if (config.isShizukuMode) {
-            if (!Shizuku.pingBinder()) alertShizukuNotRunning()
+            if (!isShizukuInstalled()) alertShizukuNotInstalled()
+            else if (!Shizuku.pingBinder()) alertShizukuNotRunning()
             else if (Shizuku.checkSelfPermission() != PERMISSION_GRANTED) alertShizukuNotAuthorized()
         }
         if (isServiceBound && pointerOverlay != null) {

@@ -89,6 +89,8 @@
 
     <string name="shizuku_not_authorized_title">Shizuku not authorized</string>
     <string name="shizuku_not_authorized_message">Authorize XtMapper from Shizuku manager app to continue</string>
+    <string name="shizuku_not_installed_title">Shizuku is not installed</string>
+    <string name="shizuku_not_installed_message">Install the Shizuku app before selecting Shizuku input mode.</string>
     <string name="test_input_service_inactive">Start the keymapper service before testing input.</string>
     <string name="test_input_root_unavailable">Root access is unavailable. Grant XtMapper root access before testing input.</string>
     <string name="test_input_ready">%1$s mode is active. Connect a keyboard or mouse to test.</string>
@@ -119,7 +121,9 @@
     <string name="press_any_key_to_stop_recording">Press any key to stop recording…</string>
     <string name="advanced">Advanced</string>
     <string name="shizuku_not_running_title">Shizuku is not started</string>
-    <string name="shizuku_not_running_message"/>
+    <string name="shizuku_not_running_message">Start the Shizuku service, then return to XtMapper.</string>
+    <string name="shizuku_install_required">Install Shizuku to use this input mode</string>
+    <string name="shizuku_start_required">Start Shizuku to use this input mode</string>
     <string name="edit">Edit</string>
     <string name="show_controls_on_screen">Show controls on screen</string>
     <string name="select_a_display">Select a Display</string>
