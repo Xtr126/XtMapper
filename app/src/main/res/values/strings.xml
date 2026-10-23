@@ -3,12 +3,6 @@
     <string name="start">Start</string>
     <string name="stop">Stop</string>
     <string name="configure">Settings</string>
-    <string name="log_folder_title">Logs</string>
-    <string name="log_folder_desc">Daily log files are written on shared storage (XtMapper-Debug/Logs in debug builds, XtMapper/Logs otherwise), visible in any file manager. Set the directory and allow All-files access if not already granted.</string>
-    <string name="log_folder_save">Save</string>
-    <string name="log_folder_saved">Log directory saved</string>
-    <string name="log_folder_grant">All files access</string>
-    <string name="log_folder_invalid">Path must be an absolute directory under /storage/emulated/0</string>
     <string name="edit_keymap">Edit keymap</string>
     <string name="help">Help</string>
     <string name="package_name">package name: </string>

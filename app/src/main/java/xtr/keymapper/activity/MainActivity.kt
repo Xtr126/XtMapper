@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.hardware.display.DisplayManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
@@ -515,51 +514,6 @@ class MainActivity : AppCompatActivity() {
 
     fun openSettingsFromCompose() {
         launchSettings()
-    }
-
-    // ------------------------------------------------------------------
-    // XtLogger: the log directory lives on shared storage. Android 11+
-    // scoped storage denies direct writes there without the All-files
-    // permission (MANAGE_EXTERNAL_STORAGE), so the dialog offers the
-    // Settings toggle next to an editable directory path.
-    // ------------------------------------------------------------------
-
-    fun openLogFolderFromCompose() {
-        val input = android.widget.EditText(this)
-        input.setText(XtLogger.logDirectory(this))
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.log_folder_title)
-            .setMessage(R.string.log_folder_desc)
-            .setView(input)
-            .setPositiveButton(R.string.log_folder_save) { _, _ ->
-                val path = input.text.toString()
-                if (XtLogger.setLogDirectory(applicationContext, path)) {
-                    Toast.makeText(this, R.string.log_folder_saved, Toast.LENGTH_SHORT).show()
-                    XtLogger.info("MainActivity", "log directory set to $path")
-                } else {
-                    Toast.makeText(this, R.string.log_folder_invalid, Toast.LENGTH_LONG).show()
-                    XtLogger.warn("MainActivity", "log directory rejected: $path")
-                }
-            }
-            .setNeutralButton(R.string.log_folder_grant) { _, _ -> launchAllFilesAccess() }
-            .setNegativeButton(R.string.ok, null)
-            .show()
-    }
-
-    private fun launchAllFilesAccess() {
-        // All-files access is an Android 11+ concept; below API 30 there is no
-        // such Settings screen and both intents would be unresolvable.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
-        val intent = Intent(
-            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-            Uri.parse("package:$packageName"),
-        )
-        try {
-            startActivity(intent)
-        } catch (e: Exception) {
-            // Some vendor Settings builds lack the per-app view.
-            runCatching { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
-        }
     }
 
     override fun onResume() {

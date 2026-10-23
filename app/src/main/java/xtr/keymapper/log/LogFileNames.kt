@@ -138,17 +138,4 @@ object LogDirectories {
     /** Debug and non-Debug builds must not share the same visible directory. */
     fun appFolder(debug: Boolean): String =
         if (debug) "XtMapper-Debug" else "XtMapper"
-
-    /**
-     * Validates a user-edited log directory. Returns the cleaned path, or null
-     * when unusable: it must stay under shared storage (deletion and rotation
-     * must not escape the shared-visible tree) and never point at a parent.
-     */
-    fun sanitizeCustomPath(raw: String): String? {
-        val path = raw.trim().trimEnd('/')
-        if (!path.startsWith("$SHARED_STORAGE_ROOT/") && path != SHARED_STORAGE_ROOT) return null
-        if (path.split('/').contains("..")) return null
-        if (path == SHARED_STORAGE_ROOT) return null
-        return path
-    }
 }

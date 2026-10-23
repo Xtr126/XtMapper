@@ -93,15 +93,4 @@ class LogFileNamesTest {
         assertEquals("Logs", LogDirectories.LOGS_FOLDER)
         assertTrue("user-facing name", LogFileNames.BASE_PREFIX == "xtmapper")
     }
-
-    @Test
-    fun `custom log paths must stay under shared storage`() {
-        assertNull(LogDirectories.sanitizeCustomPath("/sdcard/XtMapper"))
-        assertNull(LogDirectories.sanitizeCustomPath("/storage/emulated/0/../data"))
-        assertNull(LogDirectories.sanitizeCustomPath("/storage/emulated/0"))
-        assertEquals(
-            "/storage/emulated/0/MyLogs",
-            LogDirectories.sanitizeCustomPath(" /storage/emulated/0/MyLogs/ "),
-        )
-    }
 }

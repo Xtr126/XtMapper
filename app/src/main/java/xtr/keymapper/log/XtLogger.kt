@@ -1,7 +1,6 @@
 package xtr.keymapper.log
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.os.Build
 import android.os.Process
 import android.util.Log
@@ -48,9 +47,6 @@ object XtLogger {
     private val CANONICAL_LOGS_DIR =
         File(LogDirectories.SHARED_STORAGE_ROOT, LogDirectories.appFolder(BuildConfig.DEBUG))
             .let { File(it, LogDirectories.LOGS_FOLDER) }
-
-    private const val PREFS_NAME = "xtlogger"
-    private const val KEY_LOG_DIR = "log_dir"
 
     private const val TAG = "XtLogger"
 
@@ -147,9 +143,9 @@ object XtLogger {
     /// ------------------------------------------------------- initialization
 
     /**
-     * Application-process init (called from `App.onCreate`). Uses the persisted
-     * SAF tree when the user granted one; otherwise file logging stays disabled
-     * and only Logcat flows, reported once.
+     * Application-process init (called from `App.onCreate`). Uses the canonical
+     * log directory once All-files access is granted; otherwise file logging
+     * stays disabled and only Logcat flows, reported once.
      */
     @JvmStatic
     fun init(context: Context) = initInternal(Role.APP, storeForAppProcess(context))
@@ -162,18 +158,11 @@ object XtLogger {
     internal fun canonicalDirectory(): File = CANONICAL_LOGS_DIR
 
     /**
-     * Rebuilds the process pipeline with a user-edited log directory (Logs
-     * dialog). Persists the path and, when a pipeline already runs, closes
-     * that session with a marker status and opens a new session so the log
-     * stays consistent.
+     * Rebuilds the process pipeline on the canonical log directory (called to
+     * finish file-logging setup after the All-files permission was granted).
+     * When a pipeline already runs, closes that session with a marker status
+     * and opens a new session so the log stays consistent.
      */
-    @JvmStatic
-    fun setLogDirectory(context: Context, rawPath: String): Boolean {
-        val path = LogDirectories.sanitizeCustomPath(rawPath) ?: return false
-        prefs(context).edit().putString(KEY_LOG_DIR, path).apply()
-        rebuildAppPipeline(FileSystemLogStore(File(path)))
-        return true
-    }
 
     /**
      * Turns file logging on after the All-files permission was granted (called
@@ -184,7 +173,7 @@ object XtLogger {
     fun enableFileLogging(context: Context) {
         if (!hasAllFilesAccess()) return
         if (isFileSinkAvailable) return
-        rebuildAppPipeline(FileSystemLogStore(File(logDirectory(context))))
+        rebuildAppPipeline(FileSystemLogStore(CANONICAL_LOGS_DIR))
     }
 
     private fun rebuildAppPipeline(store: LogStore) {
@@ -198,14 +187,6 @@ object XtLogger {
     }
 
     // ------------------------------------------------------------ internals
-
-    private fun prefs(context: Context): SharedPreferences =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
-    /** Current effective log directory: saved override or the per-build default. */
-    @JvmStatic
-    fun logDirectory(context: Context): String =
-        prefs(context).getString(KEY_LOG_DIR, null) ?: CANONICAL_LOGS_DIR.absolutePath
 
     /**
      * All-files access exists only since Android 11 (the method needs API 30
@@ -222,10 +203,9 @@ object XtLogger {
 
     private fun storeForAppProcess(context: Context): LogStore? {
         if (!hasAllFilesAccess()) return null
-        // shortcut: a user-edited directory applies to the app role only; the
-        // shell/shizuku/root processes cannot read app prefs. Upgrade: pass the
-        // directory through the server startup command line.
-        return FileSystemLogStore(File(logDirectory(context)))
+        // The log directory is fixed: per-build `XtMapper[-Debug]/Logs` on
+        // shared storage, never a user-editable location.
+        return FileSystemLogStore(CANONICAL_LOGS_DIR)
     }
 
     private fun directFileStore(): LogStore = FileSystemLogStore(CANONICAL_LOGS_DIR)
