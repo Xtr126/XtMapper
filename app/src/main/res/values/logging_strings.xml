@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- shortcut: new logging UI is English-only; enable translation when localized text is available. -->
+    <string name="logs" translatable="false">Logs</string>
+    <string name="logs_access_needed" translatable="false">All-files access is needed to save public log files in the fixed folder below. Currently this app logs to Logcat only. You can keep using the app without granting access.</string>
+    <string name="logs_grant_access" translatable="false">Grant access</string>
+    <string name="logs_active" translatable="false">Public file logging is active in the fixed folder below.</string>
+    <string name="logs_unavailable" translatable="false">Public file logging is unavailable. This app logs to Logcat only. Check that shared storage is writable.</string>
+    <string name="logs_unsupported" translatable="false">Public app logs require Android 11 or later and All-files access. On this Android version, this app logs to Logcat only.</string>
+    <string name="logs_settings_unavailable" translatable="false">Unable to open All-files access settings. Open Android Settings and search for All-files access.</string>
+</resources>

@@ -88,11 +88,8 @@ class FileSystemLogStoreTest {
 
     @Test
     fun `delete skips a file held by an active writer, even far beyond the grace day`() {
-        // Deterministic in-JVM equivalent of another process keeping the file
-        // open: a live writer handle holds the exclusive advisory lock (JVM
-        // overlap detection rejects the second try — verified the same on
-        // device and host JVM). The file's date being weeks old must not
-        // matter: being open for writing is the only protection that counts.
+        // Local active handles are skipped before opening a second descriptor;
+        // cross-process OS locking is covered by LogStoreCoordinationTest.
         val store = FileSystemLogStore(tmp.newFolder())
         val foreign = store.openAppendWriter("xtmapper-shizuku-2026-10-01.log")
         foreign.write("still writing\n".toByteArray())
@@ -114,9 +111,7 @@ class FileSystemLogStoreTest {
         // the lock and unlink the pathname while B was still writing,
         // stranding B's records inside a still-open but unlinked inode
         // (POSIX unlink(2): the name is deleted while open fds stay alive).
-        // The protocol now refuses the contended open — the same-JVM overlap
-        // direction here; the cross-process direction (tryLock → null) is the
-        // same code path one exception earlier.
+        // The JVM-wide registry now refuses this before opening a descriptor.
         val dir = tmp.newFolder()
         val store = FileSystemLogStore(dir)
         val name = "xtmapper-2026-10-22.log"
@@ -139,11 +134,9 @@ class FileSystemLogStoreTest {
     }
 
     @Test
-    fun `an open during an in-flight delete gate is refused, never un-protected`() {
-        // Retention holds the exclusive lock while it works on the pathname; a
-        // writer racing to open the same pathname must fail instead of writing
-        // into a file the gate is about to remove (reciprocal direction of
-        // `delete skips a file held by an active writer`).
+    fun `a raw same-JVM overlapping lock refuses an open`() {
+        // This covers the platform overlap exception, not the open/delete race.
+        // Deterministic production lifecycle races live in LogStoreCoordinationTest.
         val dir = tmp.newFolder()
         val store = FileSystemLogStore(dir)
         val name = "xtmapper-2026-10-21.log"

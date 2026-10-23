@@ -2,6 +2,7 @@ package xtr.keymapper.activity
 
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.DialogInterface
@@ -19,6 +20,7 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.topjohnwu.superuser.Shell
 import rikka.shizuku.Shizuku
@@ -514,6 +516,46 @@ class MainActivity : AppCompatActivity() {
 
     fun openSettingsFromCompose() {
         launchSettings()
+    }
+
+    fun openLogsFromCompose() {
+        val supported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+        val needsAccess = supported && !android.os.Environment.isExternalStorageManager()
+        val message = when {
+            !supported -> R.string.logs_unsupported
+            needsAccess -> R.string.logs_access_needed
+            XtLogger.isFileSinkAvailable -> R.string.logs_active
+            else -> R.string.logs_unavailable
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.logs)
+            .setMessage(getString(message) + "\n\n" + XtLogger.canonicalDirectory().absolutePath)
+            .setNegativeButton(R.string.ok, null)
+            .apply {
+                if (needsAccess) setPositiveButton(R.string.logs_grant_access) { _, _ ->
+                    openLogAccessSettings()
+                }
+            }
+            .show()
+    }
+
+    private fun openLogAccessSettings() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        val intents = listOf(
+            Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, "package:$packageName".toUri()),
+            Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
+        )
+        for (intent in intents) {
+            try {
+                startActivity(intent)
+                return
+            } catch (_: ActivityNotFoundException) {
+                // Some OEMs only expose the general All-files access page.
+            } catch (_: SecurityException) {
+                // Try the general page if the app-specific page is restricted.
+            }
+        }
+        Toast.makeText(this, R.string.logs_settings_unavailable, Toast.LENGTH_LONG).show()
     }
 
     override fun onResume() {

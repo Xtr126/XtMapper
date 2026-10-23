@@ -261,7 +261,7 @@ class LoggingPipeline(
         if (skipped > 0) {
             onFailure(
                 "XtLogger: retention skipped $skipped candidate files " +
-                    "(actively locked or already removed; kept list may overshoot its budget)"
+                    "(active, unavailable or already removed; kept list may overshoot its budget)"
             )
         }
     }

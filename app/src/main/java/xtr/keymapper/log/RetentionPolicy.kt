@@ -16,8 +16,7 @@ import java.time.temporal.ChronoUnit
  *   lock gate is the primary active-file guarantee.
  * - What remains here is the temporal filter: the newest calendar day and the
  *   day before it are always kept regardless of locks. This grace day is a
- *   secondary defense for filesystems without lock support — it is a
- *   heuristic, not proof that any file is inactive, and its budget overshoot
+ *   recent-history policy, not proof that any file is inactive, and its budget overshoot
  *   (holding up to an extra day of files) is accepted by design.
  * - Files older than [LoggingConfig.maxAgeDays] days are dropped first.
  * - Then the oldest survivors are dropped until the kept-file count and kept
