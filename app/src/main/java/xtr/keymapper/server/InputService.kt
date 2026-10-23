@@ -141,7 +141,7 @@ class InputService @Throws(RemoteException::class) constructor(
             setKeyboardGrabLock(isKeyboardBlocked && !stopEvents)
         }
         try {
-            mCallback.alertKeyboardBlocked(isKeyboardBlocked)
+            mCallback.alertKeyboardBlocked(isKeyboardBlocked && !stopEvents)
         } catch (e: RemoteException) {
             Log.e(RemoteService.TAG, "Failed to send alertKeyboardBlocked", e)
         }
