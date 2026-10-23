@@ -283,12 +283,20 @@ class InputService @Throws(RemoteException::class) constructor(
     fun sendKeyboardEvent(codeName: String, action: Int) {
         val actionStr = if (action == DOWN) "DOWN" else "UP"
         val line = "EV_KEY $codeName $actionStr"
-        if (!stopEvents) {
-            keyEventHandler.handleEvent(line)
-        } else {
-            keyEventHandler.handleKeyboardShortcutEvent(line)
+        try {
+            if (!stopEvents && isKeyboardBlocked) {
+                keyEventHandler.handleEvent(line)
+            } else {
+                keyEventHandler.handleKeyboardShortcutEvent(line)
+            }
+        } catch (e: Exception) {
+            Log.e(RemoteService.TAG, "Error handling keyboard event", e)
         }
-        keyListener?.invoke(line)
+        try {
+            keyListener?.invoke(line)
+        } catch (e: Exception) {
+            Log.e(RemoteService.TAG, "Error invoking keyListener", e)
+        }
     }
 
     fun onWaylandMouseEvent(line: String) {
