@@ -329,7 +329,7 @@ class MainActivity : AppCompatActivity() {
         RemoteServiceHelper.useShizuku = config.useShizuku
         config.applySharedPrefs()
         val modeStr = if (nextMode == KeymapConfig.MODE_SHIZUKU) "Shizuku (ADB)" else "Root"
-        Toast.makeText(this, "Input Mode: $modeStr", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.input_mode_changed, modeStr), Toast.LENGTH_SHORT).show()
         if (config.isShizukuMode) {
             if (!Shizuku.pingBinder()) alertShizukuNotRunning()
             else if (Shizuku.checkSelfPermission() != PERMISSION_GRANTED) alertShizukuNotAuthorized()

@@ -144,6 +144,7 @@
     <string name="input_mode">Input Mode</string>
     <string name="input_mode_root">Root</string>
     <string name="input_mode_shizuku">Shizuku (ADB)</string>
+    <string name="input_mode_changed">Input Mode: %1$s</string>
     <string name="block_keyboard_input">Block raw keyboard input</string>
     <string name="block_keyboard">Block Keyboard</string>
     <string name="keyboard_blocked">Keyboard input blocked</string>
