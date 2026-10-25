@@ -5,15 +5,16 @@ today: the environment-detection launch signal (`Environment.kt`, applied by
 `RemoteServiceShell` and `MainActivity`) and its recording in session metadata
 by `XtLogger`. Unimplemented: the crash-reporting integration — no report
 transport, request queue, URL builder, or report-action handler exists in this
-repository.
+repository. cage-xtmapper does not currently send this signal, so automatic
+classification through the default launcher is not implemented.
 
 ## Component responsibilities
 
 Current behavior: XtLogger handles XtMapper application logging and existing
 diagnostics, and session metadata records `Environment.name`. The XtCrash and
-XtMapper split below is the target design — XtCrash v1.0.0 does not yet
-construct destination URLs or expose prepared reports (see "Verified XtCrash
-API").
+XtMapper split below is the target design — XtCrash master (`01f51d0`) does not
+yet construct destination URLs or expose prepared reports (see "Verified
+XtCrash API").
 
 XtCrash prepares the canonical crash report, constructs destination URLs, and
 exposes the report and URL through its public integration contract. XtMapper
@@ -25,13 +26,20 @@ receives the prepared URL, processes the production request/acknowledgment,
 exports Linux diagnostics, and hands the URL to the Linux default-browser
 mechanism.
 
-## Verified XtCrash API (v1.0.0)
+## Verified XtCrash API (source audit 2026-10-25; planned v1.0.0)
 
-This was audited against the XtCrash repository source. It is published as
-`com.github.SoufianoDev:xtcrash` but is not currently a dependency in
-`app/build.gradle`.
+This section records an audit of XtCrash repository source, not a published
+release. The planned JitPack coordinates are
+`com.github.SoufianoDev.XtCrash:xtcrash:v1.0.0`. No tag or release exists yet.
+Availability requires the `v1.0.0` tag and a successful JitPack build; confirm
+the resolved artifact coordinates after tagging. XtCrash is not currently a
+dependency in `app/build.gradle`.
 
-Exists today:
+The tagged commit must contain the routing APIs before integration. These
+availability requirements apply to the versioned artifact; the absence of a
+tag does not establish that commit-based JitPack artifacts are unavailable.
+
+Exists today (source baseline: XtCrash master at `01f51d0`):
 
 - `CrashConfig.Builder`: report button/text/subject/chooser title,
   `supportEmail`, `additionalReportInfo`, `errorActivity(Class)`,
@@ -55,6 +63,13 @@ XtMapper):
   `:xtcrash_error`.
 - Explicit handler result semantics.
 - Destination-specific fallback behavior.
+
+These capabilities are absent from the audited upstream baseline.
+[XtCrash PR #18](https://github.com/SoufianoDev/XtCrash/pull/18) proposes
+the routing APIs needed for this integration. The PR remains open and
+under review; its API contract is provisional. Before integration, verify
+the merged API and its availability in the selected dependency artifact.
+Do not reimplement these capabilities in XtMapper.
 
 ## Future report-action handler constraints
 
@@ -81,7 +96,7 @@ Once the XtCrash API exists:
 
 Current cage-xtmapper behavior (verified): it launches `RemoteServiceShell`
 via `app_process` with `--wayland-client` (plus optional `--xtmapper-args`),
-and the only host↔Android channel is the compositor-stdout → process-stdin
+and the only host→Android channel is the compositor-stdout → process-stdin
 pipe. Absent (verified): request queue, request IDs, acknowledgments,
 connectivity check, request-path diagnostic export, browser handoff,
 `link_delivered`.
