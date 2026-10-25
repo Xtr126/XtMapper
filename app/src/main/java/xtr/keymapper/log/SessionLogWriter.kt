@@ -57,9 +57,6 @@ class SessionLogWriter(
     var unavailable = false
         private set
 
-    /** True while the persistent sink can still accept writes. */
-    val fileSinkHealthyForWrite: Boolean get() = !unavailable
-
     /** Name currently open for append this session (retention protection). */
     fun currentlyOpenName(): String? = currentFileName
 
@@ -139,7 +136,6 @@ class SessionLogWriter(
 
     // ---------------------------------------------------------------- internals
 
-    /** Records silently dropped because the day's part budget was exhausted. */
     private fun writeOne(record: LogRecord) {
         writerFor(dayOf(record.time), record.time)
         val writer = currentWriter ?: run {

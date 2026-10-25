@@ -16,6 +16,7 @@ import android.os.SystemProperties
 import android.util.Log
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import xtr.keymapper.BuildConfig
+import xtr.keymapper.Environment
 import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.log.Role
 import xtr.keymapper.log.XtLogger
@@ -28,8 +29,10 @@ object RemoteServiceShell {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        // First statement: logging is available before anything else so even
-        // startup failures below can be recorded (uid/role based storage).
+        // Classification must precede logging: the SHELL session header renders
+        // Environment.name during initStandalone.
+        Environment.launchSignal = args.contains(Environment.CLI_ARG)
+        // Logging next so even startup failures below can be recorded (uid/role based storage).
         XtLogger.initStandalone(Role.SHELL)
         XtLogger.debug(TAG, "app_process server starting (args=${args.joinToString(",")})")
 
@@ -53,6 +56,8 @@ object RemoteServiceShell {
                     }
                     "--no-auto-launch" -> autoLaunchClientActivity = false
                     "--no-logcat" -> noLogcat = true
+                    // Already applied above.
+                    Environment.CLI_ARG -> {}
                     else -> println("Invalid argument: $arg")
                 }
             }
@@ -101,6 +106,7 @@ object RemoteServiceShell {
                     component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     putExtra("data", MainActivity.SHELL_INIT)
+                    putExtra(Environment.INTENT_EXTRA, Environment.launchSignal)
                     putExtras(Bundle().apply {
                         putBinder(MainActivity.SHELL_SERVICE_BINDER, mService.asBinder())
                     })

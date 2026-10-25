@@ -18,7 +18,7 @@ class SessionMarkersTest {
             id = "20261023-171000-8F3A",
             started = Instant.parse("2026-10-23T17:10:00.000Z"),
             zone = zone,
-            meta = SessionMetadata(appVersion = "2.5.0", buildType = "Debug", androidVersion = "15", sdkInt = 35),
+            meta = SessionMetadata(appVersion = "2.5.0", buildType = "Debug", androidVersion = "15", sdkInt = 35, environment = "waydroid"),
             previous = SessionState.DISPOSITION_FIRST,
         )
         val block = SessionMarkers.block(body)
@@ -32,6 +32,7 @@ class SessionMarkersTest {
         assertTrue(lines.any { it == "App Version: 2.5.0" })
         assertTrue(lines.any { it == "Build Type: Debug" })
         assertTrue(lines.any { it == "Android Version: 15 (sdk 35)" })
+        assertTrue(lines.any { it == "Environment: waydroid" })
         assertTrue(lines.any { it == "Previous Session: First session" })
     }
 
@@ -59,6 +60,7 @@ class SessionMarkersTest {
         assertFalse(body.contains("Build Type"))
         assertFalse(body.contains("Android Version"))
         assertFalse(body.contains("Device"))
+        assertFalse(body.contains("Environment"))
     }
 
     @Test

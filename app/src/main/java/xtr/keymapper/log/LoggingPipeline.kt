@@ -44,7 +44,7 @@ enum class Role(val tag: String) {
  * (day/rotation/session markers over a [LogStore]), [AsyncLogWorker] (single owning
  * thread) and this facade (levels, thresholds, session state, retention).
  *
- * Design guarantees (see the phase-1 requirement document):
+ * Design guarantees:
  * - Logcat and file sinks are independent: Logcat happens synchronously at call
  *   time, before the queue; a dead file sink cannot affect Logcat output.
  * - Storage/queue failures are reported once per session through [onFailure]
@@ -85,7 +85,6 @@ class LoggingPipeline(
     /** Current queue backlog (test/inspection use). */
     val pendingRecords: Int get() = queue.size
 
-    /** True while the persistent file sink can still accept writes. */
     val fileSinkAvailable: Boolean get() = !writer.unavailable
 
     /** Test/inspection seam: the session writer owning the file lifecycle. */
@@ -125,11 +124,9 @@ class LoggingPipeline(
         worker.start()
         infoInternal(
             "XtLogger",
-            "logging started role=${role.tag} session=$sessionId previous=$previous fileSink=${fileSinkAvailable()}",
+            "logging started role=${role.tag} session=$sessionId previous=$previous fileSink=$fileSinkAvailable",
         )
     }
-
-    private fun fileSinkAvailable(): Boolean = writer.fileSinkHealthyForWrite
 
     // ------------------------------------------------------------- public API
 
@@ -185,14 +182,11 @@ class LoggingPipeline(
     fun close(status: String = SessionStates.STATUS_CLEAN) {
         if (!started.get()) return
         started.set(false)
-        // 1) bounded flush + stop the consumer thread (no pending races left)
         worker.stopDraining(config.flushTimeoutMillis)
-        // 2) then write the END marker directly on the caller thread
         writer.endSession(
             clock.instant(), durationNanos(), status,
             queue.droppedCount.get() + writer.recordsDroppedByDayLimit.get(),
         )
-        // 3) release the file handle
         worker.closeFile()
     }
 

@@ -65,14 +65,9 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     init {
-        // Logging must exist before any native library load: the Shizuku user
-        // service constructs this class directly (uid 2000; uid 0 on the root
-        // fallback path) and no Application.onCreate runs there — a load
-        // failure escaping this constructor could otherwise never be recorded
-        // persistently. Processes that already initialized the logger (app
-        // process, shell entry point's earlier init) are untouched no-ops.
-        // The UID mapping mirrors init()'s own fallback below; no security
-        // check is weakened or moved.
+        // Logging first: the Shizuku user service constructs this class directly
+        // (uid 2000; uid 0 on the root fallback) with no Application.onCreate, so
+        // a load failure escaping below could otherwise never be recorded.
         if (!XtLogger.isInitialized) {
             when (Process.myUid()) {
                 2000 -> XtLogger.initStandalone(Role.SHIZUKU)
@@ -101,18 +96,6 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     fun init() {
-        // Initialize the logging role in processes not managed by an explicit
-        // entry point: the Shizuku user-service (uid 2000) and, as a fallback,
-        // any uid-0 process that did not arrive through RootRemoteService. The
-        // main app process was initialized by App.onCreate; the shell entry
-        // point initialized SHELL logging before this code can ever run.
-        if (!XtLogger.isInitialized) {
-            when (Process.myUid()) {
-                2000 -> XtLogger.initStandalone(Role.SHIZUKU)
-                0 -> XtLogger.initStandalone(Role.ROOT)
-                else -> Unit
-            }
-        }
         val pm = context.packageManager
         val packageName = context.packageName
         try {
@@ -126,8 +109,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         }
 
         Looper.getMainLooper().thread.setUncaughtExceptionHandler { t, e ->
-            // Record the terminal failure first (bounded flush); then the
-            // already existing am-start relay below keeps its exact behavior.
+            // Record the terminal failure first (bounded flush); the relay below is unchanged.
             try {
                 XtLogger.fatal(TAG, "uncaught exception on thread ${t.name}", e)
             } catch (ignored: Exception) {
@@ -404,8 +386,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
 
         if (!startedFromShell && exitProcess) {
             XtLogger.info(TAG, "server stopped; exiting process")
-            // Close the session with an explicit END marker before the existing
-            // System.exit — bounded (never hangs), additive only.
+            // END marker before the existing System.exit; endSession is bounded.
             XtLogger.endSession(SessionStates.STATUS_SERVICE_STOP)
             stop_getevent()
             System.exit(0)

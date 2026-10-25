@@ -9,9 +9,6 @@ import java.time.Instant
  * timestamps and thread metadata stay correct even when the bounded queue delays
  * the actual write. Construction is cheap: formatting and encoding are deferred to
  * the logging worker thread.
- *
- * [Level] is intentionally part of the JVM-testable core of XtLogger: this class
- * must not import Android framework classes.
  */
 class LogRecord(
     /** Event time; day rollover and ISO-8601 rendering both derive from this. */
