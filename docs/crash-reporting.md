@@ -1,19 +1,26 @@
 # Crash-reporting integration boundary
 
-Status: design and source-inspection record, audited 2026-10-25. The only part
-implemented so far is the environment-detection launch signal in
-`Environment.kt`. No transport, request queue, URL builder, or report-action
-handler exists in this repository.
+Status: design and source-inspection record, audited 2026-10-25. Implemented
+today: the environment-detection launch signal (`Environment.kt`, applied by
+`RemoteServiceShell` and `MainActivity`) and its recording in session metadata
+by `XtLogger`. Unimplemented: the crash-reporting integration — no report
+transport, request queue, URL builder, or report-action handler exists in this
+repository.
 
 ## Component responsibilities
+
+Current behavior: XtLogger handles XtMapper application logging and existing
+diagnostics, and session metadata records `Environment.name`. The XtCrash and
+XtMapper split below is the target design — XtCrash v1.0.0 does not yet
+construct destination URLs or expose prepared reports (see "Verified XtCrash
+API").
 
 XtCrash prepares the canonical crash report, constructs destination URLs, and
 exposes the report and URL through its public integration contract. XtMapper
 receives the prepared report and URL, coordinates the future Android-side host
 handoff, keeps request identity and state, and preserves the normal Android
-reporting fallback. It must never reconstruct the destination URL. XtLogger
-handles XtMapper application logging and existing diagnostics; session metadata
-records `Environment.name`. cage-xtmapper (future work, not implemented)
+reporting fallback. It must never reconstruct the destination URL.
+cage-xtmapper (future work, not implemented)
 receives the prepared URL, processes the production request/acknowledgment,
 exports Linux diagnostics, and hands the URL to the Linux default-browser
 mechanism.
