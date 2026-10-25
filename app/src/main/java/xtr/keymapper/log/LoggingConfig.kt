@@ -6,8 +6,7 @@ typealias MinLevel = Level
 /**
  * Fixed configuration for one logging pipeline. All limits are conservative
  * defaults sized for XTMapper's workload (lifecycle/exception events only; no
- * per-input-event logging), evaluated against the 8 MiB / 14 days budget stated
- * for the phase-tentative numbers.
+ * per-input-event logging), evaluated against an 8 MiB / 14 days budget.
  *
  * - [queueCapacity]: the bounded queue's fixed capacity; overflowing uses
  *   drop-oldest. 1024 records is ample headroom for bursty crash storms without

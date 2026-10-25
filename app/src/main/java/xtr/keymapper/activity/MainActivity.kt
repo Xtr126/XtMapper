@@ -25,6 +25,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.topjohnwu.superuser.Shell
 import rikka.shizuku.Shizuku
 import xtr.keymapper.BuildConfig
+import xtr.keymapper.Environment
 import xtr.keymapper.GameKeyMapperBridge
 import xtr.keymapper.IRemoteService
 import xtr.keymapper.R
@@ -75,6 +76,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Launch-context signal: applied only when the extra is present so the
+        // server-crash relay (data= only) never reclassifies the process.
+        if (intent.hasExtra(Environment.INTENT_EXTRA)) {
+            Environment.launchSignal = intent.getBooleanExtra(Environment.INTENT_EXTRA, false)
+            XtLogger.info("MainActivity", "launch signal applied: environment=${Environment.name}")
+        }
         Log.i("xtmapper-startup", "MainActivity.onCreate: shellMarker=${intent.getStringExtra("data") == SHELL_INIT} binderPresent=${intent.extras?.getBinder(SHELL_SERVICE_BINDER) != null}")
         intent.extras?.getBinder(SHELL_SERVICE_BINDER)?.let {
             RemoteServiceHelper.setShellServiceBinder(it)
@@ -565,7 +572,7 @@ class MainActivity : AppCompatActivity() {
         // the check is an API 30 call (crashes every resume below Android 11).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
             android.os.Environment.isExternalStorageManager()
-        ) XtLogger.enableFileLogging(this)
+        ) XtLogger.enableFileLogging()
     }
 
     override fun onDestroy() {

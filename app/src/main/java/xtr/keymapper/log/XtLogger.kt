@@ -154,15 +154,8 @@ object XtLogger {
     @JvmStatic
     fun initStandalone(role: Role) = initInternal(role, directFileStore())
 
-    /** Pointer to the canonical dir (for docs/tests/debugging). */
+    /** Canonical log directory, shown next to the logs entry in the UI. */
     internal fun canonicalDirectory(): File = CANONICAL_LOGS_DIR
-
-    /**
-     * Rebuilds the process pipeline on the canonical log directory (called to
-     * finish file-logging setup after the All-files permission was granted).
-     * When a pipeline already runs, closes that session with a marker status
-     * and opens a new session so the log stays consistent.
-     */
 
     /**
      * Turns file logging on after the All-files permission was granted (called
@@ -170,7 +163,7 @@ object XtLogger {
      * permission is still missing or the sink already runs.
      */
     @JvmStatic
-    fun enableFileLogging(context: Context) {
+    fun enableFileLogging() {
         if (!hasAllFilesAccess()) return
         if (isFileSinkAvailable) return
         rebuildAppPipeline(FileSystemLogStore(CANONICAL_LOGS_DIR))

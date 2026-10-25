@@ -1,39 +1,50 @@
 package xtr.keymapper
 
-import android.os.Build
-
 /**
- * Best-effort identification of the Android environment the process runs in.
+ * Launch-context classification for a running XtMapper process.
  *
- * Waydroid (Linux container running LineageOS-based images) puts `waydroid`
- * into the build fingerprint and device/product names on stock images, e.g.
- * `waydroid/lineage_waydroid_x86_64/waydroid_x86_64:11/RQ3A...` — verified in
- * upstream crash reports across Android 10-13, x86 and x86_64 images.
+ * The only classification signal is the explicit Cage launch handshake:
+ * [CLI_ARG] on the shell entry point command line and the boolean [INTENT_EXTRA]
+ * (`am start --ez`) delivered to MainActivity. Signal present → `waydroid`;
+ * signal absent or false → `android`. Absence intentionally selects the Android
+ * classification — it does not independently prove a physical device.
  *
- * shortcut: string-based only. Installs that spoof their identity via
- * `/var/lib/waydroid/waydroid.cfg [properties]` (the community
- * spoof-device.sh rewrites 20+ props incl. the fingerprint) are NOT detected.
- * Upgrade path if false negatives ever matter: additionally read
- * `/proc/version` and look for a host-Linux distro string, which the
- * container leaks regardless of prop spoofing. Not worth it today.
+ * No Build-string fallback: fingerprint/device matching was spoofable and was
+ * deliberately removed; heuristics must not override the signal.
+ *
+ * shortcut: the APP-role session header renders inside App.onCreate, before any
+ * activity intent can exist, so a process cold-started with the signal logs the
+ * `android` default in its SESSION START block and only reclassifies when
+ * MainActivity applies the extra (MainActivity logs that application). Ceiling:
+ * no supported channel delivers intent extras before Application.onCreate;
+ * upgrade path is a pre-Application signal carrier if the header itself must be
+ * right from the first byte.
  */
 object Environment {
 
-    /** True when running inside a Waydroid Android container (stock images). */
-    @JvmStatic
-    val isWaydroid: Boolean = matchesWaydroid(Build.FINGERPRINT, Build.DEVICE)
+    /** Command-line argument accepted by [xtr.keymapper.server.RemoteServiceShell]. */
+    const val CLI_ARG = "--cage-xtmapper-launch-signal"
 
-    /** Short label for diagnostics: `waydroid` or `android`. */
+    /** Boolean intent extra carrying the same signal to MainActivity. */
+    const val INTENT_EXTRA = "cage_xtmapper_launch_signal"
+
+    /**
+     * Explicit launch signal state. Default false: an untouched process
+     * classifies as Android.
+     */
     @JvmStatic
-    val name: String get() = if (isWaydroid) "waydroid" else "android"
+    @Volatile
+    var launchSignal: Boolean = false
+
+    @JvmStatic
+    val isWaydroid: Boolean get() = launchSignal
+
+    @JvmStatic
+    val isAndroid: Boolean get() = !launchSignal
+
+    @JvmStatic
+    val name: String get() = when {
+        isWaydroid -> "waydroid"
+        else -> "android"
+    }
 }
-
-/**
- * Pure decision rule over the two [android.os.Build] strings, kept as a
- * top-level function (NOT inside [Environment]) so CI unit tests can call it
- * without triggering the Android-dependent class initializer — JVM tests see
- * `Build.FINGERPRINT` as a stub that throws. See EnvironmentTest.
- */
-fun matchesWaydroid(fingerprint: String, device: String): Boolean =
-    fingerprint.contains("waydroid", ignoreCase = true) ||
-        device.startsWith("waydroid", ignoreCase = true)

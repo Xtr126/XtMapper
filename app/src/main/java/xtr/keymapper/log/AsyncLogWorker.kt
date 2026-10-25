@@ -7,20 +7,9 @@ import java.util.concurrent.atomic.AtomicReference
  * Single background worker thread draining a bounded [LoggingQueue] into a
  * [SessionLogWriter] (the persistent file sink).
  *
- * Ownership:
- * - exactly one daemon thread `xtlogger-<roleTag>` per pipeline, created by
- *   [start] and deterministically joined by [close]; no leaked threads.
- * - the worker catches every `Throwable` from the sink; failures neither
- *   propagate to producers nor kill the thread ([lastError] keeps the most
- *   recent failure for tests and diagnostics).
- * - Every record removed from the queue is accounted exactly once: a batch the
- *   sink accepted closes out via [LoggingQueue.markProcessed]; a batch whose
- *   write failed (or that the fail-soft sink absorbed without persisting)
- *   closes out via [LoggingQueue.markFailed] and is counted as dropped — never
- *   reported as written — so [flush] still completes after a failure.
- * - [flush] is bounded by the queue's exact drain condition
- *   ([LoggingQueue.awaitDrained]): it waits until every offered record is
- *   written or dropped, never indefinitely.
+ * One daemon thread `xtlogger-<roleTag>` per pipeline, created by [start] and
+ * deterministically joined by [stopDraining]; sink failures never propagate to
+ * producers nor kill the thread ([lastError] keeps the most recent one).
  */
 class AsyncLogWorker(
     val queue: LoggingQueue,
@@ -90,16 +79,15 @@ class AsyncLogWorker(
     }
 
     /**
-     * Bounded flush: waits until all offered records are written or dropped.
-     * Returns false only when timing out; never waits indefinitely.
+     * Bounded: waits until every offered record is written or dropped, false
+     * only on timeout.
      */
     fun flush(timeoutMillis: Long = config.flushTimeoutMillis): Boolean =
         queue.awaitDrained(timeoutMillis)
 
     /**
      * Bounded drain, then stops the consumer thread. Does NOT close the file
-     * sink: the pipeline still needs it for the session END marker (written on
-     * the caller thread without racing batches anymore).
+     * sink: the pipeline still needs it for the session END marker.
      */
     fun stopDraining(flushTimeoutMillis: Long) {
         if (!joined.compareAndSet(false, true)) return
@@ -113,7 +101,6 @@ class AsyncLogWorker(
         }
     }
 
-    /** Closes the persistent file sink. */
     fun closeFile() {
         if (fileClosed.compareAndSet(false, true)) writer.close()
     }
