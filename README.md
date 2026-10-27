@@ -49,7 +49,7 @@ To share your thoughts on XtMapper or ask any questions please create a post at 
 https://xtr126.github.io/XtMapper-docs/waydroid/1-overview/
 
 ## Credits
-| Contributor | Contributions |
+|  |  |
 | --- | --- |
 | [@Xtr126](https://github.com/Xtr126) | Project creator and primary maintainer; core input mapping, editor, and service implementation |
 | [@SoufianoDev](https://github.com/SoufianoDev) | **Secondary maintainer**; Kotlin migration, codebase improvements, bug fixes, and translation updates |
