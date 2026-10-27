@@ -38,6 +38,9 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">ਸਵਾਈਪ ਦੇਰੀ %d ਮਿਲੀਸਕਿੰਟ</string>
+    <string name="shift_transition_ms">ਸ਼ਿਫਟ ਤਬਦੀਲੀ: %d ਮਿਲੀਸਕਿੰਟ</string>
+    <string name="shift_transition_title">ਸ਼ਿਫਟ ਤਬਦੀਲੀ ਦੀ ਗਤੀ</string>
+    <string name="use_global_default">ਗਲੋਬਲ ਪੂਰਵ-ਨਿਰਧਾਰਤ (%d ਮਿਲੀਸਕਿੰਟ)</string>
     <string name="profile_name">ਪ੍ਰੋਫਾਈਲ ਨਾਮ</string>
     <string name="root_not_found_title">ਰੂਟ ਨਹੀਂ ਮਿਲੀ</string>
     <string name="root_not_found_message">ਕੀਮੈਪਰ ਨੂੰ ਕੰਮ ਕਰਨ ਲਈ ਰੂਟ ਦੀ ਲੋੜ ਹੈ। \n ਕਿਰਪਾ ਕਰਕੇ KernelSU ਪ੍ਰਬੰਧਕ ਐਪ ਤੋਂ XtMapper ਨੂੰ ਸੁਪਰਯੂਜ਼ਰ ਦਿਓ</string>
@@ -56,6 +59,7 @@
     <string name="crosshair">ਕਰਾਸ ਹੇਅਰ</string>
     <string name="left_click">ਖੱਬਾ ਕਲਿਕ</string>
     <string name="swipe_key">ਸਵਾਈਪ ਬਟਨ</string>
+    <string name="shift_key">ਸ਼ਿਫਟ ਬਟਨ</string>
     <string name="add_key">ਸ਼ਾਮਲ ਕਰੋ ਬਟਨ</string>
     <string name="save">ਸੇਵ ਕਰੋ</string>
     <!--  Mouse Aim  -->
@@ -118,4 +122,11 @@
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">ਸਾਰੇ ਪ੍ਰੋਫਾਈਲ ਪਹਿਲਾਂ ਤੋਂ ਮੌਜੂਦ ਹਨ, ਕੁਝ ਵੀ ਇੰਪੋਰਟ ਨਹੀਂ ਹੋਇਆ</string>
     <string name="error_import_failed">ਇੰਪੋਰਟ ਅਸਫਲ ਰਿਹਾ</string>
     <string name="share">ਸਾਂਝਾ ਕਰੋ</string>
+    <string name="touch_jitter">ਟਚ ਕੋਆਰਡੀਨੇਟ ਜਿਟਰ</string>
+    <string name="touch_jitter_spread">ਜਿਟਰ ਫੈਲਾਓ</string>
+    <string name="touch_jitter_spread_px">ਟਚ ਜਿਟਰ ਫੈਲਾਓ: %d ਪਿਕਸਲ</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">ਇਨਪੁਟ ਮੋਡ</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

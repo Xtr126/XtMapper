@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center">
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/settings_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:theme="@style/Theme.XtMapper"
+        app:icon="@drawable/ic_baseline_speed_24"
+        style="@style/Widget.Material3.Button.IconButton.Filled.Tonal" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/delete_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:theme="@style/Theme.XtMapper"
+        app:icon="@android:drawable/ic_delete"
+        style="@style/Widget.Material3.Button.IconButton.Filled.Tonal" />
+
+</LinearLayout>

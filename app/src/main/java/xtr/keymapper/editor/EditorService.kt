@@ -23,9 +23,12 @@ class EditorService : ComposeLifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        var selectedProfile = intent!!.getStringExtra(EditorActivity.PROFILE_NAME) ?: "Default"
+        val selectedProfile = intent?.getStringExtra(EditorActivity.PROFILE_NAME)
+            ?: xtr.keymapper.TouchPointer.currentSelectedProfile
+            ?: "Default"
 
         val keymapConfig = KeymapConfig(this)
+        RemoteServiceHelper.useShizuku = keymapConfig.isShizukuMode
 
         if (keymapConfig.editorOverlay) {
 

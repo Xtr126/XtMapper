@@ -39,3 +39,10 @@ LOCAL_MODULE    := touchpad_relative
 LOCAL_SRC_FILES := $(JNI_SRC_PATH)/touchpad_relative.cpp
 LOCAL_SHARED_LIBRARIES := evdev_common
 include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := keyboard_grab
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/keyboard_grab.cpp
+LOCAL_SHARED_LIBRARIES := evdev_common
+include $(BUILD_SHARED_LIBRARY)

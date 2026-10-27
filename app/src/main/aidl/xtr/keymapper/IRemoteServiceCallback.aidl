@@ -14,4 +14,5 @@ interface IRemoteServiceCallback {
     void disablePointer();
     void setCursorX(int x);
     void setCursorY(int y);
+    void alertKeyboardBlocked(boolean blocked);
 }

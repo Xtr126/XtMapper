@@ -30,6 +30,7 @@ import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import java.lang.reflect.Method
 
@@ -47,6 +48,8 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     internal var context: Context = context
     internal var startedFromShell = false
 
+    private var geteventProcess: Process? = null
+
     // shortcut: single-user check; multi-user/work-profile installs have a different uid per user
     private val appUid: Int by lazy {
         context.packageManager.getPackageUid(BuildConfig.APPLICATION_ID, 0)
@@ -58,6 +61,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     init {
+        instance = this
         loadLibraries()
         init()
     }
@@ -156,6 +160,13 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         return windowManager
     }
 
+    private fun stop_getevent() {
+        try {
+            geteventProcess?.destroy()
+            geteventProcess = null
+        } catch (_: Exception) {}
+    }
+
     /**
      * Executes getevent command and processes the output or reads from stdin if wayland client
      */
@@ -165,7 +176,9 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
             if (isWaylandClient) {
                 getevent = BufferedReader(InputStreamReader(System.`in`))
             } else {
-                getevent = Utils.geteventStream(nativeLibraryDir)
+                val proc = Utils.geteventStream(nativeLibraryDir)
+                geteventProcess = proc
+                getevent = BufferedReader(InputStreamReader(proc.inputStream))
             }
             var line: String?
             while (getevent.readLine().also { line = it } != null) {
@@ -177,15 +190,25 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                         if (isWaylandClient && data[0].contains("wl_pointer"))
                             service.onWaylandMouseEvent(data[1])
 
-                        val k: KeyEventHandler = service.keyEventHandler
-                        if (!service.stopEvents) {
-                            k.handleEvent(data[1])
-                        } else {
-                            k.handleKeyboardShortcutEvent(data[1])
+                        if (!service.isKeyboardGrabbed) {
+                            val k: KeyEventHandler = service.keyEventHandler
+                            if (!service.stopEvents) {
+                                k.handleEvent(data[1])
+                            } else {
+                                k.handleKeyboardShortcutEvent(data[1])
+                            }
                         }
-                        mOnKeyEventListener?.onKeyEvent(line)
-                    } catch (e: RemoteException) {
-                        throw RuntimeException(e)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error handling input event", e)
+                    }
+                    if (service == null || !service.isKeyboardGrabbed) {
+                        try {
+                            mOnKeyEventListener?.onKeyEvent(line)
+                        } catch (e: RemoteException) {
+                            mOnKeyEventListener = null
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error notifying key listener", e)
+                        }
                     }
                 }
             }
@@ -204,6 +227,11 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
 
         val input_event = data[1].split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         if (isWaylandClient) return true
+        if (inputService?.isKeyboardGrabbed == true) {
+            if (input_event.size > 1 && input_event[1] == "EV_KEY") {
+                inputService?.grabKeyboardDevice(evdev)
+            }
+        }
         if (currentDevice != evdev)
             if (input_event[1] == "EV_REL") {
                 println("add mouse device: $evdev")
@@ -259,6 +287,13 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                     profile, keymapConfig, cb, screenWidth, screenHeight,
                     cursorView, isWaylandClient, displayId
                 )
+                newService.keyListener = { line ->
+                    try {
+                        mOnKeyEventListener?.onKeyEvent(line)
+                    } catch (e: RemoteException) {
+                        mOnKeyEventListener = null
+                    }
+                }
                 inputService = newService
                 if (!isWaylandClient) {
                     newService.setMouseLock(true)
@@ -307,6 +342,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         }
 
         if (!startedFromShell && exitProcess) {
+            stop_getevent()
             System.exit(0)
         } else if (service != null && !isWaylandClient) {
             service.stopEvents = true
@@ -382,12 +418,14 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
 
     companion object {
         const val TAG = "xtmapper-server"
+        var instance: RemoteService? = null
 
         fun loadLibraries() {
             System.loadLibrary("mouse_read")
             System.loadLibrary("mouse_cursor")
             System.loadLibrary("touchpad_direct")
             System.loadLibrary("touchpad_relative")
+            System.loadLibrary("keyboard_grab")
         }
     }
 }

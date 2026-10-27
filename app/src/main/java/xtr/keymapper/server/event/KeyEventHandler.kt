@@ -12,12 +12,14 @@ import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.keymap.KeymapProfile.Companion.MAX_DPADS
 import xtr.keymapper.keymap.element.Camera
 import xtr.keymapper.keymap.element.Key
+import xtr.keymapper.keymap.element.ShiftKey
 import xtr.keymapper.keymap.element.SwipeKey
 import xtr.keymapper.macro.Macro
 import xtr.keymapper.server.IInputInterface
 import xtr.keymapper.server.InputService
 import xtr.keymapper.server.pid.PidProvider
 import xtr.keymapper.server.pid.PointerId.dpadpid1
+import xtr.keymapper.shiftkey.ShiftKeyHandler
 import xtr.keymapper.swipekey.SwipeKeyHandler
 
 class KeyEventHandler(private val mInput: IInputInterface) {
@@ -27,6 +29,7 @@ class KeyEventHandler(private val mInput: IInputInterface) {
     var altKeyPressed = false
     private var dpadHandlers: Array<DpadHandler?>? = null
     private var swipeKeyHandlers: ArrayList<SwipeKeyHandler>? = null
+    private var shiftKeyHandlers: ArrayList<ShiftKeyHandler>? = null
     private val pidProvider = PidProvider()
     private var mHandlerThread: HandlerThread? = null
     private var eventHandler: Handler? = null
@@ -47,21 +50,23 @@ class KeyEventHandler(private val mInput: IInputInterface) {
             }
         }
 
-        // Correction of x and y deviation from center
-        for (key in profile.keys) {
-            key.x += key.offset
-            key.y += key.offset
-        }
+        // Center offset is applied non-destructively in handleEvent when injecting touch
 
         swipeKeyHandlers = ArrayList()
         for (key in profile.swipeKeys) {
             swipeKeyHandlers!!.add(SwipeKeyHandler(key))
+        }
+
+        shiftKeyHandlers = ArrayList()
+        for (key in profile.shiftKeys) {
+            shiftKeyHandlers!!.add(ShiftKeyHandler(key))
         }
     }
 
     fun stop() {
         dpadHandlers = null
         swipeKeyHandlers = null
+        shiftKeyHandlers = null
         mHandlerThread?.quit()
         mHandlerThread = null
         eventHandler = null
@@ -103,11 +108,15 @@ class KeyEventHandler(private val mInput: IInputInterface) {
         val keyList = mInput.keymapProfile.keys
         keyList.withIndex().forEach { (i, key) ->
             if (event.code == key.code)
-                mInput.injectEvent(key.x, key.y, event.action, i)
+                mInput.injectEvent(key.x + key.offset, key.y + key.offset, event.action, i)
         }
 
         swipeKeyHandlers?.forEach { swipeKeyHandler ->
             swipeKeyHandler.handleEvent(event, mInput, pidProvider, eventHandler, keymapConfig.swipeDelayMs)
+        }
+
+        shiftKeyHandlers?.forEach { shiftKeyHandler ->
+            shiftKeyHandler.handleEvent(event, mInput, pidProvider, eventHandler, keymapConfig.shiftTransitionMs)
         }
 
         val macroIdMap = mInput.keymapProfile.macroIdMap
@@ -127,15 +136,16 @@ class KeyEventHandler(private val mInput: IInputInterface) {
 
     private fun getEvent(line: String): KeyEvent? {
         val event = KeyEvent()
-        // line: EV_KEY KEY_X DOWN
-        val input_event = line.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-        if (input_event[1] != "EV_KEY") return null
-        event.code = input_event[2]
+        // line: EV_KEY KEY_X DOWN (or with device prefix e.g. /dev/input/eventX: EV_KEY KEY_X DOWN)
+        val tokens = line.split("\\s+".toRegex()).filter { it.isNotEmpty() }
+        val evIndex = tokens.indexOf("EV_KEY")
+        if (evIndex == -1 || evIndex + 2 >= tokens.size) return null
+        event.code = tokens[evIndex + 1]
         if (!event.code.contains("KEY_")) return null
 
-        when (input_event[3]) {
-            "UP" -> event.action = InputService.UP
-            "DOWN" -> event.action = InputService.DOWN
+        when (tokens[evIndex + 2]) {
+            "UP", "00000000" -> event.action = InputService.UP
+            "DOWN", "00000001" -> event.action = InputService.DOWN
             else -> return null
         }
         return event
@@ -162,6 +172,12 @@ class KeyEventHandler(private val mInput: IInputInterface) {
         if (keymapConfig.switchProfileShortcutKeyModifier == modifier)
             if (keycode == keymapConfig.switchProfileShortcutKey) {
                 mInput.callback.switchProfiles()
+                return true
+            }
+
+        if (keymapConfig.isRootMode && keymapConfig.blockKeyboardShortcutKeyModifier == modifier)
+            if (keycode == keymapConfig.blockKeyboardShortcutKey) {
+                mInput.toggleKeyboardBlock()
                 return true
             }
         return false

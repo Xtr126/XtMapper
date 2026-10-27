@@ -47,6 +47,9 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">Retraso de deslizamiento %d milisegundos</string>
+    <string name="shift_transition_ms">Transición de cambio: %d ms</string>
+    <string name="shift_transition_title">Velocidad de transición</string>
+    <string name="use_global_default">Predeterminado global (%d ms)</string>
     <string name="profile_name">Nombre del perfil</string>
     <string name="root_not_found_title">Acceso raíz no encontrado</string>
     <string name="root_not_found_message">Se requiere acceso raíz para que el remapeador de teclas funcione. \n Otorgue permisos de superusuario a XtMapper desde la aplicación del administrador de KernelSU</string>
@@ -67,6 +70,7 @@
     <string name="crosshair">Retícula</string>
     <string name="left_click">Clic izquierdo</string>
     <string name="swipe_key">Tecla de deslizamiento</string>
+    <string name="shift_key">Tecla de cambio</string>
     <string name="add_key">Agregar tecla</string>
     <string name="save">Guardar</string>
 
@@ -131,7 +135,13 @@
     <string name="msg_backup_saved">Copia de seguridad guardada con éxito</string>
     <string name="error_save_failed">Error al guardar</string>
     <string name="msg_profiles_imported">Perfiles importados con éxito</string>
-    <string name="error_import_failed">Error al importar</string>
-    <string name="share">Compartir</string>
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">Todos los perfiles ya existen, no se importó nada</string>
+    <string name="share">Compartir</string>
+    <string name="touch_jitter">Vibración de coordenadas táctiles</string>
+    <string name="touch_jitter_spread">Dispersión de vibración</string>
+    <string name="touch_jitter_spread_px">Dispersión de vibración: %d px</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">Modo de entrada</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

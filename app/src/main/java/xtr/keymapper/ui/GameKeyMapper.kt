@@ -31,6 +31,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.draw.clip
+import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfiles
 
 // ============ THEME COLORS ============
@@ -78,8 +80,11 @@ internal enum class DeviceType {
 
 internal data class AppState(
     val isServiceActive: Boolean = false,
-    val hasAccessibilityPermission: Boolean = true,
+    val isShizukuInstalled: Boolean = true,
+    val isShizukuRunning: Boolean = true,
+    val hasShizukuPermission: Boolean = true,
     val hasOverlayPermission: Boolean = false,
+    val inputMode: Int = KeymapConfig.MODE_ROOT,
     val connectedDevices: List<HardwareDevice> = emptyList(),
     val profiles: List<GameProfile> = emptyList()
 )
@@ -90,6 +95,7 @@ internal data class AppState(
 private fun KeymapperApp(
     state: MutableState<AppState>,
     onToggleService: () -> Unit = {},
+    onToggleInputMode: () -> Unit = {},
     onFixPermission: () -> Unit = {},
     onTestInput: () -> Unit = {},
     onSelectProfile: (GameProfile) -> Unit = {},
@@ -155,6 +161,7 @@ private fun KeymapperApp(
                                 GlobalStatusToggle(
                                     state = currentState,
                                     onToggleService = onToggleService,
+                                    onToggleInputMode = onToggleInputMode,
                                     onFixPermission = onFixPermission
                                 )
                             }
@@ -248,10 +255,25 @@ private fun createComposeState(activity: MainActivity): AppState {
         )
     }
 
+    val config = KeymapConfig(activity)
+    val isShizukuInstalled = activity.isShizukuInstalled()
+    val isShizukuRunning = try {
+        rikka.shizuku.Shizuku.pingBinder()
+    } catch (_: Exception) {
+        false
+    }
+    val hasShizuku = try {
+        isShizukuRunning && rikka.shizuku.Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+    } catch (_: Exception) {
+        false
+    }
     return AppState(
         isServiceActive = activity.isComposeServiceActive(),
-        hasAccessibilityPermission = true,
+        isShizukuInstalled = isShizukuInstalled,
+        isShizukuRunning = isShizukuRunning,
+        hasShizukuPermission = hasShizuku,
         hasOverlayPermission = Settings.canDrawOverlays(activity),
+        inputMode = config.inputMode,
         connectedDevices = loadComposeDevices(),
         profiles = profiles
     )
@@ -290,6 +312,10 @@ private fun GameKeyMapperActivityContent(activity: MainActivity) {
             activity.toggleServiceFromCompose()
             refresh()
         },
+        onToggleInputMode = {
+            activity.toggleInputModeFromCompose()
+            refresh()
+        },
         onFixPermission = {
             activity.fixPermissionFromCompose()
             refresh()
@@ -303,7 +329,7 @@ private fun GameKeyMapperActivityContent(activity: MainActivity) {
         },
         onLaunchProfile = {
             activity.selectProfileFromCompose(it.profileNameForActivity())
-            activity.launchAppFromCompose()
+            activity.activateSelectedProfileFromCompose()
             refresh()
         },
         onEditProfile = {
@@ -361,6 +387,7 @@ private fun GlobalStatusToggle(
     state: AppState,
     modifier: Modifier = Modifier,
     onToggleService: () -> Unit,
+    onToggleInputMode: () -> Unit,
     onFixPermission: () -> Unit
 ) {
     val statusColor = if (state.isServiceActive) KeymapperTheme.Success else KeymapperTheme.Error
@@ -418,10 +445,62 @@ private fun GlobalStatusToggle(
                 modifier = Modifier.padding(vertical = 12.dp)
             )
 
-            if (!state.hasAccessibilityPermission) {
+            // Mode toggle: Root vs Shizuku (ADB)
+            Row(
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(KeymapperTheme.Card)
+                    .clickable { onToggleInputMode() }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val modeText = when (state.inputMode) {
+                    KeymapConfig.MODE_SHIZUKU -> "Mode: Shizuku (ADB)"
+                    else -> "Mode: Root"
+                }
+                val modeIcon = when (state.inputMode) {
+                    KeymapConfig.MODE_SHIZUKU -> Icons.Default.Terminal
+                    else -> Icons.Default.Security
+                }
+                Icon(
+                    imageVector = modeIcon,
+                    contentDescription = null,
+                    tint = KeymapperTheme.Accent,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = modeText,
+                    color = KeymapperTheme.TextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    imageVector = Icons.Default.SwapHoriz,
+                    contentDescription = null,
+                    tint = KeymapperTheme.TextSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            if (state.inputMode == KeymapConfig.MODE_SHIZUKU && !state.isShizukuInstalled) {
                 PermissionRow(
                     icon = Icons.Default.Warning,
-                    text = "Accessibility permission required",
+                    text = stringResource(R.string.shizuku_install_required),
+                    onFixPermission = onFixPermission
+                )
+            } else if (state.inputMode == KeymapConfig.MODE_SHIZUKU && !state.isShizukuRunning) {
+                PermissionRow(
+                    icon = Icons.Default.Warning,
+                    text = stringResource(R.string.shizuku_start_required),
+                    onFixPermission = onFixPermission
+                )
+            } else if (state.inputMode == KeymapConfig.MODE_SHIZUKU && !state.hasShizukuPermission) {
+                PermissionRow(
+                    icon = Icons.Default.Warning,
+                    text = "Shizuku authorization required",
                     onFixPermission = onFixPermission
                 )
             }
@@ -1081,8 +1160,9 @@ private fun getSampleDevices(): List<HardwareDevice> = listOf(
 
 private fun getSampleAppState(): AppState = AppState(
     isServiceActive = true,
-    hasAccessibilityPermission = true,
+    hasShizukuPermission = true,
     hasOverlayPermission = true,
+    inputMode = KeymapConfig.MODE_ROOT,
     connectedDevices = getSampleDevices(),
     profiles = getSampleProfiles()
 )
@@ -1121,7 +1201,7 @@ fun KeymapperInactivePreview() {
     KeymapperApp(
         state = remember { mutableStateOf(getSampleAppState().copy(
             isServiceActive = false,
-            hasAccessibilityPermission = false,
+            hasShizukuPermission = false,
             hasOverlayPermission = false
         ))},
     )

@@ -56,7 +56,13 @@ class KeymapConfig : Parcelable {
     var switchProfileShortcutKey = "KEY_S" // KEY_S
 
     @JvmField
+    var blockKeyboardShortcutKey = "KEY_B" // KEY_B
+
+    @JvmField
     var swipeDelayMs = 0
+
+    @JvmField
+    var shiftTransitionMs = 100
 
     @JvmField
     var pauseResumeShortcutKeyModifier: String? = null
@@ -66,6 +72,9 @@ class KeymapConfig : Parcelable {
 
     @JvmField
     var switchProfileShortcutKeyModifier: String? = null
+
+    @JvmField
+    var blockKeyboardShortcutKeyModifier: String? = null
 
     @JvmField
     var pointerMode = 0
@@ -78,6 +87,25 @@ class KeymapConfig : Parcelable {
 
     @JvmField
     var touchpadInputMode = TOUCHPAD_DISABLED
+
+    @JvmField
+    var touchJitter = false
+
+    @JvmField
+    var touchJitterSpread = 15f
+
+
+    @JvmField
+    var blockKeyboardInput = false
+
+    @JvmField
+    var inputMode = MODE_ROOT
+
+    val isShizukuMode: Boolean
+        get() = inputMode == MODE_SHIZUKU || useShizuku
+
+    val isRootMode: Boolean
+        get() = !isShizukuMode
 
     constructor(context: Context?) {
         if (context != null) {
@@ -123,6 +151,13 @@ class KeymapConfig : Parcelable {
         mouseAimToggle = parcel.readByte().toInt() != 0
         touchpadInputMode = parcel.readInt()
         floatingKeysSize = parcel.readFloat()
+        touchJitter = parcel.readByte().toInt() != 0
+        touchJitterSpread = parcel.readFloat()
+        inputMode = parcel.readInt()
+        shiftTransitionMs = if (parcel.dataAvail() > 0) parcel.readInt() else 100
+        blockKeyboardInput = if (parcel.dataAvail() > 0) parcel.readByte().toInt() != 0 else false
+        blockKeyboardShortcutKey = if (parcel.dataAvail() > 0) parcel.readString() ?: "KEY_B" else "KEY_B"
+        blockKeyboardShortcutKeyModifier = if (parcel.dataAvail() > 0) parcel.readString() else KEY_CTRL
     }
 
     override fun writeToParcel(dest: Parcel, flags: Int) {
@@ -159,6 +194,13 @@ class KeymapConfig : Parcelable {
         dest.writeByte((if (mouseAimToggle) 1 else 0).toByte())
         dest.writeInt(touchpadInputMode)
         dest.writeFloat(floatingKeysSize)
+        dest.writeByte((if (touchJitter) 1 else 0).toByte())
+        dest.writeFloat(touchJitterSpread)
+        dest.writeInt(inputMode)
+        dest.writeInt(shiftTransitionMs)
+        dest.writeByte((if (blockKeyboardInput) 1 else 0).toByte())
+        dest.writeString(blockKeyboardShortcutKey)
+        dest.writeString(blockKeyboardShortcutKeyModifier)
     }
 
     override fun describeContents(): Int {
@@ -182,11 +224,13 @@ class KeymapConfig : Parcelable {
         launchEditorShortcutKey = sharedPref.getString("launch_editor_shortcut", launchEditorShortcutKey)!!
         pauseResumeShortcutKey = sharedPref.getString("pause_resume_shortcut", pauseResumeShortcutKey)!!
         switchProfileShortcutKey = sharedPref.getString("switch_profile_shortcut", switchProfileShortcutKey)!!
+        blockKeyboardShortcutKey = sharedPref.getString("block_keyboard_shortcut", blockKeyboardShortcutKey)!!
         mouseAimShortcutKey = sharedPref.getString("mouse_aim_shortcut", "")
 
         launchEditorShortcutKeyModifier = sharedPref.getString("launch_editor_shortcut_modifier", KEY_CTRL)
         pauseResumeShortcutKeyModifier = sharedPref.getString("pause_resume_shortcut_modifier", KEY_CTRL)
         switchProfileShortcutKeyModifier = sharedPref.getString("switch_profile_shortcut_modifier", KEY_CTRL)
+        blockKeyboardShortcutKeyModifier = sharedPref.getString("block_keyboard_shortcut_modifier", KEY_CTRL)
 
         keyGraveMouseAim = sharedPref.getBoolean("key_grave_mouse_aim", true)
         rightClickMouseAim = sharedPref.getBoolean("right_click_mouse_aim", true)
@@ -197,6 +241,11 @@ class KeymapConfig : Parcelable {
         pointerMode = sharedPref.getInt("pointer_mode", POINTER_OVERLAY)
 
         floatingKeysSize = sharedPref.getFloat("floating_keys_size", 1f)
+        touchJitter = sharedPref.getBoolean("touch_jitter", false)
+        touchJitterSpread = sharedPref.getFloat("touch_jitter_spread", 15f)
+        shiftTransitionMs = sharedPref.getInt("shift_transition_ms", 100)
+        blockKeyboardInput = sharedPref.getBoolean("block_keyboard_input", false)
+        inputMode = sharedPref.getInt("input_mode", if (useShizuku) MODE_SHIZUKU else MODE_ROOT)
     }
 
     fun applySharedPrefs() {
@@ -215,18 +264,28 @@ class KeymapConfig : Parcelable {
             .putString("pause_resume_shortcut", pauseResumeShortcutKey)
             .putString("launch_editor_shortcut", launchEditorShortcutKey)
             .putString("switch_profile_shortcut", switchProfileShortcutKey)
+            .putString("block_keyboard_shortcut", blockKeyboardShortcutKey)
             .putString("mouse_aim_shortcut", mouseAimShortcutKey)
             .putString("pause_resume_shortcut_modifier", pauseResumeShortcutKeyModifier)
             .putString("launch_editor_shortcut_modifier", launchEditorShortcutKeyModifier)
             .putString("switch_profile_shortcut_modifier", switchProfileShortcutKeyModifier)
+            .putString("block_keyboard_shortcut_modifier", blockKeyboardShortcutKeyModifier)
             .putInt("touchpad_input_mode", touchpadInputMode)
             .putInt("swipe_delay_ms", swipeDelayMs)
+            .putInt("shift_transition_ms", shiftTransitionMs)
+            .putBoolean("block_keyboard_input", blockKeyboardInput)
             .putInt("pointer_mode", pointerMode)
             .putFloat("floating_keys_size", floatingKeysSize)
+            .putBoolean("touch_jitter", touchJitter)
+            .putFloat("touch_jitter_spread", touchJitterSpread)
+            .putInt("input_mode", inputMode)
             .apply()
     }
 
     companion object {
+        const val MODE_ROOT = 0
+        const val MODE_SHIZUKU = 1
+
         const val KEY_CTRL = "Ctrl"
         const val KEY_ALT = "Alt"
         const val TOUCHPAD_DIRECT = 3

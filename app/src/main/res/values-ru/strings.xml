@@ -47,6 +47,9 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">Задержка скольжения %d миллисекунд</string>
+    <string name="shift_transition_ms">Переход переключения: %d мс</string>
+    <string name="shift_transition_title">Скорость перехода</string>
+    <string name="use_global_default">По умолчанию (%d мс)</string>
     <string name="profile_name">Имя профиля</string>
     <string name="root_not_found_title">Доступ суперпользователя не найден</string>
     <string name="root_not_found_message">Для работы переназначителя клавиш требуется доступ суперпользователя. \n Пожалуйста, предоставьте права суперпользователя XtMapper из приложения KernelSU</string>
@@ -67,6 +70,7 @@
     <string name="crosshair">Перекрестие</string>
     <string name="left_click">Щелчок левой кнопкой</string>
     <string name="swipe_key">Клавиша скольжения</string>
+    <string name="shift_key">Клавиша переключения</string>
     <string name="add_key">Добавить клавишу</string>
     <string name="save">Сохранить</string>
 
@@ -131,7 +135,13 @@
     <string name="msg_backup_saved">Резервная копия успешно сохранена</string>
     <string name="error_save_failed">Ошибка сохранения</string>
     <string name="msg_profiles_imported">Профили успешно импортированы</string>
-    <string name="error_import_failed">Импорт не удался</string>
-    <string name="share">Поделиться</string>
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">Все профили уже существуют, ничего не импортировано</string>
+    <string name="share">Поделиться</string>
+    <string name="touch_jitter">Дрожание координат касания</string>
+    <string name="touch_jitter_spread">Разброс дрожания</string>
+    <string name="touch_jitter_spread_px">Разброс дрожания: %d пикс</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">Режим ввода</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
 </resources>

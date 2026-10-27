@@ -21,6 +21,10 @@
         android:icon="@drawable/ic_baseline_touch_app_24"
         android:title="@string/swipe_key" />
     <item
+        android:id="@+id/shift_key"
+        android:icon="@drawable/ic_baseline_swap_horiz_24"
+        android:title="@string/shift_key" />
+    <item
         android:id="@+id/add"
         android:icon="@drawable/newkey"
         android:title="@string/add_key" />

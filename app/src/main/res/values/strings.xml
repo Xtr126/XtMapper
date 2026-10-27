@@ -46,6 +46,9 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">Swipe delay %d milliseconds</string>
+    <string name="shift_transition_ms">Shift transition: %d ms</string>
+    <string name="shift_transition_title">Shift Transition Speed</string>
+    <string name="use_global_default">Global default (%d ms)</string>
     <string name="profile_name">Profile Name</string>
     <string name="root_not_found_title">Root access not found</string>
     <string name="root_not_found_message">Root access is required for the keymapper to function. \n Please grant superuser to XtMapper from KernelSU manager app</string>
@@ -66,6 +69,7 @@
     <string name="crosshair">CrossHair</string>
     <string name="left_click">Left Click</string>
     <string name="swipe_key">Swipe Key</string>
+    <string name="shift_key">Shift Key</string>
     <string name="add_key">Add Key</string>
     <string name="save">Save</string>
 
@@ -85,6 +89,11 @@
 
     <string name="shizuku_not_authorized_title">Shizuku not authorized</string>
     <string name="shizuku_not_authorized_message">Authorize XtMapper from Shizuku manager app to continue</string>
+    <string name="shizuku_not_installed_title">Shizuku is not installed</string>
+    <string name="shizuku_not_installed_message">Install the Shizuku app before selecting Shizuku input mode.</string>
+    <string name="test_input_service_inactive">Start the keymapper service before testing input.</string>
+    <string name="test_input_root_unavailable">Root access is unavailable. Grant XtMapper root access before testing input.</string>
+    <string name="test_input_ready">%1$s mode is active. Connect a keyboard or mouse to test.</string>
     <string name="activate_with">Activate with</string>
     <string name="grave_key">~ key</string>
     <string name="x_sensitivity">X-Sensitivity</string>
@@ -112,7 +121,9 @@
     <string name="press_any_key_to_stop_recording">Press any key to stop recording…</string>
     <string name="advanced">Advanced</string>
     <string name="shizuku_not_running_title">Shizuku is not started</string>
-    <string name="shizuku_not_running_message"/>
+    <string name="shizuku_not_running_message">Start the Shizuku service, then return to XtMapper.</string>
+    <string name="shizuku_install_required">Install Shizuku to use this input mode</string>
+    <string name="shizuku_start_required">Start Shizuku to use this input mode</string>
     <string name="edit">Edit</string>
     <string name="show_controls_on_screen">Show controls on screen</string>
     <string name="select_a_display">Select a Display</string>
@@ -133,4 +144,16 @@
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">All profiles already exist, nothing imported</string>
     <string name="error_import_failed">Import Failed</string>
     <string name="share">Share</string>
+    <string name="touch_jitter">Touch Coordinate Jitter</string>
+    <string name="touch_jitter_spread">Touch Jitter Spread</string>
+    <string name="touch_jitter_spread_px">Touch jitter spread: %d px</string>
+    <string name="quick_settings_tile_name">XtMapper</string>
+    <string name="input_mode">Input Mode</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
+    <string name="input_mode_changed">Input Mode: %1$s</string>
+    <string name="block_keyboard_input">Block raw keyboard input</string>
+    <string name="block_keyboard">Block Keyboard</string>
+    <string name="keyboard_blocked">Keyboard input blocked</string>
+    <string name="keyboard_unblocked">Keyboard input unblocked</string>
 </resources>
