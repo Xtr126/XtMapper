@@ -168,6 +168,39 @@ class KeymapProfilesTest {
     }
 
     @Test
+    fun shellStartupUsesDefaultWithoutReplacingTheLastSelectedProfile() {
+        val initialData = mutableMapOf<String, Any?>(
+            "SavedProfile" to setOf("APPLICATION com.example.game", "ENABLED"),
+            "OtherProfile" to setOf("APPLICATION com.example.game", "ENABLED"),
+            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "SavedProfile"
+        )
+        val (context, prefs) = createFakeContextAndPrefs(initialData)
+        val keymapProfiles = KeymapProfiles(context, prefs)
+
+        val startupProfile = keymapProfiles.getStartupProfileName(isShellInit = true)
+        assertEquals(KeymapProfiles.DEFAULT_PROFILE_NAME, startupProfile)
+        keymapProfiles.recordStartupProfileSelection(startupProfile, isShellInit = true)
+        assertEquals("SavedProfile", keymapProfiles.getLastSelectedProfile())
+        assertNull(prefs.getStringSet(KeymapProfiles.DEFAULT_PROFILE_NAME, null))
+    }
+
+    @Test
+    fun normalStartupUsesLastSelectedProfile() {
+        val initialData = mutableMapOf<String, Any?>(
+            "SavedProfile" to setOf("APPLICATION com.example.game", "ENABLED"),
+            "OtherProfile" to setOf("APPLICATION com.example.game", "ENABLED"),
+            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "SavedProfile"
+        )
+        val (context, prefs) = createFakeContextAndPrefs(initialData)
+        val keymapProfiles = KeymapProfiles(context, prefs)
+
+        val startupProfile = keymapProfiles.getStartupProfileName(isShellInit = false)
+        assertEquals("SavedProfile", startupProfile)
+        keymapProfiles.recordStartupProfileSelection("OtherProfile", isShellInit = false)
+        assertEquals("OtherProfile", keymapProfiles.getLastSelectedProfile())
+    }
+
+    @Test
     fun testRenameProfileUpdatesLastSelectedProfile() {
         val initialData = mutableMapOf<String, Any?>(
             "OldName" to setOf("APPLICATION com.example.game", "ENABLED"),

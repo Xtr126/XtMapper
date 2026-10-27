@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private var isServiceBound = false
     private var displaySelector: DisplaySelector? = null
     private var startedFromShell: Boolean? = null
+    private var shellInitStartupPending = false
 
     companion object {
         const val SHELL_INIT = "shell"
@@ -76,7 +77,9 @@ class MainActivity : AppCompatActivity() {
 
         val keymapConfig = KeymapConfig(this)
         val profiles = KeymapProfiles(this)
-        selectedProfileName = profiles.getLastSelectedProfile()
+        val isShellInit = isShellInitialization()
+        shellInitStartupPending = isShellInit
+        selectedProfileName = profiles.getStartupProfileName(isShellInit)
         TouchPointer.currentSelectedProfile = selectedProfileName
 
         /*
@@ -99,7 +102,7 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread { composeServiceActive = true }
         }
 
-        if (startedFromShell == true && intent.getStringExtra("data") == SHELL_INIT) {
+        if (isShellInit) {
             startPointer()
         }
     }
@@ -143,6 +146,10 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
         return true
+    }
+
+    private fun isShellInitialization(): Boolean {
+        return startedFromShell == true && intent.getStringExtra("data") == SHELL_INIT
     }
 
     private fun launchSettings() {
@@ -209,16 +216,17 @@ class MainActivity : AppCompatActivity() {
         if (selectedProfileName == null) {
             selectedProfileName = profiles.getLastSelectedProfile()
         }
-        profiles.setLastSelectedProfile(selectedProfileName)
         TouchPointer.currentSelectedProfile = selectedProfileName
         // Start service with selected profile if display on top permission is granted
         if (Settings.canDrawOverlays(this)) {
+            profiles.recordStartupProfileSelection(selectedProfileName, shellInitStartupPending)
             val intent = Intent(this, TouchPointer::class.java).apply {
                 putExtra(EditorActivity.PROFILE_NAME, selectedProfileName)
                 if (displayId != null) putExtra(TouchPointer.DISPLAY_ID, displayId)
             }
             isServiceBound = bindService(intent, connection, Context.BIND_AUTO_CREATE)
             ContextCompat.startForegroundService(this, intent)
+            shellInitStartupPending = false
             setButtonState(false)
             requestNotificationPermission()
         }

@@ -105,7 +105,15 @@ class KeymapProfiles @JvmOverloads constructor(
         if (last != null && profileExists(last)) {
             return last
         }
-        return getAllProfiles().keys.firstOrNull() ?: "Default"
+        return getAllProfiles().keys.firstOrNull() ?: DEFAULT_PROFILE_NAME
+    }
+
+    internal fun getStartupProfileName(isShellInit: Boolean): String {
+        return if (isShellInit) DEFAULT_PROFILE_NAME else getLastSelectedProfile()
+    }
+
+    internal fun recordStartupProfileSelection(profileName: String?, isShellInit: Boolean) {
+        if (!isShellInit) setLastSelectedProfile(profileName)
     }
 
     fun setLastSelectedProfile(profileName: String?) {
@@ -186,6 +194,7 @@ class KeymapProfiles @JvmOverloads constructor(
     companion object {
         const val MOUSE_RIGHT = "MOUSE_RIGHT"
         const val KEY_LAST_SELECTED_PROFILE = "last_selected_profile"
+        internal const val DEFAULT_PROFILE_NAME = "Default"
 
         fun parse(lines: Set<String>?): KeymapProfile {
             val profile = KeymapProfile()
