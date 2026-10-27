@@ -329,7 +329,7 @@ private fun GameKeyMapperActivityContent(activity: MainActivity) {
         },
         onLaunchProfile = {
             activity.selectProfileFromCompose(it.profileNameForActivity())
-            activity.launchAppFromCompose()
+            activity.activateSelectedProfileFromCompose()
             refresh()
         },
         onEditProfile = {

@@ -170,7 +170,7 @@ class MainActivity : AppCompatActivity() {
         RemoteServiceHelper.getInstance(context, remoteServiceCallback)
     }
 
-    private fun launchApp() {
+    private fun activateSelectedProfile() {
         if (selectedProfileName == null) {
             showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null, R.string.ok)
         } else {
@@ -422,8 +422,8 @@ class MainActivity : AppCompatActivity() {
         onProfileSelected(profileName)
     }
 
-    fun launchAppFromCompose() {
-        launchApp()
+    fun activateSelectedProfileFromCompose() {
+        activateSelectedProfile()
     }
 
     fun startEditorFromCompose() {
