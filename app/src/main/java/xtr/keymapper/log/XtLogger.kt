@@ -72,14 +72,6 @@ object XtLogger {
     val isFileSinkAvailable: Boolean
         get() = pipeline?.fileSinkAvailable == true
 
-    // A process that recorded a fatal event must not append a SESSION END marker
-    // from its shutdown hook: previous-session detection treats any END as closed.
-    @Volatile
-    private var fatalEventRecorded = false
-
-    val hasFatalEvent: Boolean
-        get() = fatalEventRecorded
-
     /// ------------------------------------------------------------- public API
 
     fun verbose(tag: String, message: String) = log(Level.VERBOSE, tag, message)
@@ -118,8 +110,6 @@ object XtLogger {
      * while never hanging the dying process.
      */
     fun fatal(tag: String, message: String, throwable: Throwable? = null) {
-        // Set the flag before logging/flushing so a concurrent shutdown hook sees it.
-        fatalEventRecorded = true
         log(Level.FATAL, tag, message, throwable)
         try {
             pipeline?.flush(DEFAULT_FATAL_FLUSH_MILLIS)
