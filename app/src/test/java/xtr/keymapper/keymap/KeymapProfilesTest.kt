@@ -159,6 +159,20 @@ class KeymapProfilesTest {
     }
 
     @Test
+    fun testGetDesignatedProfileRepairsStaleAssignment() {
+        val initialData = mutableMapOf<String, Any?>(
+            "Profile1" to setOf("APPLICATION com.example.game", "ENABLED"),
+            "Profile2" to setOf("APPLICATION com.example.game"),
+            "designated_profile_com.example.game" to "DeletedProfile"
+        )
+        val (context, prefs) = createFakeContextAndPrefs(initialData)
+        val keymapProfiles = KeymapProfiles(context, prefs)
+
+        assertEquals("Profile1", keymapProfiles.getDesignatedProfileForApp("com.example.game"))
+        assertEquals("Profile1", prefs.getString("designated_profile_com.example.game", null))
+    }
+
+    @Test
     fun testGetDesignatedProfileReturnsNullWhenNoProfilesForApp() {
         val initialData = mutableMapOf<String, Any?>()
         val (context, prefs) = createFakeContextAndPrefs(initialData)
