@@ -279,6 +279,12 @@ class RemoteService @JvmOverloads constructor(
     private val mStartServerDeathRecipient = IBinder.DeathRecipient {
         Log.w(TAG, "startServer callback binder died; queuing mouse disconnect")
         mHandler.post {
+            // Release keyboard grabs before dropping the service, even if cleanup fails.
+            try {
+                inputService?.stop()
+            } catch (e: Exception) {
+                XtLogger.error(TAG, "Failed to stop input service after client binder death", e)
+            }
             mouseDevice.disconnect()
             inputService = null
             stopServer(true)
