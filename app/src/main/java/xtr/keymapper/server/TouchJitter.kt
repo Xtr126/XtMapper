@@ -71,10 +71,10 @@ class TouchJitter(
 
         // Wrap / clamp within screen bounds if screen dimensions are known
         if (screenWidth > 0) {
-            jitteredX = jitteredX.coerceIn(0f, screenWidth.toFloat())
+            jitteredX = jitteredX.coerceIn(0f, (screenWidth - 1).toFloat())
         }
         if (screenHeight > 0) {
-            jitteredY = jitteredY.coerceIn(0f, screenHeight.toFloat())
+            jitteredY = jitteredY.coerceIn(0f, (screenHeight - 1).toFloat())
         }
 
         return Point(jitteredX, jitteredY)
