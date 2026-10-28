@@ -60,6 +60,10 @@ class KeymapProfiles @JvmOverloads constructor(
             if (profile != null && !profile.disabled) {
                 return designated
             }
+            // Keep a user's existing designation when that profile is temporarily disabled.
+            // Return an enabled fallback for this launch, but do not persist over their choice.
+            return profiles.entries.firstOrNull { !it.value.disabled }?.key
+                ?: profiles.keys.firstOrNull()
         }
 
         val fallback = profiles.entries.firstOrNull { !it.value.disabled }?.key
