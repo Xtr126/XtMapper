@@ -25,10 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger
  *   [onEvent]; storage failures never escape upwards, never recursively.
  * - When a day has exhausted its part budget, further records for that day are
  *   dropped (counted in [recordsDroppedByDayLimit]), never unbounded growth.
- *   The session END marker is the one exception: it is appended to the day's
- *   final part (no new part is opened and the rotation budget is not broken),
- *   so closing a session never pretends the sink failed when it only hit the
- *   configured limit.
+ *   The bounded SESSION START/END markers may use the day's final part (no new
+ *   part is opened and the rotation budget is not broken), so a full daily
+ *   budget alone never makes the file sink appear unavailable.
  */
 class SessionLogWriter(
     /** Backing store; exposed for session-state detection and retention. */
@@ -83,12 +82,16 @@ class SessionLogWriter(
         if (unavailable || sessionEnded || sessionStartDay == null) return
         try {
             val day = sessionStartDay!!
-            writerFor(day, requireNotNull(sessionStart))
+            // START is a bounded session marker, so it may use the day's final part.
+            writerFor(day, requireNotNull(sessionStart), allowFullPart = true)
             writeBlock(
                 SessionMarkers.block(
                     SessionMarkers.startLine(sessionId, sessionStart!!, zone, headerMetadata, previousDisposition)
                 )
             )
+            // Do not keep the final part open after the budget is exhausted;
+            // ordinary records for this day must continue to be dropped.
+            if (exhaustedDay == day) closeCurrent()
         } catch (e: Exception) {
             sinkDown(e)
         }
@@ -150,8 +153,8 @@ class SessionLogWriter(
      * Prepares the writer for [day]. On a day change inside the same session the
      * continuously same session id is marked with a `SESSION CONTINUED` block
      * before the file receives new events. [allowFullPart] is used only by the
-     * session-end path: it reopens the day's final part for the END marker when
-     * the part budget is exhausted instead of giving up the marker.
+     * session-boundary paths: they may reopen the day's final part for a bounded
+     * START or END marker when the part budget is exhausted instead of losing it.
      */
     private fun writerFor(day: String, atInstant: Instant, allowFullPart: Boolean = false) {
         val writer: LogFileWriter?
@@ -194,8 +197,8 @@ class SessionLogWriter(
      * the next part index from the store listing (never an index already in use,
      * never below 2), otherwise the base file when the day has no files yet.
      * Returns null only when the day's part budget is exhausted — except with
-     * [allowFullPart], which then reopens the final part so the bounded session
-     * END marker can still be appended without creating a part beyond the limit.
+     * [allowFullPart], which then reopens the final part so a bounded session
+     * START/END marker can still be appended without creating a part beyond the limit.
      */
     private fun activeWriterFor(day: String, allowFullPart: Boolean = false): LogFileWriter? {
         val maxExistingPart = store.listFiles()
@@ -226,8 +229,8 @@ class SessionLogWriter(
             }
             exhaustedDay = day
             if (!allowFullPart) return null
-            // Session close only: append the (small) END marker to the final
-            // part rather than losing the marker or flagging the sink down.
+            // Session boundary only: append the bounded START/END marker to the
+            // final part rather than losing it or flagging the sink down.
             currentFileName = highestName
             return store.openAppendWriter(highestName)
         }
