@@ -103,7 +103,8 @@ object RemoteServiceHelper {
             if (requestGeneration != RemoteServiceHelper.backendGeneration ||
                 requestedShizuku != RemoteServiceHelper.useShizuku
             ) {
-                cb.onConnection(null)
+                // This bind belongs to a superseded request; don't let its callback
+                // disrupt the new TouchPointer instance while it connects to the new mode.
                 return
             }
 
