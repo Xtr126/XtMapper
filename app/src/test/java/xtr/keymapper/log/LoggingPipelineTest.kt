@@ -294,7 +294,7 @@ class LoggingPipelineTest {
                 sinkLock.lock()
                 try {
                     val text = String(chunk, Charsets.UTF_8)
-                    if (text.contains("message=\\"blocked event\\"") &&
+                    if (text.contains("message=\"blocked event\"") &&
                         blockEventOnce.compareAndSet(false, true)
                     ) {
                         writeEntered.countDown()
