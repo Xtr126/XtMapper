@@ -62,7 +62,7 @@ class EditorUI(
 
     /* The active keymap config and a backup copy */
     private var profile: KeymapProfile? = null
-    private var profileBackup: KeymapProfile? = null
+    private var profileBackup: Set<String>? = null
 
     private var overlayOpen = false
 
@@ -309,8 +309,7 @@ class EditorUI(
                 showMacroDialog()
             }
             R.id.reset -> {
-                profile = profileBackup
-                reloadKeymap()
+                reloadKeymap(KeymapProfiles.parse(profileBackup))
             }
             R.id.import_export -> {
                 // Show Compose-based UI from ImportExportDialog.kt
@@ -415,7 +414,7 @@ class EditorUI(
      * note: the view is NOT already attached on every call path.
      */
     fun loadKeymapAndObserveSizeChanges() {
-        profileBackup = KeymapProfiles(context).getProfile(profileName, false)
+        profileBackup = KeymapProfiles(context).sharedPref.getStringSet(profileName, null)?.toSet()
         keysContainerView.addOnLayoutChangeListener { _, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
             val oldWidth = oldRight - oldLeft
             val oldHeight = oldBottom - oldTop
@@ -427,11 +426,24 @@ class EditorUI(
                 // Persist live editor coordinates using the dimensions they were laid out against.
                 // The layout callback runs after the new bounds are applied, so using the current
                 // dimensions here would scale old coordinates against the new orientation.
-                saveKeymap(oldWidth, oldHeight)
-                reloadKeymap()
+                // Serialize live edits into an in-memory profile using the old coordinate space.
+                // Rotation must not persist edits before the user chooses Save, or Reset loses
+                // its original baseline. Component serialization also finishes pending position
+                // animations so intermediate animation frames are not stored.
+                reloadKeymap(snapshotCurrentKeymap(oldWidth, oldHeight))
             }
         }
         keysContainerView.post { loadKeymap() }
+    }
+
+    private fun snapshotCurrentKeymap(width: Int, height: Int): KeymapProfile {
+        val linesToParse = ArrayList<String?>()
+        editorUiComponents.forEach { linesToParse.add(it.toConfigLine()) }
+        MacroIdUtils.getLines(linesToParse, profile!!)
+        linesToParse.add("APPLICATION ${profile!!.packageName}")
+        if (!profile!!.disabled) linesToParse.add("ENABLED")
+        linesToParse.add("SCREENSIZE $width $height")
+        return KeymapProfiles.parse(linesToParse.filterNotNull().filter { it.isNotBlank() }.toSet())
     }
 
     private fun reloadKeymap(profileToLoad: KeymapProfile? = null) {

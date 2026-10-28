@@ -112,20 +112,10 @@ class SwipeKey private constructor(
             callback: SwipeKeyCallback
         ) : this(rootView, callback) {
             button1.setText(swipeKey.key1.code ?: "")
-            button1.frameView.animate()
-                .x(swipeKey.key1.x)
-                .y(swipeKey.key1.y)
-                .setDuration(500)
-                .withEndAction { onXyChange(0f, 0f) }
-                .start()
+            button1.animateToPosition(swipeKey.key1.x, swipeKey.key1.y, 500L) { onXyChange(0f, 0f) }
 
             button2.setText(swipeKey.key2.code ?: "")
-            button2.frameView.animate()
-                .x(swipeKey.key2.x)
-                .y(swipeKey.key2.y)
-                .setDuration(500)
-                .withEndAction { onXyChange(0f, 0f) }
-                .start()
+            button2.animateToPosition(swipeKey.key2.x, swipeKey.key2.y, 500L) { onXyChange(0f, 0f) }
 
             val keymapConfig = KeymapConfig(rootView.context)
 

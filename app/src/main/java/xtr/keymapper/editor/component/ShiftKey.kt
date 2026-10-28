@@ -128,20 +128,10 @@ class ShiftKey private constructor(
         ) : this(rootView, callback) {
             durationMs = shiftKey.durationMs
             button1.setText(shiftKey.key1.code ?: "")
-            button1.frameView.animate()
-                .x(shiftKey.key1.x)
-                .y(shiftKey.key1.y)
-                .setDuration(500)
-                .withEndAction { onXyChange(0f, 0f) }
-                .start()
+            button1.animateToPosition(shiftKey.key1.x, shiftKey.key1.y, 500L) { onXyChange(0f, 0f) }
 
             button2.setText(shiftKey.key2.code ?: "")
-            button2.frameView.animate()
-                .x(shiftKey.key2.x)
-                .y(shiftKey.key2.y)
-                .setDuration(500)
-                .withEndAction { onXyChange(0f, 0f) }
-                .start()
+            button2.animateToPosition(shiftKey.key2.x, shiftKey.key2.y, 500L) { onXyChange(0f, 0f) }
 
             val keymapConfig = KeymapConfig(rootView.context)
 
