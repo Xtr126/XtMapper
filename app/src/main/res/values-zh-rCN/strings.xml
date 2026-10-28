@@ -41,6 +41,9 @@
     <string name="shift_transition_ms">切换过渡: %d 毫秒</string>
     <string name="shift_transition_title">切换过渡速度</string>
     <string name="use_global_default">全局默认 (%d 毫秒)</string>
+    <string name="shift_transition_instant">即时 (0 毫秒)</string>
+    <string name="shift_transition_ms_value">%d 毫秒</string>
+    <string name="shift_transition_changed">切换过渡: %1$s</string>
     <string name="profile_name">配置名称</string>
     <string name="root_not_found_title">未获取root权限</string>
     <string name="root_not_found_message">键映射需要获取root权限才能运行。\n请在您的root管理器中为XtMapper授予权限</string>
