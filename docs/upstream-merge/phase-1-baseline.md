@@ -98,3 +98,20 @@ The trial is therefore a source-reconciliation checkpoint, **not a verified buil
 ## Next required step
 
 Run the debug assembly and JVM unit tests on a full local checkout of the trial branch, then inspect and resolve compiler/test failures before treating the merge as validated. Run release assembly and device/native behavior checks afterward. Keep the proof-of-concept host-reporting/security tests separate from this merge. Do not tag or publish XtCrash as part of this task.
+
+## Follow-up source corrections after the initial CodeRabbit checkpoint
+
+The following small, reversible commits were added after merge commit `a316da06279429b76f580e5c3af937ab4317e870`:
+
+- `b67a7fedd282ed0675c0d1aff4578dcb7d00ba96`: combined the two `MainActivity.onResume()` bodies into one override, retaining both the `TouchPointer.isRunning` state refresh and the guarded file-logging enablement.
+- `a7ca6ba620142b417df7e082f13c6a425732ae24`: limited the Shizuku-to-Root preference reset to `isShellInit`, so arbitrary crash-text values no longer trigger that persisted mode change. This does not authenticate an external `data=shell` Intent; the exported activity's origin/trust boundary remains open.
+- `facb816284c29af39a87e98011d7f83c96aaff8e` and `3bbe7f532edb157558d4f995db86d6d13bee097d`: pass the initial Wayland mode into `RemoteService` before its initializer can launch the input reader; existing one-argument Kotlin construction remains available through the default parameter and generated overload.
+- `29d87cf83aaf6da8b79ef54255f6f63b8f107b15`: route `InputService` keyboard-grab/input exception diagnostics through `XtLogger` rather than direct Android `Log` calls.
+- `bc3815d42b757f4f4cabfd43eca3f093ec8c789c`: route `RemoteService.start_getevent()` input-reader exception diagnostics through `XtLogger`.
+
+Static checks after these edits confirmed one `onResume()` declaration and one `super.onResume()` call, the Shizuku reset guard, the initial Wayland constructor argument, no direct `Log.e/w/i/d/v` calls in `InputService.kt`, and no direct `Log.e` calls in the `start_getevent()` block. These are source checks only.
+
+## Remaining review findings
+
+- The exported `MainActivity` still interprets a non-null legacy `data` extra as a shell/crash flow and the crash dialog can be repeated on activity recreation. The mode-reset side effect is narrowed, but origin validation and one-shot dialog behavior have not been fully redesigned or device-tested.
+- There is no local Gradle build or test evidence in this environment. The latest commits need a fresh CodeRabbit review and successful `app:assembleDebug` / `app:testDebugUnitTest` before any compatibility claim. Release/minification/native and device/Waydroid checks remain outstanding.
