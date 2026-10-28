@@ -15,7 +15,7 @@ class AsyncLogWorker(
     val queue: LoggingQueue,
     private val config: LoggingConfig,
     val writer: SessionLogWriter,
-    roleTag: String,
+    private val roleTag: String,
 ) {
     private val running = AtomicBoolean(false)
     private val lastError = AtomicReference<Throwable?>(null)
