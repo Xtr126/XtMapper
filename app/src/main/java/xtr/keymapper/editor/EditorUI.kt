@@ -526,11 +526,17 @@ class EditorUI(
                 val importedProfile = KeymapProfiles.parse(lines)
                 val currentProfile = profile ?: KeymapProfiles(context).getProfile(profileName, false)
 
-                // Clipboard exports contain key definitions, not profile ownership or enabled state.
-                // Preserve that metadata from the profile being edited unless the import includes a
-                // valid screen size of its own.
-                importedProfile.packageName = currentProfile.packageName
-                importedProfile.disabled = currentProfile.disabled
+                // Clipboard exports usually contain only key definitions. Keep the existing
+                // profile metadata only when the imported text does not provide valid replacements.
+                val hasImportedApplication = lines.any {
+                    it.startsWith("APPLICATION ") && it.substringAfter("APPLICATION ").isNotBlank()
+                }
+                if (!hasImportedApplication) {
+                    importedProfile.packageName = currentProfile.packageName
+                }
+                if ("ENABLED" !in lines) {
+                    importedProfile.disabled = currentProfile.disabled
+                }
                 if (importedProfile.xRes <= 0) importedProfile.xRes = currentProfile.xRes
                 if (importedProfile.yRes <= 0) importedProfile.yRes = currentProfile.yRes
 
