@@ -61,6 +61,7 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_TRUSTED_SHELL_INIT = "trusted_shell_initialization"
         private const val SERVER_CRASH_DIALOG_TAG = "server_crash_dialog"
         private const val SERVER_CRASH_DISMISSED_REQUEST = "server_crash_dismissed"
+        private const val MAX_DIAGNOSTIC_MESSAGE_CHARS = 16 * 1024
 
         init {
             // Set settings before the main shell can be created
@@ -192,7 +193,12 @@ class MainActivity : AppCompatActivity() {
         if (supportFragmentManager.isStateSaved ||
             supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) != null
         ) return
-        ServerCrashDialogFragment.newInstance(message)
+        val safeMessage = if (message.length > MAX_DIAGNOSTIC_MESSAGE_CHARS) {
+            message.take(MAX_DIAGNOSTIC_MESSAGE_CHARS) + "\n\n[Message truncated]"
+        } else {
+            message
+        }
+        ServerCrashDialogFragment.newInstance(safeMessage)
             .showNow(supportFragmentManager, SERVER_CRASH_DIALOG_TAG)
     }
 
@@ -658,7 +664,7 @@ private class ServerCrashDialogFragment : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val message = requireArguments().getString(ARG_MESSAGE).orEmpty()
         return MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Server crashed")
+            .setTitle(R.string.unverified_diagnostic_title)
             .setMessage(message)
             .setPositiveButton(R.string.ok) { _, _ -> notifyDismissed() }
             .create()
