@@ -164,12 +164,12 @@ class ShiftKey private constructor(
             val speeds = intArrayOf(-1, 0, 50, 100, 150, 200, 300)
             val labels = arrayOf(
                 context.getString(R.string.use_global_default, globalSpeed),
-                "Instant (0 ms)",
-                "50 ms",
-                "100 ms",
-                "150 ms",
-                "200 ms",
-                "300 ms"
+                context.getString(R.string.shift_transition_instant),
+                context.getString(R.string.shift_transition_ms_value, 50),
+                context.getString(R.string.shift_transition_ms_value, 100),
+                context.getString(R.string.shift_transition_ms_value, 150),
+                context.getString(R.string.shift_transition_ms_value, 200),
+                context.getString(R.string.shift_transition_ms_value, 300)
             )
 
             val currentSelection = when (durationMs) {
@@ -188,11 +188,15 @@ class ShiftKey private constructor(
                 .setSingleChoiceItems(labels, currentSelection) { dialog, which ->
                     durationMs = speeds[which]
                     val chosenText = if (durationMs == -1) {
-                        "Global default ($globalSpeed ms)"
+                        context.getString(R.string.use_global_default, globalSpeed)
                     } else {
-                        "$durationMs ms"
+                        context.getString(R.string.shift_transition_ms_value, durationMs)
                     }
-                    android.widget.Toast.makeText(context, "Shift transition: $chosenText", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(
+                        context,
+                        context.getString(R.string.shift_transition_changed, chosenText),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
                     dialog.dismiss()
                 }
                 .setNegativeButton(R.string.cancel, null)
