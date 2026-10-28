@@ -429,14 +429,14 @@ class EditorUI(
         keysContainerView.post { loadKeymap() }
     }
 
-    private fun reloadKeymap() {
+    private fun reloadKeymap(profileToLoad: KeymapProfile? = null) {
         keysContainerView.removeAllViews()
         editorUiComponents.clear()
-        loadKeymap()
+        loadKeymap(profileToLoad)
     }
 
-    private fun loadKeymap() {
-        profile = KeymapProfiles(context).getProfile(profileName, false)
+    private fun loadKeymap(profileToLoad: KeymapProfile? = null) {
+        profile = profileToLoad ?: KeymapProfiles(context).getProfile(profileName, false)
 
         val (realWidth, realHeight) = getRealScreenDimensions()
         val targetWidth = if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth.toFloat() else if (keysContainerView.width > 0) keysContainerView.width.toFloat() else realWidth.toFloat()
@@ -523,8 +523,18 @@ class EditorUI(
             val text = clipData.getItemAt(0).text?.toString()
             if (!text.isNullOrBlank()) {
                 val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                profile = KeymapProfiles.parse(lines)
-                reloadKeymap()
+                val importedProfile = KeymapProfiles.parse(lines)
+                val currentProfile = profile ?: KeymapProfiles(context).getProfile(profileName, false)
+
+                // Clipboard exports contain key definitions, not profile ownership or enabled state.
+                // Preserve that metadata from the profile being edited unless the import includes a
+                // valid screen size of its own.
+                importedProfile.packageName = currentProfile.packageName
+                importedProfile.disabled = currentProfile.disabled
+                if (importedProfile.xRes <= 0) importedProfile.xRes = currentProfile.xRes
+                if (importedProfile.yRes <= 0) importedProfile.yRes = currentProfile.yRes
+
+                reloadKeymap(importedProfile)
                 android.widget.Toast.makeText(context, "Keymap imported from clipboard", android.widget.Toast.LENGTH_SHORT).show()
                 closeImportExportDialog()
                 return
