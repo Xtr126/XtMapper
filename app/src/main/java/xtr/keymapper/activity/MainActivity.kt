@@ -660,12 +660,16 @@ private class ServerCrashDialogFragment : DialogFragment() {
         return MaterialAlertDialogBuilder(requireContext())
             .setTitle("Server crashed")
             .setMessage(message)
-            .setPositiveButton(R.string.ok, null)
+            .setPositiveButton(R.string.ok) { _, _ -> notifyDismissed() }
             .create()
     }
 
-    override fun onDismiss(dialog: android.content.DialogInterface) {
-        super.onDismiss(dialog)
+    override fun onCancel(dialog: android.content.DialogInterface) {
+        super.onCancel(dialog)
+        notifyDismissed()
+    }
+
+    private fun notifyDismissed() {
         parentFragmentManager.setFragmentResult(
             DISMISSED_REQUEST,
             Bundle.EMPTY
