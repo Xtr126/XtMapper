@@ -116,7 +116,6 @@ object RemoteServiceShell {
             }
 
         } catch (e: Exception) {
-            Log.e(RemoteService.TAG, e.message, e)
             XtLogger.error(TAG, "server startup failed", e)
             // Bounded flush before the existing exit(1) behavior.
             XtLogger.flush(2_000)
@@ -215,7 +214,7 @@ object RemoteServiceShell {
         try {
             context = systemContext.createPackageContext(BuildConfig.APPLICATION_ID, flags)
         } catch (e: PackageManager.NameNotFoundException) {
-            Log.e(RemoteService.TAG, e.message, e)
+            XtLogger.error(RemoteService.TAG, "Failed to create package context for the shell process", e)
         }
         return getContextImpl(context!!)
     }
