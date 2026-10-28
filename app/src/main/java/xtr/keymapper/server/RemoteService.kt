@@ -112,11 +112,12 @@ class RemoteService @JvmOverloads constructor(
         }
 
         Looper.getMainLooper().thread.setUncaughtExceptionHandler { t, e ->
-            // Record the terminal failure first (bounded flush); the relay below is unchanged.
+            // Record the terminal failure first (bounded flush) before attempting the UI relay.
             try {
                 XtLogger.fatal(TAG, "uncaught exception on thread ${t.name}", e)
             } catch (ignored: Exception) {
             }
+            var crashRelayed = false
             try {
                 val crashInfo = ApplicationErrorReport.CrashInfo(e)
 
@@ -132,9 +133,14 @@ class RemoteService @JvmOverloads constructor(
                             crashInfo.throwLineNumber + "\n" +
                             crashInfo.throwMethodName
                 ).start()
+                crashRelayed = true
             } catch (ex: Exception) {
                 XtLogger.error(TAG, "Failed to relay the server crash to MainActivity", ex)
             }
+            XtLogger.endSession(
+                if (crashRelayed) SessionStates.STATUS_CRASH_RELAYED
+                else SessionStates.STATUS_UNEXPECTED_EXIT
+            )
             System.exit(1)
         }
     }
