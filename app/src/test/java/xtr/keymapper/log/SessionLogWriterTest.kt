@@ -193,6 +193,32 @@ class SessionLogWriterTest {
     }
 
     @Test
+    fun `exhausted day stops relisting and reopening the log sink`() {
+        val clock = MutableClock.at("2026-10-22T09:00:00Z")
+        val backing = newStore()
+        val listCalls = java.util.concurrent.atomic.AtomicInteger()
+        val store = object : LogStore {
+            override fun listFiles(): List<LogFileInfo> {
+                listCalls.incrementAndGet()
+                return backing.listFiles()
+            }
+            override fun openAppendWriter(name: String): LogFileWriter = backing.openAppendWriter(name)
+            override fun readTail(name: String, maxLines: Int): List<String> = backing.readTail(name, maxLines)
+            override fun delete(name: String): Boolean = backing.delete(name)
+        }
+        val config = LoggingConfig(queueCapacity = 8, maxFileBytes = 100, maxPartsPerDay = 2)
+        val writer = makeWriter(store, clock, "sess-limit-cache", config = config)
+        writer.writeSessionStartMarker()
+        repeat(12) { writer.write(listOf(record(clock, "initial-$it"))) }
+        assertTrue("day part budget exhausted", writer.recordsDroppedByDayLimit.get() > 0)
+
+        val callsAfterExhaustion = listCalls.get()
+        repeat(10) { writer.write(listOf(record(clock, "drop-$it"))) }
+        assertEquals("dropped records must not repeat directory I/O", callsAfterExhaustion, listCalls.get())
+        writer.close()
+    }
+
+    @Test
     fun `end session writes duration, status and drops, and is idempotent`() {
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
         val store = newStore()
