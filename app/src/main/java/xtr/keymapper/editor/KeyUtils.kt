@@ -1,6 +1,7 @@
 package xtr.keymapper.editor
 
 import android.view.KeyEvent
+import java.util.Locale
 
 object KeyUtils {
     /**
@@ -83,15 +84,8 @@ object KeyUtils {
             KeyEvent.KEYCODE_NUMPAD_DOT -> "KPDOT"
 
             else -> {
-                val label = event?.displayLabel?.toString()?.uppercase()
-                if (label != null && label.length == 1 && label.matches("[A-Z0-9]".toRegex())) {
-                    label
-                } else {
-                    val codeStr = KeyEvent.keyCodeToString(keyCode)
-                    if (codeStr.startsWith("KEYCODE_")) {
-                        codeStr.removePrefix("KEYCODE_")
-                    } else null
-                }
+                val label = event?.displayLabel?.toString()?.uppercase(Locale.ROOT)
+                if (label != null && label.length == 1 && label.matches("[A-Z0-9]".toRegex())) label else null
             }
         }
     }
