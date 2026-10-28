@@ -90,7 +90,7 @@ object RemoteServiceShell {
             }
             XtLogger.info(TAG, "native libraries loaded")
 
-            val mService = RemoteService(getContext())
+            val mService = RemoteService(getContext(), initialIsWaylandClient = isWaylandClient)
             mService.startedFromShell = true
             mService.isWaylandClient = isWaylandClient
 
