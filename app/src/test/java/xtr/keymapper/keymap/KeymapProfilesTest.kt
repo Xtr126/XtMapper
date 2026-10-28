@@ -169,8 +169,10 @@ class KeymapProfilesTest {
         val keymapProfiles = KeymapProfiles(context, prefs)
 
         val result = keymapProfiles.getDesignatedProfileForApp("com.example.game")
-        // ProfileDisabled is disabled, so it should fall back to ProfileEnabled
+        // ProfileDisabled is disabled, so it should fall back for this launch.
         assertEquals("ProfileEnabled", result)
+        // Keep the stored choice so re-enabling it restores the user's designation.
+        assertEquals("ProfileDisabled", prefs.getString("designated_profile_com.example.game", null))
     }
 
     @Test
