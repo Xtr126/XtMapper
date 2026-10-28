@@ -445,8 +445,9 @@ class MainActivity : AppCompatActivity() {
             else if (Shizuku.checkSelfPermission() != PERMISSION_GRANTED) alertShizukuNotAuthorized()
         }
         if (isComposeServiceActive()) {
-            // Input mode selects the process backend. Restart the pointer service so
-            // the existing Root/Shizuku Binder cannot keep handling input after a toggle.
+            // Invalidate the old Binder before shutdown; stopServer() exits asynchronously,
+            // so immediately reconnecting could otherwise reuse it before binder death.
+            RemoteServiceHelper.prepareForBackendSwitch()
             stopPointer()
             startPointer()
         }
