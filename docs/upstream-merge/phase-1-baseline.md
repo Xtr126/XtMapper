@@ -1,6 +1,6 @@
 # Upstream `dev` Merge — Phase 1 Baseline
 
-Status: **source inventory started; no merge commit or behavior changes applied yet.**
+Status: **source inventory and upstream merge recorded; follow-up fixes are in progress; build and device validation have not been run.**
 
 Recorded: 2026-10-28. This checkpoint records immutable refs and verified source-level constraints before trial-merging upstream into the integration branch.
 
