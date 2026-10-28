@@ -102,7 +102,9 @@ class MainActivity : AppCompatActivity() {
          * If user has enabled "Use Shizuku" but this activity was started from shell (waydroid or adb)
          * Then reset "Use Shizuku" setting to false since it crashes the app
          */
-        if (startedFromShell == true && keymapConfig.isShizukuMode) {
+        // Only the explicit shell-initialization marker may trigger the Shizuku-to-Root reset.
+        // Crash-text data extras must not change the user's persisted input mode.
+        if (isShellInit && keymapConfig.isShizukuMode) {
             keymapConfig.useShizuku = false
             keymapConfig.inputMode = KeymapConfig.MODE_ROOT
             keymapConfig.applySharedPrefs()
