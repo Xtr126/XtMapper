@@ -72,6 +72,29 @@ Documentation, translations, independent tests, and the `evdev_common.cpp` direc
 
 This is a GitHub source audit only. No build, unit test, release build, device test, or Waydroid test has been run as part of this checkpoint. These must be reported as **not run** until evidenced by a successful run.
 
+## Trial merge result (2026-10-28)
+
+A disposable trial merge was created on `merge/trial-upstream-dev-2026-10-28`:
+
+- Initial merge commit: `73174b9175de3864030ec475b3011a214b9a6d84` (parents: integration checkpoint `c067b0af587ca9e837532264b6002760135bd67c` and upstream `2638df2099e778c08e7573c3d9b09006384ec48f`).
+- Follow-up trial fix: `c24718c0a7cfe58c1c5e2065d1a99d29bbbcd4e4` restores the README credits table header. Upstream `dev` had changed it to a blank `|  |  |` header.
+- Follow-up trial fix: `545c788011b67dedb3885c083478ebf19e4abf99` qualifies the `geteventProcess` property as `java.lang.Process`. The integration imports `android.os.Process` for UID classification, so the unqualified type from upstream would resolve to the wrong class and fail to provide the subprocess methods.
+
+The merged tree contains upstream changes for 58 changed paths (51 non-overlapping paths plus the seven behaviorally reviewed overlapping files); no upstream deletions were found. The tree includes the native keyboard-grab implementation, touch-jitter support, quick-settings tile, editor/profile changes, and upstream unit tests.
+
+Source-level structural checks were run on all seven overlapping files: no conflict markers or duplicate imports were found, and each file's opening/closing brace count balanced. Additional targeted checks confirmed that desugaring and its dependency remain, JUnit is declared once, the app Application hook remains, the launch signal is separate from `data=shell`, and logger initialization/session close paths remain present. These checks do **not** replace Kotlin compilation or tests.
+
+## Verification status
+
+- `app:assembleDebug`: **not run**
+- `app:assembleRelease`: **not run**
+- `app:testDebugUnitTest`: **not run**
+- Device/Waydroid behavior and native keyboard-grab tests: **not run**
+- GitHub status checks: none reported for the trial merge commit.
+- The only observed Actions run was Crowdin, which was skipped. It is not build verification.
+
+The trial is therefore a source-reconciliation checkpoint, **not a verified build or release candidate**. No XtCrash tag, release, or publishing action was performed.
+
 ## Next required step
 
-Run a disposable trial merge from the pinned refs using a full repository clone/worktree, record the actual conflict set and resulting tree, then reconcile behavior in small reviewable commits. Keep the proof-of-concept host-reporting/security tests separate from the merge branch. Do not tag or publish XtCrash as part of this task.
+Run the debug assembly and JVM unit tests on a full local checkout of the trial branch, then inspect and resolve compiler/test failures before treating the merge as validated. Run release assembly and device/native behavior checks afterward. Keep the proof-of-concept host-reporting/security tests separate from this merge. Do not tag or publish XtCrash as part of this task.
