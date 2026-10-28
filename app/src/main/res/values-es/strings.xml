@@ -138,6 +138,7 @@
     <string name="msg_backup_saved">Copia de seguridad guardada con éxito</string>
     <string name="error_save_failed">Error al guardar</string>
     <string name="error_import_failed">Error al importar</string>
+    <string name="unverified_diagnostic_title">Texto de diagnóstico no verificado</string>
     <string name="msg_profiles_imported">Perfiles importados con éxito</string>
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">Todos los perfiles ya existen, no se importó nada</string>
     <string name="share">Compartir</string>
