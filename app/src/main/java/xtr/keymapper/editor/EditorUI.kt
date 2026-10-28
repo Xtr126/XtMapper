@@ -504,6 +504,7 @@ class EditorUI(
 
         // Enabled macro ids
         MacroIdUtils.getLines(linesToWrite, profile!!)
+        linesToWrite.removeAll { it.isNullOrBlank() }
 
         // Save Config
         val profiles = KeymapProfiles(context)
@@ -527,7 +528,7 @@ class EditorUI(
         editorUiComponents.forEach { linesToWrite.add(it.toConfigLine()) }
 
         MacroIdUtils.getLines(linesToWrite, profile!!)
-        return linesToWrite.joinToString("\n")
+        return linesToWrite.filterNotNull().filter { it.isNotBlank() }.joinToString("\n")
     }
 
     private fun handleImportAction() {
