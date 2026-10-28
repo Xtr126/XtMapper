@@ -137,10 +137,9 @@ class RemoteService @JvmOverloads constructor(
             } catch (ex: Exception) {
                 XtLogger.error(TAG, "Failed to relay the server crash to MainActivity", ex)
             }
-            XtLogger.endSession(
-                if (crashRelayed) SessionStates.STATUS_CRASH_RELAYED
-                else SessionStates.STATUS_UNEXPECTED_EXIT
-            )
+            // Do not write a SESSION END marker for an uncaught fatal exception.
+            // The next process must be able to identify this session as crashed even
+            // when the diagnostic dialog was successfully relayed to MainActivity.
             System.exit(1)
         }
     }
