@@ -140,8 +140,8 @@ class TouchJitterTest {
         // Near (1920, 1080)
         for (i in 0 until 50) {
             val pt = touchJitter.wrapCoordinates(1920f, 1080f, InputService.DOWN, i)
-            assertTrue("X should not exceed 1920: ${pt.x}", pt.x <= 1920f)
-            assertTrue("Y should not exceed 1080: ${pt.y}", pt.y <= 1080f)
+            assertTrue("X must stay below the exclusive screen width: ${pt.x}", pt.x < 1920f)
+            assertTrue("Y must stay below the exclusive screen height: ${pt.y}", pt.y < 1080f)
             touchJitter.wrapCoordinates(1920f, 1080f, InputService.UP, i)
         }
     }
