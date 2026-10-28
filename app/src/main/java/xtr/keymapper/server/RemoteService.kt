@@ -3,7 +3,6 @@ package xtr.keymapper.server
 import android.app.ApplicationErrorReport
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
 import android.os.Binder
@@ -30,7 +29,6 @@ import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
-import java.io.File
 import java.io.InputStreamReader
 import java.lang.reflect.Method
 
@@ -61,7 +59,6 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     init {
-        instance = this
         loadLibraries()
         init()
     }
@@ -418,7 +415,6 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
 
     companion object {
         const val TAG = "xtmapper-server"
-        var instance: RemoteService? = null
 
         fun loadLibraries() {
             System.loadLibrary("mouse_read")
