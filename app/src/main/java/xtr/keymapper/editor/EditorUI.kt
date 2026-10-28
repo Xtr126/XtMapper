@@ -523,7 +523,19 @@ class EditorUI(
             val text = clipData.getItemAt(0).text?.toString()
             if (!text.isNullOrBlank()) {
                 val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                val importedProfile = KeymapProfiles.parse(lines)
+                // Clipboard data is untrusted input. Malformed coordinates, sizes, or
+                // component records must report an import failure instead of crashing the editor.
+                val importedProfile = try {
+                    KeymapProfiles.parse(lines)
+                } catch (e: RuntimeException) {
+                    android.util.Log.w("EditorUI", "Rejected malformed keymap clipboard data", e)
+                    android.widget.Toast.makeText(
+                        context,
+                        R.string.error_import_failed,
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
                 val currentProfile = profile ?: KeymapProfiles(context).getProfile(profileName, false)
 
                 // Clipboard exports usually contain only key definitions. Keep the existing
