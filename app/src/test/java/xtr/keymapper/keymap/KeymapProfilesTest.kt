@@ -96,6 +96,21 @@ class KeymapProfilesTest {
     }
 
     @Test
+    fun malformedShiftKeyRecordsAreSkippedWithoutFailingProfileParse() {
+        val profile = KeymapProfiles.parse(setOf(
+            "SHIFT_KEY A 100 200 B 300 400",
+            "SHIFT_KEY A NaN 200 B 300 400",
+            "SHIFT_KEY A 100 200 B 300 400 not-a-duration",
+            "SHIFT_KEY  100 200 B 300 400",
+            "SHIFT_KEY A 100 200 B 300 400 extra"
+        ))
+
+        assertEquals(1, profile.shiftKeys.size)
+        assertEquals("A", profile.shiftKeys.single().key1.code)
+        assertEquals("B", profile.shiftKeys.single().key2.code)
+    }
+
+    @Test
     fun testSetProfileEnabledDoesNotThrowClassCastExceptionWithDesignatedProfileEntries() {
         val initialData = mutableMapOf<String, Any?>(
             "Default" to setOf("APPLICATION com.example.game", "ENABLED", "KEY_A 100 100"),
