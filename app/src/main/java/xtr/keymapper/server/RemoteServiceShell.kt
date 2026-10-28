@@ -39,7 +39,7 @@ object RemoteServiceShell {
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             println("Unsupported Android version")
-            XtLogger.endSession(SessionStates.STATUS_CRASH_RELAYED)
+            XtLogger.endSession("Unsupported Android version")
             return
         }
 
@@ -65,7 +65,7 @@ object RemoteServiceShell {
             // A shell process that reaches JVM shutdown without the explicit normal-stop
             // path must not be reported as clean. Normal stop closes the session before exit.
             Runtime.getRuntime().addShutdownHook(
-                Thread { XtLogger.endSession(SessionStates.STATUS_CRASH_RELAYED) }
+                Thread { XtLogger.endSession(SessionStates.STATUS_UNEXPECTED_EXIT) }
             )
             val fakeTouch = SystemProperties.get("persist.waydroid.fake_touch", null)
             if (fakeTouch != null && !fakeTouch.isBlank()) {
@@ -119,7 +119,7 @@ object RemoteServiceShell {
             XtLogger.error(TAG, "server startup failed", e)
             // Bounded flush before the existing exit(1) behavior.
             XtLogger.flush(2_000)
-            XtLogger.endSession(SessionStates.STATUS_CRASH_RELAYED)
+            XtLogger.endSession(SessionStates.STATUS_STARTUP_FAILED)
             exitProcess(1)
         }
         Looper.loop()
