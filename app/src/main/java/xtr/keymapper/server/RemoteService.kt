@@ -29,7 +29,6 @@ import xtr.keymapper.databinding.CursorBinding
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.log.Role
-import xtr.keymapper.log.SessionStates
 import xtr.keymapper.log.XtLogger
 import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
@@ -117,7 +116,6 @@ class RemoteService @JvmOverloads constructor(
                 XtLogger.fatal(TAG, "uncaught exception on thread ${t.name}", e)
             } catch (ignored: Exception) {
             }
-            var crashRelayed = false
             try {
                 val crashInfo = ApplicationErrorReport.CrashInfo(e)
 
@@ -133,7 +131,6 @@ class RemoteService @JvmOverloads constructor(
                             crashInfo.throwLineNumber + "\n" +
                             crashInfo.throwMethodName
                 ).start()
-                crashRelayed = true
             } catch (ex: Exception) {
                 XtLogger.error(TAG, "Failed to relay the server crash to MainActivity", ex)
             }
