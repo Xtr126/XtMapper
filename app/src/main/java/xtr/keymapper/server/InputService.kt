@@ -132,6 +132,9 @@ class InputService @Throws(RemoteException::class) constructor(
                     return
                 }
                 isKeyboardBlocked = true
+                // A new grab starts locked natively. Honour the existing pause state
+                // immediately so a grab started while paused does not swallow all typing.
+                setKeyboardGrabLock(!stopEvents)
             } catch (e: Exception) {
                 XtLogger.error(RemoteService.TAG, "Failed to start keyboard grab", e)
                 return
