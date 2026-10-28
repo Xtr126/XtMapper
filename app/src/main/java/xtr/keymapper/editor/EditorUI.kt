@@ -423,13 +423,10 @@ class EditorUI(
             // Only reload if screen orientation genuinely flipped between portrait and landscape
             val orientationChanged = oldWidth > 0 && oldHeight > 0 && (oldWidth > oldHeight) != (newWidth > newHeight)
             if (orientationChanged && profile != null) {
-                // Persist live editor coordinates using the dimensions they were laid out against.
-                // The layout callback runs after the new bounds are applied, so using the current
-                // dimensions here would scale old coordinates against the new orientation.
-                // Serialize live edits into an in-memory profile using the old coordinate space.
-                // Rotation must not persist edits before the user chooses Save, or Reset loses
-                // its original baseline. Component serialization also finishes pending position
-                // animations so intermediate animation frames are not stored.
+                // Snapshot live edits in their pre-rotation coordinate space; the layout
+                // callback runs after new bounds are applied. Keep this snapshot in memory so
+                // rotation preserves edits without changing the saved profile or Reset baseline.
+                // Component serialization finishes pending position animations before reading them.
                 reloadKeymap(snapshotCurrentKeymap(oldWidth, oldHeight))
             }
         }
