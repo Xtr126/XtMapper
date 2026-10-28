@@ -182,12 +182,54 @@ class LoggingPipeline(
     fun close(status: String = SessionStates.STATUS_CLEAN) {
         if (!started.get()) return
         started.set(false)
-        worker.stopDraining(config.flushTimeoutMillis)
-        writer.endSession(
-            clock.instant(), durationNanos(), status,
-            queue.droppedCount.get() + writer.recordsDroppedByDayLimit.get(),
-        )
-        worker.closeFile()
+        if (worker.stopDraining(config.flushTimeoutMillis)) {
+            // The consumer is fully stopped, so the caller can safely write END
+            // and release the sink without racing an in-flight writer operation.
+            finishClose(status)
+            return
+        }
+
+        // The worker did not stop within its bound. Do not call endSession() or
+        // closeFile() here: either can wait on the same file lock as the stuck
+        // worker and turn this bounded shutdown into an unbounded one. Records
+        // left in the queue will never be consumed after running=false, so close
+        // them out as dropped before scheduling deferred cleanup.
+        val abandoned = queue.drainUpTo(Int.MAX_VALUE)?.size ?: 0
+        queue.markFailed(abandoned)
+        reportFirstDropIfNeeded()
+
+        val workerThread = worker.threadReference()
+        Thread({
+            var interrupted = false
+            while (workerThread.isAlive) {
+                try {
+                    workerThread.join()
+                } catch (_: InterruptedException) {
+                    interrupted = true
+                }
+            }
+            try {
+                finishClose(status)
+            } finally {
+                if (interrupted) Thread.currentThread().interrupt()
+            }
+        }, "xtlogger-session-close-" + role.tag).apply {
+            // If the file sink never recovers, this helper must not keep the app
+            // process alive; the missing END marker correctly records an unclean session.
+            isDaemon = true
+            start()
+        }
+    }
+
+    private fun finishClose(status: String) {
+        try {
+            writer.endSession(
+                clock.instant(), durationNanos(), status,
+                queue.droppedCount.get() + writer.recordsDroppedByDayLimit.get(),
+            )
+        } finally {
+            worker.closeFile()
+        }
     }
 
     /**
