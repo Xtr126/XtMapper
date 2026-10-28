@@ -444,8 +444,11 @@ class MainActivity : AppCompatActivity() {
             else if (!Shizuku.pingBinder()) alertShizukuNotRunning()
             else if (Shizuku.checkSelfPermission() != PERMISSION_GRANTED) alertShizukuNotAuthorized()
         }
-        if (isServiceBound && pointerOverlay != null) {
-            pointerOverlay?.launchProfile(selectedProfileName)
+        if (isComposeServiceActive()) {
+            // Input mode selects the process backend. Restart the pointer service so
+            // the existing Root/Shizuku Binder cannot keep handling input after a toggle.
+            stopPointer()
+            startPointer()
         }
     }
 
