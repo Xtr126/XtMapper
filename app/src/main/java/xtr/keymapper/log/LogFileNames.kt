@@ -1,5 +1,7 @@
 package xtr.keymapper.log
 
+import java.time.DateTimeException
+import java.time.LocalDate
 import java.util.Locale
 
 /**
@@ -83,6 +85,11 @@ object LogFileNames {
         val month = date.substring(5, 7).toIntOrNull() ?: return null
         val day = date.substring(8, 10).toIntOrNull() ?: return null
         if (month !in 1..12 || day !in 1..31) return null
+        try {
+            LocalDate.of(year, month, day)
+        } catch (_: DateTimeException) {
+            return null
+        }
         return LogFileEntry(role, year, month, day, part, name)
     }
 
