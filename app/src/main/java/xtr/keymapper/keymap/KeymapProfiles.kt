@@ -71,10 +71,14 @@ class KeymapProfiles @JvmOverloads constructor(
     }
 
     fun renameProfile(profileName: String, newProfile: String) {
+        val designatedKeys = sharedPref.all
+            .filter { (key, value) -> key.startsWith("designated_profile_") && value == profileName }
+            .keys
         val stringSet = sharedPref.getStringSet(profileName, null)
         deleteProfile(profileName)
         sharedPref.edit()
             .putStringSet(newProfile, stringSet)
+            .also { editor -> designatedKeys.forEach { editor.putString(it, newProfile) } }
             .apply()
         if (sharedPref.getString(KEY_LAST_SELECTED_PROFILE, null) == profileName) {
             setLastSelectedProfile(newProfile)
@@ -159,10 +163,18 @@ class KeymapProfiles @JvmOverloads constructor(
     }
 
     fun deleteProfile(profileName: String?) {
-        sharedPref.edit().remove(profileName).apply()
-        if (profileName != null && sharedPref.getString(KEY_LAST_SELECTED_PROFILE, null) == profileName) {
-            sharedPref.edit().remove(KEY_LAST_SELECTED_PROFILE).apply()
+        val editor = sharedPref.edit().remove(profileName)
+        if (profileName != null) {
+            if (sharedPref.getString(KEY_LAST_SELECTED_PROFILE, null) == profileName) {
+                editor.remove(KEY_LAST_SELECTED_PROFILE)
+            }
+            sharedPref.all.forEach { (key, value) ->
+                if (key.startsWith("designated_profile_") && value == profileName) {
+                    editor.remove(key)
+                }
+            }
         }
+        editor.apply()
     }
 
     fun getProfile(profileName: String?, loadMacros: Boolean): KeymapProfile {
