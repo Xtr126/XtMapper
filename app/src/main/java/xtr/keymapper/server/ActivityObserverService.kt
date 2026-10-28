@@ -9,6 +9,7 @@ import android.os.RemoteException
 import android.os.ServiceManager
 import android.util.Log
 import xtr.keymapper.ActivityObserver
+import xtr.keymapper.log.XtLogger
 
 class ActivityObserverService(observer: ActivityObserver) : Runnable {
     var mCallback: ActivityObserver? = observer
@@ -53,7 +54,7 @@ class ActivityObserverService(observer: ActivityObserver) : Runnable {
                 mHandler?.postDelayed(this, 5000)
             }
         } catch (e: RemoteException) {
-            Log.e(RemoteService.TAG, e.message, e)
+            XtLogger.error(RemoteService.TAG, "Failed to query foreground activities; retrying", e)
             mHandler?.postDelayed(this, 5000)
         }
     }
