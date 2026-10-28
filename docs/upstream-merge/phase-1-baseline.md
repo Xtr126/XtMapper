@@ -1,6 +1,6 @@
 # Upstream `dev` Merge — Phase 1 Baseline
 
-Status: **source inventory and upstream merge recorded; follow-up fixes are in progress; build and device validation have not been run.**
+Status: **upstream merge and source-level review fixes recorded; build, tests and device validation have not been run.**
 
 Recorded: 2026-10-28. This checkpoint records immutable refs and verified source-level constraints before trial-merging upstream into the integration branch.
 
@@ -29,8 +29,10 @@ GitHub compare results show 19 commits on the integration side and 20 commits on
 
 - `Environment.CLI_ARG` is `--cage-xtmapper-launch-signal`; `Environment.INTENT_EXTRA` is the boolean `cage_xtmapper_launch_signal`.
 - The CLI signal is applied before standalone shell logging; the boolean Intent extra is applied by `MainActivity` only when that extra is present.
-- `MainActivity` is exported. Its existing `data` extra also has a separate legacy meaning: `data=shell` marks shell initialization, while another non-null `data` value is displayed as server-crash text.
-- Do **not** merge these into one trusted classifier or use arbitrary `data` payloads as proof of a launch environment. Keep the explicit boolean launch signal, shell-start detection, and crash-text rendering separate; consider untrusted external Intents when validating that flow.
+- `MainActivity` is exported. Its legacy `data` extra still uses `data=shell` as a shell-initialization hint and other non-null values as crash text, but neither value authenticates the caller.
+- Current code only trusts shell initialization when Android exposes the launching UID and it equals `Process.SHELL_UID`. A caller-controlled extra alone cannot select the shell startup profile, auto-start the pointer, or reset the saved Shizuku mode.
+- The crash payload is removed from the activity Intent after capture and displayed in a stable `DialogFragment`; activation prompts wait until the crash dialog is dismissed.
+- On Android versions or launch paths where Android does not expose the caller UID, the legacy marker fails closed. In that case, `data=shell` will not trigger trusted auto-start or a persistent input-mode change. This compatibility tradeoff is documented in `docs/waydroid-shell-startup.md` and still needs runtime validation.
 
 ### Build constraints
 
@@ -111,7 +113,23 @@ The following small, reversible commits were added after merge commit `a316da062
 
 Static checks after these edits confirmed one `onResume()` declaration and one `super.onResume()` call, the Shizuku reset guard, the initial Wayland constructor argument, no direct `Log.e/w/i/d/v` calls in `InputService.kt`, and no direct `Log.e` calls in the `start_getevent()` block. These are source checks only.
 
-## Remaining review findings
+## Follow-up source corrections after the full CodeRabbit review
 
-- The exported `MainActivity` still interprets a non-null legacy `data` extra as a shell/crash flow and the crash dialog can be repeated on activity recreation. The mode-reset side effect is narrowed, but origin validation and one-shot dialog behavior have not been fully redesigned or device-tested.
-- There is no local Gradle build or test evidence in this environment. The latest commits need a fresh CodeRabbit review and successful `app:assembleDebug` / `app:testDebugUnitTest` before any compatibility claim. Release/minification/native and device/Waydroid checks remain outstanding.
+In addition to the earlier checkpoint fixes above, the latest follow-up commits address the full review's actionable comments:
+
+- Corrected the overlay dimensions lookup and clipboard import/reload/save path in `EditorUI.kt`.
+- Separated untrusted Intent extras from trusted shell initialization, consumed crash data once, and moved crash rendering to a lifecycle-managed dialog in `MainActivity.kt`.
+- Repaired profile designations after rename/delete and stale fallback, preserving the last-selected profile on rename; regression tests cover designation cleanup and stale entries.
+- Clamped touch-jitter output to the last valid pixel and tightened the boundary test.
+- Avoided starting a redundant stop service from the Quick Settings tile and ensured `ACTION_STOP` always stops the matching service start.
+- Synchronized shift-key transition state, fixed block-keyboard shortcut capture, and synchronized the jitter slider with Advanced settings.
+- Routed important diagnostics from `Input.kt`, `RemoteService.kt`, `RemoteServiceShell.kt`, `ActivityObserverService.kt`, and `MouseEventHandler.kt` through XtLogger. Pointer overflow now returns instead of proceeding with an invalid pointer index. Session END statuses distinguish crash relay, startup failure and unexpected exit.
+- Restored missing Spanish/French/Portuguese/Russian import-error strings, localized ShiftKey transition labels, and corrected the README log-path claim and merge checkpoint status.
+
+## Current verification boundary
+
+- Regression tests were updated/added for profile designation cleanup and exclusive touch-jitter bounds, but none have been executed.
+- No Gradle compile, debug/release assembly, JVM unit test, Android device/Waydroid run, native/JNI check or cold-start Wayland test has been performed.
+- No GitHub Actions workflow runs or status checks are currently reported for the latest head. A new CodeRabbit review was requested after the source corrections; its findings still need to be assessed when returned.
+
+Keep PR #5 as a draft. Do not claim the integration is build-verified or merge it until compilation, tests and required runtime checks pass.
