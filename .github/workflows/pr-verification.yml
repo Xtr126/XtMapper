@@ -30,7 +30,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
 
       - name: Set up Android SDK and NDK
         uses: premex-ab/setup-android-cli@35c853708c8a6981651bb0060a17e01fac0143b1 # v1.1.0
@@ -43,7 +42,7 @@ jobs:
           no-metrics: 'true'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
