@@ -660,7 +660,7 @@ class MainActivity : AppCompatActivity() {
  * Lifecycle-aware crash relay dialog. The consumed Intent extra is not needed after this
  * fragment is shown, and FragmentManager restores the dialog across configuration changes.
  */
-private class ServerCrashDialogFragment : DialogFragment() {
+class ServerCrashDialogFragment : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val message = requireArguments().getString(ARG_MESSAGE).orEmpty()
         return MaterialAlertDialogBuilder(requireContext())
