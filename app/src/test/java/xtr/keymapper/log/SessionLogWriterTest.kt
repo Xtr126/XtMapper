@@ -246,7 +246,7 @@ class SessionLogWriterTest {
         second.write(listOf(record(clock, "after midnight")))
         assertFalse("logging resumes on the next day", second.unavailable)
         assertTrue(
-            LogFiles.readAll(store, "xtmapper-2026-10-23.log").contains("message=\\"after midnight\\"")
+            LogFiles.readAll(store, "xtmapper-2026-10-23.log").contains("message=\"after midnight\"")
         )
         assertFalse("the part limit must not be reported as a sink failure", events.any { it.contains("file sink unavailable") })
 
