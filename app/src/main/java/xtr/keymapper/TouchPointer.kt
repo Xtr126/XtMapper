@@ -480,10 +480,21 @@ class TouchPointer : Service() {
             val designated = keymapProfiles.getDesignatedProfileForApp(packageName)
 
             if (designated != null) {
-                if (designated != selectedProfile) {
+                val designatedProfileDisabled = keymapProfiles.getProfile(designated, false).disabled
+                if (designated != selectedProfile || designatedProfileDisabled) {
                     mHandler.post {
-                        launchProfile(designated)
-                        Toast.makeText(this@TouchPointer, "Switched to profile: $designated", Toast.LENGTH_SHORT).show()
+                        if (designated != selectedProfile) {
+                            launchProfile(designated)
+                            Toast.makeText(this@TouchPointer, "Switched to profile: $designated", Toast.LENGTH_SHORT).show()
+                        }
+                        // A disabled designation may have no enabled fallback. Do not leave
+                        // the previous app's keymap running in the newly foregrounded app.
+                        if (keymapProfiles.getProfile(designated, false).disabled) {
+                            try {
+                                mService?.pauseMouse()
+                            } catch (_: RemoteException) {
+                            }
+                        }
                     }
                 }
                 return
