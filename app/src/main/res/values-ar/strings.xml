@@ -111,7 +111,7 @@
     <string name="press_any_key_to_stop_recording">اضغط على أي مفتاح لإيقاف التسجيل…</string>
     <string name="advanced">متقدم</string>
     <string name="shizuku_not_running_title">لم يتم بدء تشغيل Shizuku</string>
-    <string name="shizuku_not_running_message">Start the Shizuku service, then return to XtMapper.</string>
+    <string name="shizuku_not_running_message">شغّل خدمة Shizuku ثم عُد إلى XtMapper.</string>
     <string name="shizuku_install_required">ثبّت Shizuku لاستخدام وضع الإدخال هذا</string>
     <string name="shizuku_start_required">ابدأ Shizuku لاستخدام وضع الإدخال هذا</string>
     <string name="edit">تعديل</string>
