@@ -109,7 +109,7 @@
     <string name="press_any_key_to_stop_recording">按任意键停止录制……</string>
     <string name="advanced">高级</string>
     <string name="shizuku_not_running_title">Shizuku未运行</string>
-    <string name="shizuku_not_running_message">Start the Shizuku service, then return to XtMapper.</string>
+    <string name="shizuku_not_running_message">启动 Shizuku 服务，然后返回 XtMapper。</string>
     <string name="shizuku_install_required">安装 Shizuku 以使用此输入模式</string>
     <string name="shizuku_start_required">启动 Shizuku 以使用此输入模式</string>
     <string name="edit">编辑</string>
