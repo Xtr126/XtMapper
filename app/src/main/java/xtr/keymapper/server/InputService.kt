@@ -212,9 +212,11 @@ class InputService @Throws(RemoteException::class) constructor(
         try {
             this.keymapProfile = mCallback.requestKeymapProfile()
             this.keymapConfig = mCallback.requestKeymapConfig()
+            // Release existing pointers with their original offsets before clearing
+            // jitter state; then apply the newly loaded settings to future strokes.
+            this.stop()
             touchJitter.updateConfig(this.keymapConfig.touchJitter, this.keymapConfig.touchJitterSpread)
             touchJitter.clear()
-            this.stop()
             keyEventHandler.init()
             mouseEventHandler.init()
             if (keymapConfig.isRootMode && keymapConfig.blockKeyboardInput && !isWaylandClient) {
