@@ -229,13 +229,15 @@ class KeymapProfilesTest {
     fun testRenameProfileUpdatesLastSelectedProfile() {
         val initialData = mutableMapOf<String, Any?>(
             "OldName" to setOf("APPLICATION com.example.game", "ENABLED"),
-            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "OldName"
+            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "OldName",
+            "designated_profile_com.example.game" to "OldName"
         )
         val (context, prefs) = createFakeContextAndPrefs(initialData)
         val keymapProfiles = KeymapProfiles(context, prefs)
 
         keymapProfiles.renameProfile("OldName", "NewName")
         assertEquals("NewName", keymapProfiles.getLastSelectedProfile())
+        assertEquals("NewName", prefs.getString("designated_profile_com.example.game", null))
     }
 
     @Test
@@ -243,7 +245,8 @@ class KeymapProfilesTest {
         val initialData = mutableMapOf<String, Any?>(
             "ProfileToDelete" to setOf("APPLICATION com.example.game", "ENABLED"),
             "OtherProfile" to setOf("APPLICATION com.example.game", "ENABLED"),
-            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "ProfileToDelete"
+            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "ProfileToDelete",
+            "designated_profile_com.example.game" to "ProfileToDelete"
         )
         val (context, prefs) = createFakeContextAndPrefs(initialData)
         val keymapProfiles = KeymapProfiles(context, prefs)
@@ -251,5 +254,6 @@ class KeymapProfilesTest {
         keymapProfiles.deleteProfile("ProfileToDelete")
         // After deletion of last selected, falls back to remaining profile
         assertEquals("OtherProfile", keymapProfiles.getLastSelectedProfile())
+        assertNull(prefs.getString("designated_profile_com.example.game", null))
     }
 }
