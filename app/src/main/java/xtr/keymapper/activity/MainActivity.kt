@@ -2,6 +2,7 @@ package xtr.keymapper.activity
 
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.app.Activity
+import android.app.Dialog
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
@@ -13,12 +14,14 @@ import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.Process
 import android.os.RemoteException
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.DialogFragment
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -49,11 +52,14 @@ class MainActivity : AppCompatActivity() {
     private var isServiceBound = false
     private var displaySelector: DisplaySelector? = null
     private var startedFromShell: Boolean? = null
+    private var trustedShellInitialization = false
     private var shellInitStartupPending = false
 
     companion object {
         const val SHELL_INIT = "shell"
         const val SHELL_SERVICE_BINDER = "xtr.keymapper.extra.SHELL_SERVICE_BINDER"
+        private const val KEY_TRUSTED_SHELL_INIT = "trusted_shell_initialization"
+        private const val SERVER_CRASH_DIALOG_TAG = "server_crash_dialog"
 
         init {
             // Set settings before the main shell can be created
@@ -76,8 +82,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Launch-context signal: applied only when the extra is present so the
-        // server-crash relay (data= only) never reclassifies the process.
+        // The environment signal is separate from the legacy "data" extra.
         if (intent.hasExtra(Environment.INTENT_EXTRA)) {
             Environment.launchSignal = intent.getBooleanExtra(Environment.INTENT_EXTRA, false)
             XtLogger.info("MainActivity", "launch signal applied: environment=${Environment.name}")
@@ -86,7 +91,21 @@ class MainActivity : AppCompatActivity() {
         intent.extras?.getBinder(SHELL_SERVICE_BINDER)?.let {
             RemoteServiceHelper.setShellServiceBinder(it)
         }
-        if (startedFromShell == null) startedFromShell = isStartedWithShell()
+
+        val launchData = intent.getStringExtra("data")
+        trustedShellInitialization = if (savedInstanceState != null) {
+            savedInstanceState.getBoolean(KEY_TRUSTED_SHELL_INIT, false)
+        } else {
+            launchData == SHELL_INIT && isLaunchedByAndroidShell()
+        }
+        startedFromShell = trustedShellInitialization
+
+        // Consume the crash payload before showing UI: an Activity recreation must not
+        // replay it from the original Intent. DialogFragment restores an undismissed dialog.
+        intent.removeExtra("data")
+        if (savedInstanceState == null && launchData != null && launchData != SHELL_INIT) {
+            showServerCrashDialog(launchData)
+        }
 
         GameKeyMapperBridge.installGameKeyMapperContent(this)
 
@@ -98,12 +117,8 @@ class MainActivity : AppCompatActivity() {
         Log.i("xtmapper-startup", "MainActivity: shellInit=$isShellInit profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode}")
         TouchPointer.currentSelectedProfile = selectedProfileName
 
-        /*
-         * If user has enabled "Use Shizuku" but this activity was started from shell (waydroid or adb)
-         * Then reset "Use Shizuku" setting to false since it crashes the app
-         */
-        // Only the explicit shell-initialization marker may trigger the Shizuku-to-Root reset.
-        // Crash-text data extras must not change the user's persisted input mode.
+        // The persisted mode reset is allowed only for a shell launch whose caller UID was
+        // verified by Android; caller-controlled extras alone are never sufficient.
         if (isShellInit && keymapConfig.isShizukuMode) {
             keymapConfig.useShizuku = false
             keymapConfig.inputMode = KeymapConfig.MODE_ROOT
@@ -154,20 +169,30 @@ class MainActivity : AppCompatActivity() {
      * Also handles crash report from server and shows a dialog with crash log
      * @return true if this activity was started with am shell command
      */
-    private fun isStartedWithShell(): Boolean {
-        val data = intent.getStringExtra("data") ?: return false
-        if (data != SHELL_INIT) {
-            // Crash report
-            MaterialAlertDialogBuilder(this).setTitle("Server crashed")
-                .setMessage(data)
-                .setPositiveButton(R.string.ok, null)
-                .show()
-        }
-        return true
+    /**
+     * Intent extras are caller-controlled. Only trust the shell-init marker when Android
+     * exposes the actual launching UID, rather than treating "data=shell" as authentication.
+     * Before API 34 Android exposes no supported caller-UID API for this launch flow, so the
+     * legacy marker remains a harmless hint and cannot trigger privileged startup behavior.
+     */
+    private fun isLaunchedByAndroidShell(): Boolean {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            launchedFromUid == Process.SHELL_UID
     }
 
-    private fun isShellInitialization(): Boolean {
-        return startedFromShell == true && intent.getStringExtra("data") == SHELL_INIT
+    private fun isShellInitialization(): Boolean = trustedShellInitialization
+
+    private fun showServerCrashDialog(message: String) {
+        if (supportFragmentManager.isStateSaved ||
+            supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) != null
+        ) return
+        ServerCrashDialogFragment.newInstance(message)
+            .show(supportFragmentManager, SERVER_CRASH_DIALOG_TAG)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(KEY_TRUSTED_SHELL_INIT, trustedShellInitialization)
+        super.onSaveInstanceState(outState)
     }
 
     private fun launchSettings() {
@@ -615,5 +640,30 @@ class MainActivity : AppCompatActivity() {
         override fun onServiceDisconnected(arg0: ComponentName) {
             isServiceBound = false
         }
+    }
+}
+
+
+/**
+ * Lifecycle-aware crash relay dialog. The consumed Intent extra is not needed after this
+ * fragment is shown, and FragmentManager restores the dialog across configuration changes.
+ */
+private class ServerCrashDialogFragment : DialogFragment() {
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val message = requireArguments().getString(ARG_MESSAGE).orEmpty()
+        return MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Server crashed")
+            .setMessage(message)
+            .setPositiveButton(R.string.ok, null)
+            .create()
+    }
+
+    companion object {
+        private const val ARG_MESSAGE = "message"
+
+        fun newInstance(message: String): ServerCrashDialogFragment =
+            ServerCrashDialogFragment().apply {
+                arguments = Bundle().apply { putString(ARG_MESSAGE, message) }
+            }
     }
 }
