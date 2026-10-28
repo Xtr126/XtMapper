@@ -266,4 +266,98 @@ class LoggingPipelineTest {
         assertTrue(elapsedMs in 60..4_000)
         pipeline.close("Clean shutdown") // bounded internally; must not hang
     }
+
+    @Test
+    fun `close returns while worker owns a blocked file lock`() {
+        val writeEntered = java.util.concurrent.CountDownLatch(1)
+        val releaseWrite = java.util.concurrent.CountDownLatch(1)
+        val endMarkerWritten = java.util.concurrent.CountDownLatch(1)
+        val blockEventOnce = java.util.concurrent.atomic.AtomicBoolean(false)
+        val sinkLock = java.util.concurrent.locks.ReentrantLock()
+        val output = StringBuilder()
+        var currentName: String? = null
+
+        fun <T> withSinkLock(block: () -> T): T {
+            sinkLock.lock()
+            try {
+                return block()
+            } finally {
+                sinkLock.unlock()
+            }
+        }
+
+        val sink = object : LogFileWriter {
+            override val writtenBytes: Long
+                get() = withSinkLock { output.length.toLong() }
+
+            override fun write(chunk: ByteArray) {
+                sinkLock.lock()
+                try {
+                    val text = String(chunk, Charsets.UTF_8)
+                    if (text.contains("message=\\"blocked event\\"") &&
+                        blockEventOnce.compareAndSet(false, true)
+                    ) {
+                        writeEntered.countDown()
+                        releaseWrite.await()
+                    }
+                    output.append(text)
+                    if (text.contains("SESSION END")) endMarkerWritten.countDown()
+                } finally {
+                    sinkLock.unlock()
+                }
+            }
+
+            override fun close() {
+                withSinkLock { Unit }
+            }
+        }
+
+        val store = object : LogStore {
+            override fun listFiles(): List<LogFileInfo> = withSinkLock {
+                val name = currentName
+                if (name == null) emptyList() else listOf(LogFileInfo(name, output.length.toLong()))
+            }
+
+            override fun openAppendWriter(name: String): LogFileWriter {
+                currentName = name
+                return sink
+            }
+
+            override fun readTail(name: String, maxLines: Int): List<String> = withSinkLock {
+                output.toString().lineSequence().toList().takeLast(maxLines)
+            }
+
+            override fun delete(name: String) = false
+        }
+
+        val clock = MutableClock.at("2026-01-01T00:00:00Z")
+        val factory = TestPipelineFactory(
+            store, clock, config = LoggingConfig(flushTimeoutMillis = 100)
+        )
+        val pipeline = factory.start()
+        pipeline.info("Test", "blocked event")
+        assertTrue("worker entered the deliberately blocked write", writeEntered.await(2, java.util.concurrent.TimeUnit.SECONDS))
+
+        val closeReturned = java.util.concurrent.CountDownLatch(1)
+        Thread({
+            pipeline.close("bounded close")
+            closeReturned.countDown()
+        }, "test-log-close").apply {
+            isDaemon = true
+            start()
+        }
+
+        val returnedBeforeRelease = closeReturned.await(3_500, java.util.concurrent.TimeUnit.MILLISECONDS)
+        // Always unblock the fake sink so a failing regression test cleans up.
+        releaseWrite.countDown()
+        val eventuallyReturned = closeReturned.await(3_500, java.util.concurrent.TimeUnit.MILLISECONDS)
+
+        assertTrue("close must not wait on the worker's file lock", returnedBeforeRelease)
+        assertTrue("close completes after the stuck write is released", eventuallyReturned)
+        assertTrue(
+            "deferred cleanup writes SESSION END after the worker exits",
+            endMarkerWritten.await(3, java.util.concurrent.TimeUnit.SECONDS)
+        )
+    }
+
 }
