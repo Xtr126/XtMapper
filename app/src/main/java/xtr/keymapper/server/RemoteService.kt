@@ -1,5 +1,6 @@
 package xtr.keymapper.server
 
+import android.util.Log
 import android.app.ApplicationErrorReport
 import android.content.ComponentName
 import android.content.Context
@@ -12,7 +13,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Process
 import android.os.RemoteException
-import android.util.Log
 import android.view.Display
 import android.view.LayoutInflater
 import android.view.View
