@@ -182,6 +182,14 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
             keymapConfig.editorOverlay = settingsBinding.editorOverlay.isChecked
             keymapConfig.touchJitter = settingsBinding.touchJitterSwitch.isChecked
             keymapConfig.touchJitterSpread = settingsBinding.touchJitterSpread.value
+            // Keep the editor slider in sync so onDestroyView does not overwrite dialog changes.
+            binding.sliderTouchJitter.value =
+                if (keymapConfig.touchJitter) keymapConfig.touchJitterSpread else 0f
+            binding.touchJitterText.text = if (keymapConfig.touchJitter) {
+                context.getString(R.string.touch_jitter_spread_px, keymapConfig.touchJitterSpread.toInt())
+            } else {
+                context.getString(R.string.touch_jitter_spread)
+            }
             keymapConfig.showControls = settingsBinding.showControls.isChecked
             keymapConfig.showControlsOpacity = settingsBinding.showControlsOpacity.value
             keymapConfig.applySharedPrefs()
@@ -351,6 +359,7 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         binding.pauseResume.setOnKeyListener(this::focusKey)
         binding.switchProfile.setOnKeyListener(this::focusKey)
         binding.mouseAimKey.setOnKeyListener(this::focusKey)
+        binding.blockKeyboard.setOnKeyListener(this::focusKey)
     }
 
     fun onUnRegisterKeyEventListener() {
@@ -359,6 +368,7 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         binding.pauseResume.setOnKeyListener(::onKeyboardKeyPress)
         binding.switchProfile.setOnKeyListener(::onKeyboardKeyPress)
         binding.mouseAimKey.setOnKeyListener(::onKeyboardKeyPress)
+        binding.blockKeyboard.setOnKeyListener(::onKeyboardKeyPress)
     }
 
     fun onKey(key: String?) {
