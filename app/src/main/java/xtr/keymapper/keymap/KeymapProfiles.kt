@@ -51,17 +51,24 @@ class KeymapProfiles @JvmOverloads constructor(
         val profiles = getAllProfilesForApp(packageName)
         if (profiles.isEmpty()) return null
 
-        val designated = sharedPref.getString("designated_profile_$packageName", null)
+        val designationKey = "designated_profile_$packageName"
+        val designated = sharedPref.getString(designationKey, null)
         if (designated != null && profiles.containsKey(designated)) {
             val profile = profiles[designated]
             if (profile != null && !profile.disabled) {
                 return designated
             }
         }
-        for ((name, profile) in profiles) {
-            if (!profile.disabled) return name
+
+        val fallback = profiles.entries.firstOrNull { !it.value.disabled }?.key
+            ?: profiles.keys.firstOrNull()
+        if (fallback != null) {
+            // Repair stale or disabled designations so future saves can keep the choice stable.
+            setDesignatedProfileForApp(packageName, fallback)
+        } else if (designated != null) {
+            sharedPref.edit().remove(designationKey).apply()
         }
-        return if (designated != null && profiles.containsKey(designated)) designated else profiles.keys.firstOrNull()
+        return fallback
     }
 
     fun setDesignatedProfileForApp(packageName: String?, profileName: String?) {
