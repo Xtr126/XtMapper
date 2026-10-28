@@ -29,6 +29,7 @@ class ShiftKeyHandler(key: ShiftKey) {
         private set
     private var transitionGeneration = 0
 
+    @Synchronized
     fun handleEvent(
         event: KeyEvent,
         service: IInputInterface,
@@ -151,10 +152,12 @@ class ShiftKeyHandler(key: ShiftKey) {
             val stepY = startY + (targetY - startY) * progress
 
             schedulePost(delay) {
-                if (transitionGeneration == gen && assignedPid == pid) {
-                    currentX = stepX
-                    currentY = stepY
-                    service.injectEvent(stepX, stepY, InputService.MOVE, pid)
+                synchronized(this@ShiftKeyHandler) {
+                    if (transitionGeneration == gen && assignedPid == pid) {
+                        currentX = stepX
+                        currentY = stepY
+                        service.injectEvent(stepX, stepY, InputService.MOVE, pid)
+                    }
                 }
             }
         }
