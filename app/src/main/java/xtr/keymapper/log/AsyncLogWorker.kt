@@ -89,26 +89,56 @@ class AsyncLogWorker(
      * Bounded drain, then stops the consumer thread. Does NOT close the file
      * sink: the pipeline still needs it for the session END marker.
      */
-    fun stopDraining(flushTimeoutMillis: Long) {
-        if (!joined.compareAndSet(false, true)) return
-        flush(flushTimeoutMillis)
+    /**
+     * Bounded drain and stop. Returns true only when the queue drained and the
+     * worker thread terminated. A false result means the caller must not touch
+     * the sink concurrently; an in-flight write may still own its file lock.
+     */
+    fun stopDraining(flushTimeoutMillis: Long): Boolean {
+        if (!joined.compareAndSet(false, true)) return !thread.isAlive
+        val drained = flush(flushTimeoutMillis)
         running.set(false)
         try {
-            // join is bounded: the worker polls every POLL_MILLIS and exits fast.
+            // join is bounded: the worker polls every POLL_MILLIS and exits fast
+            // unless it is blocked inside the file sink.
             thread.join(JOIN_MILLIS)
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
         }
+        return drained && !thread.isAlive
     }
 
     fun closeFile() {
         if (fileClosed.compareAndSet(false, true)) writer.close()
     }
 
-    /** Convenience for plain worker users: drain-stop then close. */
+    /** Convenience for plain worker users: close only after the consumer is gone. */
     fun close(flushTimeoutMillis: Long) {
-        stopDraining(flushTimeoutMillis)
-        closeFile()
+        if (stopDraining(flushTimeoutMillis)) {
+            closeFile()
+            return
+        }
+
+        // The worker may still hold a file lock while blocked in write(). Never
+        // close that sink on this caller thread; discard queued records and defer
+        // cleanup until the worker has really exited.
+        val abandoned = queue.drainUpTo(Int.MAX_VALUE)?.size ?: 0
+        queue.markFailed(abandoned)
+        Thread({
+            var interrupted = false
+            while (thread.isAlive) {
+                try {
+                    thread.join()
+                } catch (_: InterruptedException) {
+                    interrupted = true
+                }
+            }
+            closeFile()
+            if (interrupted) Thread.currentThread().interrupt()
+        }, "xtlogger-close-$roleTag").apply {
+            isDaemon = true
+            start()
+        }
     }
 
     fun lastError(): Throwable? = lastError.get()
