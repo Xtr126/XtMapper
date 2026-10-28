@@ -227,7 +227,7 @@ class RemoteService @JvmOverloads constructor(
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error handling input event", e)
+                        XtLogger.error(TAG, "Error handling input event", e)
                     }
                     if (service == null || !service.isKeyboardGrabbed) {
                         try {
@@ -235,13 +235,13 @@ class RemoteService @JvmOverloads constructor(
                         } catch (e: RemoteException) {
                             mOnKeyEventListener = null
                         } catch (e: Exception) {
-                            Log.e(TAG, "Error notifying key listener", e)
+                            XtLogger.error(TAG, "Error notifying key listener", e)
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
+            XtLogger.error(TAG, "Input event reader failed", e)
         }
     }
 
