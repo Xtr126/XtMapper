@@ -43,6 +43,9 @@ class LogFileNamesTest {
         assertNull(LogFileNames.parse("xtmapper-other-2026-10-22.log"))
         assertNull(LogFileNames.parse("xtmapper-2026-13-01.log"))
         assertNull(LogFileNames.parse("xtmapper-2026-10-32.log"))
+        assertNull(LogFileNames.parse("xtmapper-2025-02-30.log"))
+        assertNull(LogFileNames.parse("xtmapper-2025-02-29.log"))
+        assertEquals(29, LogFileNames.parse("xtmapper-2024-02-29.log")!!.day)
         assertNull(LogFileNames.parse("xtmapper-20261022.log"))
         assertNull(LogFileNames.parse("xtmapper-2026-10-22-part001.log")) // part001 is reserved for the base name
         assertNull(LogFileNames.parse("xtmapper-2026-10-22-part01.log"))
