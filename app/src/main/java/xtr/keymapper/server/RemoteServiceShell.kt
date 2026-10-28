@@ -19,7 +19,6 @@ import xtr.keymapper.BuildConfig
 import xtr.keymapper.Environment
 import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.log.Role
-import xtr.keymapper.log.SessionStates
 import xtr.keymapper.log.XtLogger
 import java.lang.reflect.Method
 import kotlin.system.exitProcess
@@ -62,11 +61,6 @@ object RemoteServiceShell {
                     else -> println("Invalid argument: $arg")
                 }
             }
-            // A shell process that reaches JVM shutdown without the explicit normal-stop
-            // path must not be reported as clean. Normal stop closes the session before exit.
-            Runtime.getRuntime().addShutdownHook(
-                Thread { XtLogger.endSession(SessionStates.STATUS_UNEXPECTED_EXIT) }
-            )
             val fakeTouch = SystemProperties.get("persist.waydroid.fake_touch", null)
             if (fakeTouch != null && !fakeTouch.isBlank()) {
                 val ANSI_RED = "\u001B[31m"
@@ -116,10 +110,10 @@ object RemoteServiceShell {
             }
 
         } catch (e: Exception) {
-            XtLogger.error(TAG, "server startup failed", e)
-            // Bounded flush before the existing exit(1) behavior.
+            // Startup is terminating abnormally. Persist a fatal record but leave the
+            // session without an END marker so the next launch reports an unclean exit.
+            XtLogger.fatal(TAG, "server startup failed", e)
             XtLogger.flush(2_000)
-            XtLogger.endSession(SessionStates.STATUS_STARTUP_FAILED)
             exitProcess(1)
         }
         Looper.loop()
