@@ -1,5 +1,6 @@
 package xtr.keymapper.activity
 
+import android.util.Log
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.app.Activity
 import android.app.Dialog
@@ -17,7 +18,6 @@ import android.os.IBinder
 import android.os.Process
 import android.os.RemoteException
 import android.provider.Settings
-import android.util.Log
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
@@ -204,7 +204,7 @@ class MainActivity : AppCompatActivity() {
                 if (service != null && editorUi != null) try {
                     editorUi!!.registerOnKeyEventListener(service)
                 } catch (e: RemoteException) {
-                    Log.e("MainActivity", e.message, e)
+                    XtLogger.error("MainActivity", "Failed to register remote key-event listener", e)
                     editorUi!!.unregisterOnKeyEventListener()
                 }
             }
