@@ -51,6 +51,7 @@ class SessionLogWriter(
     private var currentDay: String? = null
     private var currentWriter: LogFileWriter? = null
     private var currentFileName: String? = null
+    private var exhaustedDay: String? = null
 
     /** True after the first storage failure; all further file writes are skipped. */
     @Volatile
@@ -156,6 +157,9 @@ class SessionLogWriter(
         val writer: LogFileWriter?
         val isDayChange = currentDay != day
         if (!isDayChange) {
+            // A full daily part budget is terminal for ordinary records. Do not
+            // reopen and re-stat the same final part for every dropped record.
+            if (exhaustedDay == day && !allowFullPart) return
             val active = currentWriter
             if (active != null && active.writtenBytes < config.maxFileBytes) return
             closeCurrent()
@@ -163,6 +167,7 @@ class SessionLogWriter(
         } else {
             closeCurrent()
             currentDay = day
+            exhaustedDay = null
             writer = activeWriterFor(day, allowFullPart)
         }
         currentWriter = writer
@@ -219,6 +224,7 @@ class SessionLogWriter(
                         "${config.maxFileBytes / (1 shl 20)}MiB); further records dropped today"
                 )
             }
+            exhaustedDay = day
             if (!allowFullPart) return null
             // Session close only: append the (small) END marker to the final
             // part rather than losing the marker or flagging the sink down.
