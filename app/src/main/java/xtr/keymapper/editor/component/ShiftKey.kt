@@ -29,6 +29,8 @@ class ShiftKey private constructor(
 
     init {
         val callback = object : ShiftKeyView.ShiftKeyCallback {
+            override fun isOverlayOpen(): Boolean = mCallback.isOverlayOpen()
+
             override fun onShiftKeyRemoved() {
                 mCallback.removeComponent(this@ShiftKey)
             }
@@ -53,6 +55,9 @@ class ShiftKey private constructor(
     ) : this(mCallback, context, shiftKey, 0f, 0f)
 
     override fun toConfigLine(): String {
+        if (shiftKeyView.button1.getText().isBlank() || shiftKeyView.button2.getText().isBlank()) {
+            return ""
+        }
         val shiftKey = xtr.keymapper.keymap.element.ShiftKey()
         shiftKey.key1.code = shiftKeyView.button1.getText()
         shiftKey.key1.x = shiftKeyView.button1.getX()
@@ -76,6 +81,7 @@ class ShiftKey private constructor(
         var durationMs: Int = -1
 
         interface ShiftKeyCallback {
+            fun isOverlayOpen(): Boolean
             fun onShiftKeyRemoved()
             fun onViewClicked(view: MovableFloatingActionKey)
         }
@@ -102,7 +108,7 @@ class ShiftKey private constructor(
             }
 
             controlsBinding.settingsButton.setOnClickListener {
-                showSpeedDialog(context)
+                showSpeedDialog(context, callback.isOverlayOpen())
             }
 
             button1.setX(rootView.pivotX - 100)
@@ -147,7 +153,7 @@ class ShiftKey private constructor(
             overlay.centerViewOnLine(controlsContainer)
         }
 
-        private fun showSpeedDialog(context: Context) {
+        private fun showSpeedDialog(context: Context, overlayOpen: Boolean) {
             val keymapConfig = KeymapConfig(context)
             val globalSpeed = keymapConfig.shiftTransitionMs
 
@@ -192,7 +198,7 @@ class ShiftKey private constructor(
                 .setNegativeButton(R.string.cancel, null)
 
             val dialog = builder.create()
-            if (context !is android.app.Activity) {
+            if (context !is android.app.Activity || overlayOpen) {
                 val windowType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 } else {
