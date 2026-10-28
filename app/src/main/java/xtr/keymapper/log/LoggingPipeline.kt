@@ -271,5 +271,7 @@ class LoggingPipeline(
 object SessionStates {
     const val STATUS_CLEAN = "Clean shutdown"
     const val STATUS_CRASH_RELAYED = "Crash relayed; process exiting"
+    const val STATUS_UNEXPECTED_EXIT = "Unexpected process exit"
+    const val STATUS_STARTUP_FAILED = "Startup failed"
     const val STATUS_SERVICE_STOP = "Service stopped"
 }
