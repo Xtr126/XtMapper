@@ -130,6 +130,7 @@
     <string name="msg_profiles_imported">配置导入成功</string>
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">所有配置均已存在，未导入任何内容</string>
     <string name="error_import_failed">导入失败</string>
+    <string name="unverified_diagnostic_title">未经验证的诊断文本</string>
     <string name="share">分享</string>
     <string name="touch_jitter">触控坐标抖动</string>
     <string name="touch_jitter_spread">抖动范围</string>
