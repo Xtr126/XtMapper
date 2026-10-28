@@ -81,13 +81,14 @@ class KeymapProfiles @JvmOverloads constructor(
         val designatedKeys = sharedPref.all
             .filter { (key, value) -> key.startsWith("designated_profile_") && value == profileName }
             .keys
+        val wasLastSelected = sharedPref.getString(KEY_LAST_SELECTED_PROFILE, null) == profileName
         val stringSet = sharedPref.getStringSet(profileName, null)
         deleteProfile(profileName)
         sharedPref.edit()
             .putStringSet(newProfile, stringSet)
             .also { editor -> designatedKeys.forEach { editor.putString(it, newProfile) } }
             .apply()
-        if (sharedPref.getString(KEY_LAST_SELECTED_PROFILE, null) == profileName) {
+        if (wasLastSelected) {
             setLastSelectedProfile(newProfile)
         }
     }
