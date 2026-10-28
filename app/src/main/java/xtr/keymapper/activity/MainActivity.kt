@@ -444,10 +444,10 @@ class MainActivity : AppCompatActivity() {
             else if (!Shizuku.pingBinder()) alertShizukuNotRunning()
             else if (Shizuku.checkSelfPermission() != PERMISSION_GRANTED) alertShizukuNotAuthorized()
         }
+        // A previous Binder can remain alive briefly even when the pointer UI is stopped.
+        // Always require the next connection to use the newly selected backend.
+        RemoteServiceHelper.prepareForBackendSwitch()
         if (isComposeServiceActive()) {
-            // Invalidate the old Binder before shutdown; stopServer() exits asynchronously,
-            // so immediately reconnecting could otherwise reuse it before binder death.
-            RemoteServiceHelper.prepareForBackendSwitch()
             stopPointer()
             startPointer()
         }
