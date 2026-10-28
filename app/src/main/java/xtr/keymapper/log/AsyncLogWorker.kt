@@ -86,10 +86,6 @@ class AsyncLogWorker(
         queue.awaitDrained(timeoutMillis)
 
     /**
-     * Bounded drain, then stops the consumer thread. Does NOT close the file
-     * sink: the pipeline still needs it for the session END marker.
-     */
-    /**
      * Bounded drain and stop. Returns true only when the queue drained and the
      * worker thread terminated. A false result means the caller must not touch
      * the sink concurrently; an in-flight write may still own its file lock.
