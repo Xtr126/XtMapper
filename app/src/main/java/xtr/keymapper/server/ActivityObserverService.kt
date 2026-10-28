@@ -7,7 +7,6 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.RemoteException
 import android.os.ServiceManager
-import android.util.Log
 import xtr.keymapper.ActivityObserver
 import xtr.keymapper.log.XtLogger
 
