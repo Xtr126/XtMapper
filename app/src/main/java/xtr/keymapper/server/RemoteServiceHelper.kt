@@ -94,6 +94,9 @@ object RemoteServiceHelper {
         private val requestGeneration: Long,
         private val requestedShizuku: Boolean,
     ) : ServiceConnection {
+        @Volatile
+        private var connectedBinder: IBinder? = null
+
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             Log.i("xtmapper-startup", "onServiceConnected: component=$name alive=${service.isBinderAlive}")
             // A bind started before a mode switch must not replace the current backend.
@@ -104,6 +107,7 @@ object RemoteServiceHelper {
                 return
             }
 
+            connectedBinder = service
             val remote = IRemoteService.Stub.asInterface(service)
             RemoteServiceHelper.service = remote
             RemoteServiceHelper.forceSelectedBackend = false
@@ -118,8 +122,13 @@ object RemoteServiceHelper {
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
-            RemoteServiceHelper.service = null
-            cb.onConnection(null)
+            // A disconnect from a superseded connection must not erase the newer
+            // backend's Binder or notify a callback belonging to the old generation.
+            if (requestGeneration != RemoteServiceHelper.backendGeneration) return
+            if (RemoteServiceHelper.service?.asBinder() == connectedBinder) {
+                RemoteServiceHelper.service = null
+                cb.onConnection(null)
+            }
         }
     }
 
