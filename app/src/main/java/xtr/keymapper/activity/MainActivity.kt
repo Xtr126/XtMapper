@@ -160,6 +160,7 @@ class MainActivity : AppCompatActivity() {
                     showAlertDialog(R.string.detected_shizuku, R.string.use_shizuku_for_activation, { _, _ ->
                         RemoteServiceHelper.useShizuku = true
                         keymapConfig.useShizuku = true
+                        keymapConfig.inputMode = KeymapConfig.MODE_SHIZUKU
                         keymapConfig.applySharedPrefs()
                         alertShizukuNotAuthorized()
                     }, R.string.ok)
@@ -428,10 +429,10 @@ class MainActivity : AppCompatActivity() {
 
     fun toggleInputModeFromCompose() {
         val config = KeymapConfig(this)
-        val nextMode = if (config.inputMode == KeymapConfig.MODE_ROOT) {
-            KeymapConfig.MODE_SHIZUKU
-        } else {
+        val nextMode = if (config.isShizukuMode) {
             KeymapConfig.MODE_ROOT
+        } else {
+            KeymapConfig.MODE_SHIZUKU
         }
         config.inputMode = nextMode
         config.useShizuku = (nextMode == KeymapConfig.MODE_SHIZUKU)
