@@ -174,11 +174,14 @@ class KeymapProfilesTest {
 
     @Test
     fun testGetDesignatedProfileReturnsNullWhenNoProfilesForApp() {
-        val initialData = mutableMapOf<String, Any?>()
+        val initialData = mutableMapOf<String, Any?>(
+            "designated_profile_com.unknown.app" to "DeletedProfile"
+        )
         val (context, prefs) = createFakeContextAndPrefs(initialData)
         val keymapProfiles = KeymapProfiles(context, prefs)
 
         assertNull(keymapProfiles.getDesignatedProfileForApp("com.unknown.app"))
+        assertNull(prefs.getString("designated_profile_com.unknown.app", null))
     }
 
     @Test
