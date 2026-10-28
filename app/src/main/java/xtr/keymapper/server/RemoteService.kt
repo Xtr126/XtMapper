@@ -455,17 +455,26 @@ class RemoteService @JvmOverloads constructor(
      */
     override fun pauseMouse() {
         enforceCaller()
-        val service = inputService
-        if (service != null)
-            if (!service.stopEvents) service.pauseResumeKeymap()
+        // startServer() creates/replaces InputService on this same handler. Queue the
+        // pause too, so a pending start cannot install a fresh, unpaused service after
+        // the caller has asked to disable mapping for the foreground app.
+        mHandler.post {
+            val service = inputService
+            if (service != null && !service.stopEvents) {
+                service.pauseResumeKeymap()
+            }
+        }
     }
 
     override fun resumeMouse() {
         enforceCaller()
-        val service = inputService
-        if (service != null)
-            if (service.stopEvents)
+        // Keep pause/resume state changes ordered with startServer() on the same handler.
+        mHandler.post {
+            val service = inputService
+            if (service != null && service.stopEvents) {
                 service.pauseResumeKeymap()
+            }
+        }
     }
 
     /**
