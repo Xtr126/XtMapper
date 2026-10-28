@@ -41,6 +41,7 @@ import xtr.keymapper.editor.component.RightClick
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.keymap.KeymapProfiles
+import xtr.keymapper.log.XtLogger
 import xtr.keymapper.macro.MacroIdUtils
 import xtr.keymapper.macro.MacroStatus
 import xtr.keymapper.macro.MacroView
@@ -528,7 +529,7 @@ class EditorUI(
                 val importedProfile = try {
                     KeymapProfiles.parse(lines)
                 } catch (e: RuntimeException) {
-                    android.util.Log.w("EditorUI", "Rejected malformed keymap clipboard data", e)
+                    XtLogger.warn("EditorUI", "Rejected malformed keymap clipboard data", e)
                     android.widget.Toast.makeText(
                         context,
                         R.string.error_import_failed,
