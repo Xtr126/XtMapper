@@ -47,12 +47,12 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">Retraso de deslizamiento %d milisegundos</string>
-    <string name="shift_transition_ms">Transición de cambio: %d ms</string>
-    <string name="shift_transition_title">Velocidad de transición</string>
+    <string name="shift_transition_ms">Transición de la tecla Mayús: %d ms</string>
+    <string name="shift_transition_title">Velocidad de transición de la tecla Mayús</string>
     <string name="use_global_default">Predeterminado global (%d ms)</string>
     <string name="shift_transition_instant">Instantáneo (0 ms)</string>
     <string name="shift_transition_ms_value">%d ms</string>
-    <string name="shift_transition_changed">Transición: %1$s</string>
+    <string name="shift_transition_changed">Transición de la tecla Mayús: %1$s</string>
     <string name="profile_name">Nombre del perfil</string>
     <string name="root_not_found_title">Acceso raíz no encontrado</string>
     <string name="root_not_found_message">Se requiere acceso raíz para que el remapeador de teclas funcione. \n Otorgue permisos de superusuario a XtMapper desde la aplicación del administrador de KernelSU</string>
@@ -73,7 +73,7 @@
     <string name="crosshair">Retícula</string>
     <string name="left_click">Clic izquierdo</string>
     <string name="swipe_key">Tecla de deslizamiento</string>
-    <string name="shift_key">Tecla de cambio</string>
+    <string name="shift_key">Tecla Mayús</string>
     <string name="add_key">Agregar tecla</string>
     <string name="save">Guardar</string>
 
