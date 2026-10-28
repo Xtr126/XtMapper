@@ -110,7 +110,7 @@
     <string name="press_any_key_to_stop_recording">ਰਿਕਾਰਡਿੰਗ ਬੰਦ ਕਰਨ ਲਈ ਕੋਈ ਵੀ ਕੁੰਜੀ ਦਬਾਓ…</string>
     <string name="advanced">ਐਡਵਾਂਸਡ</string>
     <string name="shizuku_not_running_title">Shizuku ਸ਼ੁਰੂ ਨਹੀਂ ਹੋਇਆ ਹੈ</string>
-    <string name="shizuku_not_running_message">Start the Shizuku service, then return to XtMapper.</string>
+    <string name="shizuku_not_running_message">Shizuku ਸੇਵਾ ਸ਼ੁਰੂ ਕਰੋ, ਫਿਰ XtMapper ਵਿੱਚ ਵਾਪਸ ਆਓ।</string>
     <string name="shizuku_install_required">ਇਹ ਇਨਪੁੱਟ ਮੋਡ ਵਰਤਣ ਲਈ Shizuku ਇੰਸਟਾਲ ਕਰੋ</string>
     <string name="shizuku_start_required">ਇਹ ਇਨਪੁੱਟ ਮੋਡ ਵਰਤਣ ਲਈ Shizuku ਸ਼ੁਰੂ ਕਰੋ</string>
     <string name="edit">ਸੰਪਾਦਿਤ ਕਰੋ</string>
