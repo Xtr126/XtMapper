@@ -31,7 +31,7 @@ GitHub compare results show 19 commits on the integration side and 20 commits on
 - The CLI signal is applied before standalone shell logging; the boolean Intent extra is applied by `MainActivity` only when that extra is present.
 - `MainActivity` is exported. Its legacy `data` extra still uses `data=shell` as a shell-initialization hint and other non-null values as crash text, but neither value authenticates the caller.
 - Current code only trusts shell initialization when Android exposes the launching UID and it equals `Process.SHELL_UID`. A caller-controlled extra alone cannot select the shell startup profile, auto-start the pointer, or reset the saved Shizuku mode.
-- The crash payload is removed from the activity Intent after capture and displayed in a stable `DialogFragment`; activation prompts wait until the crash dialog is dismissed.
+- The crash payload is removed from the activity Intent after capture and displayed in a stable `DialogFragment` titled as unverified diagnostic text, with a 16 KiB display cap; activation prompts wait until the dialog is dismissed.
 - On Android versions or launch paths where Android does not expose the caller UID, the legacy marker fails closed. In that case, `data=shell` will not trigger trusted auto-start or a persistent input-mode change. This compatibility tradeoff is documented in `docs/waydroid-shell-startup.md` and still needs runtime validation.
 
 ### Build constraints
