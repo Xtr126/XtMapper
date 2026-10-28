@@ -116,6 +116,26 @@ class ShiftKeyHandler(key: ShiftKey) {
         }
     }
 
+    /** Releases a held pointer and invalidates queued transition steps during handler shutdown. */
+    @Synchronized
+    fun stop(service: IInputInterface, pidProvider: PidProvider) {
+        transitionGeneration++
+        val pid = assignedPid
+        if (pid != -1) {
+            try {
+                service.injectEvent(currentX, currentY, InputService.UP, pid)
+            } catch (_: Exception) {
+                // Shutdown must still release the PID and clear local held-key state if injection fails.
+            } finally {
+                pidProvider.releasePidFor(shiftId)
+            }
+        }
+        isKey1Down = false
+        isKey2Down = false
+        activeKey = 0
+        assignedPid = -1
+    }
+
     private fun startTransition(
         targetX: Float,
         targetY: Float,
