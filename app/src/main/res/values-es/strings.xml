@@ -120,7 +120,7 @@
     <string name="press_any_key_to_stop_recording">Presione cualquier tecla para detener la grabación…</string>
     <string name="advanced">Avanzado</string>
     <string name="shizuku_not_running_title">Shizuku no se está ejecutando</string>
-    <string name="shizuku_not_running_message"/>
+    <string name="shizuku_not_running_message">Inicie el servicio Shizuku y vuelva a XtMapper.</string>
     <string name="edit">Editar</string>
     <string name="show_controls_on_screen">Mostrar controles en pantalla</string>
     <string name="select_a_display">Seleccionar una pantalla</string>
