@@ -71,6 +71,9 @@ class TouchPointer : Service() {
     override fun onStartCommand(i: Intent?, flags: Int, startId: Int): Int {
         if (i == null || ACTION_STOP == i.action) {
             stopKeymapper()
+            // stopKeymapper may return early when the instance is already inactive.
+            // This service was still started for this command, so always stop this start ID.
+            stopSelf(startId)
             return START_NOT_STICKY
         }
 
