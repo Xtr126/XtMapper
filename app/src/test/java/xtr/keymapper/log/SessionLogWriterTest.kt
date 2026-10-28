@@ -219,6 +219,42 @@ class SessionLogWriterTest {
     }
 
     @Test
+    fun `start marker at exhausted daily limit does not disable next day logging`() {
+        val clock = MutableClock.at("2026-10-22T09:00:00Z")
+        val store = newStore()
+        val events = mutableListOf<String>()
+        val config = LoggingConfig(
+            queueCapacity = 8,
+            maxFileBytes = 100,
+            maxPartsPerDay = 2,
+        )
+
+        val first = makeWriter(store, clock, "sess-fill-limit", config = config, onEvent = { events.add(it) })
+        first.writeSessionStartMarker()
+        repeat(30) { first.write(listOf(record(clock, "fill-$it"))) }
+        assertTrue("first session exhausts the daily part budget", first.recordsDroppedByDayLimit.get() > 0)
+        first.close()
+
+        val second = makeWriter(store, clock, "sess-start-at-limit", config = config, onEvent = { events.add(it) })
+        second.writeSessionStartMarker()
+        assertFalse("a full daily budget is not a sink failure", second.unavailable)
+
+        val finalPartText = LogFiles.readAll(store, "xtmapper-2026-10-22-part002.log")
+        assertTrue("START marker is retained in the final part", finalPartText.contains("Session ID: sess-start-at-limit"))
+
+        clock.advanceSeconds(24 * 60 * 60)
+        second.write(listOf(record(clock, "after midnight")))
+        assertFalse("logging resumes on the next day", second.unavailable)
+        assertTrue(
+            LogFiles.readAll(store, "xtmapper-2026-10-23.log").contains("message=\\"after midnight\\"")
+        )
+        assertFalse("the part limit must not be reported as a sink failure", events.any { it.contains("file sink unavailable") })
+
+        second.endSession(clock.instant(), 1_000_000_000L, "Clean shutdown", 0)
+        second.close()
+    }
+
+    @Test
     fun `end session writes duration, status and drops, and is idempotent`() {
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
         val store = newStore()
