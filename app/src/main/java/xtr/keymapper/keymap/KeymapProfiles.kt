@@ -249,7 +249,7 @@ class KeymapProfiles @JvmOverloads constructor(
                         if (data.size > 6) profile.swipeKeys.add(SwipeKey(data))
 
                     ShiftKey.TAG ->
-                        if (data.size > 6) profile.shiftKeys.add(ShiftKey(data))
+                        if (ShiftKey.isValidData(data)) profile.shiftKeys.add(ShiftKey(data))
 
                     Camera.TAG ->
                         if (data.size >= 4)
