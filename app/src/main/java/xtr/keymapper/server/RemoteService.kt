@@ -56,7 +56,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     private fun enforceCaller() {
-        if (Binder.getCallingUid() != appUid)
+        if (getCallingUid() != appUid || getCallingPid() != android.os.Process.myPid())
             throw SecurityException("XtMapper service access denied")
     }
 
