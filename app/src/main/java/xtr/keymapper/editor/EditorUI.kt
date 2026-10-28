@@ -424,6 +424,10 @@ class EditorUI(
             // Only reload if screen orientation genuinely flipped between portrait and landscape
             val orientationChanged = oldWidth > 0 && oldHeight > 0 && (oldWidth > oldHeight) != (newWidth > newHeight)
             if (orientationChanged && profile != null) {
+                // Persist live editor coordinates using the dimensions they were laid out against.
+                // The layout callback runs after the new bounds are applied, so using the current
+                // dimensions here would scale old coordinates against the new orientation.
+                saveKeymap(oldWidth, oldHeight)
                 reloadKeymap()
             }
         }
@@ -482,7 +486,7 @@ class EditorUI(
      * Persists positions read from the live editor component views. See
      * docs/editor-lifecycle.md for the save call sites and the resize/animation timing risk.
      */
-    private fun saveKeymap() {
+    private fun saveKeymap(widthOverride: Int? = null, heightOverride: Int? = null) {
         if (startMode == SHOW_KEYMAP_ONLY) return
 
         val linesToWrite = ArrayList<String?>()
@@ -496,8 +500,8 @@ class EditorUI(
         val profiles = KeymapProfiles(context)
         val (realWidth, realHeight) = getRealScreenDimensions()
 
-        val saveWidth = if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth else if (keysContainerView.width > 0) keysContainerView.width else realWidth
-        val saveHeight = if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight else if (keysContainerView.height > 0) keysContainerView.height else realHeight
+        val saveWidth = widthOverride ?: if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth else if (keysContainerView.width > 0) keysContainerView.width else realWidth
+        val saveHeight = heightOverride ?: if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight else if (keysContainerView.height > 0) keysContainerView.height else realHeight
 
         profiles.saveProfile(
             profileName, linesToWrite, profile!!.packageName, !profile!!.disabled,
