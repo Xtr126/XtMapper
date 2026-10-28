@@ -338,13 +338,15 @@ class LoggingPipelineTest {
         pipeline.info("Test", "blocked event")
         assertTrue("worker entered the deliberately blocked write", writeEntered.await(2, java.util.concurrent.TimeUnit.SECONDS))
 
-        val closeReturned = java.util.concurrent.CountDownLatch(1)
-        Thread({
-            pipeline.close("bounded close")
-            closeReturned.countDown()
-        }, "test-log-close").apply {
-            isDaemon = true
-            start()
+        val closeReturned = java.util.concurrent.CountDownLatch(2)
+        repeat(2) { index ->
+            Thread({
+                pipeline.close("bounded close")
+                closeReturned.countDown()
+            }, "test-log-close-$index").apply {
+                isDaemon = true
+                start()
+            }
         }
 
         val returnedBeforeRelease = closeReturned.await(3_500, java.util.concurrent.TimeUnit.MILLISECONDS)
@@ -353,10 +355,15 @@ class LoggingPipelineTest {
         val eventuallyReturned = closeReturned.await(3_500, java.util.concurrent.TimeUnit.MILLISECONDS)
 
         assertTrue("close must not wait on the worker's file lock", returnedBeforeRelease)
-        assertTrue("close completes after the stuck write is released", eventuallyReturned)
+        assertTrue("both concurrent close() callers must return", eventuallyReturned)
         assertTrue(
             "deferred cleanup writes SESSION END after the worker exits",
             endMarkerWritten.await(3, java.util.concurrent.TimeUnit.SECONDS)
+        )
+        assertEquals(
+            "concurrent close() calls must emit exactly one SESSION END marker",
+            1,
+            withSinkLock { output.toString().split("SESSION END").size - 1 }
         )
     }
 
