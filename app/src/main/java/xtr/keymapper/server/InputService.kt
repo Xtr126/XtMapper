@@ -3,7 +3,6 @@ package xtr.keymapper.server
 import android.os.Handler
 import android.os.Looper
 import android.os.RemoteException
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import xtr.keymapper.InputEventCodes.BTN_MIDDLE
@@ -15,6 +14,7 @@ import xtr.keymapper.InputEventCodes.REL_Y
 import xtr.keymapper.IRemoteServiceCallback
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
+import xtr.keymapper.log.XtLogger
 import xtr.keymapper.server.event.KeyEventHandler
 import xtr.keymapper.server.event.MouseEventHandler
 
@@ -81,7 +81,7 @@ class InputService @Throws(RemoteException::class) constructor(
                 isKeyboardGrabbed = startKeyboardGrab()
                 isKeyboardBlocked = isKeyboardGrabbed
             } catch (e: Exception) {
-                Log.e(RemoteService.TAG, "Failed to start keyboard grab", e)
+                XtLogger.error(RemoteService.TAG, "Failed to start keyboard grab", e)
             }
         }
     }
@@ -128,12 +128,12 @@ class InputService @Throws(RemoteException::class) constructor(
             try {
                 isKeyboardGrabbed = startKeyboardGrab()
                 if (!isKeyboardGrabbed) {
-                    Log.w(RemoteService.TAG, "startKeyboardGrab returned false, no keyboard device grabbed")
+                    XtLogger.warn(RemoteService.TAG, "startKeyboardGrab returned false, no keyboard device grabbed")
                     return
                 }
                 isKeyboardBlocked = true
             } catch (e: Exception) {
-                Log.e(RemoteService.TAG, "Failed to start keyboard grab", e)
+                XtLogger.error(RemoteService.TAG, "Failed to start keyboard grab", e)
                 return
             }
         } else {
@@ -143,7 +143,7 @@ class InputService @Throws(RemoteException::class) constructor(
         try {
             mCallback.alertKeyboardBlocked(isKeyboardBlocked && !stopEvents)
         } catch (e: RemoteException) {
-            Log.e(RemoteService.TAG, "Failed to send alertKeyboardBlocked", e)
+            XtLogger.error(RemoteService.TAG, "Failed to send alertKeyboardBlocked", e)
         }
     }
 
@@ -217,11 +217,11 @@ class InputService @Throws(RemoteException::class) constructor(
                     isKeyboardGrabbed = startKeyboardGrab()
                     isKeyboardBlocked = isKeyboardGrabbed
                 } catch (e: Exception) {
-                    Log.e(RemoteService.TAG, "Failed to start keyboard grab", e)
+                    XtLogger.error(RemoteService.TAG, "Failed to start keyboard grab", e)
                 }
             }
         } catch (e: Exception) {
-            Log.e(RemoteService.TAG, e.message, e)
+            XtLogger.error(RemoteService.TAG, "Keyboard/input operation failed", e)
         }
     }
 
@@ -230,7 +230,7 @@ class InputService @Throws(RemoteException::class) constructor(
             try {
                 stopKeyboardGrab()
             } catch (e: Exception) {
-                Log.e(RemoteService.TAG, "Failed to stop keyboard grab", e)
+                XtLogger.error(RemoteService.TAG, "Failed to stop keyboard grab", e)
             }
             isKeyboardGrabbed = false
             isKeyboardBlocked = false
@@ -290,12 +290,12 @@ class InputService @Throws(RemoteException::class) constructor(
                 keyEventHandler.handleKeyboardShortcutEvent(line)
             }
         } catch (e: Exception) {
-            Log.e(RemoteService.TAG, "Error handling keyboard event", e)
+            XtLogger.error(RemoteService.TAG, "Error handling keyboard event", e)
         }
         try {
             keyListener?.invoke(line)
         } catch (e: Exception) {
-            Log.e(RemoteService.TAG, "Error invoking keyListener", e)
+            XtLogger.error(RemoteService.TAG, "Error invoking keyListener", e)
         }
     }
 
