@@ -180,8 +180,9 @@ class LoggingPipeline(
      * batches), so a reader never mistakes lost records for persisted ones.
      */
     fun close(status: String = SessionStates.STATUS_CLEAN) {
-        if (!started.get()) return
-        started.set(false)
+        // One caller owns shutdown; concurrent close() calls must not schedule
+        // multiple deferred END-marker writers for the same session.
+        if (!started.compareAndSet(true, false)) return
         if (worker.stopDraining(config.flushTimeoutMillis)) {
             // The consumer is fully stopped, so the caller can safely write END
             // and release the sink without racing an in-flight writer operation.
