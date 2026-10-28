@@ -124,6 +124,21 @@ class TouchJitterTest {
     }
 
     @Test
+    fun updateConfigAndClearTakeEffectImmediately() {
+        touchJitter.updateConfig(enabled = true, spread = 25f)
+        val down = touchJitter.wrapCoordinates(400f, 300f, InputService.DOWN, 7)
+        val move = touchJitter.wrapCoordinates(400f, 300f, InputService.MOVE, 7)
+        assertEquals(down.x, move.x, 0.0001f)
+        assertEquals(down.y, move.y, 0.0001f)
+
+        touchJitter.updateConfig(enabled = false, spread = 0f)
+        touchJitter.clear()
+        val afterReload = touchJitter.wrapCoordinates(400f, 300f, InputService.MOVE, 7)
+        assertEquals(400f, afterReload.x, 0.0001f)
+        assertEquals(300f, afterReload.y, 0.0001f)
+    }
+
+    @Test
     fun testScreenBoundaryClamping() {
         touchJitter.isEnabled = true
         touchJitter.spread = 30f
