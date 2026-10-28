@@ -128,6 +128,7 @@
     <string name="action_retry">Réessayer</string>
     <string name="msg_backup_saved">Sauvegarde enregistrée avec succès</string>
     <string name="error_save_failed">Échec de l\'enregistrement</string>
+    <string name="error_import_failed">Échec de l’importation</string>
     <string name="msg_profiles_imported">Profils importés avec succès</string>
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">Tous les profils existent déjà, rien n\'a été importé</string>
     <string name="share">Partager</string>
