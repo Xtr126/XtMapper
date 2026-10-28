@@ -212,6 +212,8 @@ class InputService @Throws(RemoteException::class) constructor(
         try {
             this.keymapProfile = mCallback.requestKeymapProfile()
             this.keymapConfig = mCallback.requestKeymapConfig()
+            touchJitter.updateConfig(this.keymapConfig.touchJitter, this.keymapConfig.touchJitterSpread)
+            touchJitter.clear()
             this.stop()
             keyEventHandler.init()
             mouseEventHandler.init()
