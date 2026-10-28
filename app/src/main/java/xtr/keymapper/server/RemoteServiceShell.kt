@@ -19,6 +19,7 @@ import xtr.keymapper.BuildConfig
 import xtr.keymapper.Environment
 import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.log.Role
+import xtr.keymapper.log.SessionStates
 import xtr.keymapper.log.XtLogger
 import java.lang.reflect.Method
 import kotlin.system.exitProcess
@@ -61,6 +62,15 @@ object RemoteServiceShell {
                     else -> println("Invalid argument: $arg")
                 }
             }
+            // Normal exits may close the session here, but a fatal process must remain open
+            // so the next launch reports an unclean previous session instead of a false END.
+            Runtime.getRuntime().addShutdownHook(
+                Thread {
+                    if (!XtLogger.hasFatalEvent) {
+                        XtLogger.endSession(SessionStates.STATUS_UNEXPECTED_EXIT)
+                    }
+                }
+            )
             val fakeTouch = SystemProperties.get("persist.waydroid.fake_touch", null)
             if (fakeTouch != null && !fakeTouch.isBlank()) {
                 val ANSI_RED = "\u001B[31m"
