@@ -19,6 +19,7 @@ import xtr.keymapper.BuildConfig
 import xtr.keymapper.Environment
 import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.log.Role
+import xtr.keymapper.log.SessionStates
 import xtr.keymapper.log.XtLogger
 import java.lang.reflect.Method
 import kotlin.system.exitProcess
@@ -38,7 +39,7 @@ object RemoteServiceShell {
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             println("Unsupported Android version")
-            XtLogger.endSession("Unsupported Android version")
+            XtLogger.endSession(SessionStates.STATUS_CRASH_RELAYED)
             return
         }
 
@@ -61,12 +62,10 @@ object RemoteServiceShell {
                     else -> println("Invalid argument: $arg")
                 }
             }
-            // Session close best effort: runs when the JVM exits normally and when
-            // stopServer ends the process via System.exit. SIGKILL/SIGTERM kill the
-            // process without running hooks; the next session reports that as
-            // "did not close cleanly".
+            // A shell process that reaches JVM shutdown without the explicit normal-stop
+            // path must not be reported as clean. Normal stop closes the session before exit.
             Runtime.getRuntime().addShutdownHook(
-                Thread { XtLogger.endSession("Shell server exiting") }
+                Thread { XtLogger.endSession(SessionStates.STATUS_CRASH_RELAYED) }
             )
             val fakeTouch = SystemProperties.get("persist.waydroid.fake_touch", null)
             if (fakeTouch != null && !fakeTouch.isBlank()) {
@@ -121,7 +120,7 @@ object RemoteServiceShell {
             XtLogger.error(TAG, "server startup failed", e)
             // Bounded flush before the existing exit(1) behavior.
             XtLogger.flush(2_000)
-            XtLogger.endSession("Startup failed")
+            XtLogger.endSession(SessionStates.STATUS_CRASH_RELAYED)
             exitProcess(1)
         }
         Looper.loop()
