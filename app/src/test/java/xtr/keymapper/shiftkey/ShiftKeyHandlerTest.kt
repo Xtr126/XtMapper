@@ -222,6 +222,41 @@ class ShiftKeyHandlerTest {
     }
 
     @Test
+    fun testStopReleasesHeldPointerAndInvalidatesPendingMoves() {
+        val handler = ShiftKeyHandler(createShiftKey())
+        val mockService = MockInputInterface()
+        val pidProvider = PidProvider()
+        val scheduledTasks = mutableListOf<Pair<Long, () -> Unit>>()
+        val scheduler: (Long, () -> Unit) -> Unit = { delay, task ->
+            scheduledTasks.add(Pair(delay, task))
+        }
+
+        handler.handleEvent(keyEvent("KEY_A", InputService.DOWN), mockService, pidProvider)
+        val activePointerId = mockService.events.single().pointerId
+        handler.handleEvent(
+            keyEvent("KEY_B", InputService.DOWN), mockService, pidProvider,
+            defaultDurationMs = 100, scheduler = scheduler
+        )
+        assertTrue("transition callbacks were scheduled", scheduledTasks.isNotEmpty())
+
+        handler.stop(mockService, pidProvider)
+        val upIndex = mockService.events.indexOfLast { it.action == InputService.UP }
+        assertTrue("stop releases the active pointer", upIndex >= 0)
+        assertEquals(activePointerId, mockService.events[upIndex].pointerId)
+
+        // Simulate callbacks that had already been queued when stop() ran.
+        scheduledTasks.forEach { it.second.invoke() }
+        assertTrue(
+            "no transition MOVE may be injected after the release",
+            mockService.events.drop(upIndex + 1).none { it.action == InputService.MOVE }
+        )
+        assertTrue(
+            "released pointer ID is not retained",
+            pidProvider.getPid("SHIFT_A_B") != activePointerId
+        )
+    }
+
+    @Test
     fun testInterpolatedSmoothTransition() {
         val shiftKey = createShiftKey(x1 = 100f, y1 = 200f, x2 = 500f, y2 = 600f)
         val handler = ShiftKeyHandler(shiftKey)
