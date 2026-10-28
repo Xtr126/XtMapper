@@ -221,6 +221,7 @@ class InputService @Throws(RemoteException::class) constructor(
                 try {
                     isKeyboardGrabbed = startKeyboardGrab()
                     isKeyboardBlocked = isKeyboardGrabbed
+                    if (isKeyboardGrabbed) setKeyboardGrabLock(!stopEvents)
                 } catch (e: Exception) {
                     XtLogger.error(RemoteService.TAG, "Failed to start keyboard grab", e)
                 }
