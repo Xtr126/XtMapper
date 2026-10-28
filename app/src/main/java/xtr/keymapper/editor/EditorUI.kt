@@ -257,6 +257,7 @@ class EditorUI(
             return true
         } else if (keyInFocus != null) {
             keyInFocus!!.setText(key)
+            keyInFocus = null
             return true
         }
         return false
@@ -284,7 +285,10 @@ class EditorUI(
         // Incoming calls are not guaranteed to be executed on the main thread
         mHandler.post {
             if (macroDialog != null) macroDialog!!.onKey(key)
-            else if (keyInFocus != null) keyInFocus!!.setText(key)
+            else if (keyInFocus != null) {
+                keyInFocus!!.setText(key)
+                keyInFocus = null
+            }
             settingsOverlay!!.onKey(key)
         }
     }
@@ -345,6 +349,8 @@ class EditorUI(
      * MacroView for visualization
      */
     private fun addMacro() {
+        // Stop a previous floating-key capture before macro recording consumes key events.
+        keyInFocus = null
         if (mService != null) {
             mainView!!.setFocusable(true)
         }
