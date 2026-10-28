@@ -255,6 +255,12 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         composeServiceActive = TouchPointer.isRunning
+        // The user may have granted All-files access in Settings just now;
+        // finish the pending file-logging setup without a restart. Guarded:
+        // the check is an API 30 call (crashes every resume below Android 11).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            android.os.Environment.isExternalStorageManager()
+        ) XtLogger.enableFileLogging()
     }
 
     fun stopPointer() {
@@ -565,15 +571,7 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, R.string.logs_settings_unavailable, Toast.LENGTH_LONG).show()
     }
 
-    override fun onResume() {
-        super.onResume()
-        // The user may have granted All-files access in Settings just now;
-        // finish the pending file-logging setup without a restart. Guarded:
-        // the check is an API 30 call (crashes every resume below Android 11).
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-            android.os.Environment.isExternalStorageManager()
-        ) XtLogger.enableFileLogging()
-    }
+
 
     override fun onDestroy() {
         super.onDestroy()
