@@ -29,6 +29,7 @@ import xtr.keymapper.databinding.CursorBinding
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.log.Role
+import xtr.keymapper.log.SessionStates
 import xtr.keymapper.log.XtLogger
 import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
