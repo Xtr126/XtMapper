@@ -286,7 +286,8 @@ class RemoteService @JvmOverloads constructor(
                 XtLogger.error(TAG, "Failed to stop input service after client binder death", e)
             }
             inputService = null
-            mHandler.post { stopServer(true) }
+            // Stdin can block the main handler; clearing the service also avoids dead-client callbacks.
+            stopServer(true)
         } else {
             // Serialize native mouse cleanup with device opening and server replacement.
             mHandler.post { stopServer(true) }
