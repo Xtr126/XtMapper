@@ -20,6 +20,14 @@ object Server {
         val className = RemoteServiceShell::class.java.name
         return StringBuffer().apply {
             append("#!/system/bin/sh\n")
+            append("if [ ! -e \"").append(ai.nativeLibraryDir).append("\" ]; then\n")
+            append("  echo 'Error: native library path does not exist' >&2\n")
+            append("  exit 1\n")
+            append("fi\n")
+            append("if [ ! -e \"").append(ai.publicSourceDir).append("\" ]; then\n")
+            append("  echo 'Error: APK path does not exist' >&2\n")
+            append("  exit 1\n")
+            append("fi\n")
             append("pkill -f ").append(className).append("\n")
             append("exec /system/bin/app_process")
             append(" -Djava.library.path=\"").append(ai.nativeLibraryDir) //path containing lib*.so
