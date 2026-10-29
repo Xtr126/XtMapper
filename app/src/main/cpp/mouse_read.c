@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <poll.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
 #include <time.h>
 
 #include <linux/input.h>
