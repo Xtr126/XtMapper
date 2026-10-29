@@ -411,10 +411,15 @@ class RemoteService @JvmOverloads constructor(
     private fun stopServer(exitProcess: Boolean, clientAlive: Boolean = true) {
         val service = inputService
         Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient clientAlive=$clientAlive")
-        if (service != null && clientAlive) try {
-            service.callback.disablePointer()
-        } catch (e: RemoteException) {
-            throw RuntimeException(e)
+        var callbacksAllowed = clientAlive
+        if (service != null && callbacksAllowed) {
+            try {
+                service.callback.disablePointer()
+            } catch (e: RemoteException) {
+                // Binder death can race the queued death recipient; cleanup must still run.
+                callbacksAllowed = false
+                XtLogger.warn(TAG, "Client Binder unavailable during pointer shutdown; continuing cleanup", e)
+            }
         }
 
         if (!startedFromShell && exitProcess) {
@@ -425,7 +430,15 @@ class RemoteService @JvmOverloads constructor(
             System.exit(0)
         } else if (service != null && !isWaylandClient) {
             service.stopEvents = true
-            if (clientAlive) service.hideCursor()
+            if (callbacksAllowed) {
+                try {
+                    service.hideCursor()
+                } catch (e: RuntimeException) {
+                    // hideCursor can still race a client death after disablePointer succeeded.
+                    callbacksAllowed = false
+                    XtLogger.warn(TAG, "Client Binder unavailable while hiding cursor; continuing cleanup", e)
+                }
+            }
             service.stop()
             Log.i(TAG, "stopServer: stopping native mouse reader if started")
             service.stopMouseIfStarted()
