@@ -49,6 +49,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val SHELL_INIT = "shell"
+        const val SHELL_SERVICE_BINDER = "xtr.keymapper.extra.SHELL_SERVICE_BINDER"
 
         init {
             // Set settings before the main shell can be created
@@ -71,6 +72,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        intent.extras?.getBinder(SHELL_SERVICE_BINDER)?.let {
+            RemoteServiceHelper.setShellServiceBinder(it)
+        }
         if (startedFromShell == null) startedFromShell = isStartedWithShell()
 
         GameKeyMapperBridge.installGameKeyMapperContent(this)

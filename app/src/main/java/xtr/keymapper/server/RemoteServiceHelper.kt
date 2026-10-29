@@ -8,7 +8,6 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.IBinder
 import android.os.RemoteException
-import android.os.ServiceManager
 import android.util.Log
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
@@ -93,13 +92,16 @@ object RemoteServiceHelper {
         }
     }
 
-    private fun getInstance() {
-        if (service == null) {
-            service = IRemoteService.Stub.asInterface(ServiceManager.getService("xtmapper"))
-            try {
-                service?.asBinder()?.linkToDeath({ service = null }, 0)
-            } catch (_: RemoteException) {
-            }
+    @JvmStatic
+    fun setShellServiceBinder(binder: IBinder?) {
+        val remote = binder?.let { IRemoteService.Stub.asInterface(it) }
+        service = remote
+        try {
+            val remoteBinder = remote?.asBinder()
+            remoteBinder?.linkToDeath({
+                if (service?.asBinder() == remoteBinder) service = null
+            }, 0)
+        } catch (_: RemoteException) {
         }
     }
 
@@ -156,22 +158,14 @@ object RemoteServiceHelper {
             return
         }
 
-        // 3. Check existing live cached service
+        // 3. Check an existing live service, including one delivered by RemoteServiceShell.
         val existing = service
         if (existing != null && existing.asBinder().isBinderAlive) {
             callback.onConnection(existing)
             return
         }
 
-        // 4. Try ServiceManager (shell started service)
-        getInstance()
-        val smService = service
-        if (smService != null && smService.asBinder().isBinderAlive) {
-            callback.onConnection(smService)
-            return
-        }
-
-        // 5. Connect via Shizuku or Root
+        // 4. Connect via Shizuku or Root
         val connection = RemoteServiceConnection(callback)
         if (useShizuku) {
             if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {

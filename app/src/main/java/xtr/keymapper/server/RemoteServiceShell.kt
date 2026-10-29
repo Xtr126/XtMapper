@@ -1,18 +1,24 @@
 package xtr.keymapper.server
 
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Bundle
 import android.os.Build
+import android.os.IBinder
 import android.os.Looper
-import android.os.ServiceManager
+import android.os.Process
 import android.os.SystemProperties
 import android.util.Log
+import org.lsposed.hiddenapibypass.HiddenApiBypass
 import xtr.keymapper.BuildConfig
 import xtr.keymapper.activity.MainActivity
 import java.lang.reflect.Method
+import kotlin.system.exitProcess
 
 object RemoteServiceShell {
     @JvmStatic
@@ -41,15 +47,6 @@ object RemoteServiceShell {
                     else -> println("Invalid argument: $arg")
                 }
             }
-            Selinux.real.relax()
-            // Hooks run only on System.exit (crash handler, stopServer exit) — Android does NOT
-            // run them when the process is killed with SIGTERM (e.g. pkill); a clean stop is
-            // restored by RemoteService.stopServer instead
-            Runtime.getRuntime().addShutdownHook(
-                Thread { ProcessBuilder("setenforce", "1").start() }
-            )
-            ServiceManager.addService("xtmapper", mService)
-
             ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start()
             val settingsArgs = "settings put system alert_window_bypass_low_ram 1".split(Regex("\\s+"))
             ProcessBuilder(settingsArgs).inheritIO().start()
@@ -62,19 +59,97 @@ object RemoteServiceShell {
                 println(ANSI_RED + "Reset it with " + "waydroid prop set persist.waydroid.fake_touch \"\" to avoid issues with XtMapper" + ANSI_RESET)
             } else if (!noLogcat) {
                 // Don't flood the console with logcat if warning is being shown
-                ProcessBuilder("logcat", "-v", "color", "--pid=" + android.os.Process.myPid()).inheritIO().start()
+                ProcessBuilder("logcat", "-v", "color", "--pid=" + Process.myPid()).inheritIO().start()
             }
 
-            if (autoLaunchClientActivity) ProcessBuilder("am", "start", "-a", "android.intent.action.MAIN", "-n",
-                ComponentName(mService.context, MainActivity::class.java).flattenToString(),
-                "--es", "data",
-                MainActivity.SHELL_INIT).inheritIO().start()
+            if (autoLaunchClientActivity) {
+                val intent = Intent(Intent.ACTION_MAIN).apply {
+                    component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    putExtra("data", MainActivity.SHELL_INIT)
+                    putExtras(Bundle().apply {
+                        putBinder(MainActivity.SHELL_SERVICE_BINDER, mService.asBinder())
+                    })
+                }
+                startActivityAsShell(intent)
+            }
 
         } catch (e: Exception) {
             Log.e(RemoteService.TAG, e.message, e)
-            System.exit(1)
+            exitProcess(1)
         }
         Looper.loop()
+    }
+
+    /** Launch with the shell package identity and carry Binder extras in the Intent. */
+    @SuppressLint("PrivateApi", "DiscouragedPrivateApi")
+    private fun startActivityAsShell(intent: Intent) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            Log.e(RemoteService.TAG, "Launching MainActivity with a binder requires Android 9 or newer")
+            exitProcess(1)
+        }
+        HiddenApiBypass.addHiddenApiExemptions("")
+        val activityManager = ActivityManager::class.java.getMethod("getService").invoke(null)
+        val currentUserId = runCatching {
+            ActivityManager::class.java.getMethod("getCurrentUser").invoke(null) as Int
+        }.getOrElse { Process.myUid() / 100000 }
+        val expectedTypes = listOf(
+            "android.app.IApplicationThread",
+            String::class.java.name,
+            Intent::class.java.name,
+            String::class.java.name,
+            IBinder::class.java.name,
+            String::class.java.name,
+            Int::class.javaPrimitiveType!!.name,
+            Int::class.javaPrimitiveType!!.name,
+            Bundle::class.java.name,
+            Int::class.javaPrimitiveType!!.name
+        )
+        val values = listOf(
+            null,
+            "com.android.shell",
+            intent,
+            intent.type,
+            null,
+            null,
+            -1,
+            0,
+            null,
+            currentUserId
+        )
+
+        val method = activityManager.javaClass.methods.firstOrNull { candidate ->
+            if (candidate.name != "startActivityAsUser") return@firstOrNull false
+            var expectedIndex = 0
+            for (parameterType in candidate.parameterTypes) {
+                if (expectedIndex < expectedTypes.size && parameterType.name == expectedTypes[expectedIndex]) {
+                    expectedIndex++
+                }
+            }
+            expectedIndex == expectedTypes.size
+        } ?: error("ActivityManager.startActivityAsUser method not found")
+
+        val args = arrayOfNulls<Any>(method.parameterCount)
+        var expectedIndex = 0
+        for ((index, parameterType) in method.parameterTypes.withIndex()) {
+            if (expectedIndex < expectedTypes.size && parameterType.name == expectedTypes[expectedIndex]) {
+                args[index] = values[expectedIndex++]
+            } else if (parameterType.isPrimitive) {
+                args[index] = when (parameterType) {
+                    java.lang.Boolean.TYPE -> false
+                    java.lang.Long.TYPE -> 0L
+                    java.lang.Float.TYPE -> 0f
+                    java.lang.Double.TYPE -> 0.0
+                    Character.TYPE -> '\u0000'
+                    java.lang.Byte.TYPE -> 0.toByte()
+                    java.lang.Short.TYPE -> 0.toShort()
+                    else -> 0
+                }
+            }
+        }
+
+        val result = method.invoke(activityManager, *args) as? Int
+        check(result == null || result >= 0) { "ActivityManager failed to start MainActivity: $result" }
     }
 
     @JvmStatic

@@ -326,11 +326,6 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     private fun stopServer(exitProcess: Boolean) {
-        // Restore enforcing only if this app actually relaxed SELinux (shell entry
-        // point); startedFromShell is also set by the system-app path, which never does
-        if (exitProcess && !Selinux.real.restore()) {
-            Log.e(TAG, "Failed to restore SELinux enforcing mode")
-        }
         val service = inputService
         if (service != null) try {
             service.callback.disablePointer()
