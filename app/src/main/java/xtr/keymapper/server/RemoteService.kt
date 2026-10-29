@@ -301,8 +301,8 @@ class RemoteService @JvmOverloads constructor(
             // Stdin can block the main handler; clearing the service also avoids dead-client callbacks.
             stopServer(true)
         } else {
-            // Serialize native mouse cleanup with device opening and server replacement.
-            mHandler.post { stopServer(true) }
+            // Dead-client callbacks must not prevent native cleanup on the main handler.
+            mHandler.post { stopServer(true, clientAlive = false) }
         }
     }
 
@@ -408,10 +408,10 @@ class RemoteService @JvmOverloads constructor(
         mHandler.post { stopServer(true) }
     }
 
-    private fun stopServer(exitProcess: Boolean) {
+    private fun stopServer(exitProcess: Boolean, clientAlive: Boolean = true) {
         val service = inputService
-        Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient")
-        if (service != null) try {
+        Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient clientAlive=$clientAlive")
+        if (service != null && clientAlive) try {
             service.callback.disablePointer()
         } catch (e: RemoteException) {
             throw RuntimeException(e)
@@ -425,7 +425,7 @@ class RemoteService @JvmOverloads constructor(
             System.exit(0)
         } else if (service != null && !isWaylandClient) {
             service.stopEvents = true
-            service.hideCursor()
+            if (clientAlive) service.hideCursor()
             service.stop()
             Log.i(TAG, "stopServer: stopping native mouse reader if started")
             service.stopMouseIfStarted()
