@@ -35,12 +35,14 @@ import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.reflect.Method
+import java.util.concurrent.atomic.AtomicReference
 
 class RemoteService @JvmOverloads constructor(
     context: Context,
     initialIsWaylandClient: Boolean = false
 ) : IRemoteService.Stub() {
     private val mouseDevice = MouseDeviceConnection()
+    private val lastQueuedMouseDevice = AtomicReference<String?>()
     @Volatile
     internal var inputService: InputService? = null
     private var mOnKeyEventListener: OnKeyEventListener? = null
@@ -269,8 +271,18 @@ class RemoteService @JvmOverloads constructor(
                 Log.i(TAG, "getevent: queue mouse discovery device=$evdev serviceReady=${inputService != null} thread=${Thread.currentThread().name}")
                 lastLoggedMouseDevice = evdev
             }
-            if (!mHandler.post { mouseDevice.discover(evdev) }) {
-                Log.e(TAG, "getevent: main handler rejected mouse discovery device=$evdev")
+            if (lastQueuedMouseDevice.getAndSet(evdev) != evdev) {
+                if (!mHandler.post {
+                    try {
+                        mouseDevice.discover(evdev)
+                    } finally {
+                        // Later discovery must still retry a failed open.
+                        lastQueuedMouseDevice.compareAndSet(evdev, null)
+                    }
+                }) {
+                    lastQueuedMouseDevice.compareAndSet(evdev, null)
+                    Log.e(TAG, "getevent: main handler rejected mouse discovery device=$evdev")
+                }
             }
         }
         return true
