@@ -278,16 +278,18 @@ class RemoteService @JvmOverloads constructor(
 
     private val mStartServerDeathRecipient = IBinder.DeathRecipient {
         Log.w(TAG, "startServer callback binder died; queuing mouse disconnect")
-        mHandler.post {
-            // Release keyboard grabs before dropping the service, even if cleanup fails.
+        if (isWaylandClient) {
+            // Wayland's stdin loop can block the main handler.
             try {
                 inputService?.stop()
             } catch (e: Exception) {
                 XtLogger.error(TAG, "Failed to stop input service after client binder death", e)
             }
-            mouseDevice.disconnect()
             inputService = null
-            stopServer(true)
+            mHandler.post { stopServer(true) }
+        } else {
+            // Serialize native mouse cleanup with device opening and server replacement.
+            mHandler.post { stopServer(true) }
         }
     }
 
@@ -350,7 +352,7 @@ class RemoteService @JvmOverloads constructor(
                     newService.setMouseLock(true)
                     mouseDevice.connect { device ->
                         Log.i(TAG, "mouse openDevice: calling JNI device=$device service=${System.identityHashCode(newService)}")
-                        val fd = newService.openDevice(device)
+                        val fd = newService.openMouseDevice(device)
                         Log.i(TAG, "mouse openDevice: JNI returned fd=$fd device=$device service=${System.identityHashCode(newService)}")
                         fd >= 0
                     }
@@ -379,7 +381,13 @@ class RemoteService @JvmOverloads constructor(
 
     override fun destroy() {
         enforceCaller()
-        stopServer(true)
+        if (isWaylandClient) {
+            // Wayland does not use the evdev mouse-reader lifecycle; the main Handler may be
+            // blocked in its stdin loop, so preserve the existing direct shutdown path.
+            stopServer(true)
+        } else {
+            mHandler.post { stopServer(true) }
+        }
     }
 
     override fun stopServer() {
@@ -406,13 +414,9 @@ class RemoteService @JvmOverloads constructor(
             service.stopEvents = true
             service.hideCursor()
             service.stop()
-            if (mouseDevice.isOpen) {
-                Log.i(TAG, "stopServer: stopping native mouse thread")
-                service.stopMouse()
-                Log.i(TAG, "stopServer: native mouse thread stopped")
-            } else {
-                Log.i(TAG, "stopServer: skipping mouse stop because no device opened successfully")
-            }
+            Log.i(TAG, "stopServer: stopping native mouse reader if started")
+            service.stopMouseIfStarted()
+            Log.i(TAG, "stopServer: native mouse cleanup returned")
             mouseDevice.disconnect()
             service.stopTouchpad()
             service.destroyUinputDev()

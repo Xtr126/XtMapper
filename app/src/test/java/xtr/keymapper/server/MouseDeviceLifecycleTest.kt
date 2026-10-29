@@ -62,6 +62,44 @@ class MouseDeviceLifecycleTest {
     }
 
     @Test
+    fun `failed open retries on the next discovery and in a new service generation`() {
+        val device = "/dev/input/event6"
+        lifecycle.onDeviceDiscovered(device)
+        val firstRequest = lifecycle.onInputServiceReady()!!
+
+        assertTrue(lifecycle.onOpenResult(firstRequest, success = false))
+        val retryRequest = lifecycle.onDeviceDiscovered(device)!!
+        assertEquals(device, retryRequest.device)
+        assertEquals(firstRequest.serviceGeneration, retryRequest.serviceGeneration)
+        assertNull(lifecycle.onDeviceDiscovered(device))
+
+        lifecycle.onInputServiceStopped()
+        assertEquals(device, lifecycle.onInputServiceReady()?.device)
+    }
+
+    @Test
+    fun `open result after stop without replacement is rejected`() {
+        val device = "/dev/input/event6"
+        lifecycle.onDeviceDiscovered(device)
+        val request = lifecycle.onInputServiceReady()!!
+
+        lifecycle.onInputServiceStopped()
+
+        assertFalse(lifecycle.onOpenResult(request, success = true))
+        assertNull(lifecycle.onDeviceDiscovered(device))
+    }
+
+    @Test
+    fun `open result for a superseded device is rejected`() {
+        assertNull(lifecycle.onInputServiceReady())
+        val oldRequest = lifecycle.onDeviceDiscovered("/dev/input/event6")!!
+        val currentRequest = lifecycle.onDeviceDiscovered("/dev/input/event7")!!
+
+        assertFalse(lifecycle.onOpenResult(oldRequest, success = true))
+        assertTrue(lifecycle.onOpenResult(currentRequest, success = true))
+    }
+
+    @Test
     fun `blank device paths are ignored`() {
         assertNull(lifecycle.onDeviceDiscovered(""))
         assertNull(lifecycle.onInputServiceReady())

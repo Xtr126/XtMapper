@@ -254,8 +254,38 @@ class InputService @Throws(RemoteException::class) constructor(
             stopTouchpadRelative()
     }
 
-    external fun openDevice(device: String): Int
-    external fun stopMouse()
+    @Volatile
+    private var mouseReaderOpened = false
+
+    /**
+     * The native reader uses one shared context. Stop a previous reader before replacing it.
+     * A returned file descriptor >= 0 means the native open and reader-thread creation succeeded;
+     * descriptor 0 is valid and must not be treated as failure.
+     */
+    @Synchronized
+    fun openMouseDevice(device: String): Int {
+        if (mouseReaderOpened) {
+            stopMouse()
+            mouseReaderOpened = false
+        }
+
+        val fd = openDevice(device)
+        mouseReaderOpened = fd >= 0
+        return fd
+    }
+
+    @Synchronized
+    fun stopMouseIfStarted() {
+        if (!mouseReaderOpened) return
+        try {
+            stopMouse()
+        } finally {
+            mouseReaderOpened = false
+        }
+    }
+
+    private external fun openDevice(device: String): Int
+    private external fun stopMouse()
 
     // mouse cursor created with uinput in mouse_cursor.cpp
     external fun cursorSetX(x: Int)
