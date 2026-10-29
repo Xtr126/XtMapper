@@ -54,4 +54,23 @@ class MouseDeviceConnectionTest {
         assertEquals(1, oldCalls)
         assertEquals(listOf("/dev/input/event3"), opened)
     }
+
+    @Test
+    fun disconnectDuringOpenCannotMarkStoppedServiceAsOpen() {
+        val connection = MouseDeviceConnection()
+        connection.connect { connection.disconnect(); true }
+        connection.discover("/dev/input/event2")
+        assertFalse(connection.isOpen)
+    }
+
+    @Test
+    fun oldOpenResultCannotReplaceANewServicesFailedResult() {
+        val connection = MouseDeviceConnection()
+        connection.connect {
+            connection.connect { false }
+            true
+        }
+        connection.discover("/dev/input/event2")
+        assertFalse(connection.isOpen)
+    }
 }
