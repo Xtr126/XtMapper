@@ -35,14 +35,12 @@ import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.reflect.Method
-import java.util.concurrent.atomic.AtomicReference
 
 class RemoteService @JvmOverloads constructor(
     context: Context,
     initialIsWaylandClient: Boolean = false
 ) : IRemoteService.Stub() {
     private val mouseDevice = MouseDeviceConnection()
-    private val lastQueuedMouseDevice = AtomicReference<String?>()
     @Volatile
     internal var inputService: InputService? = null
     private var mOnKeyEventListener: OnKeyEventListener? = null
@@ -52,6 +50,15 @@ class RemoteService @JvmOverloads constructor(
     private var cursorView: View? = null
     private var TYPE_SECURE_SYSTEM_OVERLAY = 0
     private val mHandler = Handler(Looper.getMainLooper())
+    // Bound queued discovery work while MouseDeviceConnection owns opening and retries.
+    private val mouseDeviceCoalescer = MouseDeviceCoalescer(
+        schedule = { task ->
+            if (!mHandler.post { task() }) {
+                Log.e(TAG, "getevent: main handler rejected mouse discovery drain")
+            }
+        },
+        process = { device -> mouseDevice.discover(device) },
+    )
     private var mWindowManager: WindowManager? = null
     internal var context: Context = context
     internal var startedFromShell = false
@@ -271,19 +278,7 @@ class RemoteService @JvmOverloads constructor(
                 Log.i(TAG, "getevent: queue mouse discovery device=$evdev serviceReady=${inputService != null} thread=${Thread.currentThread().name}")
                 lastLoggedMouseDevice = evdev
             }
-            if (lastQueuedMouseDevice.getAndSet(evdev) != evdev) {
-                if (!mHandler.post {
-                    try {
-                        mouseDevice.discover(evdev)
-                    } finally {
-                        // Later discovery must still retry a failed open.
-                        lastQueuedMouseDevice.compareAndSet(evdev, null)
-                    }
-                }) {
-                    lastQueuedMouseDevice.compareAndSet(evdev, null)
-                    Log.e(TAG, "getevent: main handler rejected mouse discovery device=$evdev")
-                }
-            }
+            mouseDeviceCoalescer.request(evdev)
         }
         return true
     }
@@ -411,13 +406,11 @@ class RemoteService @JvmOverloads constructor(
     private fun stopServer(exitProcess: Boolean, clientAlive: Boolean = true) {
         val service = inputService
         Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient clientAlive=$clientAlive")
-        var callbacksAllowed = clientAlive
-        if (service != null && callbacksAllowed) {
+        if (service != null && clientAlive) {
             try {
                 service.callback.disablePointer()
             } catch (e: RemoteException) {
                 // Binder death can race the queued death recipient; cleanup must still run.
-                callbacksAllowed = false
                 XtLogger.warn(TAG, "Client Binder unavailable during pointer shutdown; continuing cleanup", e)
             }
         }
@@ -430,24 +423,21 @@ class RemoteService @JvmOverloads constructor(
             System.exit(0)
         } else if (service != null && !isWaylandClient) {
             service.stopEvents = true
-            if (callbacksAllowed) {
-                try {
-                    service.hideCursor()
-                } catch (e: RuntimeException) {
-                    // hideCursor can still race a client death after disablePointer succeeded.
-                    callbacksAllowed = false
-                    XtLogger.warn(TAG, "Client Binder unavailable while hiding cursor; continuing cleanup", e)
+            // The local overlay must be hidden even after client Binder death.
+            CursorShutdown.hideThenCleanup(
+                hideCursor = { service.hideCursor() },
+                cleanup = {
+                    service.stop()
+                    Log.i(TAG, "stopServer: stopping native mouse reader if started")
+                    service.stopMouseIfStarted()
+                    Log.i(TAG, "stopServer: native mouse cleanup returned")
+                    mouseDevice.disconnect()
+                    service.stopTouchpad()
+                    service.destroyUinputDev()
+                    service.callback.asBinder().unlinkToDeath(mStartServerDeathRecipient, 0)
+                    inputService = null
                 }
-            }
-            service.stop()
-            Log.i(TAG, "stopServer: stopping native mouse reader if started")
-            service.stopMouseIfStarted()
-            Log.i(TAG, "stopServer: native mouse cleanup returned")
-            mouseDevice.disconnect()
-            service.stopTouchpad()
-            service.destroyUinputDev()
-            service.callback.asBinder().unlinkToDeath(mStartServerDeathRecipient, 0)
-            inputService = null
+            )
         }
     }
 

@@ -73,4 +73,31 @@ class MouseDeviceConnectionTest {
         connection.discover("/dev/input/event2")
         assertFalse(connection.isOpen)
     }
+
+    @Test
+    fun coalescedDiscoveryRetriesFailedOpenButKeepsSuccessfulDeviceOpen() {
+        val connection = MouseDeviceConnection()
+        val pending = ArrayDeque<() -> Unit>()
+        var attempts = 0
+        connection.connect {
+            attempts++
+            attempts > 1
+        }
+        val coalescer = MouseDeviceCoalescer(
+            schedule = { pending.addLast(it) },
+            process = { connection.discover(it) }
+        )
+        repeat(100) { coalescer.request("/dev/input/event2") }
+        assertEquals(1, pending.size)
+        pending.removeFirst().invoke()
+        assertEquals(1, attempts)
+        assertFalse(connection.isOpen)
+        coalescer.request("/dev/input/event2")
+        pending.removeFirst().invoke()
+        assertEquals(2, attempts)
+        assertTrue(connection.isOpen)
+        coalescer.request("/dev/input/event2")
+        pending.removeFirst().invoke()
+        assertEquals(2, attempts)
+    }
 }
