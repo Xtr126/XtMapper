@@ -1,6 +1,8 @@
 package xtr.keymapper.server
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MouseDeviceCoalescerTest {
@@ -16,8 +18,12 @@ class MouseDeviceCoalescerTest {
             queue.addLast(task)
         }
 
+        fun runNext() {
+            queue.removeFirst().invoke()
+        }
+
         fun runAll() {
-            while (queue.isNotEmpty()) queue.removeFirst().invoke()
+            while (queue.isNotEmpty()) runNext()
         }
     }
 
@@ -83,9 +89,43 @@ class MouseDeviceCoalescerTest {
         coalescer.request("A")
         handler.runAll()
 
-        // B was requested while A was being processed; the drain loop picks it up (not lost).
+        // B was requested while A was being processed; a continuation picks it up (not lost).
         assertEquals(listOf("A", "B"), processed)
-        // No extra task was queued for the mid-open request (still just the one post).
-        assertEquals(1, handler.postCount)
+        // One continuation for the pending selection: at most one task is ever queued, one
+        // per pending selection rather than one per raw event.
+        assertEquals(2, handler.postCount)
+    }
+
+    @Test
+    fun `queued shutdown task runs before an endless discovery stream finishes`() {
+        val handler = FakeDelayedHandler()
+        val processed = mutableListOf<String>()
+        var coalescerRef: MouseDeviceCoalescer? = null
+        val coalescer = MouseDeviceCoalescer(
+            schedule = { task -> handler.post(task) },
+            process = { device ->
+                processed.add(device)
+                // Endless stream: every processed selection yields another, as a moving
+                // mouse's EV_REL lines do while another device interleaves. A drain that
+                // looped inline would never return to the Handler.
+                coalescerRef!!.request("next-$device")
+            },
+        )
+        coalescerRef = coalescer
+
+        coalescer.request("A")
+        var sentinelRan = false
+        handler.post { sentinelRan = true } // e.g. stopServer posted behind the drain
+        assertEquals(2, handler.queue.size)
+
+        handler.runNext() // first drain: processes A, queues one continuation
+        assertFalse(sentinelRan)
+        // Exactly one continuation behind the sentinel: the stream is endless, so per-event
+        // posting or an inline loop would have grown the queue / never returned here.
+        assertEquals(2, handler.queue.size)
+
+        handler.runNext() // sentinel runs next, while the discovery stream is still live
+        assertTrue(sentinelRan)
+        assertEquals(listOf("A"), processed)
     }
 }
