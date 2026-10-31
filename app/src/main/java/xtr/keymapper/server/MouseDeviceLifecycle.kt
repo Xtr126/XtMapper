@@ -74,6 +74,27 @@ internal class MouseDeviceLifecycle {
         return true
     }
 
+    /**
+     * Generation of the currently running InputService, or null when none is running.
+     * Client-binder death notifications capture this at notification time so a queued
+     * cleanup task can tell the dead client's own session from a replacement session.
+     */
+    @Synchronized
+    fun currentServiceGeneration(): Long? = activeServiceGeneration
+
+    /**
+     * True only when a recorded session generation no longer matches the active service:
+     * the dead client was replaced while its cleanup waited, and the replacement session
+     * must not be stopped by it. A null generation (no session ran at notification time)
+     * or a matching generation keeps the pre-existing cleanup semantics.
+     */
+    @Synchronized
+    fun isStaleClientDeath(sessionGeneration: Long?): Boolean {
+        return sessionGeneration != null &&
+            activeServiceGeneration != null &&
+            activeServiceGeneration != sessionGeneration
+    }
+
     private fun nextOpenRequest(): OpenRequest? {
         val generation = activeServiceGeneration ?: return null
         val device = discoveredDevice ?: return null

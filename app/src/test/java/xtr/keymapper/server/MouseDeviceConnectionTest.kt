@@ -100,4 +100,17 @@ class MouseDeviceConnectionTest {
         pending.removeFirst().invoke()
         assertEquals(2, attempts)
     }
+
+    @Test
+    fun delayedClientDeathUsesTheConnectionsServiceGeneration() {
+        val connection = MouseDeviceConnection()
+        connection.connect { true }
+        val sessionAtDeath = connection.currentServiceGeneration()
+        connection.disconnect()
+        connection.connect { true }
+
+        assertTrue(connection.isStaleClientDeath(sessionAtDeath))
+        assertFalse(connection.isStaleClientDeath(connection.currentServiceGeneration()))
+        assertFalse(connection.isStaleClientDeath(null))
+    }
 }

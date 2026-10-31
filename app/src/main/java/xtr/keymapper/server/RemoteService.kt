@@ -35,6 +35,7 @@ import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.reflect.Method
+import java.util.concurrent.ConcurrentHashMap
 
 class RemoteService @JvmOverloads constructor(
     context: Context,
@@ -283,10 +284,20 @@ class RemoteService @JvmOverloads constructor(
         return true
     }
 
-    private val mStartServerDeathRecipient = IBinder.DeathRecipient {
+    // Death cleanup must identify its client even after a replacement starts.
+    private val mClientDeathRecipients =
+        ConcurrentHashMap<IBinder, IBinder.DeathRecipient>()
+
+    private fun notifyClientDeath(clientBinder: IBinder) {
         Log.w(TAG, "startServer callback binder died; queuing mouse disconnect")
+        mClientDeathRecipients.remove(clientBinder)
+        val sessionGeneration = mouseDevice.currentServiceGeneration()
         if (isWaylandClient) {
             // Wayland's stdin loop can block the main handler.
+            if (mouseDevice.isStaleClientDeath(sessionGeneration)) {
+                XtLogger.info(TAG, "ignored death notification of a replaced client session")
+                return
+            }
             try {
                 inputService?.stop()
             } catch (e: Exception) {
@@ -296,8 +307,19 @@ class RemoteService @JvmOverloads constructor(
             // Stdin can block the main handler; clearing the service also avoids dead-client callbacks.
             stopServer(true)
         } else {
-            // Dead-client callbacks must not prevent native cleanup on the main handler.
-            mHandler.post { stopServer(true, clientAlive = false) }
+            // Recheck ownership after queued replacements while keeping native cleanup serialized.
+            mHandler.post {
+                if (mouseDevice.isStaleClientDeath(sessionGeneration)) {
+                    XtLogger.info(TAG, "ignored stale death notification of a replaced session")
+                    return@post
+                }
+                val service = inputService
+                if (service != null && service.callback.asBinder() != clientBinder) {
+                    XtLogger.info(TAG, "ignored death notification of a client without a service")
+                    return@post
+                }
+                stopServer(true, clientAlive = false)
+            }
         }
     }
 
@@ -322,7 +344,12 @@ class RemoteService @JvmOverloads constructor(
         enforceCaller()
         Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
         XtLogger.info(TAG, "startServer requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode}")
-        cb.asBinder().linkToDeath(mStartServerDeathRecipient, 0)
+        val clientBinder = cb.asBinder()
+        val deathRecipient = IBinder.DeathRecipient { notifyClientDeath(clientBinder) }
+        // A restart on a still-live binder supersedes this client's previous notification link.
+        mClientDeathRecipients.remove(clientBinder)?.let { clientBinder.unlinkToDeath(it, 0) }
+        clientBinder.linkToDeath(deathRecipient, 0)
+        mClientDeathRecipients[clientBinder] = deathRecipient
         mHandler.post {
             Log.i(TAG, "startServer: main handler running existingService=${inputService != null}")
             val service = inputService
@@ -434,7 +461,10 @@ class RemoteService @JvmOverloads constructor(
                     mouseDevice.disconnect()
                     service.stopTouchpad()
                     service.destroyUinputDev()
-                    service.callback.asBinder().unlinkToDeath(mStartServerDeathRecipient, 0)
+                    // Unlink the cleaned service's client, not a replacement's client.
+                    service.callback.asBinder().let { binder ->
+                        mClientDeathRecipients.remove(binder)?.let { binder.unlinkToDeath(it, 0) }
+                    }
                     inputService = null
                 }
             )
