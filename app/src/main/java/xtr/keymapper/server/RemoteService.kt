@@ -286,8 +286,9 @@ class RemoteService @JvmOverloads constructor(
 
     // Cleanup must not unlink a same-Binder replacement's death registration.
     private val mClientDeathRegistrations = ClientDeathRegistry<IBinder>()
-    // startServer may be called concurrently from Binder threads; deferred requests
-    // from older calls must not overwrite a newer client/session request.
+    // Serialize request identity with Binder registration so concurrent startServer calls
+    // cannot register in an order different from their request sequence.
+    private val mStartRequestLock = Any()
     private val mStartRequestSequence = AtomicLong()
 
     private fun isCurrentStartRequest(
@@ -355,21 +356,26 @@ class RemoteService @JvmOverloads constructor(
         Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
         XtLogger.info(TAG, "startServer requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode}")
         val clientBinder = cb.asBinder()
-        val requestId = mStartRequestSequence.incrementAndGet()
         val deathRecipient = object : IBinder.DeathRecipient {
             override fun binderDied() {
                 notifyClientDeath(clientBinder, this)
             }
         }
-        // Link the replacement before unlinking the old recipient. If linkToDeath fails,
-        // the registry restores the previous registration so an active session still gets
-        // its death cleanup. A callback racing this block waits on the registry monitor.
-        val superseded = mClientDeathRegistrations.registerAndLink(
-            clientBinder,
-            deathRecipient
-        ) {
-            clientBinder.linkToDeath(deathRecipient, 0)
+        // Keep request ordering and registration replacement in one critical section. This
+        // prevents two Binder threads from publishing recipient A after the newer request B.
+        val (requestId, superseded) = synchronized(mStartRequestLock) {
+            val id = mStartRequestSequence.incrementAndGet()
+            val previous = mClientDeathRegistrations.registerAndLink(
+                clientBinder,
+                deathRecipient
+            ) {
+                clientBinder.linkToDeath(deathRecipient, 0)
+            }
+            id to previous
         }
+        // Link the replacement before unlinking the old recipient. If linkToDeath fails,
+        // registerAndLink restores the previous registration so its active session can still
+        // receive death cleanup.
         superseded?.let { clientBinder.unlinkToDeath(it, 0) }
 
         mHandler.post {
