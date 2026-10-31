@@ -41,7 +41,7 @@ class RemoteService @JvmOverloads constructor(
     initialIsWaylandClient: Boolean = false
 ) : IRemoteService.Stub() {
     private val mouseDevice = MouseDeviceConnection()
-    // Wayland Binder death and handler-thread replacement must arbitrate ownership atomically.
+    // Death claims commit shutdown atomically so replacements cannot enter its teardown window.
     internal val mInputService = ClientServiceSlot<IBinder, InputService>()
     private var mOnKeyEventListener: OnKeyEventListener? = null
     internal var isWaylandClient = initialIsWaylandClient
@@ -291,8 +291,8 @@ class RemoteService @JvmOverloads constructor(
         mClientDeathRegistrations.onDeath(clientBinder)
         val sessionGeneration = mouseDevice.currentServiceGeneration()
         if (isWaylandClient) {
-            // Wayland can block the handler in stdin; claim its service before inline cleanup.
-            val (service, superseded) = mInputService.claim(clientBinder)
+            // Wayland can block the handler in stdin; commit its shutdown before inline cleanup.
+            val (service, superseded) = mInputService.claimForShutdown(clientBinder)
             if (superseded) {
                 XtLogger.info(TAG, "ignored death notification of a replaced client session")
                 return
@@ -303,7 +303,9 @@ class RemoteService @JvmOverloads constructor(
                 XtLogger.error(TAG, "Failed to stop input service after client binder death", e)
             }
             // The claim cleared the dying service, avoiding callbacks into its dead Binder.
-            stopServer(true, deathOwner = clientBinder)
+            stopServer(true)
+            // Shell mode survives shutdown and must allow later sessions again.
+            mInputService.releaseTerminal(clientBinder)
         } else {
             // Recheck ownership after queued replacements while keeping native cleanup serialized.
             mHandler.post {
@@ -380,7 +382,10 @@ class RemoteService @JvmOverloads constructor(
                     }
                 }
                 Log.i(TAG, "startServer: InputService constructed id=${System.identityHashCode(newService)}")
-                mInputService.install(clientBinder, newService)
+                if (!mInputService.install(clientBinder, newService)) {
+                    XtLogger.warn(TAG, "startServer rejected: a client death shutdown is in progress")
+                    return@post
+                }
                 if (!isWaylandClient) {
                     Log.i(TAG, "startServer: setting mouse lock before connecting discovered device")
                     newService.setMouseLock(true)
@@ -429,15 +434,7 @@ class RemoteService @JvmOverloads constructor(
         mHandler.post { stopServer(true) }
     }
 
-    private fun stopServer(exitProcess: Boolean, clientAlive: Boolean = true, deathOwner: IBinder? = null) {
-        // A replacement installed since the death claim must not be shut down.
-        if (deathOwner != null) {
-            val currentOwner = mInputService.currentOwner()
-            if (currentOwner != null && currentOwner != deathOwner) {
-                XtLogger.info(TAG, "ignored stale death shutdown of a replaced client session")
-                return
-            }
-        }
+    private fun stopServer(exitProcess: Boolean, clientAlive: Boolean = true) {
         val service = mInputService.get()
         Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient clientAlive=$clientAlive")
         if (service != null && clientAlive) {

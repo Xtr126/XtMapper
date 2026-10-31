@@ -52,4 +52,38 @@ class ClientServiceSlotTest {
         assertNull(slot.claim("session-a").first)
         assertEquals("service-b", slot.get())
     }
+
+    @Test
+    fun `a committed shutdown rejects admission until its owner releases the terminal state`() {
+        slot.install("session-a", "service-a")
+
+        // The shutdown decision commits in the same critical section as the ownership
+        // decision, so a replacement arriving after the commit is not admitted.
+        val (claimed, superseded) = slot.claimForShutdown("session-a")
+        assertEquals("service-a", claimed)
+        assertFalse(superseded)
+
+        assertFalse(slot.install("session-b", "service-b"))
+        assertNull(slot.get())
+        assertNull(slot.currentOwner())
+
+        // After the shutdown's side effects complete (release), admission reopens.
+        slot.releaseTerminal("session-a")
+        assertTrue(slot.install("session-c", "service-c"))
+        assertEquals("service-c", slot.get())
+    }
+
+    @Test
+    fun `a superseded shutdown commits nothing and leaves the newer session admissible`() {
+        slot.install("session-b", "service-b")
+
+        val (claimed, superseded) = slot.claimForShutdown("session-a")
+        assertNull(claimed)
+        assertTrue(superseded)
+
+        // No terminal state was latched: B stays installed and re-admission by B works.
+        assertEquals("session-b", slot.currentOwner())
+        assertTrue(slot.install("session-b", "service-b"))
+        assertEquals("service-b", slot.claimForShutdown("session-b").first)
+    }
 }
