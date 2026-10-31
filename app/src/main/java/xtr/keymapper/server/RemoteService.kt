@@ -289,7 +289,6 @@ class RemoteService @JvmOverloads constructor(
     private fun notifyClientDeath(clientBinder: IBinder) {
         Log.w(TAG, "startServer callback binder died; queuing mouse disconnect")
         mClientDeathRegistrations.onDeath(clientBinder)
-        val sessionGeneration = mouseDevice.currentServiceGeneration()
         if (isWaylandClient) {
             // Wayland can block the handler in stdin; commit its shutdown before inline cleanup.
             val (service, superseded) = mInputService.claimForShutdown(clientBinder)
@@ -305,14 +304,10 @@ class RemoteService @JvmOverloads constructor(
             // The claim cleared the dying service, avoiding callbacks into its dead Binder.
             stopServer(true)
             // Shell mode survives shutdown and must allow later sessions again.
-            mInputService.releaseTerminal(clientBinder)
+            mInputService.releaseTerminal()
         } else {
-            // Recheck ownership after queued replacements while keeping native cleanup serialized.
+            // Same-Binder restarts still belong to the dead client; only a different owner is spared.
             mHandler.post {
-                if (mouseDevice.isStaleClientDeath(sessionGeneration)) {
-                    XtLogger.info(TAG, "ignored stale death notification of a replaced session")
-                    return@post
-                }
                 val service = mInputService.get()
                 if (service != null && service.callback.asBinder() != clientBinder) {
                     XtLogger.info(TAG, "ignored death notification of a client without a service")

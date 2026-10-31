@@ -11,11 +11,6 @@ internal class MouseDeviceConnection {
 
     val isOpen: Boolean get() = lifecycle.isOpen
 
-    fun currentServiceGeneration(): Long? = lifecycle.currentServiceGeneration()
-
-    fun isStaleClientDeath(sessionGeneration: Long?): Boolean =
-        lifecycle.isStaleClientDeath(sessionGeneration)
-
     fun discover(device: String) {
         if (device != lifecycle.device) {
             Log.i(TAG, "discover: device=$device previous=${lifecycle.device} opened=$isOpen connected=${openDevice != null} thread=${Thread.currentThread().name}")

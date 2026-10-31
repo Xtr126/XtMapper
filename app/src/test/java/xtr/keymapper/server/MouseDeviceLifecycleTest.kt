@@ -2,7 +2,6 @@ package xtr.keymapper.server
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -103,37 +102,5 @@ class MouseDeviceLifecycleTest {
     fun `blank device paths are ignored`() {
         assertNull(lifecycle.onDeviceDiscovered(""))
         assertNull(lifecycle.onInputServiceReady())
-    }
-
-    @Test
-    fun `queued death notification from a replaced session is ignored and the replacement stays active`() {
-        // RemoteService queues the replacement task and the death notification on one handler:
-        // session A is active when A's client dies, the replacement session B installs while
-        // A's queued cleanup task waits, and that task then runs last.
-        lifecycle.onInputServiceReady()
-        val sessionAtDeath = lifecycle.currentServiceGeneration()
-        lifecycle.onInputServiceStopped()
-        lifecycle.onInputServiceReady()
-
-        assertTrue(lifecycle.isStaleClientDeath(sessionAtDeath))
-        assertNotEquals(sessionAtDeath, lifecycle.currentServiceGeneration())
-        assertEquals(2L, lifecycle.currentServiceGeneration())
-
-        // The replacement session's own death still identifies the active session and
-        // proceeds to cleanup.
-        assertFalse(lifecycle.isStaleClientDeath(lifecycle.currentServiceGeneration()))
-
-        // A notification captured while no session ran keeps the preexisting semantics.
-        assertFalse(lifecycle.isStaleClientDeath(null))
-    }
-
-    @Test
-    fun `death notification without a replacement session proceeds to cleanup`() {
-        lifecycle.onInputServiceReady()
-        val sessionAtDeath = lifecycle.currentServiceGeneration()
-
-        // No replacement session followed, so the death cleanup is still meant for this one.
-        assertFalse(lifecycle.isStaleClientDeath(sessionAtDeath))
-        assertFalse(lifecycle.isStaleClientDeath(null))
     }
 }
