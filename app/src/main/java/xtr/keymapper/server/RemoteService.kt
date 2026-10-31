@@ -364,14 +364,14 @@ class RemoteService @JvmOverloads constructor(
         // Keep request ordering and registration replacement in one critical section. This
         // prevents two Binder threads from publishing recipient A after the newer request B.
         val (requestId, superseded) = synchronized(mStartRequestLock) {
-            val id = mStartRequestSequence.incrementAndGet()
             val previous = mClientDeathRegistrations.registerAndLink(
                 clientBinder,
                 deathRecipient
             ) {
                 clientBinder.linkToDeath(deathRecipient, 0)
             }
-            id to previous
+            // A failed link must not supersede a still-valid pending request.
+            mStartRequestSequence.incrementAndGet() to previous
         }
         // Link the replacement before unlinking the old recipient. If linkToDeath fails,
         // registerAndLink restores the previous registration so its active session can still
