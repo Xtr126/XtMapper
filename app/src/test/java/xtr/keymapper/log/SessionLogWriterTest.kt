@@ -82,6 +82,27 @@ class SessionLogWriterTest {
     }
 
     @Test
+    fun `record that does not fit the remaining part budget rotates instead of crossing it`() {
+        val clock = MutableClock.at("2026-10-22T09:00:00Z")
+        val store = newStore()
+        val config = LoggingConfig(queueCapacity = 8, maxFileBytes = 4096)
+        val writer = makeWriter(store, clock, "sess-budget", config = config)
+        writer.writeSessionStartMarker()
+
+        // The record no longer fits beside the START marker in part 1, but fits
+        // whole in a fresh part: it must rotate instead of crossing the budget,
+        // so readTail can still see the START marker inside the part.
+        val big = "x".repeat(3900)
+        writer.write(listOf(record(clock, big)))
+        writer.close()
+
+        val base = LogFiles.readAll(store, "xtmapper-2026-10-22.log")
+        assertFalse(base.contains(big))
+        val part2 = LogFiles.readAll(store, "xtmapper-2026-10-22-part002.log")
+        assertTrue(part2.contains(big))
+    }
+
+    @Test
     fun `two sessions append into the same daily file and both stay complete`() {
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
         val store = newStore()

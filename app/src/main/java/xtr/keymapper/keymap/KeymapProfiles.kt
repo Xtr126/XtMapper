@@ -84,6 +84,7 @@ class KeymapProfiles @JvmOverloads constructor(
     }
 
     fun renameProfile(profileName: String, newProfile: String) {
+        migrateProfileCollidingWithMetadataKey()
         val designatedKeys = sharedPref.all
             .filter { (key, value) -> key.startsWith("designated_profile_") && value == profileName }
             .keys
@@ -118,7 +119,32 @@ class KeymapProfiles @JvmOverloads constructor(
         return getAllProfilesForApp(packageName).isNotEmpty()
     }
 
+    /**
+     * [KEY_LAST_SELECTED_PROFILE] shares its namespace with profile StringSets, so a profile
+     * created with that exact free-typed name replaces the metadata string with a Set and
+     * makes plain getString() reads throw ClassCastException. Move such a profile to a
+     * unique key (following its designation references) before touching the metadata again.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun migrateProfileCollidingWithMetadataKey() {
+        val all = sharedPref.all
+        val value = all[KEY_LAST_SELECTED_PROFILE]
+        if (value !is Set<*>) return
+        var recovered = "${KEY_LAST_SELECTED_PROFILE}_profile"
+        while (sharedPref.contains(recovered)) recovered = "${recovered}_1"
+        val editor = sharedPref.edit()
+            .putStringSet(recovered, value as Set<String>)
+            .putString(KEY_LAST_SELECTED_PROFILE, recovered)
+        all.forEach { (key, v) ->
+            if (key.startsWith("designated_profile_") && v == KEY_LAST_SELECTED_PROFILE) {
+                editor.putString(key, recovered)
+            }
+        }
+        editor.apply()
+    }
+
     fun getLastSelectedProfile(): String {
+        migrateProfileCollidingWithMetadataKey()
         val last = sharedPref.getString(KEY_LAST_SELECTED_PROFILE, null)
         if (last != null && profileExists(last)) {
             return last
@@ -128,6 +154,7 @@ class KeymapProfiles @JvmOverloads constructor(
 
     fun setLastSelectedProfile(profileName: String?) {
         if (!profileName.isNullOrEmpty()) {
+            migrateProfileCollidingWithMetadataKey()
             sharedPref.edit().putString(KEY_LAST_SELECTED_PROFILE, profileName).apply()
         }
     }
@@ -169,6 +196,7 @@ class KeymapProfiles @JvmOverloads constructor(
     }
 
     fun deleteProfile(profileName: String?) {
+        migrateProfileCollidingWithMetadataKey()
         val editor = sharedPref.edit().remove(profileName)
         if (profileName != null) {
             if (sharedPref.getString(KEY_LAST_SELECTED_PROFILE, null) == profileName) {

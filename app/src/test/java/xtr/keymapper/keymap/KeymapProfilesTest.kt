@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -224,6 +225,30 @@ class KeymapProfilesTest {
         // When no profiles exist, fall back to Default
         initialData.clear()
         assertEquals("Default", keymapProfiles.getLastSelectedProfile())
+    }
+
+    @Test
+    fun profileCollidingWithMetadataKeyIsMigratedWithoutLosingData() {
+        val colliding = setOf("APPLICATION com.example.game", "ENABLED")
+        val initialData = mutableMapOf<String, Any?>(
+            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to colliding,
+            "designated_profile_com.example.game" to KeymapProfiles.KEY_LAST_SELECTED_PROFILE,
+            "SafeProfile" to setOf("APPLICATION com.example.game", "ENABLED")
+        )
+        val (context, prefs) = createFakeContextAndPrefs(initialData)
+        val keymapProfiles = KeymapProfiles(context, prefs)
+
+        val selected = keymapProfiles.getLastSelectedProfile()
+
+        // The reserved key is a plain metadata string again, naming the recovered profile.
+        val recoveredName = prefs.getString(KeymapProfiles.KEY_LAST_SELECTED_PROFILE, null)
+        assertNotNull(recoveredName)
+        assertEquals(recoveredName, selected)
+        // The colliding profile survived under its unique key and is listed again.
+        assertEquals(colliding, prefs.getStringSet(recoveredName!!, null))
+        assertTrue(keymapProfiles.getAllProfiles().containsKey(recoveredName))
+        // Designations that pointed at the reserved name follow the migration.
+        assertEquals(recoveredName, prefs.getString("designated_profile_com.example.game", null))
     }
 
     @Test

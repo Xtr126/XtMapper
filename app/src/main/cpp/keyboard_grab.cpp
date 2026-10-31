@@ -52,11 +52,17 @@ static bool isKeyboardDevice(int fd, const char *dev_name) {
     if (!HasEventType(fd, EV_KEY)) {
         return false;
     }
-    // Must have standard alphanumeric keyboard keys
-    if (!HasSpecificKey(fd, KEY_A) || !HasSpecificKey(fd, KEY_SPACE) || !HasSpecificKey(fd, KEY_ENTER)) {
+    // Pointer devices expose mouse buttons; grabbing one would freeze it.
+    if (HasSpecificKey(fd, BTN_MOUSE) || HasSpecificKey(fd, BTN_TOUCH)) {
         return false;
     }
-    return true;
+    // Full keyboards expose KEY_A/KEY_SPACE/KEY_ENTER. Secondary key devices
+    // (standalone numpads, macro keypads) may expose only digit or keypad keys.
+    // shortcut: keys outside this set (letter-only macro pads) stay rejected;
+    // upgrade path: scan the device key bitmap for any KEY_ below BTN_MISC.
+    return HasSpecificKey(fd, KEY_A) || HasSpecificKey(fd, KEY_SPACE) || HasSpecificKey(fd, KEY_ENTER) ||
+           HasSpecificKey(fd, KEY_1) || HasSpecificKey(fd, KEY_0) ||
+           HasSpecificKey(fd, KEY_KP0) || HasSpecificKey(fd, KEY_KPENTER);
 }
 
 static void run_keyboard_grab_loop() {

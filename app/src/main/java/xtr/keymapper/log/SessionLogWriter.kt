@@ -141,22 +141,34 @@ class SessionLogWriter(
     // ---------------------------------------------------------------- internals
 
     private fun writeOne(record: LogRecord) {
-        writerFor(dayOf(record.time), record.time)
+        // Size the record before selecting a part: a part may only be reused when
+        // the record still fits, so no ordinary record can push it past the byte
+        // budget that readTail relies on to find the session markers.
+        val bytes = chunk(RecordFormatter.format(record, zone))
+        writerFor(dayOf(record.time), record.time, requiredBytes = bytes.size)
         val writer = currentWriter ?: run {
             recordsDroppedByDayLimit.incrementAndGet()
             return
         }
-        writer.write(chunk(RecordFormatter.format(record, zone)))
+        writer.write(bytes)
     }
 
     /**
      * Prepares the writer for [day]. On a day change inside the same session the
      * continuously same session id is marked with a `SESSION CONTINUED` block
-     * before the file receives new events. [allowFullPart] is used only by the
-     * session-boundary paths: they may reopen the day's final part for a bounded
-     * START or END marker when the part budget is exhausted instead of losing it.
+     * before the file receives new events. A part is reused only when the next
+     * write ([requiredBytes] for ordinary records, 0 for markers) still fits
+     * inside its byte budget, so a part never grows past the size readTail
+     * scans. [allowFullPart] is used only by the session-boundary paths: they
+     * may reopen the day's final part for a bounded START or END marker when
+     * the part budget is exhausted instead of losing it.
      */
-    private fun writerFor(day: String, atInstant: Instant, allowFullPart: Boolean = false) {
+    private fun writerFor(
+        day: String,
+        atInstant: Instant,
+        allowFullPart: Boolean = false,
+        requiredBytes: Int = 0,
+    ) {
         val writer: LogFileWriter?
         val isDayChange = currentDay != day
         if (!isDayChange) {
@@ -164,14 +176,14 @@ class SessionLogWriter(
             // reopen and re-stat the same final part for every dropped record.
             if (exhaustedDay == day && !allowFullPart) return
             val active = currentWriter
-            if (active != null && active.writtenBytes < config.maxFileBytes) return
+            if (active != null && active.writtenBytes + requiredBytes <= config.maxFileBytes) return
             closeCurrent()
-            writer = activeWriterFor(day, allowFullPart)
+            writer = activeWriterFor(day, allowFullPart, requiredBytes)
         } else {
             closeCurrent()
             currentDay = day
             exhaustedDay = null
-            writer = activeWriterFor(day, allowFullPart)
+            writer = activeWriterFor(day, allowFullPart, requiredBytes)
         }
         currentWriter = writer
         if (writer != null && isDayChange) {
@@ -192,15 +204,20 @@ class SessionLogWriter(
     private val continuedDays = HashSet<String>()
 
     /**
-     * The active writer for the day: the highest existing part that is below the
-     * rotation threshold (chronological: only this one is considered), otherwise
+     * The active writer for the day: the highest existing part in which the next
+     * write still fits below the rotation threshold (chronological: only this
+     * one is considered), otherwise
      * the next part index from the store listing (never an index already in use,
      * never below 2), otherwise the base file when the day has no files yet.
      * Returns null only when the day's part budget is exhausted — except with
      * [allowFullPart], which then reopens the final part so a bounded session
      * START/END marker can still be appended without creating a part beyond the limit.
      */
-    private fun activeWriterFor(day: String, allowFullPart: Boolean = false): LogFileWriter? {
+    private fun activeWriterFor(
+        day: String,
+        allowFullPart: Boolean = false,
+        requiredBytes: Int = 0,
+    ): LogFileWriter? {
         val maxExistingPart = store.listFiles()
             .mapNotNull { LogFileNames.parse(it.name) }
             .filter { it.date == day && it.role == role }
@@ -213,7 +230,7 @@ class SessionLogWriter(
         // partName(part == 1) resolves to the base daily name.
         val highestName = LogFileNames.partName(day, role, maxExistingPart)
         val highest = store.openAppendWriter(highestName)
-        if (highest.writtenBytes < config.maxFileBytes) {
+        if (highest.writtenBytes + requiredBytes <= config.maxFileBytes) {
             currentFileName = highestName
             return highest
         }
