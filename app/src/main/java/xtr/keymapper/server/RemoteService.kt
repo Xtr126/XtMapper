@@ -383,6 +383,18 @@ class RemoteService @JvmOverloads constructor(
                 }
                 Log.i(TAG, "startServer: InputService constructed id=${System.identityHashCode(newService)}")
                 if (!mInputService.install(clientBinder, newService)) {
+                    // The constructed service already opened native resources (event
+                    // handlers, touchpad uinput) and addCursorView may have shown the
+                    // overlay: a rejected start must not leave either behind.
+                    try {
+                        cursorView?.let { view -> view.post { view.visibility = View.GONE } }
+                        newService.stop()
+                        newService.stopMouseIfStarted()
+                        newService.stopTouchpad()
+                        newService.destroyUinputDev()
+                    } catch (e: Exception) {
+                        XtLogger.error(TAG, "Failed to tear down a rejected start request", e)
+                    }
                     XtLogger.warn(TAG, "startServer rejected: a client death shutdown is in progress")
                     return@post
                 }
