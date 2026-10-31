@@ -463,8 +463,8 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton(R.string.ok) { _, _ ->
                 val renamed = field.editText.text.toString()
                 val profiles = KeymapProfiles(context)
-                profiles.renameProfile(profileName, renamed)
-                if (selectedProfileName == profileName) {
+                val renameAccepted = profiles.renameProfile(profileName, renamed)
+                if (renameAccepted && selectedProfileName == profileName) {
                     selectedProfileName = renamed
                     TouchPointer.currentSelectedProfile = renamed
                 }

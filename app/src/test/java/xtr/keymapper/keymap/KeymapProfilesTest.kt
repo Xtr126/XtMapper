@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -298,16 +299,27 @@ class KeymapProfilesTest {
         keymapProfiles.saveProfile("SafeProfile", arrayListOf(), "com.safe", true, 0, 0)
         keymapProfiles.setLastSelectedProfile("SafeProfile")
 
-        // The real creation flow: save, bind the package, then select.
+        // The real creation flow with the dialog gate (ProfileSelector): the
+        // selection callback only fires when saveProfile accepted the name.
         val reserved = KeymapProfiles.KEY_LAST_SELECTED_PROFILE
-        keymapProfiles.saveProfile(reserved, arrayListOf(), "com.reserved", true, 0, 0)
+        var callbackName: String? = null
+        if (keymapProfiles.saveProfile(reserved, arrayListOf(), "com.reserved", true, 0, 0)) {
+            callbackName = reserved
+        }
         keymapProfiles.setProfilePackageName(reserved, "com.reserved")
         keymapProfiles.setLastSelectedProfile(reserved)
 
-        // Nothing was stored under the reserved key and the selection is untouched.
+        // No selection was emitted and nothing was stored under the reserved key.
+        assertNull(callbackName)
         assertTrue(prefs.all[reserved] !is Set<*>)
         assertEquals("SafeProfile", prefs.getString(reserved, null))
-        assertEquals("SafeProfile", keymapProfiles.getLastSelectedProfile())
+
+        // The subsequent activation read (TouchPointer.getProfile /
+        // MainActivity.onProfileSelected) sees the unchanged selection,
+        // without ClassCastException.
+        val target = keymapProfiles.getLastSelectedProfile()
+        assertEquals("SafeProfile", target)
+        assertEquals("com.safe", keymapProfiles.getProfile(target, false).packageName)
         assertTrue(keymapProfiles.profileExists("SafeProfile"))
     }
 
@@ -322,12 +334,24 @@ class KeymapProfilesTest {
         val (context, prefs) = createFakeContextAndPrefs(initialData)
         val keymapProfiles = KeymapProfiles(context, prefs)
 
-        keymapProfiles.renameProfile("OldName", KeymapProfiles.KEY_LAST_SELECTED_PROFILE)
+        // The gate at MainActivity.renameProfileFromCompose: the in-memory
+        // selection only follows a rename that was actually performed.
+        val reserved = KeymapProfiles.KEY_LAST_SELECTED_PROFILE
+        var inMemorySelection = "OldName"
+        val renameAccepted = keymapProfiles.renameProfile("OldName", reserved)
+        if (renameAccepted && inMemorySelection == "OldName") {
+            inMemorySelection = reserved
+        }
 
-        // The rename was refused: profile data, designation and selection survive.
+        // The rename was refused: selection, data and designation survive.
+        assertFalse(renameAccepted)
+        assertEquals("OldName", inMemorySelection)
         assertEquals(colliding, prefs.getStringSet("OldName", null))
         assertEquals("OldName", prefs.getString("designated_profile_com.example.game", null))
         assertEquals("OldName", keymapProfiles.getLastSelectedProfile())
-        assertTrue(prefs.all[KeymapProfiles.KEY_LAST_SELECTED_PROFILE] !is Set<*>)
+        assertTrue(prefs.all[reserved] !is Set<*>)
+
+        // The subsequent activation read still works.
+        assertEquals("com.example.game", keymapProfiles.getProfile(inMemorySelection, false).packageName)
     }
 }

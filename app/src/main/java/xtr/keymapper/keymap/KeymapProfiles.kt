@@ -83,9 +83,11 @@ class KeymapProfiles @JvmOverloads constructor(
         }
     }
 
-    fun renameProfile(profileName: String, newProfile: String) {
-        // A profile cannot live under the reserved metadata key (see saveProfile).
-        if (newProfile == KEY_LAST_SELECTED_PROFILE) return
+    fun renameProfile(profileName: String, newProfile: String): Boolean {
+        // A profile cannot live under the reserved metadata key (see saveProfile);
+        // false tells the caller the rename did not happen, so in-memory selection
+        // updates must be skipped.
+        if (newProfile == KEY_LAST_SELECTED_PROFILE) return false
         migrateProfileCollidingWithMetadataKey()
         val designatedKeys = sharedPref.all
             .filter { (key, value) -> key.startsWith("designated_profile_") && value == profileName }
@@ -100,6 +102,7 @@ class KeymapProfiles @JvmOverloads constructor(
         if (wasLastSelected) {
             setLastSelectedProfile(newProfile)
         }
+        return true
     }
 
     fun setProfilePackageName(profileName: String?, packageName: String) {
@@ -184,12 +187,13 @@ class KeymapProfiles @JvmOverloads constructor(
         enabled: Boolean,
         xRes: Int,
         yRes: Int
-    ) {
+    ): Boolean {
         // The reserved key holds the selection metadata, not a profile: a StringSet
         // stored there destroys the selection and makes later metadata reads throw
         // ClassCastException on Android. Creation, import and package-binding paths
-        // all funnel through here, so rejecting at this boundary covers them.
-        if (profileName == KEY_LAST_SELECTED_PROFILE) return
+        // all funnel through here, so rejecting at this boundary covers them. The
+        // false result tells selection callbacks nothing was stored.
+        if (profileName == KEY_LAST_SELECTED_PROFILE) return false
         lines.removeIf { it!!.contains("APPLICATION") }
         lines.add("APPLICATION $packageName")
 
@@ -210,6 +214,7 @@ class KeymapProfiles @JvmOverloads constructor(
                 setDesignatedProfileForApp(packageName, profileName)
             }
         }
+        return true
     }
 
     fun deleteProfile(profileName: String?) {
