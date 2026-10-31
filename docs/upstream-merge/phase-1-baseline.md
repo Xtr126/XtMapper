@@ -30,9 +30,9 @@ GitHub compare results show 19 commits on the integration side and 20 commits on
 - `Environment.CLI_ARG` is `--cage-xtmapper-launch-signal`; `Environment.INTENT_EXTRA` is the boolean `cage_xtmapper_launch_signal`.
 - The CLI signal is applied before standalone shell logging; the boolean Intent extra is applied by `MainActivity` only when that extra is present.
 - `MainActivity` is exported. Its legacy `data` extra still uses `data=shell` as a shell-initialization hint and other non-null values as crash text, but neither value authenticates the caller.
-- Current code only trusts shell initialization when Android exposes the launching UID and it equals `Process.SHELL_UID`. A caller-controlled extra alone cannot select the shell startup profile, auto-start the pointer, or reset the saved Shizuku mode.
+- Current code has no trusted shell-initialization path: a caller-controlled extra alone cannot select a shell startup profile, auto-start the pointer, or reset the saved Shizuku mode. The `data=shell` marker only suppresses crash-payload replay.
 - The crash payload is removed from the activity Intent after capture and displayed in a stable `DialogFragment` titled as unverified diagnostic text, with a 16 KiB display cap; activation prompts wait until the dialog is dismissed.
-- On Android versions or launch paths where Android does not expose the caller UID, the legacy marker fails closed. In that case, `data=shell` will not trigger trusted auto-start or a persistent input-mode change. This compatibility tradeoff is documented in `docs/waydroid-shell-startup.md` and still needs runtime validation.
+- The legacy marker always fails closed: Android never exposes the caller UID for this launch path (`getLaunchedFromUid()` stays `INVALID_UID` without identity sharing), so `data=shell` never triggers trusted auto-start or a persistent input-mode change. This is documented in `docs/waydroid-shell-startup.md` and still needs runtime validation.
 
 ### Build constraints
 

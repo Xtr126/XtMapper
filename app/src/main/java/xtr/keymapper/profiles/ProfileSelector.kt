@@ -109,8 +109,11 @@ class ProfileSelector {
                 .setPositiveButton(R.string.ok) { _, _ ->
                     val selectedProfile = binding.editText.text.toString()
                     val keymapProfiles = KeymapProfiles(context)
-                    keymapProfiles.saveProfile(selectedProfile, arrayListOf(), packageName, enabled, 0, 0)
-                    listener.onProfileSelected(selectedProfile)
+                    // A rejected name (reserved metadata key) must not emit a
+                    // successful selection to the listeners below.
+                    if (keymapProfiles.saveProfile(selectedProfile, arrayListOf(), packageName, enabled, 0, 0)) {
+                        listener.onProfileSelected(selectedProfile)
+                    }
                 }
                 .setView(binding.root)
             showDialog(builder)

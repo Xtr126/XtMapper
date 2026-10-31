@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -47,13 +49,21 @@ class KeymapProfilesTest {
                 "getString" -> {
                     val key = args[0] as String
                     val def = args.getOrNull(1) as? String
-                    (storage[key] as? String) ?: def
+                    // Faithful to Android: a type mismatch throws instead of returning default.
+                    when (val value = storage[key]) {
+                        null -> def
+                        is String -> value
+                        else -> throw ClassCastException("Value for $key is not a String")
+                    }
                 }
                 "getStringSet" -> {
                     val key = args[0] as String
-                    val def = args.getOrNull(1) as? Set<String>
-                    @Suppress("UNCHECKED_CAST")
-                    (storage[key] as? Set<String>) ?: def
+                    val def = args.getOrNull(1) as? Set<*>
+                    when (val value = storage[key]) {
+                        null -> def
+                        is Set<*> -> value.toSet()
+                        else -> throw ClassCastException("Value for $key is not a Set")
+                    }
                 }
                 "contains" -> storage.containsKey(args[0] as String)
                 "edit" -> editorProxy
@@ -227,36 +237,27 @@ class KeymapProfilesTest {
     }
 
     @Test
-    fun shellStartupUsesDefaultWithoutReplacingTheLastSelectedProfile() {
+    fun profileCollidingWithMetadataKeyIsMigratedWithoutLosingData() {
+        val colliding = setOf("APPLICATION com.example.game", "ENABLED")
         val initialData = mutableMapOf<String, Any?>(
-            "SavedProfile" to setOf("APPLICATION com.example.game", "ENABLED"),
-            "OtherProfile" to setOf("APPLICATION com.example.game", "ENABLED"),
-            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "SavedProfile"
+            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to colliding,
+            "designated_profile_com.example.game" to KeymapProfiles.KEY_LAST_SELECTED_PROFILE,
+            "SafeProfile" to setOf("APPLICATION com.example.game", "ENABLED")
         )
         val (context, prefs) = createFakeContextAndPrefs(initialData)
         val keymapProfiles = KeymapProfiles(context, prefs)
 
-        val startupProfile = keymapProfiles.getStartupProfileName(isShellInit = true)
-        assertEquals(KeymapProfiles.DEFAULT_PROFILE_NAME, startupProfile)
-        keymapProfiles.recordStartupProfileSelection(startupProfile, isShellInit = true)
-        assertEquals("SavedProfile", keymapProfiles.getLastSelectedProfile())
-        assertNull(prefs.getStringSet(KeymapProfiles.DEFAULT_PROFILE_NAME, null))
-    }
+        val selected = keymapProfiles.getLastSelectedProfile()
 
-    @Test
-    fun normalStartupUsesLastSelectedProfile() {
-        val initialData = mutableMapOf<String, Any?>(
-            "SavedProfile" to setOf("APPLICATION com.example.game", "ENABLED"),
-            "OtherProfile" to setOf("APPLICATION com.example.game", "ENABLED"),
-            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "SavedProfile"
-        )
-        val (context, prefs) = createFakeContextAndPrefs(initialData)
-        val keymapProfiles = KeymapProfiles(context, prefs)
-
-        val startupProfile = keymapProfiles.getStartupProfileName(isShellInit = false)
-        assertEquals("SavedProfile", startupProfile)
-        keymapProfiles.recordStartupProfileSelection("OtherProfile", isShellInit = false)
-        assertEquals("OtherProfile", keymapProfiles.getLastSelectedProfile())
+        // The reserved key is a plain metadata string again, naming the recovered profile.
+        val recoveredName = prefs.getString(KeymapProfiles.KEY_LAST_SELECTED_PROFILE, null)
+        assertNotNull(recoveredName)
+        assertEquals(recoveredName, selected)
+        // The colliding profile survived under its unique key and is listed again.
+        assertEquals(colliding, prefs.getStringSet(recoveredName!!, null))
+        assertTrue(keymapProfiles.getAllProfiles().containsKey(recoveredName))
+        // Designations that pointed at the reserved name follow the migration.
+        assertEquals(recoveredName, prefs.getString("designated_profile_com.example.game", null))
     }
 
     @Test
@@ -289,5 +290,68 @@ class KeymapProfilesTest {
         // After deletion of last selected, falls back to remaining profile
         assertEquals("OtherProfile", keymapProfiles.getLastSelectedProfile())
         assertNull(prefs.getString("designated_profile_com.example.game", null))
+    }
+
+    @Test
+    fun profileNamedLikeMetadataKeyIsRejectedAtCreationAndSelectionBoundaries() {
+        val (context, prefs) = createFakeContextAndPrefs(mutableMapOf())
+        val keymapProfiles = KeymapProfiles(context, prefs)
+        keymapProfiles.saveProfile("SafeProfile", arrayListOf(), "com.safe", true, 0, 0)
+        keymapProfiles.setLastSelectedProfile("SafeProfile")
+
+        // The real creation flow with the dialog gate (ProfileSelector): the
+        // selection callback only fires when saveProfile accepted the name.
+        val reserved = KeymapProfiles.KEY_LAST_SELECTED_PROFILE
+        var callbackName: String? = null
+        if (keymapProfiles.saveProfile(reserved, arrayListOf(), "com.reserved", true, 0, 0)) {
+            callbackName = reserved
+        }
+        keymapProfiles.setProfilePackageName(reserved, "com.reserved")
+        keymapProfiles.setLastSelectedProfile(reserved)
+
+        // No selection was emitted and nothing was stored under the reserved key.
+        assertNull(callbackName)
+        assertTrue(prefs.all[reserved] !is Set<*>)
+        assertEquals("SafeProfile", prefs.getString(reserved, null))
+
+        // The subsequent activation read (TouchPointer.getProfile /
+        // MainActivity.onProfileSelected) sees the unchanged selection,
+        // without ClassCastException.
+        val target = keymapProfiles.getLastSelectedProfile()
+        assertEquals("SafeProfile", target)
+        assertEquals("com.safe", keymapProfiles.getProfile(target, false).packageName)
+        assertTrue(keymapProfiles.profileExists("SafeProfile"))
+    }
+
+    @Test
+    fun renameProfileToMetadataKeyIsRejected() {
+        val colliding = setOf("APPLICATION com.example.game", "ENABLED")
+        val initialData = mutableMapOf<String, Any?>(
+            "OldName" to colliding,
+            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "OldName",
+            "designated_profile_com.example.game" to "OldName"
+        )
+        val (context, prefs) = createFakeContextAndPrefs(initialData)
+        val keymapProfiles = KeymapProfiles(context, prefs)
+
+        // The gate at MainActivity.renameProfileFromCompose: the in-memory
+        // selection only follows a rename that was actually performed.
+        val reserved = KeymapProfiles.KEY_LAST_SELECTED_PROFILE
+        var inMemorySelection = "OldName"
+        val renameAccepted = keymapProfiles.renameProfile("OldName", reserved)
+        if (renameAccepted && inMemorySelection == "OldName") {
+            inMemorySelection = reserved
+        }
+
+        // The rename was refused: selection, data and designation survive.
+        assertFalse(renameAccepted)
+        assertEquals("OldName", inMemorySelection)
+        assertEquals(colliding, prefs.getStringSet("OldName", null))
+        assertEquals("OldName", prefs.getString("designated_profile_com.example.game", null))
+        assertEquals("OldName", keymapProfiles.getLastSelectedProfile())
+        assertTrue(prefs.all[reserved] !is Set<*>)
+
+        // The subsequent activation read still works.
+        assertEquals("com.example.game", keymapProfiles.getProfile(inMemorySelection, false).packageName)
     }
 }
