@@ -20,6 +20,13 @@
 https://xtr126.github.io/XtMapper-docs/guides/about  
 [Watch video on YouTube](https://www.youtube.com/watch?v=Slcu43xBV3M)  
 
+Persistent logs: daily log files are written to the fixed folder `XtMapper/Logs`
+on shared storage (`XtMapper-Debug/Logs` for debug builds). They are user-visible
+and are enabled from the main screen by allowing All-files access (Android 11+).
+Each running process role (app, shell, shizuku, root) logs into its own
+`xtmapper[-role]-YYYY-MM-DD.log` file, wrapped in `SESSION START`/`SESSION END`
+markers, with bounded size, rotation and retention.
+
  ## Screenshots
 
 <details>

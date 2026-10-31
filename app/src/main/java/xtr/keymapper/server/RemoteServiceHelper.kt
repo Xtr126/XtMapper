@@ -22,7 +22,16 @@ object RemoteServiceHelper {
     @Volatile
     private var service: IRemoteService? = null
 
+    /** Forces the next connection to honor the selected Root/Shizuku backend. */
+    @Volatile
+    private var forceSelectedBackend = false
+
+    /** Invalidates callbacks from binds started before an input-mode switch. */
+    @Volatile
+    private var backendGeneration = 0L
+
     @JvmStatic
+    @Volatile
     var useShizuku = false
 
     @JvmStatic
@@ -72,11 +81,37 @@ object RemoteServiceHelper {
         fun onConnection(service: IRemoteService?)
     }
 
-    class RemoteServiceConnection(private val cb: RootRemoteServiceCallback) : ServiceConnection {
+    /** Invalidate cached and pending Binders before restarting TouchPointer for a new backend. */
+    @JvmStatic
+    fun prepareForBackendSwitch() {
+        backendGeneration++
+        service = null
+        forceSelectedBackend = true
+    }
+
+    class RemoteServiceConnection(
+        private val cb: RootRemoteServiceCallback,
+        private val requestGeneration: Long,
+        private val requestedShizuku: Boolean,
+    ) : ServiceConnection {
+        @Volatile
+        private var connectedBinder: IBinder? = null
+
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             Log.i("xtmapper-startup", "onServiceConnected: component=$name alive=${service.isBinderAlive}")
+            // A bind started before a mode switch must not replace the current backend.
+            if (requestGeneration != RemoteServiceHelper.backendGeneration ||
+                requestedShizuku != RemoteServiceHelper.useShizuku
+            ) {
+                // This bind belongs to a superseded request; don't let its callback
+                // disrupt the new TouchPointer instance while it connects to the new mode.
+                return
+            }
+
+            connectedBinder = service
             val remote = IRemoteService.Stub.asInterface(service)
             RemoteServiceHelper.service = remote
+            RemoteServiceHelper.forceSelectedBackend = false
             try {
                 service.linkToDeath({
                     if (RemoteServiceHelper.service?.asBinder() == service) {
@@ -88,8 +123,13 @@ object RemoteServiceHelper {
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
-            RemoteServiceHelper.service = null
-            cb.onConnection(null)
+            // A disconnect from a superseded connection must not erase the newer
+            // backend's Binder or notify a callback belonging to the old generation.
+            if (requestGeneration != RemoteServiceHelper.backendGeneration) return
+            if (RemoteServiceHelper.service?.asBinder() == connectedBinder) {
+                RemoteServiceHelper.service = null
+                cb.onConnection(null)
+            }
         }
     }
 
@@ -134,6 +174,9 @@ object RemoteServiceHelper {
             mService.startedFromShell = true
             service = mService
         }
+        // The system-app path intentionally uses its in-process service rather than
+        // RootService/Shizuku, so backend selection is not applicable here.
+        forceSelectedBackend = false
         callback?.onConnection(service)
     }
 
@@ -147,9 +190,12 @@ object RemoteServiceHelper {
         useShizuku = KeymapConfig(context).isShizukuMode
         Log.i("xtmapper-startup", "getInstance: shizuku=$useShizuku cachedPresent=${service != null} cachedAlive=${service?.asBinder()?.isBinderAlive}")
 
-        // 1. Check if TouchPointer has an active, running service instance
+        val forceBackend = forceSelectedBackend
+
+        // 1. Reuse the active TouchPointer Binder only when the caller has not
+        // explicitly requested a backend switch.
         val activePointerService = TouchPointer.activeInstance?.mService
-        if (activePointerService != null && activePointerService.asBinder().isBinderAlive) {
+        if (!forceBackend && activePointerService != null && activePointerService.asBinder().isBinderAlive) {
             service = activePointerService
             Log.i("xtmapper-startup", "getInstance: using active TouchPointer service")
             callback.onConnection(activePointerService)
@@ -162,17 +208,18 @@ object RemoteServiceHelper {
             return
         }
 
-        // 3. Check an existing live service, including one delivered by RemoteServiceShell.
-        val existing = service
-        if (existing != null && existing.asBinder().isBinderAlive) {
-            Log.i("xtmapper-startup", "getInstance: using cached service Binder")
-            callback.onConnection(existing)
-            return
+        // A mode switch must bypass an old live Binder while stopServer() is still completing.
+        if (!forceBackend) {
+            val existing = service
+            if (existing != null && existing.asBinder().isBinderAlive) {
+                Log.i("xtmapper-startup", "getInstance: using cached service Binder")
+                callback.onConnection(existing)
+                return
+            }
         }
 
-        // 4. Connect via Shizuku or Root
         Log.i("xtmapper-startup", "getInstance: falling back to ${if (useShizuku) "Shizuku" else "root"} binding")
-        val connection = RemoteServiceConnection(callback)
+        val connection = RemoteServiceConnection(callback, backendGeneration, useShizuku)
         if (useShizuku) {
             if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                 bindShizukuService(context, connection)

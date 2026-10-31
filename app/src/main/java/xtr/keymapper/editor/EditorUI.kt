@@ -41,6 +41,7 @@ import xtr.keymapper.editor.component.RightClick
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.keymap.KeymapProfiles
+import xtr.keymapper.log.XtLogger
 import xtr.keymapper.macro.MacroIdUtils
 import xtr.keymapper.macro.MacroStatus
 import xtr.keymapper.macro.MacroView
@@ -61,7 +62,7 @@ class EditorUI(
 
     /* The active keymap config and a backup copy */
     private var profile: KeymapProfile? = null
-    private var profileBackup: KeymapProfile? = null
+    private var profileBackup: Set<String>? = null
 
     private var overlayOpen = false
 
@@ -256,6 +257,7 @@ class EditorUI(
             return true
         } else if (keyInFocus != null) {
             keyInFocus!!.setText(key)
+            keyInFocus = null
             return true
         }
         return false
@@ -283,7 +285,10 @@ class EditorUI(
         // Incoming calls are not guaranteed to be executed on the main thread
         mHandler.post {
             if (macroDialog != null) macroDialog!!.onKey(key)
-            else if (keyInFocus != null) keyInFocus!!.setText(key)
+            else if (keyInFocus != null) {
+                keyInFocus!!.setText(key)
+                keyInFocus = null
+            }
             settingsOverlay!!.onKey(key)
         }
     }
@@ -308,8 +313,7 @@ class EditorUI(
                 showMacroDialog()
             }
             R.id.reset -> {
-                profile = profileBackup
-                reloadKeymap()
+                reloadKeymap(KeymapProfiles.parse(profileBackup))
             }
             R.id.import_export -> {
                 // Show Compose-based UI from ImportExportDialog.kt
@@ -345,6 +349,8 @@ class EditorUI(
      * MacroView for visualization
      */
     private fun addMacro() {
+        // Stop a previous floating-key capture before macro recording consumes key events.
+        keyInFocus = null
         if (mService != null) {
             mainView!!.setFocusable(true)
         }
@@ -414,7 +420,7 @@ class EditorUI(
      * note: the view is NOT already attached on every call path.
      */
     fun loadKeymapAndObserveSizeChanges() {
-        profileBackup = KeymapProfiles(context).getProfile(profileName, false)
+        profileBackup = KeymapProfiles(context).sharedPref.getStringSet(profileName, null)?.toSet()
         keysContainerView.addOnLayoutChangeListener { _, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
             val oldWidth = oldRight - oldLeft
             val oldHeight = oldBottom - oldTop
@@ -423,20 +429,34 @@ class EditorUI(
             // Only reload if screen orientation genuinely flipped between portrait and landscape
             val orientationChanged = oldWidth > 0 && oldHeight > 0 && (oldWidth > oldHeight) != (newWidth > newHeight)
             if (orientationChanged && profile != null) {
-                reloadKeymap()
+                // Snapshot live edits in their pre-rotation coordinate space; the layout
+                // callback runs after new bounds are applied. Keep this snapshot in memory so
+                // rotation preserves edits without changing the saved profile or Reset baseline.
+                // Component serialization finishes pending position animations before reading them.
+                reloadKeymap(snapshotCurrentKeymap(oldWidth, oldHeight))
             }
         }
         keysContainerView.post { loadKeymap() }
     }
 
-    private fun reloadKeymap() {
-        keysContainerView.removeAllViews()
-        editorUiComponents.clear()
-        loadKeymap()
+    private fun snapshotCurrentKeymap(width: Int, height: Int): KeymapProfile {
+        val linesToParse = ArrayList<String?>()
+        editorUiComponents.forEach { linesToParse.add(it.toConfigLine()) }
+        MacroIdUtils.getLines(linesToParse, profile!!)
+        linesToParse.add("APPLICATION ${profile!!.packageName}")
+        if (!profile!!.disabled) linesToParse.add("ENABLED")
+        linesToParse.add("SCREENSIZE $width $height")
+        return KeymapProfiles.parse(linesToParse.filterNotNull().filter { it.isNotBlank() }.toSet())
     }
 
-    private fun loadKeymap() {
-        profile = KeymapProfiles(context).getProfile(profileName, false)
+    private fun reloadKeymap(profileToLoad: KeymapProfile? = null) {
+        keysContainerView.removeAllViews()
+        editorUiComponents.clear()
+        loadKeymap(profileToLoad)
+    }
+
+    private fun loadKeymap(profileToLoad: KeymapProfile? = null) {
+        profile = profileToLoad ?: KeymapProfiles(context).getProfile(profileName, false)
 
         val (realWidth, realHeight) = getRealScreenDimensions()
         val targetWidth = if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth.toFloat() else if (keysContainerView.width > 0) keysContainerView.width.toFloat() else realWidth.toFloat()
@@ -481,7 +501,7 @@ class EditorUI(
      * Persists positions read from the live editor component views. See
      * docs/editor-lifecycle.md for the save call sites and the resize/animation timing risk.
      */
-    private fun saveKeymap() {
+    private fun saveKeymap(widthOverride: Int? = null, heightOverride: Int? = null) {
         if (startMode == SHOW_KEYMAP_ONLY) return
 
         val linesToWrite = ArrayList<String?>()
@@ -490,13 +510,14 @@ class EditorUI(
 
         // Enabled macro ids
         MacroIdUtils.getLines(linesToWrite, profile!!)
+        linesToWrite.removeAll { it.isNullOrBlank() }
 
         // Save Config
         val profiles = KeymapProfiles(context)
         val (realWidth, realHeight) = getRealScreenDimensions()
 
-        val saveWidth = if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth else if (keysContainerView.width > 0) keysContainerView.width else realWidth
-        val saveHeight = if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight else if (keysContainerView.height > 0) keysContainerView.height else realHeight
+        val saveWidth = widthOverride ?: if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth else if (keysContainerView.width > 0) keysContainerView.width else realWidth
+        val saveHeight = heightOverride ?: if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight else if (keysContainerView.height > 0) keysContainerView.height else realHeight
 
         profiles.saveProfile(
             profileName, linesToWrite, profile!!.packageName, !profile!!.disabled,
@@ -513,7 +534,7 @@ class EditorUI(
         editorUiComponents.forEach { linesToWrite.add(it.toConfigLine()) }
 
         MacroIdUtils.getLines(linesToWrite, profile!!)
-        return linesToWrite.joinToString("\n")
+        return linesToWrite.filterNotNull().filter { it.isNotBlank() }.joinToString("\n")
     }
 
     private fun handleImportAction() {
@@ -523,8 +544,37 @@ class EditorUI(
             val text = clipData.getItemAt(0).text?.toString()
             if (!text.isNullOrBlank()) {
                 val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                profile = KeymapProfiles.parse(lines)
-                reloadKeymap()
+                // Clipboard data is untrusted input. Malformed coordinates, sizes, or
+                // component records must report an import failure instead of crashing the editor.
+                val importedProfile = try {
+                    KeymapProfiles.parse(lines)
+                } catch (e: RuntimeException) {
+                    XtLogger.warn("EditorUI", "Rejected malformed keymap clipboard data", e)
+                    android.widget.Toast.makeText(
+                        context,
+                        R.string.error_import_failed,
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
+                val currentProfile = profile ?: KeymapProfiles(context).getProfile(profileName, false)
+
+                // Clipboard exports usually contain only key definitions. Keep the existing
+                // profile metadata only when the imported text does not provide valid replacements.
+                val hasImportedApplication = lines.any {
+                    it.startsWith("APPLICATION ") && it.substringAfter("APPLICATION ").isNotBlank()
+                }
+                if (!hasImportedApplication) {
+                    importedProfile.packageName = currentProfile.packageName
+                }
+                if ("ENABLED" !in lines) {
+                    importedProfile.disabled = currentProfile.disabled
+                }
+                if (importedProfile.xRes <= 0) importedProfile.xRes = currentProfile.xRes
+                if (importedProfile.yRes <= 0) importedProfile.yRes = currentProfile.yRes
+
+                reloadKeymap(importedProfile)
+                saveKeymap()
                 android.widget.Toast.makeText(context, "Keymap imported from clipboard", android.widget.Toast.LENGTH_SHORT).show()
                 closeImportExportDialog()
                 return

@@ -59,11 +59,7 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
         }
 
         // SoufianoDev: Animate Crosshair To Target Position
-        crosshairView.animate()
-            .x(x)
-            .y(y)
-            .setDuration(500)
-            .start()
+        crosshairView.animateToPosition(x, y, 500L)
 
         // SoufianoDev: Initialize And Add Left Click Floating Button
         leftClick = addLeftClick(mouseAimConfig.xleftClick, mouseAimConfig.yleftClick)
@@ -71,6 +67,7 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
 
     override fun toConfigLine(): String {
         // SoufianoDev: Update Configuration Data With Current View Coordinates
+        crosshairView.finishPendingPositionAnimation()
         return mouseAimConfig.apply {
             setCenterXY(crosshairView)
             setLeftClickXY(leftClick)
@@ -114,11 +111,7 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
         return MovableFloatingActionKey(context, { }, callback.keysContainerView).apply {
             frameView.setBackgroundResource(R.drawable.ic_baseline_mouse_36)
             setText(R.string.left_click)
-            frameView.animate()
-                .x(x)
-                .y(y)
-                .setDuration(500)
-                .start()
+            animateToPosition(x, y, 500L)
         }
     }
 
@@ -191,11 +184,7 @@ private fun AlertDialog.setupOverlayWindowType() {
 }
 
     fun animateLeftClick(x: Float, y: Float) {
-        leftClick.frameView.animate()
-            .x(x)
-            .y(y)
-            .setDuration(500)
-            .start()
+        leftClick.animateToPosition(x, y, 500L)
     }
 
     // SoufianoDev: Inner Class To Handle Interactive Area Resizing
@@ -240,6 +229,7 @@ private fun AlertDialog.setupOverlayWindowType() {
             val centerX = rootView.x + rootView.pivotX
             val centerY = rootView.y + rootView.pivotY
 
+            crosshairView.finishPendingPositionAnimation()
             crosshairView.apply {
                 x = centerX
                 y = centerY

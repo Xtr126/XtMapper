@@ -29,6 +29,8 @@ class ShiftKey private constructor(
 
     init {
         val callback = object : ShiftKeyView.ShiftKeyCallback {
+            override fun isOverlayOpen(): Boolean = mCallback.isOverlayOpen()
+
             override fun onShiftKeyRemoved() {
                 mCallback.removeComponent(this@ShiftKey)
             }
@@ -53,6 +55,9 @@ class ShiftKey private constructor(
     ) : this(mCallback, context, shiftKey, 0f, 0f)
 
     override fun toConfigLine(): String {
+        if (shiftKeyView.button1.getText().isBlank() || shiftKeyView.button2.getText().isBlank()) {
+            return ""
+        }
         val shiftKey = xtr.keymapper.keymap.element.ShiftKey()
         shiftKey.key1.code = shiftKeyView.button1.getText()
         shiftKey.key1.x = shiftKeyView.button1.getX()
@@ -76,6 +81,7 @@ class ShiftKey private constructor(
         var durationMs: Int = -1
 
         interface ShiftKeyCallback {
+            fun isOverlayOpen(): Boolean
             fun onShiftKeyRemoved()
             fun onViewClicked(view: MovableFloatingActionKey)
         }
@@ -102,7 +108,7 @@ class ShiftKey private constructor(
             }
 
             controlsBinding.settingsButton.setOnClickListener {
-                showSpeedDialog(context)
+                showSpeedDialog(context, callback.isOverlayOpen())
             }
 
             button1.setX(rootView.pivotX - 100)
@@ -128,20 +134,10 @@ class ShiftKey private constructor(
         ) : this(rootView, callback) {
             durationMs = shiftKey.durationMs
             button1.setText(shiftKey.key1.code ?: "")
-            button1.frameView.animate()
-                .x(shiftKey.key1.x)
-                .y(shiftKey.key1.y)
-                .setDuration(500)
-                .withEndAction { onXyChange(0f, 0f) }
-                .start()
+            button1.animateToPosition(shiftKey.key1.x, shiftKey.key1.y, 500L) { onXyChange(0f, 0f) }
 
             button2.setText(shiftKey.key2.code ?: "")
-            button2.frameView.animate()
-                .x(shiftKey.key2.x)
-                .y(shiftKey.key2.y)
-                .setDuration(500)
-                .withEndAction { onXyChange(0f, 0f) }
-                .start()
+            button2.animateToPosition(shiftKey.key2.x, shiftKey.key2.y, 500L) { onXyChange(0f, 0f) }
 
             val keymapConfig = KeymapConfig(rootView.context)
 
@@ -157,19 +153,19 @@ class ShiftKey private constructor(
             overlay.centerViewOnLine(controlsContainer)
         }
 
-        private fun showSpeedDialog(context: Context) {
+        private fun showSpeedDialog(context: Context, overlayOpen: Boolean) {
             val keymapConfig = KeymapConfig(context)
             val globalSpeed = keymapConfig.shiftTransitionMs
 
             val speeds = intArrayOf(-1, 0, 50, 100, 150, 200, 300)
             val labels = arrayOf(
                 context.getString(R.string.use_global_default, globalSpeed),
-                "Instant (0 ms)",
-                "50 ms",
-                "100 ms",
-                "150 ms",
-                "200 ms",
-                "300 ms"
+                context.getString(R.string.shift_transition_instant),
+                context.getString(R.string.shift_transition_ms_value, 50),
+                context.getString(R.string.shift_transition_ms_value, 100),
+                context.getString(R.string.shift_transition_ms_value, 150),
+                context.getString(R.string.shift_transition_ms_value, 200),
+                context.getString(R.string.shift_transition_ms_value, 300)
             )
 
             val currentSelection = when (durationMs) {
@@ -188,17 +184,21 @@ class ShiftKey private constructor(
                 .setSingleChoiceItems(labels, currentSelection) { dialog, which ->
                     durationMs = speeds[which]
                     val chosenText = if (durationMs == -1) {
-                        "Global default ($globalSpeed ms)"
+                        context.getString(R.string.use_global_default, globalSpeed)
                     } else {
-                        "$durationMs ms"
+                        context.getString(R.string.shift_transition_ms_value, durationMs)
                     }
-                    android.widget.Toast.makeText(context, "Shift transition: $chosenText", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(
+                        context,
+                        context.getString(R.string.shift_transition_changed, chosenText),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
                     dialog.dismiss()
                 }
                 .setNegativeButton(R.string.cancel, null)
 
             val dialog = builder.create()
-            if (context !is android.app.Activity) {
+            if (context !is android.app.Activity || overlayOpen) {
                 val windowType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 } else {

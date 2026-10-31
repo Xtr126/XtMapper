@@ -6,13 +6,13 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.SystemClock
-import android.util.Log
 import android.view.InputDevice
 import android.view.InputEvent
 import android.view.MotionEvent
 import com.genymobile.scrcpy.Point
 import com.genymobile.scrcpy.Pointer
 import com.genymobile.scrcpy.PointersState
+import xtr.keymapper.log.XtLogger
 import xtr.keymapper.server.event.MouseEventHandler
 import java.lang.reflect.Method
 
@@ -61,7 +61,8 @@ class Input(private val displayId: Int) {
 
         val pointerIndex = pointersState.getPointerIndex(pointerId.toLong())
         if (pointerIndex == -1) {
-            Log.e(RemoteService.TAG, "Too many pointers for touch event")
+            XtLogger.error(RemoteService.TAG, "Too many pointers for touch event")
+            return
         }
         val pointer = pointersState[pointerIndex]
         pointer.point = point
@@ -106,7 +107,8 @@ class Input(private val displayId: Int) {
 
         val pointerIndex = pointersState.getPointerIndex(pointerId)
         if (pointerIndex == -1) {
-            Log.e(RemoteService.TAG, "Too many pointers for touch event")
+            XtLogger.error(RemoteService.TAG, "Too many pointers for touch event")
+            return
         }
 
         val pointer = pointersState[pointerIndex]
@@ -163,7 +165,7 @@ class Input(private val displayId: Int) {
                 try {
                     setActionButtonMethod?.invoke(pressEvent, actionButton)
                 } catch (e: Exception) {
-                    Log.e(RemoteService.TAG, e.message, e)
+                    XtLogger.error(RemoteService.TAG, "Input operation failed", e)
                 }
 
                 injectInputEvent(pressEvent)
@@ -178,7 +180,7 @@ class Input(private val displayId: Int) {
                 try {
                     setActionButtonMethod?.invoke(releaseEvent, actionButton)
                 } catch (e: Exception) {
-                    Log.e(RemoteService.TAG, e.message, e)
+                    XtLogger.error(RemoteService.TAG, "Input operation failed", e)
                 }
 
                 injectInputEvent(releaseEvent)
@@ -228,7 +230,7 @@ class Input(private val displayId: Int) {
             }
             injectInputEventMethod!!.invoke(inputManager, motionEvent, displayId)
         } catch (e: Exception) {
-            Log.e(RemoteService.TAG, e.message, e)
+            XtLogger.error(RemoteService.TAG, "Input operation failed", e)
         }
     }
 
@@ -297,7 +299,7 @@ class Input(private val displayId: Int) {
 
                 injectScroll(event, ivalue)
             } catch (e: InterruptedException) {
-                Log.e(RemoteService.TAG, e.message, e)
+                XtLogger.error(RemoteService.TAG, "Input operation failed", e)
             }
         }
     }
@@ -340,7 +342,7 @@ class Input(private val displayId: Int) {
                 setActionButtonMethod = MotionEvent::class.java.getDeclaredMethod("setActionButton", Int::class.javaPrimitiveType)
                 setActionButtonMethod!!.isAccessible = true
             } catch (e: Exception) {
-                Log.e(RemoteService.TAG, e.message, e)
+                XtLogger.error(RemoteService.TAG, "Input operation failed", e)
             }
         }
     }

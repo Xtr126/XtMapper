@@ -2,12 +2,16 @@
 
 `cage_xtmapper.sh` starts Waydroid's full UI and then runs XtMapper's
 `RemoteServiceShell`. Unless `--no-auto-launch` is passed, that shell process
-starts `MainActivity` with the `SHELL_INIT` marker. Shell initialization starts
-the mapper with the profile named `Default`, regardless of the profile last
-selected in the app. If no `Default` profile exists, XtMapper still requests
-`Default`; it does not substitute another saved profile. This shell startup
-does not overwrite the last selected profile, so an ordinary app launch
-continues to restore the last profile the user selected.
+requests `MainActivity` with the legacy `SHELL_INIT` marker.
+
+The marker is an Intent extra, not proof of the caller's identity. Android does
+not expose the launching UID for an `am start` launch that does not share
+identity, so XtMapper cannot authenticate the shell request and has no trusted
+shell-initialization path: `data=shell` never triggers automatic mapper
+startup, never selects the `Default` profile, and never resets the saved
+Shizuku-to-Root mode. Launch XtMapper normally and start the mapper from its
+UI; startup restores the profile last selected in the app. The marker's only
+remaining effect is to suppress replay of a crash payload on the shell request.
 
 Whether starting a profile also opens its associated app depends on the
 **Disable auto profiling** setting. When that setting is enabled, starting an

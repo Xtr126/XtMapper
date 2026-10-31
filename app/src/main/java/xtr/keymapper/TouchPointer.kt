@@ -50,6 +50,7 @@ class TouchPointer : Service() {
     private var displayId = 0
     private var displayListener: DisplayListener? = null
     private var lastForegroundPackage: String? = null
+    private var connectionGeneration = 0
 
 
     interface MainActivityCallback {
@@ -71,6 +72,9 @@ class TouchPointer : Service() {
     override fun onStartCommand(i: Intent?, flags: Int, startId: Int): Int {
         if (i == null || ACTION_STOP == i.action) {
             stopKeymapper()
+            // stopKeymapper may return early when the instance is already inactive.
+            // This service was still started for this command, so always stop this start ID.
+            stopSelf(startId)
             return START_NOT_STICKY
         }
 
@@ -200,13 +204,19 @@ class TouchPointer : Service() {
         if (!profile.disabled) activityCallback?.updateCmdView1("connecting to server..")
         val config = KeymapConfig(this)
         RemoteServiceHelper.useShizuku = config.isShizukuMode
+        val generation = connectionGeneration
         RemoteServiceHelper.getInstance(
             this
         ) { service: IRemoteService? ->
             Log.i("xtmapper-startup", "connectRemoteService: callback servicePresent=${service != null} alive=${service?.asBinder()?.isBinderAlive}")
+            // A late bind callback must not restart a stopped or superseded pointer service.
+            if (generation != connectionGeneration || !isRunning || activeInstance !== this) {
+                return@getInstance
+            }
             if (service == null) {
                 Log.w("TouchPointer", "Remote service is null, cannot start server")
                 activityCallback?.updateCmdView1("Failed to connect to server (root/shizuku not available)")
+                stopKeymapper()
                 return@getInstance
             }
             mService = service
@@ -263,6 +273,7 @@ class TouchPointer : Service() {
 
     fun stopKeymapper() {
         if (!isRunning && activeInstance == null) return
+        connectionGeneration++
         isRunning = false
         activeInstance = null
 
@@ -477,10 +488,21 @@ class TouchPointer : Service() {
             val designated = keymapProfiles.getDesignatedProfileForApp(packageName)
 
             if (designated != null) {
-                if (designated != selectedProfile) {
+                val designatedProfileDisabled = keymapProfiles.getProfile(designated, false).disabled
+                if (designated != selectedProfile || designatedProfileDisabled) {
                     mHandler.post {
-                        launchProfile(designated)
-                        Toast.makeText(this@TouchPointer, "Switched to profile: $designated", Toast.LENGTH_SHORT).show()
+                        if (designated != selectedProfile) {
+                            launchProfile(designated)
+                            Toast.makeText(this@TouchPointer, "Switched to profile: $designated", Toast.LENGTH_SHORT).show()
+                        }
+                        // A disabled designation may have no enabled fallback. Do not leave
+                        // the previous app's keymap running in the newly foregrounded app.
+                        if (keymapProfiles.getProfile(designated, false).disabled) {
+                            try {
+                                mService?.pauseMouse()
+                            } catch (_: RemoteException) {
+                            }
+                        }
                     }
                 }
                 return

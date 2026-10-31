@@ -49,6 +49,10 @@ class EditorService : ComposeLifecycleService() {
             )
 
             RemoteServiceHelper.getInstance(this) { remoteService ->
+                if (remoteService == null) {
+                    Log.w("EditorService", "Remote input service unavailable; skipping key listener registration")
+                    return@getInstance
+                }
                 try {
                     editor?.registerOnKeyEventListener(remoteService)
                 } catch (e: RemoteException) {

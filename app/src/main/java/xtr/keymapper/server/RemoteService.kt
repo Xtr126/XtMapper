@@ -1,5 +1,6 @@
 package xtr.keymapper.server
 
+import android.util.Log
 import android.app.ApplicationErrorReport
 import android.content.ComponentName
 import android.content.Context
@@ -10,8 +11,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.Process
 import android.os.RemoteException
-import android.util.Log
 import android.view.Display
 import android.view.LayoutInflater
 import android.view.View
@@ -27,17 +28,23 @@ import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.databinding.CursorBinding
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
+import xtr.keymapper.log.Role
+import xtr.keymapper.log.SessionStates
+import xtr.keymapper.log.XtLogger
 import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.reflect.Method
 
-class RemoteService(context: Context) : IRemoteService.Stub() {
+class RemoteService @JvmOverloads constructor(
+    context: Context,
+    initialIsWaylandClient: Boolean = false
+) : IRemoteService.Stub() {
     private val mouseDevice = MouseDeviceConnection()
     @Volatile
     internal var inputService: InputService? = null
     private var mOnKeyEventListener: OnKeyEventListener? = null
-    internal var isWaylandClient = false
+    internal var isWaylandClient = initialIsWaylandClient
     private var activityObserverService: ActivityObserverService? = null
     internal var nativeLibraryDir: String = System.getProperty("java.library.path").orEmpty()
     private var cursorView: View? = null
@@ -47,7 +54,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     internal var context: Context = context
     internal var startedFromShell = false
 
-    private var geteventProcess: Process? = null
+    private var geteventProcess: java.lang.Process? = null
     private var lastLoggedMouseDevice: String? = null
 
     // shortcut: single-user check; multi-user/work-profile installs have a different uid per user
@@ -61,7 +68,24 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     }
 
     init {
-        loadLibraries()
+        // Logging first: the Shizuku user service constructs this class directly
+        // (uid 2000; uid 0 on the root fallback) with no Application.onCreate, so
+        // a load failure escaping below could otherwise never be recorded.
+        if (!XtLogger.isInitialized) {
+            when (Process.myUid()) {
+                2000 -> XtLogger.initStandalone(Role.SHIZUKU)
+                0 -> XtLogger.initStandalone(Role.ROOT)
+                else -> Unit
+            }
+        }
+        try {
+            loadLibraries()
+        } catch (t: Throwable) {
+            // Bounded flush so the record outlives the process; then the
+            // original failure still propagates exactly as before.
+            XtLogger.fatal(TAG, "native library load failed", t)
+            throw t
+        }
         init()
     }
 
@@ -69,7 +93,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         return try {
             prepareCursorOverlayWindow(displayId)
         } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
+            XtLogger.error(TAG, "Failed to prepare cursor overlay window; falling back to default WindowManager", e)
             context.getSystemService(WindowManager::class.java)
         }
     }
@@ -83,11 +107,16 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
             if (!isWaylandClient) Thread { start_getevent() }.start()
             else mHandler.post { start_getevent() }
         } catch (e: PackageManager.NameNotFoundException) {
-            Log.e(TAG, e.message, e)
+            XtLogger.error(TAG, "Unable to resolve app native library directory", e)
             throw RuntimeException(e)
         }
 
         Looper.getMainLooper().thread.setUncaughtExceptionHandler { t, e ->
+            // Record the terminal failure first (bounded flush) before attempting the UI relay.
+            try {
+                XtLogger.fatal(TAG, "uncaught exception on thread ${t.name}", e)
+            } catch (ignored: Exception) {
+            }
             try {
                 val crashInfo = ApplicationErrorReport.CrashInfo(e)
 
@@ -104,8 +133,11 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                             crashInfo.throwMethodName
                 ).start()
             } catch (ex: Exception) {
-                Log.e(TAG, ex.message, ex)
+                XtLogger.error(TAG, "Failed to relay the server crash to MainActivity", ex)
             }
+            // Do not write a SESSION END marker for an uncaught fatal exception.
+            // The next process must be able to identify this session as crashed even
+            // when the diagnostic dialog was successfully relayed to MainActivity.
             System.exit(1)
         }
     }
@@ -121,7 +153,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                 mWindowManager!!.addView(view, params)
             } catch (e: IllegalStateException) { // A14 QPR3 issue https://gist.github.com/RikkaW/be3fe4178903702c54ec73b2fc1187fe
                 cursorView = null
-                Log.e(TAG, e.message, e)
+                XtLogger.error(TAG, "Failed to attach cursor overlay view", e)
             }
         }
     }
@@ -198,7 +230,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error handling input event", e)
+                        XtLogger.error(TAG, "Error handling input event", e)
                     }
                     if (service == null || !service.isKeyboardGrabbed) {
                         try {
@@ -206,13 +238,13 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                         } catch (e: RemoteException) {
                             mOnKeyEventListener = null
                         } catch (e: Exception) {
-                            Log.e(TAG, "Error notifying key listener", e)
+                            XtLogger.error(TAG, "Error notifying key listener", e)
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
+            XtLogger.error(TAG, "Input event reader failed", e)
         }
     }
 
@@ -247,6 +279,12 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     private val mStartServerDeathRecipient = IBinder.DeathRecipient {
         Log.w(TAG, "startServer callback binder died; queuing mouse disconnect")
         mHandler.post {
+            // Release keyboard grabs before dropping the service, even if cleanup fails.
+            try {
+                inputService?.stop()
+            } catch (e: Exception) {
+                XtLogger.error(TAG, "Failed to stop input service after client binder death", e)
+            }
             mouseDevice.disconnect()
             inputService = null
             stopServer(true)
@@ -273,6 +311,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     ) {
         enforceCaller()
         Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
+        XtLogger.info(TAG, "startServer requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode}")
         cb.asBinder().linkToDeath(mStartServerDeathRecipient, 0)
         mHandler.post {
             Log.i(TAG, "startServer: main handler running existingService=${inputService != null}")
@@ -358,6 +397,9 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         }
 
         if (!startedFromShell && exitProcess) {
+            XtLogger.info(TAG, "server stopped; exiting process")
+            // END marker before the existing System.exit; endSession is bounded.
+            XtLogger.endSession(SessionStates.STATUS_SERVICE_STOP)
             stop_getevent()
             System.exit(0)
         } else if (service != null && !isWaylandClient) {
@@ -413,17 +455,26 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
      */
     override fun pauseMouse() {
         enforceCaller()
-        val service = inputService
-        if (service != null)
-            if (!service.stopEvents) service.pauseResumeKeymap()
+        // startServer() creates/replaces InputService on this same handler. Queue the
+        // pause too, so a pending start cannot install a fresh, unpaused service after
+        // the caller has asked to disable mapping for the foreground app.
+        mHandler.post {
+            val service = inputService
+            if (service != null && !service.stopEvents) {
+                service.pauseResumeKeymap()
+            }
+        }
     }
 
     override fun resumeMouse() {
         enforceCaller()
-        val service = inputService
-        if (service != null)
-            if (service.stopEvents)
+        // Keep pause/resume state changes ordered with startServer() on the same handler.
+        mHandler.post {
+            val service = inputService
+            if (service != null && service.stopEvents) {
                 service.pauseResumeKeymap()
+            }
+        }
     }
 
     /**

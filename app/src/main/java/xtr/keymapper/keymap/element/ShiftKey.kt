@@ -24,6 +24,7 @@ class ShiftKey : KeymapProfileElement {
     }
 
     constructor(data: Array<String>) : this() {
+        require(isValidData(data)) { "Malformed SHIFT_KEY record" }
         key1.code = data[1]
         key1.x = data[2].toFloat()
         key1.y = data[3].toFloat()
@@ -32,8 +33,8 @@ class ShiftKey : KeymapProfileElement {
         key2.x = data[5].toFloat()
         key2.y = data[6].toFloat()
 
-        if (data.size > 7) {
-            durationMs = data[7].toIntOrNull() ?: -1
+        if (data.size == 8) {
+            durationMs = data[7].toInt()
         }
     }
 
@@ -75,6 +76,20 @@ class ShiftKey : KeymapProfileElement {
 
     companion object {
         const val TAG = "SHIFT_KEY"
+
+        /** Validates token count and values before the constructor performs numeric conversion. */
+        internal fun isValidData(data: Array<String>): Boolean {
+            if (data.size !in 7..8 || data[1].isBlank() || data[4].isBlank()) return false
+            for (index in intArrayOf(2, 3, 5, 6)) {
+                val coordinate = data[index].toFloatOrNull() ?: return false
+                if (!coordinate.isFinite()) return false
+            }
+            if (data.size == 8) {
+                val duration = data[7].toIntOrNull() ?: return false
+                if (duration < -1) return false
+            }
+            return true
+        }
 
         @JvmField
         val CREATOR: Parcelable.Creator<ShiftKey> = object : Parcelable.Creator<ShiftKey> {

@@ -1,7 +1,6 @@
 package xtr.keymapper.server.event
 
 import android.os.RemoteException
-import android.util.Log
 import xtr.keymapper.InputEventCodes.BTN_EXTRA
 import xtr.keymapper.InputEventCodes.BTN_MIDDLE
 import xtr.keymapper.InputEventCodes.BTN_MOUSE
@@ -10,6 +9,7 @@ import xtr.keymapper.InputEventCodes.BTN_SIDE
 import xtr.keymapper.InputEventCodes.REL_WHEEL
 import xtr.keymapper.InputEventCodes.REL_X
 import xtr.keymapper.InputEventCodes.REL_Y
+import xtr.keymapper.log.XtLogger
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.keymap.element.Key
@@ -87,7 +87,7 @@ class MouseEventHandler(private val mInput: IInputInterface) {
                 try {
                     mInput.callback.alertMouseAimActivated()
                 } catch (e: RemoteException) {
-                    Log.e(RemoteService.TAG, Objects.requireNonNull(e.message), e)
+                    XtLogger.error(RemoteService.TAG, "Mouse-aim activation callback failed", e)
                 }
                 mInput.hideCursor()
             } else {

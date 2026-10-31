@@ -2,8 +2,8 @@ package xtr.keymapper.editor.component
 
 import android.content.Context
 import android.os.Build
-import android.view.View
 import android.view.WindowManager
+import xtr.keymapper.floatingkeys.MovableFrameLayout
 import androidx.appcompat.app.AlertDialog
 import xtr.keymapper.R
 import xtr.keymapper.databinding.CameraBinding
@@ -17,7 +17,7 @@ import xtr.keymapper.editor.keyCodePrefix
 class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y: Float) :
     EditorUiComponent(callback, context, x, y) {
 
-    val cameraView: View
+    val cameraView: MovableFrameLayout
 
     // SoufianoDev: Helper Property To Safely Access Or Initialize Camera Element In Profile
     private val cameraElement: xtr.keymapper.keymap.element.Camera
@@ -34,11 +34,7 @@ class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y:
         binding.editButton.setOnClickListener { showSettingsDialog() }
 
         // SoufianoDev: Animate Component To Initial Position
-        cameraView.animate()
-            .x(x)
-            .y(y)
-            .setDuration(500)
-            .start()
+        cameraView.animateToPosition(x, y, 500L)
 
         // SoufianoDev: Handle Component Removal And View Release
         binding.closeButton.setOnClickListener {
@@ -52,6 +48,7 @@ class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y:
     }
 
     override fun toConfigLine(): String {
+        cameraView.finishPendingPositionAnimation()
         // SoufianoDev: Update Coordinates And Return Serialized Data String
         return cameraElement.apply {
             x = cameraView.x
