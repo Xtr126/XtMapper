@@ -126,14 +126,6 @@ class KeymapProfiles @JvmOverloads constructor(
         return getAllProfiles().keys.firstOrNull() ?: DEFAULT_PROFILE_NAME
     }
 
-    internal fun getStartupProfileName(isShellInit: Boolean): String {
-        return if (isShellInit) DEFAULT_PROFILE_NAME else getLastSelectedProfile()
-    }
-
-    internal fun recordStartupProfileSelection(profileName: String?, isShellInit: Boolean) {
-        if (!isShellInit) setLastSelectedProfile(profileName)
-    }
-
     fun setLastSelectedProfile(profileName: String?) {
         if (!profileName.isNullOrEmpty()) {
             sharedPref.edit().putString(KEY_LAST_SELECTED_PROFILE, profileName).apply()
