@@ -169,8 +169,22 @@ class SessionLogWriter(
         allowFullPart: Boolean = false,
         requiredBytes: Int = 0,
     ) {
-        val writer: LogFileWriter?
         val isDayChange = currentDay != day
+        // Same session continuing after midnight: build the rollover marker up front —
+        // its bytes land before the record and must be part of the fit decision, or
+        // the marker alone could push the part over budget.
+        val continuedBody: String? =
+            if (isDayChange && sessionStartDay != null && !sessionEnded &&
+                day != sessionStartDay && day !in continuedDays
+            ) {
+                SessionMarkers.block(
+                    SessionMarkers.continuedLine(sessionId, requireNotNull(sessionStart), atInstant, zone)
+                )
+            } else {
+                null
+            }
+        val continuationBytes = continuedBody?.let { chunk(it).size } ?: 0
+        val writer: LogFileWriter?
         if (!isDayChange) {
             // A full daily part budget is terminal for ordinary records. Do not
             // reopen and re-stat the same final part for every dropped record.
@@ -183,20 +197,15 @@ class SessionLogWriter(
             closeCurrent()
             currentDay = day
             exhaustedDay = null
-            writer = activeWriterFor(day, allowFullPart, requiredBytes)
+            writer = activeWriterFor(day, allowFullPart, requiredBytes + continuationBytes)
         }
         currentWriter = writer
-        if (writer != null && isDayChange) {
+        if (writer != null && continuedBody != null) {
             // Same session continuing after midnight: keep the id, note rollover.
-            val startDay = sessionStartDay
-            if (startDay != null && !sessionEnded && day != startDay && continuedDays.add(day)) {
-                val body = SessionMarkers.block(
-                    SessionMarkers.continuedLine(sessionId, requireNotNull(sessionStart), atInstant, zone)
-                )
-                // Marker write failure must not abort the rollover; the record
-                // write below is the one guarded by writeOne.
-                try { writer.write(chunk(body)) } catch (e: Exception) { sinkDown(e) }
-            }
+            continuedDays.add(day)
+            // Marker write failure must not abort the rollover; the record
+            // write below is the one guarded by writeOne.
+            try { writer.write(chunk(continuedBody)) } catch (e: Exception) { sinkDown(e) }
         }
     }
 
@@ -212,6 +221,12 @@ class SessionLogWriter(
      * Returns null only when the day's part budget is exhausted — except with
      * [allowFullPart], which then reopens the final part so a bounded session
      * START/END marker can still be appended without creating a part beyond the limit.
+     *
+     * An ordinary record larger than [maxFileBytes] is still written whole into a
+     * fresh part: records are never split or dropped for size alone (shortcut: at
+     * the default 4 MiB budget the clipped message plus stack trace can never reach
+     * it — upgrade: clip the record to the remaining budget if sub-MiB budgets are
+     * ever configured).
      */
     private fun activeWriterFor(
         day: String,

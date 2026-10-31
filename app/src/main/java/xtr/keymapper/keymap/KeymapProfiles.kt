@@ -84,6 +84,8 @@ class KeymapProfiles @JvmOverloads constructor(
     }
 
     fun renameProfile(profileName: String, newProfile: String) {
+        // A profile cannot live under the reserved metadata key (see saveProfile).
+        if (newProfile == KEY_LAST_SELECTED_PROFILE) return
         migrateProfileCollidingWithMetadataKey()
         val designatedKeys = sharedPref.all
             .filter { (key, value) -> key.startsWith("designated_profile_") && value == profileName }
@@ -101,6 +103,8 @@ class KeymapProfiles @JvmOverloads constructor(
     }
 
     fun setProfilePackageName(profileName: String?, packageName: String) {
+        // getStringSet on the reserved metadata key would read a String on Android.
+        if (profileName == KEY_LAST_SELECTED_PROFILE) return
         val stringSet = sharedPref.getStringSet(profileName, null) ?: return
         saveProfile(profileName, ArrayList<String?>(stringSet), packageName, stringSet.contains("ENABLED"), 0, 0)
     }
@@ -124,12 +128,13 @@ class KeymapProfiles @JvmOverloads constructor(
      * created with that exact free-typed name replaces the metadata string with a Set and
      * makes plain getString() reads throw ClassCastException. Move such a profile to a
      * unique key (following its designation references) before touching the metadata again.
+     * Returns the recovered name, or null when there was nothing to move.
      */
     @Suppress("UNCHECKED_CAST")
-    private fun migrateProfileCollidingWithMetadataKey() {
+    private fun migrateProfileCollidingWithMetadataKey(): String? {
         val all = sharedPref.all
         val value = all[KEY_LAST_SELECTED_PROFILE]
-        if (value !is Set<*>) return
+        if (value !is Set<*>) return null
         var recovered = "${KEY_LAST_SELECTED_PROFILE}_profile"
         while (sharedPref.contains(recovered)) recovered = "${recovered}_1"
         val editor = sharedPref.edit()
@@ -141,6 +146,7 @@ class KeymapProfiles @JvmOverloads constructor(
             }
         }
         editor.apply()
+        return recovered
     }
 
     fun getLastSelectedProfile(): String {
@@ -154,8 +160,14 @@ class KeymapProfiles @JvmOverloads constructor(
 
     fun setLastSelectedProfile(profileName: String?) {
         if (!profileName.isNullOrEmpty()) {
-            migrateProfileCollidingWithMetadataKey()
-            sharedPref.edit().putString(KEY_LAST_SELECTED_PROFILE, profileName).apply()
+            val recovered = migrateProfileCollidingWithMetadataKey()
+            // The reserved key never stores a selectable name: one stored there was just
+            // moved to its recovered name; without one there is nothing to select, and
+            // writing the raw reserved name would make profileExists() read the metadata
+            // string as a StringSet (ClassCastException on Android).
+            val name = if (profileName == KEY_LAST_SELECTED_PROFILE) recovered ?: return
+                       else profileName
+            sharedPref.edit().putString(KEY_LAST_SELECTED_PROFILE, name).apply()
         }
     }
 
@@ -173,6 +185,11 @@ class KeymapProfiles @JvmOverloads constructor(
         xRes: Int,
         yRes: Int
     ) {
+        // The reserved key holds the selection metadata, not a profile: a StringSet
+        // stored there destroys the selection and makes later metadata reads throw
+        // ClassCastException on Android. Creation, import and package-binding paths
+        // all funnel through here, so rejecting at this boundary covers them.
+        if (profileName == KEY_LAST_SELECTED_PROFILE) return
         lines.removeIf { it!!.contains("APPLICATION") }
         lines.add("APPLICATION $packageName")
 

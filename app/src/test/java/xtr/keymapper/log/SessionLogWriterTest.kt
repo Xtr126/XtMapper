@@ -100,6 +100,67 @@ class SessionLogWriterTest {
         assertFalse(base.contains(big))
         val part2 = LogFiles.readAll(store, "xtmapper-2026-10-22-part002.log")
         assertTrue(part2.contains(big))
+        // The budget itself: neither part may cross the rotation threshold.
+        assertTrue(base.toByteArray().size <= 4096)
+        assertTrue(part2.toByteArray().size <= 4096)
+    }
+
+    @Test
+    fun midnightContinuationMarkerCountsTowardThePartBudget() {
+        val clock = MutableClock.at("2026-10-22T21:00:00Z") // 23:00 Berlin, day 22
+        val store = newStore()
+        val config = LoggingConfig(queueCapacity = 8, maxFileBytes = 4096)
+
+        // Session B starts before midnight; its rollover is the subject below.
+        val b = makeWriter(store, clock, "sess-b", config = config)
+        b.writeSessionStartMarker()
+
+        // Another session writes into day 23 first, leaving its base part with content.
+        clock.advanceSeconds(2 * 3600) // 01:00 Berlin, day 23
+        val a = makeWriter(store, clock, "sess-a", config = config)
+        a.writeSessionStartMarker()
+        a.write(listOf(record(clock, "x".repeat(400))))
+        a.close()
+
+        val day23 = "xtmapper-2026-10-23.log"
+        val baseSize = LogFiles.readAll(store, day23).toByteArray().size
+
+        // Size the record to exactly fill the remaining budget: beside the base
+        // content alone it fits, but preceded by the SESSION CONTINUED marker it
+        // cannot — so marker and record must rotate into the next part together.
+        val probe = (RecordFormatter.format(record(clock, ""), zone) + "\n").toByteArray().size
+        val big = "x".repeat(4096 - baseSize - probe)
+        b.write(listOf(record(clock, big)))
+        b.close()
+
+        assertEquals(
+            "record must rotate instead of overflowing the base part",
+            baseSize, LogFiles.readAll(store, day23).toByteArray().size,
+        )
+        val part2 = LogFiles.readAll(store, "xtmapper-2026-10-23-part002.log")
+        assertTrue(part2.contains(big))
+        assertTrue(part2.toByteArray().size <= 4096)
+        assertEquals(1, Regex("SESSION CONTINUED").findAll(part2).count())
+    }
+
+    @Test
+    fun recordLargerThanTheWholeBudgetIsWrittenWholeIntoAFreshPart() {
+        // Policy: records are never split or dropped for size alone; a single
+        // record exceeding the budget overshoots its fresh part by design.
+        val clock = MutableClock.at("2026-10-22T09:00:00Z")
+        val store = newStore()
+        val config = LoggingConfig(queueCapacity = 8, maxFileBytes = 512)
+        val writer = makeWriter(store, clock, "sess-oversized", config = config)
+        writer.writeSessionStartMarker()
+
+        val big = "x".repeat(700) // record ~801 bytes, larger than the whole budget
+        writer.write(listOf(record(clock, big)))
+        writer.close()
+
+        val part2 = LogFiles.readAll(store, "xtmapper-2026-10-22-part002.log")
+        assertTrue("oversized record is written, not dropped", part2.contains(big))
+        assertTrue("oversized record overshoots the budget by policy",
+            part2.toByteArray().size > 512)
     }
 
     @Test
