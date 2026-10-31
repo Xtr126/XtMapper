@@ -7,17 +7,18 @@ package xtr.keymapper.server
  * outstanding shutdown commitment that blocks replacement admission; each later claim
  * (including repeated ones from the same owner after the slot is empty) stacks its own
  * commitment instead of overwriting the first one, so admission stays closed until every
- * requesting shutdown has released. Generic over the owner key and value so JVM tests
- * exercise the arbitration without Android Binder instances.
+ * requesting shutdown has released. Deferred admission callbacks are delivered only after
+ * the final commitment is released, and always outside the monitor.
  */
 internal class ClientServiceSlot<K : Any, V : Any> {
     private var entry: Pair<K, V>? = null
     private var pendingReleases: Int = 0
+    private val admissionWaiters = mutableListOf<() -> Unit>()
 
     /**
      * Installs [value] owned by [owner], replacing any previous session. Returns false
      * while a shutdown commitment is outstanding: the session is not admitted and the
-     * caller completes its request without installing it.
+     * caller must defer the request.
      */
     fun install(owner: K, value: V): Boolean = synchronized(this) {
         if (pendingReleases != 0) return false
@@ -52,8 +53,35 @@ internal class ClientServiceSlot<K : Any, V : Any> {
         current?.second to false
     }
 
-    /** Releases one outstanding shutdown commitment; admission reopens when none remain. */
+    /**
+     * Registers [onAvailable] when shutdown commitments are active. Returns true when the
+     * callback was deferred; returns false when admission is already open and the caller
+     * should continue or schedule its retry. The state check and callback registration are
+     * atomic with [releaseTerminal], so a release cannot be missed between those steps.
+     */
+    fun deferUntilAvailable(onAvailable: () -> Unit): Boolean = synchronized(this) {
+        if (pendingReleases == 0) {
+            false
+        } else {
+            admissionWaiters.add(onAvailable)
+            true
+        }
+    }
+
+    /**
+     * Releases one shutdown commitment. When the final commitment is released, waiting
+     * startup callbacks are copied under the monitor and invoked afterward, avoiding
+     * callback execution while holding the slot lock.
+     */
     fun releaseTerminal() {
-        synchronized(this) { if (pendingReleases > 0) pendingReleases -= 1 }
+        val callbacks = synchronized(this) {
+            if (pendingReleases > 0) pendingReleases -= 1
+            if (pendingReleases == 0) {
+                admissionWaiters.toList().also { admissionWaiters.clear() }
+            } else {
+                emptyList()
+            }
+        }
+        callbacks.forEach { it() }
     }
 }
