@@ -12,7 +12,7 @@ import xtr.keymapper.log.XtLogger
 
 class ActivityObserverService(observer: ActivityObserver) : Runnable {
     var mCallback: ActivityObserver? = observer
-    private val am: IActivityManager = IActivityManager.Stub.asInterface(ServiceManager.getService(ACTIVITY_SERVICE))
+    private val am: IActivityManager = IActivityManager.Stub.asInterface(ServiceManager.getService(ACTIVITY_SERVICE))!!
     private var mHandlerThread: HandlerThread? = null
     private var mHandler: Handler? = null
 
