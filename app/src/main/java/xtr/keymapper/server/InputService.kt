@@ -26,7 +26,8 @@ class InputService @Throws(RemoteException::class) constructor(
     screenHeight: Int,
     private val cursorView: View?,
     private val isWaylandClient: Boolean,
-    displayId: Int
+    displayId: Int,
+    private val touchpadSessions: TouchpadSessionRegistry<InputService>
 ) : IInputInterface {
 
     override var keymapConfig: KeymapConfig = keymapConfig
@@ -60,13 +61,8 @@ class InputService @Throws(RemoteException::class) constructor(
         }
         if (currentPointerMode != KeymapConfig.POINTER_SYSTEM) showCursor()
 
-        // Disable touchpad features for wayland client
         this.touchpadInputMode = if (isWaylandClient) KeymapConfig.TOUCHPAD_DISABLED else keymapConfig.touchpadInputMode
 
-        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DIRECT)
-            startTouchpadDirect()
-        else if (touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
-            startTouchpadRelative()
 
         mouseEventHandler = MouseEventHandler(this)
         mouseEventHandler.init(screenWidth, screenHeight)
@@ -132,8 +128,6 @@ class InputService @Throws(RemoteException::class) constructor(
                     return
                 }
                 isKeyboardBlocked = true
-                // A new grab starts locked natively. Honour the existing pause state
-                // immediately so a grab started while paused does not swallow all typing.
                 setKeyboardGrabLock(!stopEvents)
             } catch (e: Exception) {
                 XtLogger.error(RemoteService.TAG, "Failed to start keyboard grab", e)
@@ -212,8 +206,6 @@ class InputService @Throws(RemoteException::class) constructor(
         try {
             this.keymapProfile = mCallback.requestKeymapProfile()
             this.keymapConfig = mCallback.requestKeymapConfig()
-            // Release existing pointers with their original offsets before clearing
-            // jitter state; then apply the newly loaded settings to future strokes.
             this.stop()
             touchJitter.updateConfig(this.keymapConfig.touchJitter, this.keymapConfig.touchJitterSpread)
             touchJitter.clear()
@@ -247,21 +239,36 @@ class InputService @Throws(RemoteException::class) constructor(
         mouseEventHandler.stop()
     }
 
+    fun startTouchpad() {
+        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DISABLED) return
+        when (val outcome = touchpadSessions.start(this, touchpadInputMode)) {
+            TouchpadStartOutcome.Started -> Unit
+            TouchpadStartOutcome.NoDevice ->
+                XtLogger.info(RemoteService.TAG, "No touchpad devices found; continuing without touchpad")
+            TouchpadStartOutcome.StartIncomplete ->
+                XtLogger.error(RemoteService.TAG, "Touchpad start incomplete; native cleanup retained for retry")
+            TouchpadStartOutcome.Blocked ->
+                XtLogger.error(RemoteService.TAG, "Touchpad start blocked: another session owns the worker or cleanup is pending")
+            is TouchpadStartOutcome.Failed ->
+                XtLogger.error(
+                    RemoteService.TAG,
+                    "Touchpad start failed (mode=$touchpadInputMode code=${outcome.code}); continuing without touchpad"
+                )
+        }
+    }
+
     fun stopTouchpad() {
-        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DIRECT)
-            stopTouchpadDirect()
-        else if (touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
-            stopTouchpadRelative()
+        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DISABLED) return
+        when (touchpadSessions.stop(this)) {
+            TouchpadStopOutcome.STOPPED -> Unit
+            TouchpadStopOutcome.INCOMPLETE ->
+                XtLogger.error(RemoteService.TAG, "Touchpad stop incomplete; native cleanup retained for retry")
+        }
     }
 
     @Volatile
     private var mouseReaderOpened = false
 
-    /**
-     * The native reader uses one shared context. Stop a previous reader before replacing it.
-     * A returned file descriptor >= 0 means the native open and reader-thread creation succeeded;
-     * descriptor 0 is valid and must not be treated as failure.
-     */
     @Synchronized
     fun openMouseDevice(device: String): Int {
         if (mouseReaderOpened) {
@@ -301,12 +308,23 @@ class InputService @Throws(RemoteException::class) constructor(
     external fun setKeyboardGrabLock(lock: Boolean)
     external fun grabKeyboardDevice(device: String): Boolean
 
-    // touchpad_direct.cpp
-    private external fun startTouchpadDirect()
-    external fun stopTouchpadDirect()
+    private external fun startTouchpadDirect(): Int
+    private external fun stopTouchpadDirect(): Int
 
-    private external fun startTouchpadRelative()
-    external fun stopTouchpadRelative()
+    private external fun startTouchpadRelative(): Int
+    private external fun stopTouchpadRelative(): Int
+
+    internal fun startNativeTouchpad(mode: Int): Int = when (mode) {
+        KeymapConfig.TOUCHPAD_DIRECT -> startTouchpadDirect()
+        KeymapConfig.TOUCHPAD_RELATIVE -> startTouchpadRelative()
+        else -> error("unsupported touchpad mode $mode")
+    }
+
+    internal fun stopNativeTouchpad(): Int = when (touchpadInputMode) {
+        KeymapConfig.TOUCHPAD_DIRECT -> stopTouchpadDirect()
+        KeymapConfig.TOUCHPAD_RELATIVE -> stopTouchpadRelative()
+        else -> TouchpadStopCodes.ALREADY_STOPPED
+    }
 
     /*
      * Called from native code to send mouse event to client

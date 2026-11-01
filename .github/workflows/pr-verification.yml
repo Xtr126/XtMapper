@@ -26,6 +26,14 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      # Host-side C++ lifecycle/scanner tests compile the production sources directly.
+      # Runs before the JDK/SDK setup so a native regression fails fast.
+      - name: Run host C++ tests
+        run: |
+          cmake -S app/src/hostTest/cpp -B build/hostTest -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build/hostTest --parallel
+          ctest --test-dir build/hostTest --output-on-failure
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:

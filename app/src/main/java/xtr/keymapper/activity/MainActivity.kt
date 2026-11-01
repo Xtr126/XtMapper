@@ -95,11 +95,8 @@ class MainActivity : AppCompatActivity() {
             RemoteServiceHelper.setShellServiceBinder(it)
         }
 
-        // shortcut: shell markers only suppress crash replay; auto-start requires shared launch identity.
         val launchData = intent.getStringExtra("data")
 
-        // Consume the crash payload before showing UI: an Activity recreation must not
-        // replay it from the original Intent. DialogFragment restores an undismissed dialog.
         intent.removeExtra("data")
         if (savedInstanceState == null && launchData != null && launchData != SHELL_INIT) {
             showServerCrashDialog(launchData)
@@ -129,7 +126,6 @@ class MainActivity : AppCompatActivity() {
     private fun handleActivationFlow(keymapConfig: KeymapConfig) {
         if (!RemoteServiceHelper.useShizuku) {
             Shell.getShell {
-                // Ask user to enable shizuku if shizuku app detected
                 if (Shizuku.pingBinder() || packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api") != null) {
                     showAlertDialog(R.string.detected_shizuku, R.string.use_shizuku_for_activation, { _, _ ->
                         RemoteServiceHelper.useShizuku = true
@@ -229,7 +225,6 @@ class MainActivity : AppCompatActivity() {
             selectedProfileName = profiles.getLastSelectedProfile()
         }
         TouchPointer.currentSelectedProfile = selectedProfileName
-        // Start service with selected profile if display on top permission is granted
         if (Settings.canDrawOverlays(this)) {
             profiles.setLastSelectedProfile(selectedProfileName)
             val intent = Intent(this, TouchPointer::class.java).apply {
@@ -250,9 +245,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         composeServiceActive = TouchPointer.isRunning
-        // The user may have granted All-files access in Settings just now;
-        // finish the pending file-logging setup without a restart. Guarded:
-        // the check is an API 30 call (crashes every resume below Android 11).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
             android.os.Environment.isExternalStorageManager()
         ) XtLogger.enableFileLogging()
@@ -360,8 +352,6 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread { builder.create().show() }
     }
 
-    // ============ COMPOSE UI BRIDGE ============
-
     fun isComposeServiceActive(): Boolean = composeServiceActive || TouchPointer.isRunning
 
     fun selectedProfileNameForCompose(): String? = selectedProfileName
@@ -400,8 +390,6 @@ class MainActivity : AppCompatActivity() {
             else if (!Shizuku.pingBinder()) alertShizukuNotRunning()
             else if (Shizuku.checkSelfPermission() != PERMISSION_GRANTED) alertShizukuNotAuthorized()
         }
-        // A previous Binder can remain alive briefly even when the pointer UI is stopped.
-        // Always require the next connection to use the newly selected backend.
         RemoteServiceHelper.prepareForBackendSwitch()
         if (isComposeServiceActive()) {
             stopPointer()
@@ -598,11 +586,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Defines callbacks for service binding, passed to bindService() */
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             isServiceBound = true
-            // We've bound to Service, cast the IBinder and get TouchPointer instance
             val binder = service as TouchPointer.TouchPointerBinder
             pointerOverlay = binder.service.apply {
                 activityCallback = this@MainActivity.mCallback
@@ -616,10 +602,6 @@ class MainActivity : AppCompatActivity() {
 }
 
 
-/**
- * Lifecycle-aware crash relay dialog. The consumed Intent extra is not needed after this
- * fragment is shown, and FragmentManager restores the dialog across configuration changes.
- */
 class ServerCrashDialogFragment : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val message = requireArguments().getString(ARG_MESSAGE).orEmpty()

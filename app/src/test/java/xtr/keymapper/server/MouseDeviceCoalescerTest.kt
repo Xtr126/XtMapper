@@ -7,7 +7,6 @@ import org.junit.Test
 
 class MouseDeviceCoalescerTest {
 
-    /** Fake Handler: posts are queued and only drained when the test explicitly runs them. */
     private class FakeDelayedHandler {
         val queue = ArrayDeque<() -> Unit>()
         var postCount = 0
@@ -79,8 +78,6 @@ class MouseDeviceCoalescerTest {
             schedule = { task -> handler.post(task) },
             process = { device ->
                 processed.add(device)
-                // Simulate a newer device arriving from the reader thread while this one is
-                // being opened on the Handler.
                 if (device == "A") coalescerRef!!.request("B")
             },
         )
@@ -91,8 +88,6 @@ class MouseDeviceCoalescerTest {
 
         // B was requested while A was being processed; a continuation picks it up (not lost).
         assertEquals(listOf("A", "B"), processed)
-        // One continuation for the pending selection: at most one task is ever queued, one
-        // per pending selection rather than one per raw event.
         assertEquals(2, handler.postCount)
     }
 
@@ -105,9 +100,6 @@ class MouseDeviceCoalescerTest {
             schedule = { task -> handler.post(task) },
             process = { device ->
                 processed.add(device)
-                // Endless stream: every processed selection yields another, as a moving
-                // mouse's EV_REL lines do while another device interleaves. A drain that
-                // looped inline would never return to the Handler.
                 coalescerRef!!.request("next-$device")
             },
         )
@@ -120,8 +112,6 @@ class MouseDeviceCoalescerTest {
 
         handler.runNext() // first drain: processes A, queues one continuation
         assertFalse(sentinelRan)
-        // Exactly one continuation behind the sentinel: the stream is endless, so per-event
-        // posting or an inline loop would have grown the queue / never returned here.
         assertEquals(2, handler.queue.size)
 
         handler.runNext() // sentinel runs next, while the discovery stream is still live

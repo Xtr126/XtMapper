@@ -9,90 +9,27 @@ import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
 
-/** Name and size of one existing log file as seen by the store. */
 data class LogFileInfo(
     val name: String,
-    /** Size in bytes; -1 when unknown (never used for rotation thresholds). */
     val sizeBytes: Long,
 )
 
-/**
- * Storage abstraction behind the persistent log sink.
- *
- * [FileSystemLogStore] — direct `java.io.File` access, used by every execution
- * mode:
- *
- * - the standalone `app_process` server processes (shell uid 2000 / root uid 0,
- *   see `RemoteServiceShell`, `RootRemoteService`) which have no Android
- *   `Context` or `ContentResolver`;
- * - the ordinary application process, which may write to shared storage only
- *   after the user enabled All-files access (`MANAGE_EXTERNAL_STORAGE`);
- * - unit tests, which pass temporary directories.
- *
- * All implementations append additively: an existing daily file is never
- * truncated or overwritten when a new session starts.
- */
 interface LogStore {
-    /**
-     * Snapshot of the log files visible to this store (display names of the log
-     * directory). Empty when nothing exists yet or enumeration is unavailable.
-     */
     fun listFiles(): List<LogFileInfo>
 
-    /**
-     * Opens an append-mode writer for [name], creating the file if missing.
-     * Throws if safe coordination or storage is unavailable. The persistent
-     * sink treats this as unavailability and keeps Logcat functional.
-     */
     fun openAppendWriter(name: String): LogFileWriter
 
-    /**
-     * Reads trailing bytes of [name] (oldest first) up to [maxLines] lines and a
-     * store-defined byte budget (see [FileSystemLogStore.READ_TAIL_MAX_BYTES]);
-     * used for previous-session detection. Returns an empty list when the file
-     * is missing or unreadable; failures are swallowed.
-     */
     fun readTail(name: String, maxLines: Int): List<String>
 
-    /**
-     * Deletes [name] when this store owns deletion rights. Returns false (never
-     * throws) when unavailable or when the file is still actively locked by a
-     * writer, in this or any other process (see [FileSystemLogStore] for the
-     * verified/degraded platform behavior). Callers only pass
-     * `LogFileNames.parse`-matched names, so deletion cannot escape the
-     * canonical log directory.
-     */
     fun delete(name: String): Boolean
 }
 
-/**
- * One open append-mode log file handle.
- *
- * [write] receives a complete, self-contained UTF-8 chunk (one or more finished
- * lines ending in `\n`) so each call maps to one append on the underlying
- * storage; the caller rotates by closing and opening the next part file.
- */
 interface LogFileWriter : Closeable {
-    /** Bytes accounted for this handle since creation (rotation threshold use). */
     val writtenBytes: Long
 
-    /** Appends one pre-encoded UTF-8 chunk ending with `\n`. */
     fun write(chunk: ByteArray)
 }
 
-/**
- * All roles use the same lock order: JVM monitor, permanent directory lock,
- * then target-file lock. The directory lock covers open-to-lock and unlink;
- * only the target lock remains held while writing (including idle writers).
- * Any lock failure refuses the writer or skips deletion; there is no unlocked
- * fallback. Closing or process death releases the OS locks.
- *
- * POSIX close(any descriptor) releases that process's locks on the same inode.
- * The JVM-wide registry therefore rejects duplicate opens BEFORE opening, skips
- * local active files in delete, and reuses their descriptor for tail reads.
- * This is a cooperative protocol: external unlink/rename of logs or the lock
- * file, and older processes not using this protocol, are not coordinated.
- */
 class FileSystemLogStore internal constructor(
     private val rootDirectory: File,
     private val tryFileLock: (FileChannel) -> FileLock?,
@@ -234,13 +171,8 @@ class FileSystemLogStore internal constructor(
         private val lifecycleMonitor = Any()
         private val activeFiles = HashMap<File, RandomAccessFile>()
 
-        /** Trailing-read budget ≥ one rotation part at default configuration. */
         const val READ_TAIL_MAX_BYTES = 4L * 1024 * 1024
 
-        /**
-         * Decodes the trailing [maxLines] lines of a UTF-8 byte buffer,
-         * tolerating a truncated leading line (skipped without failing).
-         */
         fun decodeTrailingLines(bytes: ByteArray, maxLines: Int): List<String> {
             val text = String(bytes, Charsets.UTF_8)
             val lines = text.split('\n')

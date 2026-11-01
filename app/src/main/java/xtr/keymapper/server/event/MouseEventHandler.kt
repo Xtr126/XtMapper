@@ -83,7 +83,6 @@ class MouseEventHandler(private val mInput: IInputInterface) {
             if (mouseAimActive) {
                 stopMouseWalk()
                 instance.resetPointer()
-                // Notifying user that shooting mode was activated
                 try {
                     mInput.callback.alertMouseAimActivated()
                 } catch (e: RemoteException) {

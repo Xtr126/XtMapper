@@ -72,7 +72,6 @@ class SwipeKey private constructor(
             fun onViewClicked(view: MovableFloatingActionKey)
         }
 
-        /* New swipe key */
         constructor(rootView: ViewGroup, callback: SwipeKeyCallback) {
             val context = rootView.context
             button1 = MovableFloatingActionKey(context, true, rootView)
@@ -105,7 +104,6 @@ class SwipeKey private constructor(
             button2.setOnClickListener { callback.onViewClicked(button2) }
         }
 
-        /* From saved profile */
         constructor(
             rootView: ViewGroup,
             swipeKey: xtr.keymapper.keymap.element.SwipeKey,

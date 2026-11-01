@@ -9,12 +9,6 @@ import java.io.IOException
 import java.io.InputStreamReader
 
 object Utils {
-    /**
-     * @param key input key code KEY_X
-     * @return the index of X in the logical alphabet 0-9A-Z, or -1.
-     * Multi-character suffixes are valid only as contiguous sequences
-     * (e.g. "9A", "AB", "ABC" -> start index; "AZ", "A1" -> -1).
-     */
     @JvmStatic
     fun obtainIndex(key: String): Int {
         val suffix = key.substring(4)

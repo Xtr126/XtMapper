@@ -132,7 +132,6 @@ private fun KeymapperApp(
         ) {
             Column(modifier = Modifier.widthIn(max = 500.dp).fillMaxHeight()) {
 
-                // Full-width top bar
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = KeymapperTheme.Background,
@@ -145,7 +144,6 @@ private fun KeymapperApp(
                     )
                 }
 
-                // Constrained main content
                 Box(
                     modifier = Modifier.fillMaxWidth()
                         .widthIn(max = 100.dp)
@@ -460,7 +458,6 @@ private fun GlobalStatusToggle(
                 modifier = Modifier.padding(vertical = 12.dp)
             )
 
-            // Mode toggle: Root vs Shizuku (ADB)
             Row(
                 modifier = Modifier
                     .padding(vertical = 4.dp)

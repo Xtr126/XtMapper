@@ -62,15 +62,12 @@ class TouchJitterTest {
         val targetX = 400f
         val targetY = 300f
 
-        // DOWN
         val downPt = touchJitter.wrapCoordinates(targetX, targetY, InputService.DOWN, pointerId)
 
-        // MOVE 1
         val movePt1 = touchJitter.wrapCoordinates(targetX, targetY, InputService.MOVE, pointerId)
         assertEquals(downPt.x, movePt1.x, 0.0001f)
         assertEquals(downPt.y, movePt1.y, 0.0001f)
 
-        // MOVE 2 with different target (e.g. dragging)
         val movedTargetX = 450f
         val movedTargetY = 350f
         val movePt2 = touchJitter.wrapCoordinates(movedTargetX, movedTargetY, InputService.MOVE, pointerId)
@@ -79,7 +76,6 @@ class TouchJitterTest {
         assertEquals(movedTargetX + downOffsetX, movePt2.x, 0.0001f)
         assertEquals(movedTargetY + downOffsetY, movePt2.y, 0.0001f)
 
-        // UP
         val upPt = touchJitter.wrapCoordinates(targetX, targetY, InputService.UP, pointerId)
         assertEquals(downPt.x, upPt.x, 0.0001f)
         assertEquals(downPt.y, upPt.y, 0.0001f)
@@ -144,7 +140,6 @@ class TouchJitterTest {
         touchJitter.spread = 30f
         touchJitter.setScreenDimensions(1920, 1080)
 
-        // Near (0, 0)
         for (i in 0 until 50) {
             val pt = touchJitter.wrapCoordinates(0f, 0f, InputService.DOWN, i)
             assertTrue("X should not be negative: ${pt.x}", pt.x >= 0f)
@@ -152,7 +147,6 @@ class TouchJitterTest {
             touchJitter.wrapCoordinates(0f, 0f, InputService.UP, i)
         }
 
-        // Near (1920, 1080)
         for (i in 0 until 50) {
             val pt = touchJitter.wrapCoordinates(1920f, 1080f, InputService.DOWN, i)
             assertTrue("X must stay below the exclusive screen width: ${pt.x}", pt.x < 1920f)

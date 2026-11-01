@@ -45,10 +45,8 @@ import androidx.compose.ui.unit.dp
 import xtr.keymapper.R
 import xtr.keymapper.activity.ui.theme.XtMapperTheme
 
-// Constants for the result
 private const val EXTRA_SELECTED_DISPLAY_ID = "selected_display_id"
 
-// 1. Activity to select display
 class DisplaySelectorActivity : ComponentActivity() {
     private var selectedDisplayId by mutableIntStateOf(-1)
 
@@ -182,7 +180,7 @@ fun DisplayCard(
         ) {
             RadioButton(
                 selected = isSelected,
-                onClick = null, // null because we handle selection with the card click
+                onClick = null, // selection handled by the card click
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
@@ -198,7 +196,6 @@ fun DisplayCard(
     }
 }
 
-// 2. Helper to launch the activity from another activity
 class DisplaySelector(var activity: AppCompatActivity) {
     private lateinit var launcher: ActivityResultLauncher<Intent>
     private lateinit var intent: Intent

@@ -3,8 +3,6 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.compose'
 }
 
-// Create a variable called keystorePropertiesFile, and initialize it to your
-// keystore.properties file, in the rootProject folder.
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 
 // Initialize a new Properties() object called keystoreProperties.
@@ -71,8 +69,6 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
-        // XtLogger's core (Clock/Instant/ZoneId/DateTimeFormatter, java.time in
-        // general) needs core-library desugaring to exist on API 25–27 runtimes.
         coreLibraryDesugaringEnabled true
     }
     buildFeatures {

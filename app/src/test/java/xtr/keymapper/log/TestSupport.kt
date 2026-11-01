@@ -4,7 +4,6 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
 
-/** Deterministic clock for tests. */
 class MutableClock(
     initial: Instant,
     val zoneId: ZoneId = ZoneId.of("Europe/Berlin"),
@@ -31,7 +30,6 @@ class MutableClock(
     }
 }
 
-/** Collects diagnostics and builds test pipelines bound to a temp store. */
 class TestPipelineFactory(
     private val store: LogStore,
     private val clock: MutableClock,
@@ -67,7 +65,6 @@ class TestPipelineFactory(
     }
 }
 
-/** Little helpers for reading the produced text. */
 object LogFiles {
     fun readAll(store: LogStore, name: String): String =
         store.readTail(name, Int.MAX_VALUE).joinToString("\n")

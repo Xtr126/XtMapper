@@ -18,21 +18,18 @@ fun onKeyboardKeyPress(view: View, keyCode: Int, event: KeyEvent): Boolean {
 }
 
 fun onMouseClick(v: View?, event: MotionEvent?): Boolean {
-    // Handle middle mouse button
     if (event!!.isFromSource(InputDevice.SOURCE_CLASS_POINTER)) {
         if (event.getAction() == MotionEvent.ACTION_BUTTON_PRESS) {
             if (event.getActionButton() == MotionEvent.BUTTON_TERTIARY) {
-                // Middle mouse button was pressed
                 (v as EditText).setText("MMB")
                 return true
             } else if (event.getActionButton() == MotionEvent.BUTTON_SECONDARY) {
-                // Right mouse button was pressed
                 (v as EditText).setText("RMB")
                 return true
             }
         }
     }
-    return false // Event not handled
+    return false
 }
 
 fun keyCodePrefix(e: EditText?): String {

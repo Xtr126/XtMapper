@@ -77,7 +77,6 @@ class ShiftKey : KeymapProfileElement {
     companion object {
         const val TAG = "SHIFT_KEY"
 
-        /** Validates token count and values before the constructor performs numeric conversion. */
         internal fun isValidData(data: Array<String>): Boolean {
             if (data.size !in 7..8 || data[1].isBlank() || data[4].isBlank()) return false
             for (index in intArrayOf(2, 3, 5, 6)) {

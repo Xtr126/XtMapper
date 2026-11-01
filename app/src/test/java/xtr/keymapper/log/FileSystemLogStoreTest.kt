@@ -19,8 +19,6 @@ class FileSystemLogStoreTest {
         val dir = tmp.newFolder()
         val store = FileSystemLogStore(dir)
         store.openAppendWriter("xtmapper-2026-10-22.log").use { it.write("one\n".toByteArray()) }
-        // A second open with a brand new handle appends after the first (this is
-        // the property that makes same-day multi-session files safe).
         store.openAppendWriter("xtmapper-2026-10-22.log").use { it.write("two\n".toByteArray()) }
         val content = java.io.File(dir, "xtmapper-2026-10-22.log").readText()
         assertEquals("one\ntwo\n", content)
@@ -78,8 +76,6 @@ class FileSystemLogStoreTest {
 
     @Test
     fun `retention deletes unlocked files even when far beyond the grace day`() {
-        // The lock gate must never overprotect: inactive old files that no
-        // writer holds are exactly the candidates retention is for.
         val store = FileSystemLogStore(tmp.newFolder())
         store.openAppendWriter("xtmapper-2026-10-01.log").close()
         assertTrue(store.delete("xtmapper-2026-10-01.log"))
@@ -88,8 +84,6 @@ class FileSystemLogStoreTest {
 
     @Test
     fun `delete skips a file held by an active writer, even far beyond the grace day`() {
-        // Local active handles are skipped before opening a second descriptor;
-        // cross-process OS locking is covered by LogStoreCoordinationTest.
         val store = FileSystemLogStore(tmp.newFolder())
         val foreign = store.openAppendWriter("xtmapper-shizuku-2026-10-01.log")
         foreign.write("still writing\n".toByteArray())
@@ -106,12 +100,6 @@ class FileSystemLogStoreTest {
 
     @Test
     fun `a contended open is refused instead of returning an un-protected writer`() {
-        // Original defect sequence: writer B opened the same file WITHOUT a
-        // lock and kept writing; once writer A closed, retention could acquire
-        // the lock and unlink the pathname while B was still writing,
-        // stranding B's records inside a still-open but unlinked inode
-        // (POSIX unlink(2): the name is deleted while open fds stay alive).
-        // The JVM-wide registry now refuses this before opening a descriptor.
         val dir = tmp.newFolder()
         val store = FileSystemLogStore(dir)
         val name = "xtmapper-2026-10-22.log"
@@ -135,8 +123,6 @@ class FileSystemLogStoreTest {
 
     @Test
     fun `a raw same-JVM overlapping lock refuses an open`() {
-        // This covers the platform overlap exception, not the open/delete race.
-        // Deterministic production lifecycle races live in LogStoreCoordinationTest.
         val dir = tmp.newFolder()
         val store = FileSystemLogStore(dir)
         val name = "xtmapper-2026-10-21.log"

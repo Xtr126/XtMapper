@@ -55,7 +55,6 @@ class ProfileSelector {
                 appIcon = pm.getApplicationIcon(packageName)
             } catch (ignored: PackageManager.NameNotFoundException) {
             }
-            // Show dialog to select profile
             val builder = MaterialAlertDialogBuilder(context)
             builder.setTitle(context.getString(R.string.dialog_alert_select_profile) + appName)
                 .setItems(items) { _, which ->
@@ -109,8 +108,6 @@ class ProfileSelector {
                 .setPositiveButton(R.string.ok) { _, _ ->
                     val selectedProfile = binding.editText.text.toString()
                     val keymapProfiles = KeymapProfiles(context)
-                    // A rejected name (reserved metadata key) must not emit a
-                    // successful selection to the listeners below.
                     if (keymapProfiles.saveProfile(selectedProfile, arrayListOf(), packageName, enabled, 0, 0)) {
                         listener.onProfileSelected(selectedProfile)
                     }
@@ -119,7 +116,6 @@ class ProfileSelector {
             showDialog(builder)
         }
 
-        // Show a dialog with a list of apps and callback when an app is selected
         fun showAppSelectionDialog(context: Context, listener: OnAppSelectedListener) {
             val builder = MaterialAlertDialogBuilder(context)
             ProfilesApps.asyncLoadAppsAndThen(context, builder) { p, adapter, loadingDialog ->

@@ -116,7 +116,6 @@ class ShiftKeyHandler(key: ShiftKey) {
         }
     }
 
-    /** Releases a held pointer and invalidates queued transition steps during handler shutdown. */
     @Synchronized
     fun stop(service: IInputInterface, pidProvider: PidProvider) {
         transitionGeneration++

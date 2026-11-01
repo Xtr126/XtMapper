@@ -2,7 +2,6 @@ package xtr.keymapper.log
 
 import java.io.File
 
-/** Interactive child used by JVM regressions and the on-device app_process probe. */
 object LogStoreProcessProbe {
     @JvmStatic
     fun main(args: Array<String>) {

@@ -299,8 +299,6 @@ class KeymapProfilesTest {
         keymapProfiles.saveProfile("SafeProfile", arrayListOf(), "com.safe", true, 0, 0)
         keymapProfiles.setLastSelectedProfile("SafeProfile")
 
-        // The real creation flow with the dialog gate (ProfileSelector): the
-        // selection callback only fires when saveProfile accepted the name.
         val reserved = KeymapProfiles.KEY_LAST_SELECTED_PROFILE
         var callbackName: String? = null
         if (keymapProfiles.saveProfile(reserved, arrayListOf(), "com.reserved", true, 0, 0)) {
@@ -314,9 +312,6 @@ class KeymapProfilesTest {
         assertTrue(prefs.all[reserved] !is Set<*>)
         assertEquals("SafeProfile", prefs.getString(reserved, null))
 
-        // The subsequent activation read (TouchPointer.getProfile /
-        // MainActivity.onProfileSelected) sees the unchanged selection,
-        // without ClassCastException.
         val target = keymapProfiles.getLastSelectedProfile()
         assertEquals("SafeProfile", target)
         assertEquals("com.safe", keymapProfiles.getProfile(target, false).packageName)
@@ -334,8 +329,6 @@ class KeymapProfilesTest {
         val (context, prefs) = createFakeContextAndPrefs(initialData)
         val keymapProfiles = KeymapProfiles(context, prefs)
 
-        // The gate at MainActivity.renameProfileFromCompose: the in-memory
-        // selection only follows a rename that was actually performed.
         val reserved = KeymapProfiles.KEY_LAST_SELECTED_PROFILE
         var inMemorySelection = "OldName"
         val renameAccepted = keymapProfiles.renameProfile("OldName", reserved)

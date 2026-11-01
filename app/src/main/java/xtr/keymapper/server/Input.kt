@@ -154,12 +154,10 @@ class Input(private val displayId: Int) {
          */
         if (source == InputDevice.SOURCE_MOUSE) {
             if (action == MotionEvent.ACTION_DOWN) {
-                // First button pressed: ACTION_DOWN
                 val downEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_DOWN, pointerCount, pointerProperties,
                     pointerCoords, 0, buttons, 1f, 1f, 0, 0, source, 0)
                 injectInputEvent(downEvent)
 
-                // Any button pressed: ACTION_BUTTON_PRESS
                 val pressEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_PRESS, pointerCount, pointerProperties,
                     pointerCoords, 0, buttons, 1f, 1f, 0, 0, source, 0)
                 try {
@@ -174,7 +172,6 @@ class Input(private val displayId: Int) {
             }
 
             if (action == MotionEvent.ACTION_UP) {
-                // Any button released: ACTION_BUTTON_RELEASE
                 val releaseEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_RELEASE, pointerCount, pointerProperties,
                     pointerCoords, 0, buttons, 1f, 1f, 0, 0, source, 0)
                 try {
@@ -185,7 +182,6 @@ class Input(private val displayId: Int) {
 
                 injectInputEvent(releaseEvent)
 
-                // Last button released: ACTION_UP
                 val upEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_UP, pointerCount, pointerProperties,
                     pointerCoords, 0, buttons, 1f, 1f, 0, 0, source, 0)
                 injectInputEvent(upEvent)
@@ -224,7 +220,6 @@ class Input(private val displayId: Int) {
 
     private fun injectInputEvent(motionEvent: MotionEvent) {
         try {
-            // Set display ID for the motion event using reflection
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && setDisplayIdMethod != null) {
                 setDisplayIdMethod!!.invoke(motionEvent, displayId)
             }

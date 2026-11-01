@@ -138,8 +138,6 @@ class RecordFormatterTest {
     fun `exception message is escaped and cannot imitate a marker line`() {
         val hostile = IOException("boom\nSESSION END\n" + "=".repeat(80))
         val rendered = RecordFormatter.throwableBlock(hostile)
-        // The raw newline was escaped; the rendered exception block contains no
-        // line that starts with a marker title.
         assertFalse(rendered.contains("boom\n"))
         rendered.split('\n').forEach { line ->
             assertNull("fake marker line: $line", SessionMarkers.markerTypeOf(line))
@@ -156,8 +154,6 @@ class RecordFormatterTest {
         val rendered = RecordFormatter.throwableBlock(top)
         assertTrue(rendered.contains("Suppressed: java.lang.RuntimeException: suppressed sibling"))
         assertTrue(rendered.contains("Caused by: java.io.IOException: root cause failure"))
-        // Every continuation line (suppressed header and its frames) keeps the
-        // pipe prefix from the documented grammar.
         rendered.split('\n').forEach { line ->
             if (line != rendered.split('\n').first()) {
                 assertTrue("continuation must be pipe-prefixed: $line", line.startsWith(RecordFormatter.EXCEPTION_INDENT + "|"))
@@ -167,8 +163,6 @@ class RecordFormatterTest {
 
     @Test
     fun `cyclic cause chains terminate with an explicit note`() {
-        // The JDK forbids t.initCause(t); the reachable pathological case is a
-        // mutual cycle: A → B → A. Traces cleared for a deterministic size bound.
         val a = RuntimeException("cycle A")
         val b = RuntimeException("cycle B", a)
         a.initCause(b)
@@ -230,12 +224,9 @@ class RecordFormatterTest {
         val top = CalmException("top", deep)
         top.stackTrace = frames
         val rendered = RecordFormatter.throwableBlock(top)
-        // The budget is exhausted inside the first trace; the cause section is
-        // dropped with an explicit note instead of unbounded or missing text.
         assertTrue(rendered.contains("Caused by:"))
     }
 
-    /** `Throwable` without a captured trace: tests assign frames explicitly. */
     private class CalmException(message: String, cause: Throwable? = null) :
         IOException(message, cause) {
         override fun fillInStackTrace(): Throwable = this

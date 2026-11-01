@@ -89,9 +89,6 @@ class SessionLogWriterTest {
         val writer = makeWriter(store, clock, "sess-budget", config = config)
         writer.writeSessionStartMarker()
 
-        // The record no longer fits beside the START marker in part 1, but fits
-        // whole in a fresh part: it must rotate instead of crossing the budget,
-        // so readTail can still see the START marker inside the part.
         val big = "x".repeat(3900)
         writer.write(listOf(record(clock, big)))
         writer.close()
@@ -125,9 +122,6 @@ class SessionLogWriterTest {
         val day23 = "xtmapper-2026-10-23.log"
         val baseSize = LogFiles.readAll(store, day23).toByteArray().size
 
-        // Size the record to exactly fill the remaining budget: beside the base
-        // content alone it fits, but preceded by the SESSION CONTINUED marker it
-        // cannot — so marker and record must rotate into the next part together.
         val probe = (RecordFormatter.format(record(clock, ""), zone) + "\n").toByteArray().size
         val big = "x".repeat(4096 - baseSize - probe)
         b.write(listOf(record(clock, big)))
@@ -145,8 +139,6 @@ class SessionLogWriterTest {
 
     @Test
     fun recordLargerThanTheWholeBudgetIsWrittenWholeIntoAFreshPart() {
-        // Policy: records are never split or dropped for size alone; a single
-        // record exceeding the budget overshoots its fresh part by design.
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
         val store = newStore()
         val config = LoggingConfig(queueCapacity = 8, maxFileBytes = 512)
@@ -187,16 +179,12 @@ class SessionLogWriterTest {
         assertTrue(text.contains("message=\"first event\""))
         assertTrue(text.contains("message=\"second event\""))
         assertTrue(text.contains("Status: Clean shutdown"))
-        // Correct chronological placement: the second session's marker appears
-        // after the first session's END marker.
         assertTrue(text.indexOf("Session ID: sess-first") < text.indexOf("Status: Clean shutdown"))
         assertTrue(text.indexOf("Status: Clean shutdown") < text.indexOf("Session ID: sess-second"))
     }
 
     @Test
     fun `midnight rollover keeps the session id and writes one continuation marker`() {
-        // Berlin is UTC+02:00 in late October 2026, so the session starts at
-        // 21:58Z (23:58 local) on the 22nd and rolls over before midnight local.
         val clock = MutableClock.at("2026-10-22T21:58:00Z")
         val store = newStore()
         val writer = makeWriter(store, clock, "sess-rollover")
@@ -393,8 +381,6 @@ class SessionLogWriterTest {
         writer.write(listOf(record(clock, "past-limit")))
         assertTrue("records dropped by day limit", writer.recordsDroppedByDayLimit.get() > 0)
 
-        // Closing the session must neither throw nor claim a sink failure, and
-        // the END marker lands in the day's final part without a ninth part.
         writer.endSession(clock.instant(), 1_500_000_000L, "Service stopped", 0)
         writer.endSession(clock.instant(), 9_000_000_000L, "ignored second call", 0) // idempotent
         assertFalse("healthy sink must not be flagged unavailable", writer.unavailable)
@@ -410,11 +396,6 @@ class SessionLogWriterTest {
 
     @Test
     fun `a contended file sink fails once and gracefully without touching the held file`() {
-        // Production consumption of the refusal protocol: when the session's
-        // daily file already has an active handler (same or other process),
-        // the session writer goes down cleanly (one bounded report, no lines
-        // written into a file it does not protect) instead of appending
-        // un-locked into it.
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
         val store = newStore()
 
@@ -438,8 +419,6 @@ class SessionLogWriterTest {
 
     @Test
     fun `closing after midnight without post-midnight events emits CONTINUED then END`() {
-        // Session starts 23:58 local on the 22nd and stays idle across midnight;
-        // the process closes cleanly the next morning.
         val clock = MutableClock.at("2026-10-22T21:58:00Z")
         val store = newStore()
         val writer = makeWriter(store, clock, "sess-midnight-close")

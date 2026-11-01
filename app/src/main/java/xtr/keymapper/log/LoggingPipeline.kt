@@ -5,25 +5,15 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Execution mode of the owning process. The role owns BOTH the persistent
- * file name suffix (`xtmapper[-<tag>]-<date>.log`) and the day-file separation
- * between concurrent processes.
- */
 enum class Role(val tag: String) {
-    /** Main application process (activities, foreground service, IME, system-app server). */
     APP("app"),
 
-    /** Standalone `app_process` server launched by `xtMapper.sh` (adb/waydroid uid 2000, or root). */
     SHELL("shell"),
 
-    /** Shizuku user-service process (`RemoteService` bound through Shizuku, uid 2000). */
     SHIZUKU("shizuku"),
 
-    /** libsu `:root` remote service process (uid 0). */
     ROOT("root");
 
-    /** File-name tag: the app-role file has no suffix (canonical default). */
     val fileNameTag: String? get() = when (this) {
         APP -> null
         SHELL -> "shell"
@@ -36,22 +26,6 @@ enum class Role(val tag: String) {
     }
 }
 
-/**
- * Owns one process's logging pipeline: bounded queue, single writer thread,
- * persistent daily-file sink, Logcat sink, session lifecycle, retention.
- *
- * Responsibilities are split along [LoggingQueue] (bounded storage), [SessionLogWriter]
- * (day/rotation/session markers over a [LogStore]), [AsyncLogWorker] (single owning
- * thread) and this facade (levels, thresholds, session state, retention).
- *
- * Design guarantees:
- * - Logcat and file sinks are independent: Logcat happens synchronously at call
- *   time, before the queue; a dead file sink cannot affect Logcat output.
- * - Storage/queue failures are reported once per session through [onFailure]
- *   (an independent channel, production wires it to Logcat) and counters; they
- *   can never re-enter the file sink (no recursive logging loops).
- * - All public methods are safe to call from any thread.
- */
 class LoggingPipeline(
     val role: Role,
     sessionId: String,
@@ -63,11 +37,8 @@ class LoggingPipeline(
     private val durationNanos: () -> Long,
     private val pid: Int? = null,
     private val metadata: SessionMetadata = SessionMetadata(),
-    /** Renders a record to Logcat immediately; injected so tests can capture. */
     private val logcat: (LogRecord) -> Unit = {},
-    /** Independent diagnostics channel for sink/queue failures. */
     private val onFailure: (String) -> Unit = {},
-    /** Retention is applied by this pipeline on start when true (app role only). */
     private val pruneRetention: Boolean = false,
 ) {
     val sessionId: String = sessionId
@@ -76,18 +47,14 @@ class LoggingPipeline(
     private val writer: SessionLogWriter
     private val started = AtomicBoolean(false)
 
-    /** Counted once per session; more drops are visible via [droppedCount]. */
     private val dropReported = AtomicBoolean(false)
 
-    /** Records currently visible as dropped by the queue (test/inspection use). */
     val droppedCount: Int get() = queue.droppedCount.get()
 
-    /** Current queue backlog (test/inspection use). */
     val pendingRecords: Int get() = queue.size
 
     val fileSinkAvailable: Boolean get() = !writer.unavailable
 
-    /** Test/inspection seam: the session writer owning the file lifecycle. */
     internal val sessionWriter: SessionLogWriter get() = writer
 
     private val worker: AsyncLogWorker
@@ -105,10 +72,6 @@ class LoggingPipeline(
         worker = AsyncLogWorker(queue, config, writer, roleTag = role.tag)
     }
 
-    /**
-     * Completes session start: previous-session detection, START marker, worker,
-     * and (optionally) retention. Safe to call once; later calls are no-ops.
-     */
     fun start() {
         if (!started.compareAndSet(false, true)) return
         if (pruneRetention) runRetention()
@@ -118,8 +81,6 @@ class LoggingPipeline(
             SessionState.DISPOSITION_UNKNOWN
         }
         writer.configure(previous, metadata, startTime)
-        // The marker is written on the caller thread BEFORE the worker runs, so
-        // the marker is never interleaved behind other records.
         writer.writeSessionStartMarker()
         worker.start()
         infoInternal(
@@ -127,8 +88,6 @@ class LoggingPipeline(
             "logging started role=${role.tag} session=$sessionId previous=$previous fileSink=$fileSinkAvailable",
         )
     }
-
-    // ------------------------------------------------------------- public API
 
     fun verbose(tag: String, message: String) = log(Level.VERBOSE, tag, message)
     fun debug(tag: String, message: String) = log(Level.DEBUG, tag, message)
@@ -140,18 +99,11 @@ class LoggingPipeline(
     fun fatal(tag: String, message: String, throwable: Throwable? = null) =
         log(Level.FATAL, tag, message, throwable)
 
-    /**
-     * Central log entry point: builds one [LogRecord] at call time (clock and
-     * thread stampings happen on the caller thread), renders to Logcat when the
-     * Logcat threshold allows, then enqueues for the persistent sink.
-     */
     fun log(level: Level, tag: String, message: String, throwable: Throwable? = null) {
         val record = LogRecord.now(
             clock.instant(), level, tag, message, throwable, pid, role.tag, sessionId,
         )
         if (level.enabled(config.minLevelLogcat)) {
-            // Logcat first: independent of the file sink's health, cheap, and the
-            // caller thread keeps its exception stack live for app-side tools.
             try {
                 logcat(record)
             } catch (e: Exception) {
@@ -164,37 +116,16 @@ class LoggingPipeline(
         }
     }
 
-    /**
-     * Bounded flush of everything already offered; never blocks indefinitely.
-     * Returns false when the bound passed (partial result is fine by contract).
-     */
     fun flush(timeoutMillis: Long = config.flushTimeoutMillis): Boolean =
         worker.flush(timeoutMillis)
 
-    /**
-     * Writes the session END marker (clean closes only), stops the worker and
-     * releases the file sink. Idempotent. [status] appears in the marker's
-     * `Status:` line after the queue is drained (no batch/end race). The
-     * marker's `Dropped:` count is the session's total loss: queue-overflow
-     * drops plus records the sink could not persist (day-limit and failed
-     * batches), so a reader never mistakes lost records for persisted ones.
-     */
     fun close(status: String = SessionStates.STATUS_CLEAN) {
-        // One caller owns shutdown; concurrent close() calls must not schedule
-        // multiple deferred END-marker writers for the same session.
         if (!started.compareAndSet(true, false)) return
         if (worker.stopDraining(config.flushTimeoutMillis)) {
-            // The consumer is fully stopped, so the caller can safely write END
-            // and release the sink without racing an in-flight writer operation.
             finishClose(status)
             return
         }
 
-        // The worker did not stop within its bound. Do not call endSession() or
-        // closeFile() here: either can wait on the same file lock as the stuck
-        // worker and turn this bounded shutdown into an unbounded one. Records
-        // left in the queue will never be consumed after running=false, so close
-        // them out as dropped before scheduling deferred cleanup.
         val abandoned = queue.drainUpTo(Int.MAX_VALUE)?.size ?: 0
         queue.markFailed(abandoned)
         reportFirstDropIfNeeded()
@@ -215,8 +146,6 @@ class LoggingPipeline(
                 if (interrupted) Thread.currentThread().interrupt()
             }
         }, "xtlogger-session-close-" + role.tag).apply {
-            // If the file sink never recovers, this helper must not keep the app
-            // process alive; the missing END marker correctly records an unclean session.
             isDaemon = true
             start()
         }
@@ -233,9 +162,6 @@ class LoggingPipeline(
         }
     }
 
-    /**
-     * Internal lifecycle `info` line; never user content.
-     */
     private fun infoInternal(tag: String, message: String) {
         val record = LogRecord(
             time = clock.instant(),
@@ -263,7 +189,6 @@ class LoggingPipeline(
         }
     }
 
-    /** Starts retention pruning (app-role pipelines only; fail-soft). */
     private fun runRetention() {
         try {
             applyRetention(writer.store, config, clock.instant().atZone(zone).toLocalDate())
@@ -272,7 +197,6 @@ class LoggingPipeline(
         }
     }
 
-    /** Exposed for tests through the store argument. */
     fun applyRetention(
         store: LogStore,
         config: LoggingConfig,
@@ -291,9 +215,6 @@ class LoggingPipeline(
             today = today,
             activeNames = activeNames,
         )
-        // store.delete fails closed on still-locked files (active writers in
-        // any process) and on files gone in the meantime; one bounded report
-        // per scan keeps the budget overshoot visible without per-file spam.
         val skipped = deletions.count { !store.delete(it) }
         if (skipped > 0) {
             onFailure(
@@ -303,14 +224,12 @@ class LoggingPipeline(
         }
     }
 
-    /** Names this process currently holds open; protected from pruning. */
     private fun activeWriterNames(): Set<String> {
         val current = writer.currentlyOpenName()
         return if (current == null) emptySet() else setOf(current)
     }
 }
 
-/** Status strings used in `SESSION END` blocks. */
 object SessionStates {
     const val STATUS_CLEAN = "Clean shutdown"
     const val STATUS_CRASH_RELAYED = "Crash relayed; process exiting"

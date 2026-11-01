@@ -6,13 +6,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Launch-context classification contract, exercised independently of Cage:
- * these tests apply the signal directly, exactly as RemoteServiceShell (args)
- * and MainActivity (intent extra) do. They prove XtMapper's reaction to a
- * supplied signal — they do NOT prove that Cage ever supplies one (the
- * Cage-side launch change is not implemented yet).
- */
 class EnvironmentTest {
 
     @After
@@ -45,8 +38,6 @@ class EnvironmentTest {
 
     @Test
     fun `signal applied after an android default reclassifies`() {
-        // Mirrors the cold start order: App.onCreate sees the default, then
-        // MainActivity applies the delivered extra.
         assertEquals("android", Environment.name)
         Environment.launchSignal = true
         assertEquals("waydroid", Environment.name)
