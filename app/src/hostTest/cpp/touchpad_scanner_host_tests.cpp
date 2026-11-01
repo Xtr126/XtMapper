@@ -134,7 +134,7 @@ int fakeIoctl(int fd, unsigned long request, void* arg) {
 
 EvdevOps makeOps() {
 	EvdevOps ops;
-	ops.list = []() { return g_paths; };
+	ops.list = []() { return DeviceList {true, g_paths}; };
 	ops.open = fakeOpen;
 	ops.ioctl = fakeIoctl;
 	ops.close = fakeClose;
@@ -300,6 +300,48 @@ void testPointerFallbackRequiresBtnMouse() {
 	CHECK(contains(g_closed, 100));
 }
 
+// Enumeration failure (opendir on /dev/input) is not confirmed absence:
+// it must surface as SCAN_ERROR, not a clean NO_DEVICE.
+void testEnumerationFailureIsScanError() {
+	reset();
+	auto ops = makeOps();
+	ops.list = []() { return DeviceList {false, {}}; };
+	auto r = scanTouchpadDevices(ops);
+	CHECK(r.status == TouchpadScanStatus::SCAN_ERROR);
+	CHECK(r.fds.empty());
+}
+
+// A real touchpad that exists but cannot be grabbed (EBUSY/EACCES) is not
+// confirmed absence either: ACCESS_ERROR, never a clean NO_DEVICE.
+void testAllGrabsFailIsNotNoDevice() {
+	reset();
+	Profile busy = touchpadProfile("Busy Touchpad");
+	busy.grabOk = false;
+	addDevice("/dev/input/event0", busy);
+	auto r = scanTouchpadDevices(makeOps());
+	CHECK(r.status == TouchpadScanStatus::ACCESS_ERROR);
+	CHECK(r.fds.empty());
+	CHECK_EQ(g_closed.size(), 1);
+}
+
+// A required capability query that fails means "unknown", not "absent":
+// the scanner could not inspect the device, so NO_DEVICE would be a lie.
+void testRequiredQueryFailureIsNotNoDevice() {
+	reset();
+	addDevice("/dev/input/event0", touchpadProfile("Query Broken"));
+	auto ops = makeOps();
+	ops.ioctl = [](int fd, unsigned long request, void* arg) -> int {
+		const unsigned nr = _IOC_NR(request);
+		// Every EVIOCGBIT(EV_*) query fails; name/grab ioctls behave normally.
+		if (nr >= 0x20 && nr <= 0x20 + EV_MAX) return -1;
+		return fakeIoctl(fd, request, arg);
+	};
+	auto r = scanTouchpadDevices(ops);
+	CHECK(r.status == TouchpadScanStatus::SCAN_ERROR);
+	CHECK(r.fds.empty());
+	CHECK_EQ(g_closed.size(), 1);
+}
+
 } // namespace
 
 int main() {
@@ -313,6 +355,9 @@ int main() {
 	testGrabFailureSkipsDevice();
 	testNonTouchDevicesAreNoDevice();
 	testPointerFallbackRequiresBtnMouse();
+	testEnumerationFailureIsScanError();
+	testAllGrabsFailIsNotNoDevice();
+	testRequiredQueryFailureIsNotNoDevice();
 
 	if (g_failures != 0) {
 		std::fprintf(stderr, "%d check(s) FAILED\n", g_failures);

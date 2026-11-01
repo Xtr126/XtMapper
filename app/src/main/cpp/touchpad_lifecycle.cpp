@@ -10,6 +10,9 @@
 namespace touchpad {
 namespace {
 constexpr int kPollBackstopMs = 1000;
+// Upper bound of events drained per wake: keeps stop() latency bounded even
+// when a device emits at line rate (the cancel check is the primary exit).
+constexpr int kMaxDrainPerWake = 128;
 constexpr auto kStopWait = std::chrono::milliseconds(5000);
 } // namespace
 
@@ -40,6 +43,17 @@ void TouchpadLifecycle::notifyExited() {
 }
 
 void TouchpadLifecycle::workerMain() {
+	try {
+		workerLoop();
+	} catch (...) {
+		// Containment: an escaping exception (allocation failure inside the
+		// loop) would std::terminate the server process; the exit signal
+		// below is what stop() and the destructor reap on every path.
+	}
+	notifyExited();
+}
+
+void TouchpadLifecycle::workerLoop() {
 	struct Dev {
 		int evdev;
 		int virt;
@@ -91,9 +105,17 @@ void TouchpadLifecycle::workerMain() {
 
 			if (re & POLLIN) {
 				input_event in {};
-				ssize_t r;
-				while ((r = ::read(dev->evdev, &in, sizeof(in))) ==
-				       static_cast<ssize_t>(sizeof(in))) {
+				ssize_t r = 0;
+				bool readFailed = false;
+				// Cancel-aware and bounded: a continuously readable fd must
+				// not starve the wake/poll cycle that stop() and the
+				// destructor rely on.
+				for (int budget = kMaxDrainPerWake; budget-- > 0 && !shouldStop();) {
+					r = ::read(dev->evdev, &in, sizeof(in));
+					if (r != static_cast<ssize_t>(sizeof(in))) {
+						readFailed = true;
+						break;
+					}
 					std::vector<input_event> outs;
 					try {
 						outs = ops_.transform(static_cast<int>(index), in);
@@ -105,8 +127,11 @@ void TouchpadLifecycle::workerMain() {
 				}
 				// EOF or a hard read error (ENODEV, ...): the device is gone.
 				// Do not close here; the record stays for stop() to release.
-				if (r == 0) dev->dead = true;
-				else if (errno != EAGAIN && errno != EINTR) dev->dead = true;
+				// Budget/cancel exits skip this: their read did not fail.
+				if (readFailed) {
+					if (r == 0) dev->dead = true;
+					else if (errno != EAGAIN && errno != EINTR) dev->dead = true;
+				}
 			}
 			if (re & (POLLERR | POLLHUP | POLLNVAL)) dev->dead = true;
 		}
@@ -118,7 +143,6 @@ void TouchpadLifecycle::workerMain() {
 
 		rebuild();
 	}
-	notifyExited();
 }
 
 bool TouchpadLifecycle::cleanupResources() {
@@ -214,21 +238,34 @@ StartOutcome TouchpadLifecycle::start(void* owner, LifecycleOps ops) {
 	std::unique_lock<std::mutex> lk(mu_);
 	// BUSY covers STARTING, RUNNING and unresolved STOPPING (cleanup pending):
 	// no new run while cleanup is unresolved.
-	if (state_ != State::STOPPED) return StartOutcome::BUSY;
+	if (state_ != State::STOPPED) {
+		// The token was never adopted; start() owns every token it is handed.
+		// Released outside mu_: the op may call back into the JVM.
+		lk.unlock();
+		if (owner != nullptr) ownerOps_.release(owner);
+		return StartOutcome::BUSY;
+	}
 	state_ = State::STARTING;
 	owner_ = owner;
 	cancel_ = false;
-	ops_ = std::move(ops);
-	if (!ops_.spawnWorker)
-		ops_.spawnWorker = [this](std::function<void()> main) {
-			workerThread_ = std::thread(std::move(main));
-			return true;
-		};
-	if (!ops_.joinWorker)
-		ops_.joinWorker = [this]() {
-			if (workerThread_.joinable()) workerThread_.join();
-			return true;
-		};
+	try {
+		ops_ = std::move(ops);
+		if (!ops_.spawnWorker)
+			ops_.spawnWorker = [this](std::function<void()> main) {
+				workerThread_ = std::thread(std::move(main));
+				return true;
+			};
+		if (!ops_.joinWorker)
+			ops_.joinWorker = [this]() {
+				if (workerThread_.joinable()) workerThread_.join();
+				return true;
+			};
+	} catch (...) {
+		// std::function assignment can allocate; nothing is acquired yet,
+		// so a throw must not wedge the state in STARTING.
+		lk.unlock();
+		return abortStart(StartOutcome::INTERNAL_ERROR);
+	}
 	lk.unlock();
 
 	TouchpadScanResult scan;
@@ -248,7 +285,21 @@ StartOutcome TouchpadLifecycle::start(void* owner, LifecycleOps ops) {
 	// Adopt every scan fd up front so a mid-way createVirtual failure still
 	// releases the evdev fds that were never paired with a virtual device.
 	std::vector<DeviceRecord> acquired;
-	acquired.reserve(scan.fds.size());
+	try {
+		// reserve is the only throwing operation: DeviceRecord is trivially
+		// copyable, so the push_back loop below cannot throw.
+		acquired.reserve(scan.fds.size());
+	} catch (...) {
+		// Still the sole owner of the scan fds: release them, then drop the
+		// adopted token instead of wedging STARTING forever.
+		for (int fd : scan.fds) {
+			try {
+				ops_.releaseDevice(fd);
+			} catch (...) {
+			}
+		}
+		return abortStart(StartOutcome::INTERNAL_ERROR);
+	}
 	for (int fd : scan.fds) acquired.push_back(DeviceRecord {fd, -1});
 	int wake = -1;
 	bool failed = false;
@@ -307,6 +358,12 @@ StopOutcome TouchpadLifecycle::stopInternal(void* owner, bool enforceOwner) {
 	for (;;) {
 		if (state_ == State::STOPPED) return StopOutcome::ALREADY_STOPPED;
 
+		// Identity before any side effect, re-checked after every wait via
+		// `continue`: a stale owner must never cancel or wait on a run (or a
+		// startup) that belongs to someone else. owner_ and state_ always
+		// transition together under mu_, so this check is exact.
+		if (enforceOwner && !ownerOps_.same(owner_, owner)) return StopOutcome::NOT_OWNER;
+
 		if (state_ == State::STARTING) {
 			cancel_ = true;
 			if (!cv_.wait_for(lk, kStopWait, [this]() { return state_ != State::STARTING; }))
@@ -324,8 +381,6 @@ StopOutcome TouchpadLifecycle::stopInternal(void* owner, bool enforceOwner) {
 		}
 		break; // unresolved cleanup from a previous INCOMPLETE: retry below
 	}
-
-	if (enforceOwner && !ownerOps_.same(owner_, owner)) return StopOutcome::NOT_OWNER;
 
 	state_ = State::STOPPING;
 	cleanupActive_ = true;

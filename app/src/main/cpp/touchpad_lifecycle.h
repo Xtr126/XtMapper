@@ -50,6 +50,13 @@ struct TouchpadScanResult {
 
 // Injectable seam. Every entry has a failure-injection host test except
 // transform (covered by module-level host tests) and the default spawn/join.
+//
+// Contract for the bool-returning release ops: false must mean "the
+// resource is still ours; retrying this exact handle is safe". Ops that
+// pass a descriptor to close(2) must return true unconditionally — Linux
+// may have freed it even when close reports an error, and a retry would
+// then target an unrelated descriptor that reused the number (see the
+// EINTR note in close(2)).
 struct LifecycleOps {
 	// Scanner contract: on non-OK status the scanner has closed everything it
 	// opened; on OK the lifecycle owns every returned fd.
@@ -93,6 +100,8 @@ private:
 
 	bool shouldStop();
 	void notifyExited();
+	// Contains the poll/drain loop; exceptions are absorbed by workerMain.
+	void workerLoop();
 	void workerMain();
 	// Mutex NOT held. Joins, then destroys virtuals, releases devices, closes
 	// wake; retains any record whose release failed. Returns true when empty.

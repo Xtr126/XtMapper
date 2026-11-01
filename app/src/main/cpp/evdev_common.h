@@ -24,10 +24,19 @@ struct TouchpadScanResult {
 	std::vector<int> fds;
 };
 
+// Enumeration result: ok=false means the input directory could not be listed
+// at all (a genuinely empty directory is ok=true with zero paths).
+struct DeviceList {
+	bool ok = true;
+	std::vector<std::string> paths;
+};
+
+DeviceList EnumerateInputDevices();
+
 // Injectable seam for host tests; production callers use the defaults
 // (readdir, open(O_RDWR|O_NONBLOCK|O_CLOEXEC), ioctl, close).
 struct EvdevOps {
-	std::function<std::vector<std::string>()> list;
+	std::function<DeviceList()> list;
 	std::function<int(const std::string& path)> open;
 	std::function<int(int fd, unsigned long request, void* arg)> ioctl;
 	std::function<int(int fd)> close;

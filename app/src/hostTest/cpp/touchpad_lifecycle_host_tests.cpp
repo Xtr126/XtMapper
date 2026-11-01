@@ -6,8 +6,10 @@
 // deliberately uncovered here; it needs a device/CheckJNI run.
 #include "touchpad_lifecycle.h"
 
+#include <atomic>
 #include <cerrno>
 #include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
@@ -221,12 +223,61 @@ void testBusyAndStaleStop() {
 	TouchpadLifecycle life(ownerOps());
 	CHECK(life.start(f.owner, f.ops) == StartOutcome::STARTED);
 
+	// A rejected start releases its never-adopted token exactly once.
 	CHECK(life.start(f.otherOwner, f.ops) == StartOutcome::BUSY);
-	CHECK(life.start(f.owner, f.ops) == StartOutcome::BUSY);
+	CHECK_EQ(releasesOf(f.otherOwner), 1);
+	CHECK(life.start(f.otherOwner, f.ops) == StartOutcome::BUSY);
+	CHECK_EQ(releasesOf(f.otherOwner), 2);
+	CHECK_EQ(releasesOf(f.owner), 0); // the active owner's token is untouched
 
 	// A stale stop from another owner can never stop this run.
 	CHECK(life.stop(f.otherOwner) == StopOutcome::NOT_OWNER);
+	CHECK_EQ(releasesOf(f.otherOwner), 2); // stop releases no non-owner token
+
+	CHECK(life.stop(f.owner) == StopOutcome::COMPLETED);
+	CHECK_EQ(releasesOf(f.owner), 1);
+}
+
+// Regression (CodeRabbit #1): while a start is still in progress the state
+// is STARTING and owner_ already belongs to the starter; a stale stop must
+// fail the identity check before it can set cancel_ and abort that startup.
+void testStaleStopDuringStartupReturnsNotOwner() {
+	Fixture f;
+	std::mutex m;
+	std::condition_variable cv;
+	bool inScan = false;
+	bool releaseScan = false;
+	f.ops.scan = [&]() {
+		{
+			std::lock_guard<std::mutex> lk(m);
+			inScan = true;
+		}
+		cv.notify_all();
+		{
+			std::unique_lock<std::mutex> lk(m);
+			cv.wait(lk, [&] { return releaseScan; });
+		}
+		return TouchpadScanResult {ScanStatus::OK, {f.device.r}};
+	};
+	TouchpadLifecycle life(ownerOps());
+	std::atomic<StartOutcome> startOutcome {StartOutcome::BUSY};
+	std::thread starter([&] { startOutcome = life.start(f.owner, f.ops); });
+	{
+		std::unique_lock<std::mutex> lk(m);
+		cv.wait(lk, [&] { return inScan; });
+	}
+
+	// Deterministic interleave: the start is provably inside scan (STARTING).
+	CHECK(life.stop(f.otherOwner) == StopOutcome::NOT_OWNER);
 	CHECK_EQ(releasesOf(f.otherOwner), 0);
+
+	{
+		std::lock_guard<std::mutex> lk(m);
+		releaseScan = true;
+	}
+	cv.notify_all();
+	starter.join();
+	CHECK(startOutcome == StartOutcome::STARTED); // startup survived the stale stop
 
 	CHECK(life.stop(f.owner) == StopOutcome::COMPLETED);
 	CHECK_EQ(releasesOf(f.owner), 1);
@@ -257,6 +308,21 @@ void testWakeCreateFailure() {
 void testSpawnFailure() {
 	Fixture f;
 	f.ops.spawnWorker = [](std::function<void()>) { return false; };
+	TouchpadLifecycle life(ownerOps());
+	CHECK(life.start(f.owner, f.ops) == StartOutcome::THREAD_FAILED);
+	CHECK(isClosed(f.virt.w));
+	CHECK(isClosed(f.device.r));
+	CHECK(isClosed(f.wake));
+	CHECK_EQ(releasesOf(f.owner), 1);
+}
+
+// Pins the exception containment around the spawn call: a throwing
+// spawnWorker maps to THREAD_FAILED, never an exception through start().
+void testSpawnThrowIsThreadFailed() {
+	Fixture f;
+	f.ops.spawnWorker = [](std::function<void()>) -> bool {
+		throw std::runtime_error("spawn exploded");
+	};
 	TouchpadLifecycle life(ownerOps());
 	CHECK(life.start(f.owner, f.ops) == StartOutcome::THREAD_FAILED);
 	CHECK(isClosed(f.virt.w));
@@ -310,6 +376,7 @@ void testStartIncompleteRetainsOwnerAndBlocksNewRuns() {
 
 	// No new run while cleanup is unresolved — even from another owner.
 	CHECK(life.start(f.otherOwner, f.ops) == StartOutcome::BUSY);
+	CHECK_EQ(releasesOf(f.otherOwner), 1); // rejected token released, owner retained
 
 	failRelease = false;
 	CHECK(life.stop(f.owner) == StopOutcome::COMPLETED);
@@ -437,6 +504,38 @@ void testTransformExceptionDoesNotKillWorker() {
 	CHECK_EQ(releasesOf(f.owner), 1);
 }
 
+// Regression (CodeRabbit #2): /dev/zero never returns EOF or EAGAIN, so a
+// read drain without a cancel check spins forever and stop() can never reap
+// the worker. Transform returns nothing so the worker never blocks on the
+// virtual pipe; only the cancel check can end this drain.
+void testContinuousInputDoesNotStarveStop() {
+	Fixture f;
+	int zeroFd = ::open("/dev/zero", O_RDONLY | O_CLOEXEC);
+	CHECK(zeroFd >= 0);
+	f.ops.scan = [=]() {
+		return TouchpadScanResult {ScanStatus::OK, {zeroFd}};
+	};
+	// The call count proves the worker is inside the drain before stop() runs;
+	// without it stop() can win the scheduling race at the loop-top check.
+	std::atomic<int> drained {0};
+	f.ops.transform = [&](int, const input_event&) {
+		drained.fetch_add(1, std::memory_order_relaxed);
+		return std::vector<input_event> {};
+	};
+	TouchpadLifecycle life(ownerOps());
+	CHECK(life.start(f.owner, f.ops) == StartOutcome::STARTED);
+	// Bounded condition wait (no sleep): a worker that never drains fails the
+	// check below instead of hanging the suite.
+	auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+	while (drained.load(std::memory_order_relaxed) == 0 &&
+	       std::chrono::steady_clock::now() < deadline)
+		std::this_thread::yield();
+	CHECK(drained.load(std::memory_order_relaxed) > 0);
+	CHECK(life.stop(f.owner) == StopOutcome::COMPLETED);
+	CHECK_EQ(releasesOf(f.owner), 1);
+	CHECK(isClosed(zeroFd));
+}
+
 // ---- destructor ----------------------------------------------------------
 
 void testDestructorJoinsRunningWorker() {
@@ -459,9 +558,11 @@ int main() {
 	testScanThrows();
 	testStartStopHappyPath();
 	testBusyAndStaleStop();
+	testStaleStopDuringStartupReturnsNotOwner();
 	testVirtualCreateFailure();
 	testWakeCreateFailure();
 	testSpawnFailure();
+	testSpawnThrowIsThreadFailed();
 	testFdZeroIsAValidDeviceFd();
 	testStartIncompleteRetainsOwnerAndBlocksNewRuns();
 	testJoinFailureRetainsThenRetryCompletes();
@@ -471,6 +572,7 @@ int main() {
 	testStopWakeWriteFailureStillCompletes();
 	testWorkerExitsWhenAllDevicesDie();
 	testTransformExceptionDoesNotKillWorker();
+	testContinuousInputDoesNotStarveStop();
 	testDestructorJoinsRunningWorker();
 
 	if (g_failures != 0) {
