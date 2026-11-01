@@ -26,7 +26,8 @@ class InputService @Throws(RemoteException::class) constructor(
     screenHeight: Int,
     private val cursorView: View?,
     private val isWaylandClient: Boolean,
-    displayId: Int
+    displayId: Int,
+    private val touchpadSessions: TouchpadSessionRegistry<InputService>
 ) : IInputInterface {
 
     override var keymapConfig: KeymapConfig = keymapConfig
@@ -63,10 +64,9 @@ class InputService @Throws(RemoteException::class) constructor(
         // Disable touchpad features for wayland client
         this.touchpadInputMode = if (isWaylandClient) KeymapConfig.TOUCHPAD_DISABLED else keymapConfig.touchpadInputMode
 
-        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DIRECT)
-            startTouchpadDirect()
-        else if (touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
-            startTouchpadRelative()
+        // Touchpad start is intentionally not a constructor side effect: RemoteService
+        // starts it after construction, before slot admission, so a failure can roll
+        // back this exact instance without leaving an orphaned native worker.
 
         mouseEventHandler = MouseEventHandler(this)
         mouseEventHandler.init(screenWidth, screenHeight)
@@ -247,11 +247,37 @@ class InputService @Throws(RemoteException::class) constructor(
         mouseEventHandler.stop()
     }
 
+    /**
+     * Starts the native touchpad worker for this session through the registry.
+     * Every non-start outcome continues the service without a touchpad, with a
+     * distinct log; cleanup obligations (START_INCOMPLETE) stay recorded in the
+     * registry and block conflicting starts until retried.
+     */
+    fun startTouchpad() {
+        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DISABLED) return
+        when (val outcome = touchpadSessions.start(this, touchpadInputMode)) {
+            TouchpadStartOutcome.Started -> Unit
+            TouchpadStartOutcome.NoDevice ->
+                XtLogger.info(RemoteService.TAG, "No touchpad devices found; continuing without touchpad")
+            TouchpadStartOutcome.StartIncomplete ->
+                XtLogger.error(RemoteService.TAG, "Touchpad start incomplete; native cleanup retained for retry")
+            TouchpadStartOutcome.Blocked ->
+                XtLogger.error(RemoteService.TAG, "Touchpad start blocked: another session owns the worker or cleanup is pending")
+            is TouchpadStartOutcome.Failed ->
+                XtLogger.error(
+                    RemoteService.TAG,
+                    "Touchpad start failed (mode=$touchpadInputMode code=${outcome.code}); continuing without touchpad"
+                )
+        }
+    }
+
     fun stopTouchpad() {
-        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DIRECT)
-            stopTouchpadDirect()
-        else if (touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
-            stopTouchpadRelative()
+        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DISABLED) return
+        when (touchpadSessions.stop(this)) {
+            TouchpadStopOutcome.STOPPED -> Unit
+            TouchpadStopOutcome.INCOMPLETE ->
+                XtLogger.error(RemoteService.TAG, "Touchpad stop incomplete; native cleanup retained for retry")
+        }
     }
 
     @Volatile
@@ -301,12 +327,27 @@ class InputService @Throws(RemoteException::class) constructor(
     external fun setKeyboardGrabLock(lock: Boolean)
     external fun grabKeyboardDevice(device: String): Boolean
 
-    // touchpad_direct.cpp
-    private external fun startTouchpadDirect()
-    external fun stopTouchpadDirect()
+    // touchpad_direct.cpp / touchpad_relative.cpp. JNI symbols keep their
+    // historical names; the Kotlin signatures return the native outcome codes.
+    private external fun startTouchpadDirect(): Int
+    private external fun stopTouchpadDirect(): Int
 
-    private external fun startTouchpadRelative()
-    external fun stopTouchpadRelative()
+    private external fun startTouchpadRelative(): Int
+    private external fun stopTouchpadRelative(): Int
+
+    /** Called by [RealTouchpadNativeOps]; mode comes from the registry decision. */
+    internal fun startNativeTouchpad(mode: Int): Int = when (mode) {
+        KeymapConfig.TOUCHPAD_DIRECT -> startTouchpadDirect()
+        KeymapConfig.TOUCHPAD_RELATIVE -> startTouchpadRelative()
+        else -> error("unsupported touchpad mode $mode")
+    }
+
+    /** Called by [RealTouchpadNativeOps]; identity-matched in the native core. */
+    internal fun stopNativeTouchpad(): Int = when (touchpadInputMode) {
+        KeymapConfig.TOUCHPAD_DIRECT -> stopTouchpadDirect()
+        KeymapConfig.TOUCHPAD_RELATIVE -> stopTouchpadRelative()
+        else -> TouchpadStopCodes.ALREADY_STOPPED
+    }
 
     /*
      * Called from native code to send mouse event to client

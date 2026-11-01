@@ -30,14 +30,16 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE    := touchpad_direct
-LOCAL_SRC_FILES := $(JNI_SRC_PATH)/touchpad_direct.cpp
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/touchpad_direct.cpp $(JNI_SRC_PATH)/touchpad_lifecycle.cpp
+LOCAL_CPPFLAGS  := -fexceptions
 LOCAL_SHARED_LIBRARIES := evdev_common
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 
 LOCAL_MODULE    := touchpad_relative
-LOCAL_SRC_FILES := $(JNI_SRC_PATH)/touchpad_relative.cpp
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/touchpad_relative.cpp $(JNI_SRC_PATH)/touchpad_lifecycle.cpp
+LOCAL_CPPFLAGS  := -fexceptions
 LOCAL_SHARED_LIBRARIES := evdev_common
 include $(BUILD_SHARED_LIBRARY)
 

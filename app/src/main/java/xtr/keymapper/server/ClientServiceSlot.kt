@@ -1,5 +1,18 @@
 package xtr.keymapper.server
 
+import android.os.IBinder
+
+/**
+ * Identity of one client start request: the Binder plus the exact death
+ * recipient registered for it. A superseded same-Binder restart never equals
+ * the newer session, so death guards and slot ownership can compare whole
+ * sessions instead of just the Binder.
+ */
+internal data class ClientSession(
+    val binder: IBinder,
+    val recipient: IBinder.DeathRecipient,
+)
+
 /**
  * Single-slot holder for the current client session's service, shared between
  * Handler-thread replacement (install/clear) and binder-thread death claims. Every
@@ -27,6 +40,9 @@ internal class ClientServiceSlot<K : Any, V : Any> {
     }
 
     fun get(): V? = synchronized(this) { entry?.second }
+
+    /** Returns the current owner, or null when the slot is empty. */
+    fun owner(): K? = synchronized(this) { entry?.first }
 
     /** Clears the slot unconditionally and returns the value that was stored, if any. */
     fun clear(): V? = synchronized(this) {

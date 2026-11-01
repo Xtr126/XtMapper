@@ -104,6 +104,14 @@ class ClientServiceSlotTest {
     }
 
     @Test
+    fun `owner reports the installed session and clears on release`() {
+        assertNull(slot.owner())
+        slot.install("session-a", "service-a")
+        assertEquals("session-a", slot.owner())
+        assertEquals("service-a", slot.get())
+    }
+
+    @Test
     fun `defer returns immediately when admission is already open`() {
         var retried = false
         assertFalse(slot.deferUntilAvailable { retried = true })

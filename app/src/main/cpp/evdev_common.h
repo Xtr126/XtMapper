@@ -1,11 +1,13 @@
-using std::string;
+#pragma once
 
-const char *x_virtual_touch = "x-virtual-touch";
-const char *x_virtual_mouse = "x-virtual-mouse";
+#include <functional>
+#include <string>
+#include <vector>
 
-std::vector<string> ListInputDevices();
+inline constexpr const char x_virtual_touch[] = "x-virtual-touch";
+inline constexpr const char x_virtual_mouse[] = "x-virtual-mouse";
 
-std::vector<int> scanTouchpadDevices();
+std::vector<std::string> ListInputDevices();
 
 bool HasSpecificAbs(int device_fd, unsigned int abs);
 
@@ -14,3 +16,28 @@ bool HasSpecificKey(int device_fd, unsigned int key);
 bool HasInputProp(int device_fd, unsigned int input_prop);
 
 bool HasEventType(int device_fd, unsigned int type);
+
+enum class TouchpadScanStatus { OK, NO_DEVICE, SCAN_ERROR, ACCESS_ERROR };
+
+struct TouchpadScanResult {
+	TouchpadScanStatus status = TouchpadScanStatus::NO_DEVICE;
+	std::vector<int> fds;
+};
+
+// Injectable seam for host tests; production callers use the defaults
+// (readdir, open(O_RDWR|O_NONBLOCK|O_CLOEXEC), ioctl, close).
+struct EvdevOps {
+	std::function<std::vector<std::string>()> list;
+	std::function<int(const std::string& path)> open;
+	std::function<int(int fd, unsigned long request, void* arg)> ioctl;
+	std::function<int(int fd)> close;
+};
+
+// Scanner contract: on non-OK status every opened fd has been closed; on OK
+// the caller owns every fd in `fds` (grabbed, ready to poll). Unset ops entries
+// are filled with the real implementations before scanning.
+TouchpadScanResult scanTouchpadDevices(EvdevOps ops);
+
+inline TouchpadScanResult scanTouchpadDevices() {
+	return scanTouchpadDevices(EvdevOps{});
+}

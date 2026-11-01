@@ -43,7 +43,9 @@ class RemoteService @JvmOverloads constructor(
 ) : IRemoteService.Stub() {
     private val mouseDevice = MouseDeviceConnection()
     // Death claims commit shutdown atomically so replacements cannot enter its teardown window.
-    internal val mInputService = ClientServiceSlot<IBinder, InputService>()
+    internal val mInputService = ClientServiceSlot<ClientSession, InputService>()
+    // Direct and relative touchpad workers must never overlap across sessions.
+    private val touchpadSessions = TouchpadSessionRegistry(RealTouchpadNativeOps)
     private var mOnKeyEventListener: OnKeyEventListener? = null
     internal var isWaylandClient = initialIsWaylandClient
     private var activityObserverService: ActivityObserverService? = null
@@ -307,9 +309,12 @@ class RemoteService @JvmOverloads constructor(
             XtLogger.info(TAG, "ignored death notification from a superseded client registration")
             return
         }
+        // Whole-session identity: same Binder with a superseded recipient is a
+        // different session and must never tear down the newer one.
+        val session = ClientSession(clientBinder, deathRecipient)
         if (isWaylandClient) {
             // Wayland can block the handler in stdin; commit its shutdown before inline cleanup.
-            val (service, superseded) = mInputService.claimForShutdown(clientBinder)
+            val (service, superseded) = mInputService.claimForShutdown(session)
             if (superseded) {
                 XtLogger.info(TAG, "ignored death notification of a replaced client session")
                 return
@@ -329,9 +334,9 @@ class RemoteService @JvmOverloads constructor(
         } else {
             // Dead-client callbacks must not prevent native cleanup on the main handler.
             mHandler.post {
-                val service = mInputService.get()
-                if (service != null && service.callback.asBinder() != clientBinder) {
-                    XtLogger.info(TAG, "ignored death notification of a client without a service")
+                val owner = mInputService.owner()
+                if (owner != null && owner != session) {
+                    XtLogger.info(TAG, "ignored death notification of a replaced client session")
                     return@post
                 }
                 stopServer(true, clientAlive = false)
@@ -474,7 +479,7 @@ class RemoteService @JvmOverloads constructor(
         val newService = try {
             InputService(
                 profile, keymapConfig, cb, screenWidth, screenHeight,
-                cursorView, isWaylandClient, displayId
+                cursorView, isWaylandClient, displayId, touchpadSessions
             )
         } catch (e: RemoteException) {
             throw RuntimeException(e)
@@ -488,6 +493,11 @@ class RemoteService @JvmOverloads constructor(
             }
         }
 
+        // Start the native touchpad before admission: a start failure rolls back
+        // this exact instance, and an admission rejection tears it down through
+        // discardUninstalledService below.
+        startTouchpadFor(newService)
+
         // The final liveness/ownership check and slot installation are atomic with
         // consumption of this exact Binder death registration. If death wins, no service
         // is installed. If installation wins, the death callback runs afterward and cleans
@@ -499,7 +509,7 @@ class RemoteService @JvmOverloads constructor(
                 requestId == mStartRequestSequence.get() && clientBinder.isBinderAlive
             }
         ) {
-            mInputService.install(clientBinder, newService)
+            mInputService.install(ClientSession(clientBinder, deathRecipient), newService)
         }
         if (!admitted) {
             discardUninstalledService(newService)
@@ -545,31 +555,35 @@ class RemoteService @JvmOverloads constructor(
     }
 
     /**
+     * Starts the native touchpad for a service that is about to be admitted. Any
+     * Throwable from the start rolls back this exact instance (registry stop is
+     * identity-checked, so it cannot stop a newer session's worker) and rethrows.
+     */
+    private fun startTouchpadFor(service: InputService) {
+        try {
+            service.startTouchpad()
+        } catch (t: Throwable) {
+            try {
+                service.stopTouchpad()
+            } catch (e: Exception) {
+                XtLogger.error(TAG, "Touchpad rollback after failed start threw", e)
+            }
+            throw t
+        }
+    }
+
+    /**
      * Releases every resource owned by a service that never passed slot admission. Each
      * cleanup is isolated so one failing native release cannot skip the remaining ones.
      */
     private fun discardUninstalledService(service: InputService) {
         cursorView?.visibility = View.GONE
-        try {
-            service.stop()
-        } catch (e: Exception) {
-            XtLogger.error(TAG, "Failed to stop a rejected InputService", e)
-        }
-        try {
-            service.stopMouseIfStarted()
-        } catch (e: Exception) {
-            XtLogger.error(TAG, "Failed to stop mouse reader for rejected InputService", e)
-        }
-        try {
-            service.stopTouchpad()
-        } catch (e: Exception) {
-            XtLogger.error(TAG, "Failed to stop touchpad for rejected InputService", e)
-        }
-        try {
-            service.destroyUinputDev()
-        } catch (e: Exception) {
-            XtLogger.error(TAG, "Failed to destroy uinput for rejected InputService", e)
-        }
+        OrderedCleanup.run(
+            "stop rejected input service" to { service.stop() },
+            "stop mouse reader for rejected service" to { service.stopMouseIfStarted() },
+            "stop touchpad for rejected service" to { service.stopTouchpad() },
+            "destroy uinput for rejected service" to { service.destroyUinputDev() },
+        )
     }
 
     override fun destroy() {
@@ -612,14 +626,18 @@ class RemoteService @JvmOverloads constructor(
             CursorShutdown.hideThenCleanup(
                 hideCursor = { service.hideCursor() },
                 cleanup = {
-                    service.stop()
-                    Log.i(TAG, "stopServer: stopping native mouse reader if started")
-                    service.stopMouseIfStarted()
-                    Log.i(TAG, "stopServer: native mouse cleanup returned")
-                    mouseDevice.disconnect()
-                    service.stopTouchpad()
-                    service.destroyUinputDev()
-                    mInputService.clear()
+                    OrderedCleanup.run(
+                        "stop input service" to { service.stop() },
+                        "stop mouse reader" to {
+                            Log.i(TAG, "stopServer: stopping native mouse reader if started")
+                            service.stopMouseIfStarted()
+                            Log.i(TAG, "stopServer: native mouse cleanup returned")
+                        },
+                        "stop touchpad" to { service.stopTouchpad() },
+                        "destroy uinput" to { service.destroyUinputDev() },
+                        "mouse device connection" to { mouseDevice.disconnect() },
+                        "clear input service slot" to { mInputService.clear() },
+                    )
                 }
             )
         }
