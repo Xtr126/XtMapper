@@ -1,11 +1,5 @@
 package xtr.keymapper.server
 
-/**
- * Serializes the relationship between a discovered evdev mouse and an InputService generation.
- *
- * The getevent reader and the server-start handler run on different threads. Keep the state
- * behind synchronized methods, and let RemoteService perform open requests on its main Handler.
- */
 internal class MouseDeviceLifecycle {
     internal data class OpenRequest(
         val device: String,
@@ -56,9 +50,6 @@ internal class MouseDeviceLifecycle {
         inFlightRequest = null
     }
 
-    /**
-     * Returns false for a result belonging to a stopped/replaced service or superseded device.
-     */
     @Synchronized
     fun onOpenResult(request: OpenRequest, success: Boolean): Boolean {
         if (activeServiceGeneration != request.serviceGeneration ||

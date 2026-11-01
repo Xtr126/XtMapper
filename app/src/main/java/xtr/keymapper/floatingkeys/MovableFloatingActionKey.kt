@@ -74,7 +74,6 @@ class MovableFloatingActionKey(context: Context, parent: ViewGroup?) : View.OnTo
         return "KEY_" + getText() + " " + frameView.x + " " + frameView.y + " " + frameView.pivotX
     }
 
-    /** Animates to a saved position while keeping its final coordinates available for snapshots. */
     fun animateToPosition(x: Float, y: Float, durationMillis: Long, onEnd: (() -> Unit)? = null) {
         pendingPositionX = x
         pendingPositionY = y
@@ -87,7 +86,6 @@ class MovableFloatingActionKey(context: Context, parent: ViewGroup?) : View.OnTo
         }.start()
     }
 
-    /** Ensures serialization and direct manipulation use the final position, not an in-flight frame. */
     fun finishPendingPositionAnimation() {
         val targetX = pendingPositionX ?: return
         val targetY = pendingPositionY ?: return

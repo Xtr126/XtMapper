@@ -1,9 +1,3 @@
-// Host tests for touchpad_lifecycle.cpp. poll/read run for real against
-// nonblocking pipes and eventfd (the same contract production evdev fds have:
-// scanner opens O_NONBLOCK, EAGAIN ends the read drain); everything
-// destructive (scan, virtual create/destroy, wake, release, spawn/join) is
-// injectable for failure placement. The JNI owner layer (touchpad_jni.h) is
-// deliberately uncovered here; it needs a device/CheckJNI run.
 #include "touchpad_lifecycle.h"
 
 #include <atomic>
@@ -105,8 +99,6 @@ struct Fixture {
 	Pipe device = makePipe();
 	Pipe virt = makePipe();
 	int wake = makeEventFd();
-	// Heap tokens: stack addresses repeat across sequential tests and would
-	// share release bookkeeping.
 	int* owner = new int(0);
 	int* otherOwner = new int(0);
 	LifecycleOps ops;
@@ -238,9 +230,6 @@ void testBusyAndStaleStop() {
 	CHECK_EQ(releasesOf(f.owner), 1);
 }
 
-// Regression (CodeRabbit #1): while a start is still in progress the state
-// is STARTING and owner_ already belongs to the starter; a stale stop must
-// fail the identity check before it can set cancel_ and abort that startup.
 void testStaleStopDuringStartupReturnsNotOwner() {
 	Fixture f;
 	std::mutex m;
@@ -316,8 +305,6 @@ void testSpawnFailure() {
 	CHECK_EQ(releasesOf(f.owner), 1);
 }
 
-// Pins the exception containment around the spawn call: a throwing
-// spawnWorker maps to THREAD_FAILED, never an exception through start().
 void testSpawnThrowIsThreadFailed() {
 	Fixture f;
 	f.ops.spawnWorker = [](std::function<void()>) -> bool {
@@ -331,8 +318,6 @@ void testSpawnThrowIsThreadFailed() {
 	CHECK_EQ(releasesOf(f.owner), 1);
 }
 
-// fd 0 is a valid descriptor; only a negative value is failure. No dup2 games:
-// the scan result carries 0 and the injected release records it.
 void testFdZeroIsAValidDeviceFd() {
 	Fixture f;
 	std::vector<int> released;
@@ -504,10 +489,6 @@ void testTransformExceptionDoesNotKillWorker() {
 	CHECK_EQ(releasesOf(f.owner), 1);
 }
 
-// Regression (CodeRabbit #2): /dev/zero never returns EOF or EAGAIN, so a
-// read drain without a cancel check spins forever and stop() can never reap
-// the worker. Transform returns nothing so the worker never blocks on the
-// virtual pipe; only the cancel check can end this drain.
 void testContinuousInputDoesNotStarveStop() {
 	Fixture f;
 	int zeroFd = ::open("/dev/zero", O_RDONLY | O_CLOEXEC);
@@ -515,8 +496,6 @@ void testContinuousInputDoesNotStarveStop() {
 	f.ops.scan = [=]() {
 		return TouchpadScanResult {ScanStatus::OK, {zeroFd}};
 	};
-	// The call count proves the worker is inside the drain before stop() runs;
-	// without it stop() can win the scheduling race at the loop-top check.
 	std::atomic<int> drained {0};
 	f.ops.transform = [&](int, const input_event&) {
 		drained.fetch_add(1, std::memory_order_relaxed);
@@ -524,8 +503,6 @@ void testContinuousInputDoesNotStarveStop() {
 	};
 	TouchpadLifecycle life(ownerOps());
 	CHECK(life.start(f.owner, f.ops) == StartOutcome::STARTED);
-	// Bounded condition wait (no sleep): a worker that never drains fails the
-	// check below instead of hanging the suite.
 	auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
 	while (drained.load(std::memory_order_relaxed) == 0 &&
 	       std::chrono::steady_clock::now() < deadline)

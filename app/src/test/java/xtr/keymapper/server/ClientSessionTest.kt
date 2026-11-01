@@ -21,8 +21,6 @@ class ClientSessionTest {
 
     @Test
     fun `a session reconstructed from the death callback equals the installed one`() {
-        // RemoteService rebuilds the session from (binder, recipient) on death;
-        // value equality is what lets owner() != session detect a superseded recipient.
         val binder = Binder()
         val recipient = IBinder.DeathRecipient {}
         val installed = ClientSession(binder, recipient)

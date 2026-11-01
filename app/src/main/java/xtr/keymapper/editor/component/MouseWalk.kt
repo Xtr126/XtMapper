@@ -25,7 +25,6 @@ class MouseWalk private constructor(
     private var pendingCenterX = defaultX
     private var pendingCenterY = defaultY
 
-    // Inflate exactly once per constructor, as in the Java original
     init {
         if (saved != null) addMouseWalk(saved) else addMouseWalk(defaultX, defaultY)
     }
@@ -47,16 +46,11 @@ class MouseWalk private constructor(
     override fun toConfigLine(): String {
         val view = rootView!!
         if (!positioned) {
-            // Imported profiles are saved immediately after reloadKeymap(), before the
-            // posted layout/position callback can run. Preserve their trusted parsed model
-            // rather than replacing it with the newly inflated view's (0, 0) coordinates.
             mouseWalk?.let { saved ->
                 return xtr.keymapper.keymap.element.MouseWalk.TAG + " " +
                     saved.x + " " + saved.y + " " + saved.radius
             }
 
-            // A brand-new component can also be saved before its post callback. Its layout
-            // dimensions are already available in LayoutParams even if the view isn't laid out.
             val params = view.layoutParams
             val width = view.width.takeIf { it > 0 } ?: params.width
             val height = view.height.takeIf { it > 0 } ?: params.height
@@ -65,7 +59,6 @@ class MouseWalk private constructor(
                 pendingCenterX + " " + pendingCenterY + " " + radius
         }
         view.finishPendingPositionAnimation()
-        // Create new instance for updating properties
         this.mouseWalk = xtr.keymapper.keymap.element.MouseWalk(view)
         return xtr.keymapper.keymap.element.MouseWalk.TAG + " " +
                 mouseWalk!!.x + " " +

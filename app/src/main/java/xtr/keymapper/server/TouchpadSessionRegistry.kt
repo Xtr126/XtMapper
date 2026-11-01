@@ -3,7 +3,6 @@ package xtr.keymapper.server
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.log.XtLogger
 
-/** Native start/stop outcomes, mirroring StartOutcome/StopOutcome in touchpad_lifecycle.h. */
 internal object TouchpadStartCodes {
     const val STARTED = 0
     const val NO_DEVICE = 1
@@ -35,11 +34,6 @@ internal sealed class TouchpadStartOutcome {
 
 internal enum class TouchpadStopOutcome { STOPPED, INCOMPLETE }
 
-/**
- * Injectable JNI seam so the registry decision table is testable without
- * native code or Android classes ([InputService] cannot be constructed in
- * host unit tests); the owner type stays generic for that reason.
- */
 internal interface TouchpadNativeOps<T : Any> {
     fun start(owner: T, mode: Int): Int
     fun stop(owner: T): Int
@@ -50,19 +44,6 @@ internal object RealTouchpadNativeOps : TouchpadNativeOps<InputService> {
     override fun stop(owner: InputService): Int = owner.stopNativeTouchpad()
 }
 
-/**
- * Arbitrates the process-wide native touchpad worker across client sessions.
- *
- * Invariants (verified by TouchpadSessionRegistryTest):
- *  - at most one active owner; a different owner, or the same owner in a
- *    different mode, is BLOCKED (Direct and Relative never overlap)
- *  - same owner + same mode is an idempotent STARTED with no native call
- *  - unresolved cleanup obligations (native INCOMPLETE/NOT_OWNER) retain the
- *    exact InputService that owns the native run, are retried on every start
- *    and stop, and block any new start until resolved
- *  - a failed stop clears the registry owner and retains an obligation; it
- *    never reports STOPPED while native cleanup is unresolved
- */
 class TouchpadSessionRegistry<T : Any> internal constructor(
     private val native: TouchpadNativeOps<T>
 ) {
@@ -96,8 +77,6 @@ class TouchpadSessionRegistry<T : Any> internal constructor(
                 obligations.add(Obligation(owner, mode))
                 TouchpadStartOutcome.StartIncomplete
             }
-            // BUSY means the native still holds a run the registry cannot see;
-            // treat as blocked rather than double-starting.
             TouchpadStartCodes.BUSY -> TouchpadStartOutcome.Blocked
             else -> TouchpadStartOutcome.Failed(code)
         }
@@ -121,22 +100,16 @@ class TouchpadSessionRegistry<T : Any> internal constructor(
                 TouchpadStopCodes.COMPLETED, TouchpadStopCodes.ALREADY_STOPPED ->
                     TouchpadStopOutcome.STOPPED
                 else -> {
-                    // INCOMPLETE or NOT_OWNER (or a throwing native call): the
-                    // native still owns resources behind this exact instance;
-                    // retain it for retry.
                     obligations.add(Obligation(owner, mode))
                     TouchpadStopOutcome.INCOMPLETE
                 }
             }
         }
 
-        // Never active here: a remaining obligation for this exact owner is the
-        // only way it can still own native resources.
         return if (obligations.any { it.owner === owner }) TouchpadStopOutcome.INCOMPLETE
         else TouchpadStopOutcome.STOPPED
     }
 
-    /** Retries every unresolved obligation; successful ones are removed. */
     private fun retryObligations() {
         val iterator = obligations.iterator()
         while (iterator.hasNext()) {

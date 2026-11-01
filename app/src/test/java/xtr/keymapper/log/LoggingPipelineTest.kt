@@ -22,11 +22,6 @@ class LoggingPipelineTest {
 
     @Test
     fun `retention cannot delete a foreign process's active file beyond the grace day`() {
-        // APP pipeline scans/prunes the shared directory; a shizuku-role file
-        // opened weeks ago is still held open by its "foreign" writer handle
-        // (same-JVM helper stands in for the other process — the cross-process
-        // behavior itself is device-verified). The lock gate must keep it, and
-        // closing it must make it prunable again; each scan reports skips once.
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
         val store = FileSystemLogStore(tmp.newFolder())
         val factory = TestPipelineFactory(store, clock)
@@ -151,16 +146,10 @@ class LoggingPipelineTest {
         assertTrue(text.contains("Previous Session: First session"))
         assertTrue(text.contains("Previous Session: Closed cleanly"))
 
-        // Third process instance closes WITHOUT its END (simulated kill): the
-        // fourth instance must classify the third as not closed cleanly.
         val factory3 = TestPipelineFactory(store, clock)
         val third = factory3.start()
         third.info("Server", "third run")
         assertTrue(third.flush(5_000))
-        // Simulated process death: in production the kernel releases the
-        // POSIX lock at process exit while no SESSION END gets written.
-        // Within one JVM the equivalent is closing the dead writer's file
-        // handle (releases its lock, writes no marker).
         third.sessionWriter.close()
 
         val factory4 = TestPipelineFactory(store, clock)
@@ -184,9 +173,6 @@ class LoggingPipelineTest {
                 override val writtenBytes: Long get() = bytes
                 override fun write(chunk: ByteArray) {
                     val text = String(chunk, Charsets.UTF_8)
-                    // Event chunks carry message="..."; marker blocks do not. The
-                    // worker's FIRST event write blocks: that record is in flight,
-                    // and the test only releases it after the burst.
                     if (text.contains("message=\"")) {
                         if (firstWriteSeen.compareAndSet(false, true)) {
                             firstWrite.countDown()
@@ -206,12 +192,8 @@ class LoggingPipelineTest {
         val factory = TestPipelineFactory(blockingStore, clock, config = config)
         val pipeline = factory.start()
 
-        // Deterministic setup: the worker is known to hold one record in flight
-        // (blocked in the store write) before the burst begins.
         assertTrue("worker took the first record", firstWrite.await(3, java.util.concurrent.TimeUnit.SECONDS))
 
-        // Capacity 2 holds exactly two queued records plus one in flight, so
-        // 8 of the 10 burst records overflow (drop-oldest).
         repeat(10) { pipeline.info("Burst", "event $it") }
         assertEquals(8, pipeline.droppedCount)
         assertEquals(1, factory.failureEvents.count { it.contains("records are being dropped") })

@@ -5,11 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import xtr.keymapper.keymap.KeymapConfig
 
-/**
- * Decision-table tests for the touchpad session registry. Owners are plain
- * [Any] tokens: the registry only needs reference identity, and InputService
- * cannot be constructed in host unit tests.
- */
 class TouchpadSessionRegistryTest {
 
     private class FakeNative : TouchpadNativeOps<Any> {
@@ -143,8 +138,6 @@ class TouchpadSessionRegistryTest {
 
         assertEquals(TouchpadStartOutcome.StartIncomplete, registry.start(ownerA, direct))
 
-        // Every new start first retries the obligation; while it stays
-        // unresolved no session may start.
         native.stopScript.add(TouchpadStopCodes.INCOMPLETE)
         assertEquals(TouchpadStartOutcome.Blocked, registry.start(ownerB, direct))
         assertEquals(listOf(ownerA), native.stopCalls)
@@ -170,9 +163,6 @@ class TouchpadSessionRegistryTest {
 
         assertEquals(TouchpadStopOutcome.INCOMPLETE, registry.stop(ownerA))
 
-        // The active owner was released at the registry level but the native
-        // obligation still blocks new starts until the retry succeeds; the
-        // retry runs inside the next start and then proceeds.
         native.stopCode = TouchpadStopCodes.COMPLETED
         assertEquals(TouchpadStartOutcome.Started, registry.start(ownerB, direct))
         assertEquals(listOf(ownerA, ownerA), native.stopCalls)
@@ -189,8 +179,6 @@ class TouchpadSessionRegistryTest {
         assertEquals(TouchpadStopOutcome.INCOMPLETE, registry.stop(ownerA))
         assertEquals(1, native.stopCalls.size)
 
-        // Repeated stop retries and reports STOPPED once resolved (the default
-        // stopCode answers the second retry).
         assertEquals(TouchpadStopOutcome.STOPPED, registry.stop(ownerA))
         assertEquals(2, native.stopCalls.size)
     }

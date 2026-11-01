@@ -1,6 +1,3 @@
-// Host tests for the touchpad scanner (evdev_common.cpp) using fully injected
-// EvdevOps — readdir/open/ioctl/close never touch the real system, so edge
-// cases like fd 0, EVIOCGNAME failure, and EVIOCGRAB failure are deterministic.
 #include "evdev_common.h"
 
 #include <algorithm>
@@ -164,8 +161,6 @@ void testEmptyListIsNoDevice() {
 	CHECK(r.fds.empty());
 }
 
-// fd 0 is valid; only a negative return is a failure (no dup2 games: the
-// injected open hands out 0 directly).
 void testFdZeroIsAccepted() {
 	reset();
 	Profile p = touchpadProfile("Zero Touchpad");
@@ -184,12 +179,7 @@ void testEvioCgnameFailureSkipsDevice() {
 	reset();
 	addDevice("/dev/input/event0", touchpadProfile("Bad Name"));
 	addDevice("/dev/input/event1", touchpadProfile("Good Touchpad"));
-	// Break event0's name lookup: remove its profile-backed name match by
-	// making the ioctl fail through an empty name -> return 0-length is
-	// success, so instead drop the fd from the profile map after open.
 	auto ops = makeOps();
-	// Simpler: scan only the failing device by flagging its open to hand out
-	// an fd whose profile lookup fails (removed mid-flight).
 	int openCalls = 0;
 	ops.open = [&openCalls](const std::string& path) {
 		int fd = fakeOpen(path);
@@ -203,8 +193,6 @@ void testEvioCgnameFailureSkipsDevice() {
 	CHECK_EQ(r.fds[0], 101);
 }
 
-// A zero-length name return (success) must not reject the device: the old
-// `!ioctl(...)` check treated return 0 as failure.
 void testEvioCgnameZeroReturnAccepted() {
 	reset();
 	Profile p = touchpadProfile(""); // fakeIoctl returns 0 (empty name)
@@ -238,9 +226,6 @@ void testAllOpensFailIsAccessError() {
 	CHECK(r.fds.empty());
 }
 
-// The old pointer-compare bug never matched virtual names, and the
-// x-virtual-touch branch cleared the whole list; now each virtual device is
-// skipped individually and scanning continues.
 void testVirtualDevicesSkippedWithoutClearingResults() {
 	reset();
 	addDevice("/dev/input/event0", touchpadProfile("Real Touchpad"));
@@ -301,8 +286,6 @@ void testPointerFallbackRequiresBtnMouse() {
 	CHECK(contains(g_closed, 100));
 }
 
-// Enumeration failure (opendir on /dev/input) is not confirmed absence:
-// it must surface as SCAN_ERROR, not a clean NO_DEVICE.
 void testEnumerationFailureIsScanError() {
 	reset();
 	auto ops = makeOps();
@@ -312,8 +295,6 @@ void testEnumerationFailureIsScanError() {
 	CHECK(r.fds.empty());
 }
 
-// A real touchpad that exists but cannot be grabbed (EBUSY/EACCES) is not
-// confirmed absence either: ACCESS_ERROR, never a clean NO_DEVICE.
 void testAllGrabsFailIsNotNoDevice() {
 	reset();
 	Profile busy = touchpadProfile("Busy Touchpad");
@@ -325,8 +306,6 @@ void testAllGrabsFailIsNotNoDevice() {
 	CHECK_EQ(g_closed.size(), 1);
 }
 
-// A required capability query that fails means "unknown", not "absent":
-// the scanner could not inspect the device, so NO_DEVICE would be a lie.
 void testRequiredQueryFailureIsNotNoDevice() {
 	reset();
 	addDevice("/dev/input/event0", touchpadProfile("Query Broken"));
@@ -343,10 +322,6 @@ void testRequiredQueryFailureIsNotNoDevice() {
 	CHECK_EQ(g_closed.size(), 1);
 }
 
-// Mixed acquisition: one candidate cannot even be opened while another is
-// opened and cleanly rejected — incomplete acquisition, never confirmed
-// absence (the rejected device proves the directory was readable, not that
-// no touchpad exists).
 void testMixedOpenFailureIsNotNoDevice() {
 	reset();
 	addDevice("/dev/input/event0", touchpadProfile("Locked Touchpad"));
@@ -361,9 +336,6 @@ void testMixedOpenFailureIsNotNoDevice() {
 	CHECK_EQ(g_closed.size(), 1); // only the keyboard was ever opened
 }
 
-// A throw mid-scan must not leak descriptors already grabbed: the scanner
-// closes everything it owns and reports SCAN_ERROR (contract: non-OK status
-// means every opened fd is closed).
 void testOpenExceptionAfterGrabsClosesDescriptors() {
 	reset();
 	addDevice("/dev/input/event0", touchpadProfile("First"));
@@ -388,9 +360,6 @@ void testOpenExceptionAfterGrabsClosesDescriptors() {
 	CHECK(contains(g_closed, 101));
 }
 
-// A throw after a successful grab — while the current descriptor is still
-// owned by the scanner — must close the current fd through scoped ownership
-// and the already-collected ones through the loop-level guard.
 void testGrabExceptionClosesCurrentAndCollected() {
 	reset();
 	addDevice("/dev/input/event0", touchpadProfile("First"));

@@ -30,8 +30,6 @@ object RemoteServiceShell {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        // Classification must precede logging: the SHELL session header renders
-        // Environment.name during initStandalone.
         Environment.launchSignal = args.contains(Environment.CLI_ARG)
         // Logging next so even startup failures below can be recorded (uid/role based storage).
         XtLogger.initStandalone(Role.SHELL)
@@ -62,8 +60,6 @@ object RemoteServiceShell {
                     else -> println("Invalid argument: $arg")
                 }
             }
-            // Normal exits may close the session here, but a fatal process must remain open
-            // so the next launch reports an unclean previous session instead of a false END.
             Runtime.getRuntime().addShutdownHook(
                 Thread {
                     if (!XtLogger.hasFatalEvent) {
@@ -120,8 +116,6 @@ object RemoteServiceShell {
             }
 
         } catch (e: Exception) {
-            // Startup is terminating abnormally. Persist a fatal record but leave the
-            // session without an END marker so the next launch reports an unclean exit.
             XtLogger.fatal(TAG, "server startup failed", e)
             XtLogger.flush(2_000)
             exitProcess(1)

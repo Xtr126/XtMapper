@@ -61,12 +61,8 @@ class InputService @Throws(RemoteException::class) constructor(
         }
         if (currentPointerMode != KeymapConfig.POINTER_SYSTEM) showCursor()
 
-        // Disable touchpad features for wayland client
         this.touchpadInputMode = if (isWaylandClient) KeymapConfig.TOUCHPAD_DISABLED else keymapConfig.touchpadInputMode
 
-        // Touchpad start is intentionally not a constructor side effect: RemoteService
-        // starts it after construction, before slot admission, so a failure can roll
-        // back this exact instance without leaving an orphaned native worker.
 
         mouseEventHandler = MouseEventHandler(this)
         mouseEventHandler.init(screenWidth, screenHeight)
@@ -132,8 +128,6 @@ class InputService @Throws(RemoteException::class) constructor(
                     return
                 }
                 isKeyboardBlocked = true
-                // A new grab starts locked natively. Honour the existing pause state
-                // immediately so a grab started while paused does not swallow all typing.
                 setKeyboardGrabLock(!stopEvents)
             } catch (e: Exception) {
                 XtLogger.error(RemoteService.TAG, "Failed to start keyboard grab", e)
@@ -212,8 +206,6 @@ class InputService @Throws(RemoteException::class) constructor(
         try {
             this.keymapProfile = mCallback.requestKeymapProfile()
             this.keymapConfig = mCallback.requestKeymapConfig()
-            // Release existing pointers with their original offsets before clearing
-            // jitter state; then apply the newly loaded settings to future strokes.
             this.stop()
             touchJitter.updateConfig(this.keymapConfig.touchJitter, this.keymapConfig.touchJitterSpread)
             touchJitter.clear()
@@ -247,12 +239,6 @@ class InputService @Throws(RemoteException::class) constructor(
         mouseEventHandler.stop()
     }
 
-    /**
-     * Starts the native touchpad worker for this session through the registry.
-     * Every non-start outcome continues the service without a touchpad, with a
-     * distinct log; cleanup obligations (START_INCOMPLETE) stay recorded in the
-     * registry and block conflicting starts until retried.
-     */
     fun startTouchpad() {
         if (touchpadInputMode == KeymapConfig.TOUCHPAD_DISABLED) return
         when (val outcome = touchpadSessions.start(this, touchpadInputMode)) {
@@ -283,11 +269,6 @@ class InputService @Throws(RemoteException::class) constructor(
     @Volatile
     private var mouseReaderOpened = false
 
-    /**
-     * The native reader uses one shared context. Stop a previous reader before replacing it.
-     * A returned file descriptor >= 0 means the native open and reader-thread creation succeeded;
-     * descriptor 0 is valid and must not be treated as failure.
-     */
     @Synchronized
     fun openMouseDevice(device: String): Int {
         if (mouseReaderOpened) {
@@ -327,22 +308,18 @@ class InputService @Throws(RemoteException::class) constructor(
     external fun setKeyboardGrabLock(lock: Boolean)
     external fun grabKeyboardDevice(device: String): Boolean
 
-    // touchpad_direct.cpp / touchpad_relative.cpp. JNI symbols keep their
-    // historical names; the Kotlin signatures return the native outcome codes.
     private external fun startTouchpadDirect(): Int
     private external fun stopTouchpadDirect(): Int
 
     private external fun startTouchpadRelative(): Int
     private external fun stopTouchpadRelative(): Int
 
-    /** Called by [RealTouchpadNativeOps]; mode comes from the registry decision. */
     internal fun startNativeTouchpad(mode: Int): Int = when (mode) {
         KeymapConfig.TOUCHPAD_DIRECT -> startTouchpadDirect()
         KeymapConfig.TOUCHPAD_RELATIVE -> startTouchpadRelative()
         else -> error("unsupported touchpad mode $mode")
     }
 
-    /** Called by [RealTouchpadNativeOps]; identity-matched in the native core. */
     internal fun stopNativeTouchpad(): Int = when (touchpadInputMode) {
         KeymapConfig.TOUCHPAD_DIRECT -> stopTouchpadDirect()
         KeymapConfig.TOUCHPAD_RELATIVE -> stopTouchpadRelative()

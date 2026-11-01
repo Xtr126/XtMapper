@@ -10,8 +10,6 @@
 namespace touchpad {
 namespace {
 constexpr int kPollBackstopMs = 1000;
-// Upper bound of events drained per wake: keeps stop() latency bounded even
-// when a device emits at line rate (the cancel check is the primary exit).
 constexpr int kMaxDrainPerWake = 128;
 constexpr auto kStopWait = std::chrono::milliseconds(5000);
 } // namespace
@@ -19,8 +17,6 @@ constexpr auto kStopWait = std::chrono::milliseconds(5000);
 TouchpadLifecycle::TouchpadLifecycle(OwnerOps ownerOps) : ownerOps_(std::move(ownerOps)) {}
 
 TouchpadLifecycle::~TouchpadLifecycle() {
-	// Must join: destroying a joinable std::thread terminates the process.
-	// The worker is guaranteed to exit once cancel_ is set (poll backstop).
 	stopInternal(nullptr, false);
 	if (joinable_) {
 		try {
@@ -46,9 +42,6 @@ void TouchpadLifecycle::workerMain() {
 	try {
 		workerLoop();
 	} catch (...) {
-		// Containment: an escaping exception (allocation failure inside the
-		// loop) would std::terminate the server process; the exit signal
-		// below is what stop() and the destructor reap on every path.
 	}
 	notifyExited();
 }
@@ -107,9 +100,6 @@ void TouchpadLifecycle::workerLoop() {
 				input_event in {};
 				ssize_t r = 0;
 				bool readFailed = false;
-				// Cancel-aware and bounded: a continuously readable fd must
-				// not starve the wake/poll cycle that stop() and the
-				// destructor rely on.
 				for (int budget = kMaxDrainPerWake; budget-- > 0 && !shouldStop();) {
 					r = ::read(dev->evdev, &in, sizeof(in));
 					if (r != static_cast<ssize_t>(sizeof(in))) {
@@ -125,9 +115,6 @@ void TouchpadLifecycle::workerLoop() {
 					for (const auto& out : outs)
 						::write(dev->virt, &out, sizeof(out));
 				}
-				// EOF or a hard read error (ENODEV, ...): the device is gone.
-				// Do not close here; the record stays for stop() to release.
-				// Budget/cancel exits skip this: their read did not fail.
 				if (readFailed) {
 					if (r == 0) dev->dead = true;
 					else if (errno != EAGAIN && errno != EINTR) dev->dead = true;
@@ -160,8 +147,6 @@ bool TouchpadLifecycle::cleanupResources() {
 
 	bool ok = true;
 	for (auto& d : devices_) {
-		// Each fd tracks independently: a retry after a partial cleanup must
-		// still release whatever was retained.
 		if (d.virt >= 0) {
 			bool destroyed = false;
 			try {
@@ -236,11 +221,7 @@ StartOutcome TouchpadLifecycle::rollbackStart(StartOutcome mapped) {
 
 StartOutcome TouchpadLifecycle::start(void* owner, LifecycleOps ops) {
 	std::unique_lock<std::mutex> lk(mu_);
-	// BUSY covers STARTING, RUNNING and unresolved STOPPING (cleanup pending):
-	// no new run while cleanup is unresolved.
 	if (state_ != State::STOPPED) {
-		// The token was never adopted; start() owns every token it is handed.
-		// Released outside mu_: the op may call back into the JVM.
 		lk.unlock();
 		if (owner != nullptr) ownerOps_.release(owner);
 		return StartOutcome::BUSY;
@@ -261,8 +242,6 @@ StartOutcome TouchpadLifecycle::start(void* owner, LifecycleOps ops) {
 				return true;
 			};
 	} catch (...) {
-		// std::function assignment can allocate; nothing is acquired yet,
-		// so a throw must not wedge the state in STARTING.
 		lk.unlock();
 		return abortStart(StartOutcome::INTERNAL_ERROR);
 	}
@@ -282,16 +261,10 @@ StartOutcome TouchpadLifecycle::start(void* owner, LifecycleOps ops) {
 		case ScanStatus::OK: break;
 	}
 
-	// Adopt every scan fd up front so a mid-way createVirtual failure still
-	// releases the evdev fds that were never paired with a virtual device.
 	std::vector<DeviceRecord> acquired;
 	try {
-		// reserve is the only throwing operation: DeviceRecord is trivially
-		// copyable, so the push_back loop below cannot throw.
 		acquired.reserve(scan.fds.size());
 	} catch (...) {
-		// Still the sole owner of the scan fds: release them, then drop the
-		// adopted token instead of wedging STARTING forever.
 		for (int fd : scan.fds) {
 			try {
 				ops_.releaseDevice(fd);
@@ -330,8 +303,6 @@ StartOutcome TouchpadLifecycle::start(void* owner, LifecycleOps ops) {
 	}
 	if (failed) return rollbackStart(StartOutcome::ACQUISITION_FAILED);
 
-	// Cancel check + spawn + RUNNING publish in one critical section so a stop
-	// either observes a fully-published RUNNING worker or a clean rollback.
 	bool spawned = false;
 	lk.lock();
 	if (cancel_) {
@@ -358,10 +329,6 @@ StopOutcome TouchpadLifecycle::stopInternal(void* owner, bool enforceOwner) {
 	for (;;) {
 		if (state_ == State::STOPPED) return StopOutcome::ALREADY_STOPPED;
 
-		// Identity before any side effect, re-checked after every wait via
-		// `continue`: a stale owner must never cancel or wait on a run (or a
-		// startup) that belongs to someone else. owner_ and state_ always
-		// transition together under mu_, so this check is exact.
 		if (enforceOwner && !ownerOps_.same(owner_, owner)) return StopOutcome::NOT_OWNER;
 
 		if (state_ == State::STARTING) {
@@ -384,8 +351,6 @@ StopOutcome TouchpadLifecycle::stopInternal(void* owner, bool enforceOwner) {
 
 	state_ = State::STOPPING;
 	cleanupActive_ = true;
-	// The contract: the worker must leave within one poll backstop after this,
-	// even when the wake write fails.
 	cancel_ = true;
 	int wake = wakeFd_;
 	lk.unlock();

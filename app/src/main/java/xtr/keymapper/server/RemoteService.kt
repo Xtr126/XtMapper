@@ -42,9 +42,7 @@ class RemoteService @JvmOverloads constructor(
     initialIsWaylandClient: Boolean = false
 ) : IRemoteService.Stub() {
     private val mouseDevice = MouseDeviceConnection()
-    // Death claims commit shutdown atomically so replacements cannot enter its teardown window.
     internal val mInputService = ClientServiceSlot<ClientSession, InputService>()
-    // Direct and relative touchpad workers must never overlap across sessions.
     private val touchpadSessions = TouchpadSessionRegistry(RealTouchpadNativeOps)
     private var mOnKeyEventListener: OnKeyEventListener? = null
     internal var isWaylandClient = initialIsWaylandClient
@@ -53,7 +51,6 @@ class RemoteService @JvmOverloads constructor(
     private var cursorView: View? = null
     private var TYPE_SECURE_SYSTEM_OVERLAY = 0
     private val mHandler = Handler(Looper.getMainLooper())
-    // Bound queued discovery work while MouseDeviceConnection owns opening and retries.
     private val mouseDeviceCoalescer = MouseDeviceCoalescer(
         schedule = { task ->
             if (!mHandler.post { task() }) {
@@ -80,9 +77,6 @@ class RemoteService @JvmOverloads constructor(
     }
 
     init {
-        // Logging first: the Shizuku user service constructs this class directly
-        // (uid 2000; uid 0 on the root fallback) with no Application.onCreate, so
-        // a load failure escaping below could otherwise never be recorded.
         if (!XtLogger.isInitialized) {
             when (Process.myUid()) {
                 2000 -> XtLogger.initStandalone(Role.SHIZUKU)
@@ -93,8 +87,6 @@ class RemoteService @JvmOverloads constructor(
         try {
             loadLibraries()
         } catch (t: Throwable) {
-            // Bounded flush so the record outlives the process; then the
-            // original failure still propagates exactly as before.
             XtLogger.fatal(TAG, "native library load failed", t)
             throw t
         }
@@ -147,9 +139,6 @@ class RemoteService @JvmOverloads constructor(
             } catch (ex: Exception) {
                 XtLogger.error(TAG, "Failed to relay the server crash to MainActivity", ex)
             }
-            // Do not write a SESSION END marker for an uncaught fatal exception.
-            // The next process must be able to identify this session as crashed even
-            // when the diagnostic dialog was successfully relayed to MainActivity.
             System.exit(1)
         }
     }
@@ -186,10 +175,6 @@ class RemoteService @JvmOverloads constructor(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             this.context = this.context.createWindowContext(display, TYPE_SECURE_SYSTEM_OVERLAY, null)
         }
-        /*
-        * We obtained an instance of WindowManager configured to show windows on the given display.
-        * Now call getSystemService(Class) on the returned window context.
-        */
         val windowManager: WindowManager = this.context.getSystemService(WindowManager::class.java)
 
         val layoutInflater: LayoutInflater = this.context.getSystemService(LayoutInflater::class.java)
@@ -210,9 +195,6 @@ class RemoteService @JvmOverloads constructor(
         } catch (_: Exception) {}
     }
 
-    /**
-     * Executes getevent command and processes the output or reads from stdin if wayland client
-     */
     private fun start_getevent() {
         try {
             val getevent: BufferedReader
@@ -260,10 +242,6 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
-    /**
-     * @param data split output of getevent command
-     * @return true if output is valid for processing
-     */
     private fun addNewDevices(data: Array<String>): Boolean {
         if (data.size != 2) return false
         val evdev = data[0]
@@ -276,7 +254,6 @@ class RemoteService @JvmOverloads constructor(
             }
         }
         if (input_event.getOrNull(1) == "EV_REL") {
-            // Discovery runs on the getevent thread; service lifecycle runs on the main thread.
             if (lastLoggedMouseDevice != evdev) {
                 Log.i(TAG, "getevent: queue mouse discovery device=$evdev serviceReady=${mInputService.get() != null} thread=${Thread.currentThread().name}")
                 lastLoggedMouseDevice = evdev
@@ -286,10 +263,7 @@ class RemoteService @JvmOverloads constructor(
         return true
     }
 
-    // Cleanup must not unlink a same-Binder replacement's death registration.
     private val mClientDeathRegistrations = ClientDeathRegistry<IBinder>()
-    // Serialize request identity with Binder registration so concurrent startServer calls
-    // cannot register in an order different from their request sequence.
     private val mStartRequestLock = Any()
     private val mStartRequestSequence = AtomicLong()
 
@@ -309,11 +283,8 @@ class RemoteService @JvmOverloads constructor(
             XtLogger.info(TAG, "ignored death notification from a superseded client registration")
             return
         }
-        // Whole-session identity: same Binder with a superseded recipient is a
-        // different session and must never tear down the newer one.
         val session = ClientSession(clientBinder, deathRecipient)
         if (isWaylandClient) {
-            // Wayland can block the handler in stdin; commit its shutdown before inline cleanup.
             val (service, superseded) = mInputService.claimForShutdown(session)
             if (superseded) {
                 XtLogger.info(TAG, "ignored death notification of a replaced client session")
@@ -332,7 +303,6 @@ class RemoteService @JvmOverloads constructor(
                 mInputService.releaseTerminal()
             }
         } else {
-            // Dead-client callbacks must not prevent native cleanup on the main handler.
             mHandler.post {
                 val owner = mInputService.owner()
                 if (owner != null && owner != session) {
@@ -344,10 +314,6 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
-    /**
-     * Queues a client start request. The exact death-recipient identity is captured so a
-     * delayed callback from a superseded same-Binder registration cannot invalidate it.
-     */
     @Throws(RemoteException::class)
     override fun startServer(
         profile: KeymapProfile,
@@ -366,8 +332,6 @@ class RemoteService @JvmOverloads constructor(
                 notifyClientDeath(clientBinder, this)
             }
         }
-        // Keep request ordering and registration replacement in one critical section. This
-        // prevents two Binder threads from publishing recipient A after the newer request B.
         val (requestId, superseded) = synchronized(mStartRequestLock) {
             val previous = mClientDeathRegistrations.registerAndLink(
                 clientBinder,
@@ -378,9 +342,6 @@ class RemoteService @JvmOverloads constructor(
             // A failed link must not supersede a still-valid pending request.
             mStartRequestSequence.incrementAndGet() to previous
         }
-        // Link the replacement before unlinking the old recipient. If linkToDeath fails,
-        // registerAndLink restores the previous registration so its active session can still
-        // receive death cleanup.
         superseded?.let { clientBinder.unlinkToDeath(it, 0) }
 
         mHandler.post {
@@ -398,11 +359,6 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
-    /**
-     * Executes one startup attempt on the main Handler. A request waits without constructing
-     * resources while shutdown is committed, then retries with a fresh InputService only
-     * after the final commitment is released.
-     */
     private fun startServerOnHandler(
         profile: KeymapProfile,
         keymapConfig: KeymapConfig,
@@ -440,8 +396,6 @@ class RemoteService @JvmOverloads constructor(
             return
         }
 
-        // Recheck after the admission wait and before touching the active session or
-        // allocating display/service resources.
         if (!isCurrentStartRequest(clientBinder, deathRecipient, requestId)) {
             XtLogger.info(TAG, "ignored stale start request before service creation displayId=$displayId")
             return
@@ -493,15 +447,8 @@ class RemoteService @JvmOverloads constructor(
             }
         }
 
-        // Start the native touchpad before admission: a start failure rolls back
-        // this exact instance, and an admission rejection tears it down through
-        // discardUninstalledService below.
         startTouchpadFor(newService)
 
-        // The final liveness/ownership check and slot installation are atomic with
-        // consumption of this exact Binder death registration. If death wins, no service
-        // is installed. If installation wins, the death callback runs afterward and cleans
-        // up the just-installed service through the normal ownership-aware path.
         val admitted = mClientDeathRegistrations.runIfCurrent(
             clientBinder,
             deathRecipient,
@@ -514,9 +461,6 @@ class RemoteService @JvmOverloads constructor(
         if (!admitted) {
             discardUninstalledService(newService)
             if (isCurrentStartRequest(clientBinder, deathRecipient, requestId)) {
-                // A shutdown may have committed after the initial availability check.
-                // Registering the waiter is atomic with releaseTerminal; if the last release
-                // already happened, queue one retry instead of losing the request.
                 if (!mInputService.deferUntilAvailable(retryStart)) {
                     retryStart()
                 }
@@ -554,11 +498,6 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
-    /**
-     * Starts the native touchpad for a service that is about to be admitted. Any
-     * Throwable from the start rolls back this exact instance (registry stop is
-     * identity-checked, so it cannot stop a newer session's worker) and rethrows.
-     */
     private fun startTouchpadFor(service: InputService) {
         try {
             service.startTouchpad()
@@ -572,10 +511,6 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
-    /**
-     * Releases every resource owned by a service that never passed slot admission. Each
-     * cleanup is isolated so one failing native release cannot skip the remaining ones.
-     */
     private fun discardUninstalledService(service: InputService) {
         cursorView?.visibility = View.GONE
         OrderedCleanup.run(
@@ -589,8 +524,6 @@ class RemoteService @JvmOverloads constructor(
     override fun destroy() {
         enforceCaller()
         if (isWaylandClient) {
-            // Wayland does not use the evdev mouse-reader lifecycle; the main Handler may be
-            // blocked in its stdin loop, so preserve the existing direct shutdown path.
             stopServer(true)
         } else {
             mHandler.post { stopServer(true) }
@@ -609,7 +542,6 @@ class RemoteService @JvmOverloads constructor(
             try {
                 service.callback.disablePointer()
             } catch (e: RemoteException) {
-                // Binder death can race the queued death recipient; cleanup must still run.
                 XtLogger.warn(TAG, "Client Binder unavailable during pointer shutdown; continuing cleanup", e)
             }
         }
@@ -622,7 +554,6 @@ class RemoteService @JvmOverloads constructor(
             System.exit(0)
         } else if (service != null && !isWaylandClient) {
             service.stopEvents = true
-            // The local overlay must be hidden even after client Binder death.
             CursorShutdown.hideThenCleanup(
                 hideCursor = { service.hideCursor() },
                 cleanup = {
@@ -672,14 +603,8 @@ class RemoteService @JvmOverloads constructor(
         activityObserverService = null
     }
 
-    /**
-     * Used to temporary stop the keymapping.
-     */
     override fun pauseMouse() {
         enforceCaller()
-        // startServer() creates/replaces InputService on this same handler. Queue the
-        // pause too, so a pending start cannot install a fresh, unpaused service after
-        // the caller has asked to disable mapping for the foreground app.
         mHandler.post {
             val service = mInputService.get()
             if (service != null && !service.stopEvents) {
@@ -699,9 +624,6 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
-    /**
-     * Used to refresh by requesting new keymap from the user app
-     */
     override fun reloadKeymap() {
         enforceCaller()
         mInputService.get()?.reloadKeymap()

@@ -3,11 +3,6 @@ package xtr.keymapper.server
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 
-/**
- * Manages coordinate jitter / random spread for touch event dispatching.
- * Prevents identical coordinate dispatching by wrapping target X and Y with
- * a bounded random offset, maintaining stroke consistency between DOWN, MOVE, and UP.
- */
 class TouchJitter(
     @Volatile var isEnabled: Boolean = false,
     @Volatile var spread: Float = 15f
@@ -33,17 +28,6 @@ class TouchJitter(
         activeOffsets.clear()
     }
 
-    /**
-     * Wrap target X and Y with a random spread for touch dispatching.
-     * Ensures DOWN, MOVE, and UP events for the same stroke share consistent offset
-     * to prevent spurious drag/scroll detection.
-     *
-     * @param x target X coordinate
-     * @param y target Y coordinate
-     * @param action InputService action (UP=0, DOWN=1, MOVE=2)
-     * @param pointerId pointer identifier
-     * @return Point containing bounded, jittered coordinates
-     */
     fun wrapCoordinates(x: Float, y: Float, action: Int, pointerId: Int): Point {
         if (!isEnabled || spread <= 0f) {
             return Point(x, y)
@@ -51,17 +35,14 @@ class TouchJitter(
 
         val offset: Point = when (action) {
             InputService.DOWN -> {
-                // New touch stroke: generate new random error/spread
                 val newOffset = generateRandomSpread(spread)
                 activeOffsets[pointerId] = newOffset
                 newOffset
             }
             InputService.UP -> {
-                // Touch release: reuse active stroke offset if present, then clean up
                 activeOffsets.remove(pointerId) ?: generateRandomSpread(spread)
             }
             else -> {
-                // MOVE or other ongoing action: preserve existing offset
                 activeOffsets.getOrPut(pointerId) { generateRandomSpread(spread) }
             }
         }
@@ -69,7 +50,6 @@ class TouchJitter(
         var jitteredX = x + offset.x
         var jitteredY = y + offset.y
 
-        // Wrap / clamp within screen bounds if screen dimensions are known
         if (screenWidth > 0) {
             jitteredX = jitteredX.coerceIn(0f, (screenWidth - 1).toFloat())
         }
@@ -80,12 +60,6 @@ class TouchJitter(
         return Point(jitteredX, jitteredY)
     }
 
-    /**
-     * Generate uniform random spread within a circular disk of radius maxSpread.
-     *
-     * @param maxSpread maximum offset radius in pixels
-     * @return Point random offset (dx, dy)
-     */
     fun generateRandomSpread(maxSpread: Float): Point {
         val angle = Random.nextDouble() * 2.0 * Math.PI
         // Square root of uniform random gives uniform areal distribution on a disk

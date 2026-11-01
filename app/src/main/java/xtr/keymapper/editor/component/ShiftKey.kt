@@ -86,7 +86,6 @@ class ShiftKey private constructor(
             fun onViewClicked(view: MovableFloatingActionKey)
         }
 
-        /* New shift key */
         constructor(rootView: ViewGroup, callback: ShiftKeyCallback) {
             val context = rootView.context
             button1 = MovableFloatingActionKey(context, true, rootView)
@@ -126,7 +125,6 @@ class ShiftKey private constructor(
             controlsContainer.post { onXyChange(0f, 0f) }
         }
 
-        /* From saved profile */
         constructor(
             rootView: ViewGroup,
             shiftKey: xtr.keymapper.keymap.element.ShiftKey,

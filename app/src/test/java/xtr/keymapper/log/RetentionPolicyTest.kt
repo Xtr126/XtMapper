@@ -55,8 +55,6 @@ class RetentionPolicyTest {
                 entry("xtmapper-2026-10-23.log", size = 1024 * 1024L),
             )
         )
-        // The newest day is never deleted; the previous day (cross-midnight
-        // grace) is protected too; the oldest day pays the budget bill.
         assertEquals(listOf("xtmapper-2026-10-19.log"), deleted)
         assertTrue(deleted.none { it.startsWith("xtmapper-2026-10-20") })
     }
@@ -79,8 +77,6 @@ class RetentionPolicyTest {
         val deleted = run(
             (2..24).map { day -> entry("xtmapper-2026-10-%02d.log".format(java.util.Locale.ROOT, day)) }
         )
-        // Age pass removes days 02..08 (> 14 days). Count cap 8 then removes the
-        // oldest survivors (days 09..16): 7 + 8 = 15 deletions.
         assertEquals(15, deleted.size)
         assertTrue(deleted.first().endsWith("10-02.log"))
         assertTrue(deleted.last().endsWith("10-16.log"))
@@ -135,8 +131,6 @@ class RetentionPolicyTest {
                 entry("xtmapper-2026-10-23.log"),
             )
         )
-        // A shizuku session that is still open across midnight may still hold
-        // its 10-22 file open: it is never pruned. The day before pays.
         assertTrue(deleted.none { it.contains("2026-10-22") })
         assertTrue(deleted.any { it == "xtmapper-shizuku-2026-10-21.log" })
     }
@@ -149,9 +143,6 @@ class RetentionPolicyTest {
                 entry("xtmapper-2026-10-23.log"),
             )
         )
-        // Budget-8MiB cannot force out the grace day: temporary overshoot is
-        // the documented trade-off for not deleting files another process may
-        // still be writing.
         assertEquals(emptyList<String>(), deleted)
     }
 

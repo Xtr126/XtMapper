@@ -46,7 +46,6 @@ class Dpad(
 
     override fun toConfigLine(): String {
         dpadView!!.finishPendingPositionAnimation()
-        // Create new dpad instance for updating properties
         this.dpad = if (dpad!!.keycodes.equals(DpadKeyCodes.ARROW_KEYS))
             xtr.keymapper.keymap.element.Dpad(
                 dpadView!!,

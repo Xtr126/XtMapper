@@ -37,7 +37,6 @@ class EditorService : ComposeLifecycleService() {
                 R.style.Theme_XtMapper
             )
 
-            // Create the ComposeView using the themed context.
             composeView = createComposeView(context)
 
             editor = EditorUI(

@@ -1,13 +1,3 @@
-// Race-safe lifecycle core for the touchpad worker modules.
-//
-// JNI-free by design: the two JNI modules supply an opaque owner token and an
-// injectable ops table; every destructive entry point is testable by injection
-// while poll/read stay real. Invariants (enforced here, verified by host tests):
-//  - at most one worker process-wide per lifecycle instance
-//  - resources are never destroyed before the worker has exited and been joined
-//  - STOPPED is published only after the resource set is empty
-//  - an incomplete cleanup retains the owner and resource records for retry
-//  - a stale stop can never stop a newer run (owner identity check)
 #pragma once
 
 #include <condition_variable>
@@ -48,18 +38,7 @@ struct TouchpadScanResult {
 	std::vector<int> fds;
 };
 
-// Injectable seam. Every entry has a failure-injection host test except
-// transform (covered by module-level host tests) and the default spawn/join.
-//
-// Contract for the bool-returning release ops: false must mean "the
-// resource is still ours; retrying this exact handle is safe". Ops that
-// pass a descriptor to close(2) must return true unconditionally — Linux
-// may have freed it even when close reports an error, and a retry would
-// then target an unrelated descriptor that reused the number (see the
-// EINTR note in close(2)).
 struct LifecycleOps {
-	// Scanner contract: on non-OK status the scanner has closed everything it
-	// opened; on OK the lifecycle owns every returned fd.
 	std::function<TouchpadScanResult()> scan;
 	std::function<int(int evdevFd)> createVirtual;       // fd >= 0, or -1
 	std::function<bool(int fd)> destroyVirtual;          // true = released
@@ -74,8 +53,6 @@ struct LifecycleOps {
 
 class TouchpadLifecycle {
 public:
-	// Owner token: opaque to this class. Glue supplies same (identity, e.g.
-	// JNI IsSameObject) and release (drop the acquired reference exactly once).
 	struct OwnerOps {
 		std::function<bool(const void*, const void*)> same;
 		std::function<void(void*)> release;
@@ -103,8 +80,6 @@ private:
 	// Contains the poll/drain loop; exceptions are absorbed by workerMain.
 	void workerLoop();
 	void workerMain();
-	// Mutex NOT held. Joins, then destroys virtuals, releases devices, closes
-	// wake; retains any record whose release failed. Returns true when empty.
 	bool cleanupResources();
 	// Mutex NOT held. Full rollback after resources were published.
 	StartOutcome rollbackStart(StartOutcome mapped);

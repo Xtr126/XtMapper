@@ -64,8 +64,6 @@ class KeyEventHandler(private val mInput: IInputInterface) {
     }
 
     fun stop() {
-        // Release active ShiftKey pointer state before dropping the handlers.
-        // stop() invalidates pending transition callbacks under the same lock.
         shiftKeyHandlers?.forEach { it.stop(mInput, pidProvider) }
         dpadHandlers = null
         swipeKeyHandlers = null

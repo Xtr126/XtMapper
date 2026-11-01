@@ -1,5 +1,3 @@
-// Shared JNI glue for the two touchpad modules. JNI stays out of the lifecycle
-// core and the scanner; this header only adapts owner tokens and common ops.
 #pragma once
 
 #include <jni.h>
@@ -18,17 +16,12 @@
 
 namespace touchpad {
 
-// Owner token = heap JniOwner holding a NewGlobalRef to the InputService
-// instance that started the run. Identity is compared with IsSameObject, so a
-// stop from any other instance (or a newer session) can never stop this run.
 struct JniOwner {
 	JavaVM* vm = nullptr;
 	jobject ref = nullptr;
 };
 
 inline JniOwner* acquireOwner(JNIEnv* env, jobject thiz) {
-	// Allocate the token before taking the GlobalRef: a bad_alloc must not
-	// leak the reference acquired below.
 	auto owner = std::make_unique<JniOwner>();
 	jobject ref = env->NewGlobalRef(thiz);
 	if (ref == nullptr) return nullptr; // OutOfMemoryError already pending
@@ -65,10 +58,6 @@ inline void releaseOwner(void* token) {
 	delete owner;
 }
 
-// The lifecycle takes ownership of the token on every outcome that reaches
-// it and releases it exactly once via releaseOwner — including BUSY, whose
-// rejected token is released immediately inside start(). Only
-// OWNER_REF_FAILED returns before any token exists.
 inline jint startTouchpad(JNIEnv* env, jobject thiz, TouchpadLifecycle& lifecycle, LifecycleOps ops) {
 	try {
 		// Inside the try: make_unique in acquireOwner must not cross JNI.
@@ -76,15 +65,10 @@ inline jint startTouchpad(JNIEnv* env, jobject thiz, TouchpadLifecycle& lifecycl
 		if (owner == nullptr) return static_cast<jint>(StartOutcome::OWNER_REF_FAILED);
 		return static_cast<jint>(lifecycle.start(owner, std::move(ops)));
 	} catch (...) {
-		// Exceptions must not cross the JNI boundary (Android aborts).
-		// A throw before adoption leaves no token; after adoption it stays
-		// retained for stop() to reap — either way never release here.
 		return static_cast<jint>(StartOutcome::INTERNAL_ERROR);
 	}
 }
 
-// Stop identity is a stack probe holding a local ref; IsSameObject works with
-// local refs, and nothing is acquired so nothing needs releasing.
 inline jint stopTouchpad(JNIEnv* env, jobject thiz, TouchpadLifecycle& lifecycle) {
 	JavaVM* vm = nullptr;
 	env->GetJavaVM(&vm);
@@ -92,16 +76,12 @@ inline jint stopTouchpad(JNIEnv* env, jobject thiz, TouchpadLifecycle& lifecycle
 	try {
 		return static_cast<jint>(lifecycle.stop(&probe));
 	} catch (...) {
-		// INCOMPLETE retains resources: the safe interrupted-teardown
-		// outcome never claims the run was cleaned up.
 		return static_cast<jint>(StopOutcome::INCOMPLETE);
 	}
 }
 
 // Fills the ops entries both modules share verbatim.
 inline LifecycleOps withCommonOps(LifecycleOps ops) {
-	// The scanner's result type and the lifecycle's are separate by design;
-	// the status values are declared in the same order (asserted below).
 	static_assert(static_cast<int>(touchpad::ScanStatus::ACCESS_ERROR) ==
 	              static_cast<int>(TouchpadScanStatus::ACCESS_ERROR));
 	ops.scan = []() {
@@ -113,10 +93,6 @@ inline LifecycleOps withCommonOps(LifecycleOps ops) {
 	};
 	ops.createWake = []() { return eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC); };
 	ops.closeWake = [](int fd) {
-		// Linux frees the fd even when close() reports an error (EINTR,
-		// EBADF): after any close attempt the number is never ours again,
-		// so reporting "retained for retry" could later close an unrelated
-		// descriptor that reused it. Same contract as destroyVirtual.
 		::close(fd);
 		return true;
 	};
@@ -126,8 +102,6 @@ inline LifecycleOps withCommonOps(LifecycleOps ops) {
 	};
 	ops.releaseDevice = [](int fd) {
 		::ioctl(fd, EVIOCGRAB, reinterpret_cast<void*>(0));
-		// Linux releases the grab and the fd on close; always forget the
-		// record — a retry could EVIOCGRAB/close a reused descriptor number.
 		::close(fd);
 		return true;
 	};

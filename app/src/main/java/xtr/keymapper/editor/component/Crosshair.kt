@@ -29,19 +29,16 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
     private val crosshairView: MovableFrameLayout
     private val leftClick: MovableFloatingActionKey
 
-    // SoufianoDev: Direct Access To Profile Via Extension Property
     private val profile: KeymapProfile
         get() = callback.profile
 
     private val mouseAimConfig: MouseAimConfig
         get() = profile.mouseAimConfig!!
 
-    // SoufianoDev: Secondary Constructor For Convenience
     constructor(mCallback: EditorUiComponentCallback, context: Context, mouseAimConfig: MouseAimConfig) :
             this(mCallback, context, mouseAimConfig.xCenter, mouseAimConfig.yCenter)
 
     init {
-        // SoufianoDev: Ensure MouseAimConfig Is Initialized In Profile
         if (profile.mouseAimConfig == null) {
             profile.mouseAimConfig = MouseAimConfig()
         }
@@ -49,7 +46,6 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
         val binding = CrosshairBinding.inflate(layoutInflater, callback.keysContainerView, true)
         crosshairView = binding.root
 
-        // SoufianoDev: Setup Action Listeners Using 'with' For Clean Binding Access
         with(binding) {
             expandButton.setOnClickListener { view -> onExpandButtonClicked(view) }
             editButton.setOnClickListener { showMouseAimSettingsDialog() }
@@ -58,15 +54,12 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
             }
         }
 
-        // SoufianoDev: Animate Crosshair To Target Position
         crosshairView.animateToPosition(x, y, 500L)
 
-        // SoufianoDev: Initialize And Add Left Click Floating Button
         leftClick = addLeftClick(mouseAimConfig.xleftClick, mouseAimConfig.yleftClick)
     }
 
     override fun toConfigLine(): String {
-        // SoufianoDev: Update Configuration Data With Current View Coordinates
         crosshairView.finishPendingPositionAnimation()
         return mouseAimConfig.apply {
             setCenterXY(crosshairView)
@@ -107,7 +100,6 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
 }
 
     private fun addLeftClick(x: Float, y: Float): MovableFloatingActionKey {
-        // SoufianoDev: Create And Configure The Left Click Action Button
         return MovableFloatingActionKey(context, { }, callback.keysContainerView).apply {
             frameView.setBackgroundResource(R.drawable.ic_baseline_mouse_36)
             setText(R.string.left_click)
@@ -119,7 +111,6 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
         val keymapConfig = KeymapConfig(context)
         val binding = MouseAimConfigBinding.inflate(layoutInflater, null, false)
 
-        // SoufianoDev: Map Saved Preferences To UI Components
         with(binding) {
             rightClickCheckbox.isChecked = keymapConfig.rightClickMouseAim
             graveKeyCheckbox.isChecked = keymapConfig.keyGraveMouseAim
@@ -131,7 +122,6 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
         AlertDialog.Builder(context)
             .setView(binding.root)
             .setPositiveButton(R.string.ok) { _, _ ->
-                // SoufianoDev: Persist Updated Settings Back To Config And Profile
                 keymapConfig.apply {
                     rightClickMouseAim = binding.rightClickCheckbox.isChecked
                     keyGraveMouseAim = binding.graveKeyCheckbox.isChecked
@@ -152,8 +142,7 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
             }
     }
 
-    // SoufianoDev: Extension Helper To Set Window Type Safely
-private fun AlertDialog.setupOverlayWindowType() {
+    private fun AlertDialog.setupOverlayWindowType() {
     val canDraw = android.provider.Settings.canDrawOverlays(context)
     android.widget.Toast.makeText(
         context,
@@ -187,7 +176,6 @@ private fun AlertDialog.setupOverlayWindowType() {
         leftClick.animateToPosition(x, y, 500L)
     }
 
-    // SoufianoDev: Inner Class To Handle Interactive Area Resizing
     inner class ResizableArea : View.OnTouchListener, View.OnClickListener {
         private val rootView: ViewGroup
         private var defaultPivotX = 0f
@@ -202,7 +190,7 @@ private fun AlertDialog.setupOverlayWindowType() {
         }
 
         private fun updatePivotAndAdjustPosition() {
-            // SoufianoDev: Keep View Centered During Resizing Actions
+            // Keep view centered during resizing actions
             if (defaultPivotX > 0) {
                 val deltaX = rootView.pivotX - defaultPivotX
                 val deltaY = rootView.pivotY - defaultPivotY
@@ -225,7 +213,6 @@ private fun AlertDialog.setupOverlayWindowType() {
         }
 
         override fun onClick(v: View) {
-            // SoufianoDev: Finalize Bounds And Update Crosshair Position
             val centerX = rootView.x + rootView.pivotX
             val centerY = rootView.y + rootView.pivotY
 

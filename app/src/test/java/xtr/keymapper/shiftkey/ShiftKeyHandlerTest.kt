@@ -83,12 +83,10 @@ class ShiftKeyHandlerTest {
         val mockService = MockInputInterface()
         val pidProvider = PidProvider()
 
-        // Press A -> DOWN at (100, 200)
         handler.handleEvent(keyEvent("KEY_A", InputService.DOWN), mockService, pidProvider)
         assertEquals(1, mockService.events.size)
         assertEquals(RecordedEvent(100f, 200f, InputService.DOWN, 0), mockService.events[0])
 
-        // Release A -> UP at (100, 200)
         handler.handleEvent(keyEvent("KEY_A", InputService.UP), mockService, pidProvider)
         assertEquals(2, mockService.events.size)
         assertEquals(RecordedEvent(100f, 200f, InputService.UP, 0), mockService.events[1])
@@ -101,12 +99,10 @@ class ShiftKeyHandlerTest {
         val mockService = MockInputInterface()
         val pidProvider = PidProvider()
 
-        // Press B -> DOWN at (500, 600)
         handler.handleEvent(keyEvent("KEY_B", InputService.DOWN), mockService, pidProvider)
         assertEquals(1, mockService.events.size)
         assertEquals(RecordedEvent(500f, 600f, InputService.DOWN, 0), mockService.events[0])
 
-        // Release B -> UP at (500, 600)
         handler.handleEvent(keyEvent("KEY_B", InputService.UP), mockService, pidProvider)
         assertEquals(2, mockService.events.size)
         assertEquals(RecordedEvent(500f, 600f, InputService.UP, 0), mockService.events[1])
@@ -119,20 +115,17 @@ class ShiftKeyHandlerTest {
         val mockService = MockInputInterface()
         val pidProvider = PidProvider()
 
-        // 1. Press and hold Key 1 (A)
         handler.handleEvent(keyEvent("KEY_A", InputService.DOWN), mockService, pidProvider)
         assertEquals(RecordedEvent(100f, 200f, InputService.DOWN, 0), mockService.events[0])
 
-        // 2. While holding Key 1, press Key 2 (B) -> Shifting via MOVE to (500, 600)
         handler.handleEvent(keyEvent("KEY_B", InputService.DOWN), mockService, pidProvider)
         assertEquals(2, mockService.events.size)
         assertEquals(RecordedEvent(500f, 600f, InputService.MOVE, 0), mockService.events[1])
 
-        // 3. Release Key 1 while Key 2 is still held down -> remains held at Key 2
+        // Key 2 still held, so releasing Key 1 injects no event
         handler.handleEvent(keyEvent("KEY_A", InputService.UP), mockService, pidProvider)
         assertEquals(2, mockService.events.size)
 
-        // 4. Release Key 2 -> UP at (500, 600)
         handler.handleEvent(keyEvent("KEY_B", InputService.UP), mockService, pidProvider)
         assertEquals(3, mockService.events.size)
         assertEquals(RecordedEvent(500f, 600f, InputService.UP, 0), mockService.events[2])
@@ -145,18 +138,14 @@ class ShiftKeyHandlerTest {
         val mockService = MockInputInterface()
         val pidProvider = PidProvider()
 
-        // 1. Hold A
         handler.handleEvent(keyEvent("KEY_A", InputService.DOWN), mockService, pidProvider)
-        // 2. Press B -> shifts to B
         handler.handleEvent(keyEvent("KEY_B", InputService.DOWN), mockService, pidProvider)
         assertEquals(RecordedEvent(500f, 600f, InputService.MOVE, 0), mockService.events[1])
 
-        // 3. Release B while A is still held -> shifts back to A
         handler.handleEvent(keyEvent("KEY_B", InputService.UP), mockService, pidProvider)
         assertEquals(3, mockService.events.size)
         assertEquals(RecordedEvent(100f, 200f, InputService.MOVE, 0), mockService.events[2])
 
-        // 4. Release A -> UP at A
         handler.handleEvent(keyEvent("KEY_A", InputService.UP), mockService, pidProvider)
         assertEquals(4, mockService.events.size)
         assertEquals(RecordedEvent(100f, 200f, InputService.UP, 0), mockService.events[3])
@@ -169,19 +158,15 @@ class ShiftKeyHandlerTest {
         val mockService = MockInputInterface()
         val pidProvider = PidProvider()
 
-        // 1. Hold B -> DOWN at B
         handler.handleEvent(keyEvent("KEY_B", InputService.DOWN), mockService, pidProvider)
         assertEquals(RecordedEvent(500f, 600f, InputService.DOWN, 0), mockService.events[0])
 
-        // 2. Press A -> shifts to A
         handler.handleEvent(keyEvent("KEY_A", InputService.DOWN), mockService, pidProvider)
         assertEquals(RecordedEvent(100f, 200f, InputService.MOVE, 0), mockService.events[1])
 
-        // 3. Release A while B is still held -> shifts back to B
         handler.handleEvent(keyEvent("KEY_A", InputService.UP), mockService, pidProvider)
         assertEquals(RecordedEvent(500f, 600f, InputService.MOVE, 0), mockService.events[2])
 
-        // 4. Release B -> UP at B
         handler.handleEvent(keyEvent("KEY_B", InputService.UP), mockService, pidProvider)
         assertEquals(RecordedEvent(500f, 600f, InputService.UP, 0), mockService.events[3])
     }
@@ -268,7 +253,6 @@ class ShiftKeyHandlerTest {
             scheduledTasks.add(Pair(delay, task))
         }
 
-        // 1. Press Key 1 (A) -> DOWN at (100, 200)
         handler.handleEvent(
             keyEvent("KEY_A", InputService.DOWN),
             mockService,
@@ -279,7 +263,6 @@ class ShiftKeyHandlerTest {
         assertEquals(1, mockService.events.size)
         assertEquals(RecordedEvent(100f, 200f, InputService.DOWN, 0), mockService.events[0])
 
-        // 2. Press Key 2 (B) -> initiates smooth transition over 100ms
         handler.handleEvent(
             keyEvent("KEY_B", InputService.DOWN),
             mockService,
@@ -287,10 +270,8 @@ class ShiftKeyHandlerTest {
             defaultDurationMs = 100,
             scheduler = scheduler
         )
-        // Multiple intermediate steps should be scheduled
         assertTrue(scheduledTasks.size >= 8)
 
-        // Execute scheduled steps in chronological order
         scheduledTasks.sortBy { it.first }
         var lastX = 100f
         var lastY = 200f
@@ -304,7 +285,6 @@ class ShiftKeyHandlerTest {
             lastY = latest.y
         }
 
-        // Final step reaches exact target (500, 600)
         assertEquals(500f, lastX, 0.01f)
         assertEquals(600f, lastY, 0.01f)
     }
@@ -321,12 +301,9 @@ class ShiftKeyHandlerTest {
             scheduledTasks.add(Pair(delay, task))
         }
 
-        // 1. Press Key 1
         handler.handleEvent(keyEvent("KEY_A", InputService.DOWN), mockService, pidProvider, scheduler = scheduler)
-        // 2. Press Key 2 -> transition started
         handler.handleEvent(keyEvent("KEY_B", InputService.DOWN), mockService, pidProvider, defaultDurationMs = 100, scheduler = scheduler)
 
-        // Run only first 3 steps (partial transition)
         scheduledTasks.sortBy { it.first }
         scheduledTasks[0].second.invoke()
         scheduledTasks[1].second.invoke()
@@ -337,7 +314,6 @@ class ShiftKeyHandlerTest {
         assertTrue(midX > 100f && midX < 500f)
         assertTrue(midY > 200f && midY < 600f)
 
-        // Release Key 1 then Key 2 (both released)
         handler.handleEvent(keyEvent("KEY_A", InputService.UP), mockService, pidProvider, scheduler = scheduler)
         handler.handleEvent(keyEvent("KEY_B", InputService.UP), mockService, pidProvider, scheduler = scheduler)
 
@@ -364,12 +340,9 @@ class ShiftKeyHandlerTest {
             scheduledTasks.add(Pair(delay, task))
         }
 
-        // 1. Press A
         handler.handleEvent(keyEvent("KEY_A", InputService.DOWN), mockService, pidProvider, scheduler = scheduler)
-        // 2. Press B -> moving to B
         handler.handleEvent(keyEvent("KEY_B", InputService.DOWN), mockService, pidProvider, defaultDurationMs = 100, scheduler = scheduler)
 
-        // Execute first 3 steps towards B
         scheduledTasks[0].second.invoke()
         scheduledTasks[1].second.invoke()
         scheduledTasks[2].second.invoke()
@@ -378,7 +351,6 @@ class ShiftKeyHandlerTest {
         val turnaroundY = handler.currentY
         assertTrue(turnaroundX > 100f && turnaroundX < 500f)
 
-        // 3. Release B while A is still held -> reverse back towards A(100, 200)
         val reversalTasks = mutableListOf<Pair<Long, () -> Unit>>()
         val reversalScheduler: (Long, () -> Unit) -> Unit = { delay, task ->
             reversalTasks.add(Pair(delay, task))
@@ -387,7 +359,6 @@ class ShiftKeyHandlerTest {
 
         assertTrue(reversalTasks.isNotEmpty())
         reversalTasks.sortBy { it.first }
-        // Run first step of reversal -> should move towards A from turnaround position
         reversalTasks[0].second.invoke()
         val reversedLatest = mockService.events.last()
         assertTrue(reversedLatest.x < turnaroundX)
@@ -427,7 +398,6 @@ class ShiftKeyHandlerTest {
             override val isKeyboardBlocked: Boolean get() = false
         }
 
-        // 1. Press Key 1 -> DOWN with jitter offset
         handler.handleEvent(keyEvent("KEY_A", InputService.DOWN), jitteredService, pidProvider)
         assertEquals(1, capturedEvents.size)
         val downEvent = capturedEvents[0]
@@ -437,7 +407,6 @@ class ShiftKeyHandlerTest {
         val dist = Math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
         assertTrue("Jitter offset should be within spread", dist <= 25.01f)
 
-        // 2. Press Key 2 -> instantaneous shift (MOVE)
         handler.handleEvent(keyEvent("KEY_B", InputService.DOWN), jitteredService, pidProvider, defaultDurationMs = 0)
         val moveEvent = capturedEvents[1]
         assertEquals(InputService.MOVE, moveEvent.action)
@@ -445,7 +414,6 @@ class ShiftKeyHandlerTest {
         assertEquals(500f + dx, moveEvent.x, 0.01f)
         assertEquals(600f + dy, moveEvent.y, 0.01f)
 
-        // 3. Release both keys -> UP with same jitter offset
         handler.handleEvent(keyEvent("KEY_A", InputService.UP), jitteredService, pidProvider)
         handler.handleEvent(keyEvent("KEY_B", InputService.UP), jitteredService, pidProvider)
         val upEvent = capturedEvents.last()

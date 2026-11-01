@@ -20,8 +20,6 @@ class OrderedCleanupTest {
     @Test
     fun `an exception in one step does not skip the remaining steps`() {
         val seen = mutableListOf<String>()
-        // Exceptions are logged and swallowed: one failing native release must
-        // not skip the rest of the teardown.
         OrderedCleanup.run(
             "a" to { seen += "a" },
             "boom" to { throw IOException("disk full") },
@@ -43,8 +41,6 @@ class OrderedCleanupTest {
         } catch (e: OutOfMemoryError) {
             assertEquals("oom", e.message)
         }
-        // Every step ran before the rethrow so the fatal handler still sees a
-        // complete teardown attempt.
         assertEquals(listOf("a", "c"), seen)
     }
 

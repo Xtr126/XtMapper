@@ -14,8 +14,6 @@
 
 namespace {
 
-// Builds the per-device virtual touchpad. Returns the uinput fd, or -1 on
-// failure (no exit(): a failed device must not kill the server process).
 int SetupUinputDevice(int device_fd) {
 	struct uinput_setup uinputSetup {};
 	int uinput_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
@@ -89,8 +87,6 @@ Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject 
 		ops.transform = [](int index, const input_event& in) { return directTransform(index, in); };
 		return touchpad::startTouchpad(env, thiz, lifecycle(), std::move(ops));
 	} catch (...) {
-		// Nothing may cross the JNI boundary: ops construction and the
-		// lifecycle() static can allocate before any owner token exists.
 		return static_cast<jint>(touchpad::StartOutcome::INTERNAL_ERROR);
 	}
 }

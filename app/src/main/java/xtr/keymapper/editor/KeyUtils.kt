@@ -4,10 +4,6 @@ import android.view.KeyEvent
 import java.util.Locale
 
 object KeyUtils {
-    /**
-     * Resolves an Android KeyEvent / keyCode into the canonical key name matching Linux evdev (without "KEY_").
-     * Supports alphanumeric keys, modifiers (Shift, Ctrl, Alt), navigation, function keys, and symbols.
-     */
     @JvmStatic
     fun resolveKeyName(keyCode: Int, event: KeyEvent? = null): String? {
         return when (keyCode) {
