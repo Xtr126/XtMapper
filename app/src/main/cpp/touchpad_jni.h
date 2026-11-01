@@ -70,14 +70,15 @@ inline void releaseOwner(void* token) {
 // rejected token is released immediately inside start(). Only
 // OWNER_REF_FAILED returns before any token exists.
 inline jint startTouchpad(JNIEnv* env, jobject thiz, TouchpadLifecycle& lifecycle, LifecycleOps ops) {
-	JniOwner* owner = acquireOwner(env, thiz);
-	if (owner == nullptr) return static_cast<jint>(StartOutcome::OWNER_REF_FAILED);
 	try {
+		// Inside the try: make_unique in acquireOwner must not cross JNI.
+		JniOwner* owner = acquireOwner(env, thiz);
+		if (owner == nullptr) return static_cast<jint>(StartOutcome::OWNER_REF_FAILED);
 		return static_cast<jint>(lifecycle.start(owner, std::move(ops)));
 	} catch (...) {
 		// Exceptions must not cross the JNI boundary (Android aborts).
-		// start() resolves token adoption internally, so this is a
-		// mapping-only backstop and must never release here.
+		// A throw before adoption leaves no token; after adoption it stays
+		// retained for stop() to reap — either way never release here.
 		return static_cast<jint>(StartOutcome::INTERNAL_ERROR);
 	}
 }

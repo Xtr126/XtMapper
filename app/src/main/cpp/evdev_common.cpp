@@ -2,6 +2,7 @@
 
 #include "mouse_cursor.h"
 
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
@@ -46,6 +47,24 @@ int defaultIoctl(int fd, unsigned long request, void* arg) {
 }
 
 int defaultClose(int fd) { return ::close(fd); }
+
+// Owns one descriptor across the operations that can throw (the injectable
+// ops seam and vector growth); closes via ops at scope exit unless released.
+// The destructor swallows: it is noexcept, and a throwing std::function
+// close must not terminate the process (mirrors cleanupResources' pattern).
+struct FdGuard {
+	int fd = -1;
+	EvdevOps* ops = nullptr;
+	~FdGuard() {
+		if (fd >= 0 && ops) {
+			try {
+				ops->close(fd);
+			} catch (...) {
+			}
+		}
+	}
+	void release() { fd = -1; }
+};
 } // namespace
 
 DeviceList EnumerateInputDevices() {
@@ -57,12 +76,26 @@ DeviceList EnumerateInputDevices() {
 		return out;
 	}
 
-	struct dirent *entry;
-	while ((entry = readdir(directory))) {
-		if (entry->d_name[0] == 'e') // is eventX
-		  out.paths.push_back(input_directory + "/" + entry->d_name);
+	bool failed = false;
+	try {
+		struct dirent *entry;
+		for (;;) {
+			errno = 0; // per-call reset: loop-body allocators may clobber errno
+			entry = readdir(directory);
+			if (entry == nullptr) break;
+			if (entry->d_name[0] == 'e') // is eventX
+			  out.paths.push_back(input_directory + "/" + entry->d_name);
+		}
+		if (errno != 0) failed = true; // readdir error ≠ end-of-directory
+	} catch (...) {
+		// Allocation failure mid-enumeration: no exception escapes this seam.
+		failed = true;
 	}
 	closedir(directory);
+	if (failed) {
+		out.ok = false;
+		out.paths.clear();
+	}
 	return out;
 }
 
@@ -86,77 +119,87 @@ TouchpadScanResult scanTouchpadDevices(EvdevOps ops) {
 	if (evdevNames.empty()) return result; // confirmed absence: NO_DEVICE
 
 	printf("I: Searching for touchpad devices...\n");
-	bool openedAny = false;
 	bool openFailed = false;
-	// Candidates existed but could not be inspected (query) or acquired
-	// (grab): unknown, never a clean NO_DEVICE.
+	// Candidates existed but could not be opened, inspected (query) or
+	// acquired (grab): unknown, never a clean NO_DEVICE.
 	bool queryFailed = false;
 	bool grabFailed = false;
-	for (auto & evdev : evdevNames) {
-		int device_fd = ops.open(evdev);
-		if (device_fd < 0) {
-			// fd 0 is a valid descriptor; only a negative return is a failure.
-			perror("opening device");
-			openFailed = true;
-			continue;
-		}
-		openedAny = true;
-
-		// Get device name. EVIOCGNAME returns < 0 on failure (a successful
-		// call returns the name length, so `== 0` would discard every device).
-		char dev_name[24] {};
-		if (ops.ioctl(device_fd, EVIOCGNAME(sizeof(dev_name) - 1), dev_name) < 0) {
-			perror("get device name");
-			queryFailed = true; // the device exists but cannot be identified
-			ops.close(device_fd);
-			continue;
-		}
-
-		// Queried defaults are optimistic: hasBit only flips them when its
-		// ioctl actually runs, and C++ ||-short-circuit may skip the second probe.
-		bool absXQueried = true;
-		bool absYQueried = true;
-		if (!hasBit<kKeyBits>(ops.ioctl, device_fd, EVIOCGBIT(EV_ABS, kKeyBits), ABS_X, &absXQueried) ||
-		    !hasBit<kKeyBits>(ops.ioctl, device_fd, EVIOCGBIT(EV_ABS, kKeyBits), ABS_Y, &absYQueried)) {
-			queryFailed = queryFailed || !absXQueried || !absYQueried;
-			printf("%s: no ABS_X or ABS_Y events found\n", dev_name);
-			printf("Not a touch device\n");
-			ops.close(device_fd);
-			continue;
-		}
-
-		bool propQueried = true;
-		if (!hasBit<kPropBits>(ops.ioctl, device_fd, EVIOCGPROP(kPropBits), INPUT_PROP_POINTER, &propQueried)) {
-			queryFailed = queryFailed || !propQueried;
-			printf("%s: INPUT_PROP_POINTER not set\n", dev_name);
-			bool btnQueried = true;
-			if (!hasBit<kKeyBits>(ops.ioctl, device_fd, EVIOCGBIT(EV_KEY, kKeyBits), BTN_MOUSE, &btnQueried)) {
-				queryFailed = queryFailed || !btnQueried;
-				printf("BTN_MOUSE not found\n");
-				printf("Not a touchpad device\n");
-				ops.close(device_fd);
+	try {
+		for (auto & evdev : evdevNames) {
+			int device_fd = ops.open(evdev);
+			if (device_fd < 0) {
+				// fd 0 is a valid descriptor; only a negative return is a failure.
+				perror("opening device");
+				openFailed = true;
 				continue;
 			}
-		}
+			FdGuard guard {device_fd, &ops}; // closes on every rejection path
 
-		// Skip this process's own virtual devices so they are never re-grabbed.
-		if (strcmp(x_virtual_tablet, dev_name) == 0 ||
-		    strcmp(x_virtual_mouse, dev_name) == 0 ||
-		    strcmp(x_virtual_touch, dev_name) == 0) {
-			printf("skipping %s\n", dev_name);
-			ops.close(device_fd);
-			continue;
-		}
+			// Get device name. EVIOCGNAME returns < 0 on failure (a successful
+			// call returns the name length, so `== 0` would discard every device).
+			char dev_name[24] {};
+			if (ops.ioctl(device_fd, EVIOCGNAME(sizeof(dev_name) - 1), dev_name) < 0) {
+				perror("get device name");
+				queryFailed = true; // the device exists but cannot be identified
+				continue;
+			}
 
-		if (ops.ioctl(device_fd, EVIOCGRAB, reinterpret_cast<void*>(1)) < 0) {
-			printf("%s: EVIOCGRAB failed\n", dev_name);
-			grabFailed = true;
-			ops.close(device_fd);
-			continue;
-		}
+			// Queried defaults are optimistic: hasBit only flips them when its
+			// ioctl actually runs, and C++ ||-short-circuit may skip the second probe.
+			bool absXQueried = true;
+			bool absYQueried = true;
+			if (!hasBit<kKeyBits>(ops.ioctl, device_fd, EVIOCGBIT(EV_ABS, kKeyBits), ABS_X, &absXQueried) ||
+			    !hasBit<kKeyBits>(ops.ioctl, device_fd, EVIOCGBIT(EV_ABS, kKeyBits), ABS_Y, &absYQueried)) {
+				queryFailed = queryFailed || !absXQueried || !absYQueried;
+				printf("%s: no ABS_X or ABS_Y events found\n", dev_name);
+				printf("Not a touch device\n");
+				continue;
+			}
 
-		printf("I: Add touchpad device: %s %s\n", dev_name, evdev.c_str());
-		result.fds.push_back(device_fd);
+			bool propQueried = true;
+			if (!hasBit<kPropBits>(ops.ioctl, device_fd, EVIOCGPROP(kPropBits), INPUT_PROP_POINTER, &propQueried)) {
+				queryFailed = queryFailed || !propQueried;
+				printf("%s: INPUT_PROP_POINTER not set\n", dev_name);
+				bool btnQueried = true;
+				if (!hasBit<kKeyBits>(ops.ioctl, device_fd, EVIOCGBIT(EV_KEY, kKeyBits), BTN_MOUSE, &btnQueried)) {
+					queryFailed = queryFailed || !btnQueried;
+					printf("BTN_MOUSE not found\n");
+					printf("Not a touchpad device\n");
+					continue;
+				}
+			}
+
+			// Skip this process's own virtual devices so they are never re-grabbed.
+			if (strcmp(x_virtual_tablet, dev_name) == 0 ||
+			    strcmp(x_virtual_mouse, dev_name) == 0 ||
+			    strcmp(x_virtual_touch, dev_name) == 0) {
+				printf("skipping %s\n", dev_name);
+				continue;
+			}
+
+			if (ops.ioctl(device_fd, EVIOCGRAB, reinterpret_cast<void*>(1)) < 0) {
+				printf("%s: EVIOCGRAB failed\n", dev_name);
+				grabFailed = true;
+				continue;
+			}
+
+			printf("I: Add touchpad device: %s %s\n", dev_name, evdev.c_str());
+			result.fds.push_back(device_fd); // guard reclaims current fd if this throws
+			guard.release();
+		}
+	} catch (...) {
+		// Contract: on non-OK status every opened fd is closed. The current
+		// device was reclaimed by its FdGuard during unwinding; close the
+		// collected ones and report the acquisition as failed.
+		for (int fd : result.fds) {
+			try {
+				ops.close(fd);
+			} catch (...) {
+			}
+		}
+		result.fds.clear();
+		result.status = TouchpadScanStatus::SCAN_ERROR;
+		return result;
 	}
 
 	if (!result.fds.empty()) {
@@ -166,8 +209,9 @@ TouchpadScanResult scanTouchpadDevices(EvdevOps ops) {
 	} else if (queryFailed) {
 		// Candidates existed but could not be inspected: unknown, not absent.
 		result.status = TouchpadScanStatus::SCAN_ERROR;
-	} else if (grabFailed || (openFailed && !openedAny)) {
-		// Present but not acquirable: grab denied or every open failed.
+	} else if (grabFailed || openFailed) {
+		// Present but not acquirable: grab denied or some candidate could
+		// not even be opened — absence is unconfirmed.
 		result.status = TouchpadScanStatus::ACCESS_ERROR;
 	} else {
 		// Every candidate opened, was identified and cleanly rejected.

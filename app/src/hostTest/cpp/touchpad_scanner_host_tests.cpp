@@ -10,6 +10,7 @@
 #include <linux/input.h>
 #include <map>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <sys/ioctl.h>
 #include <vector>
@@ -342,6 +343,78 @@ void testRequiredQueryFailureIsNotNoDevice() {
 	CHECK_EQ(g_closed.size(), 1);
 }
 
+// Mixed acquisition: one candidate cannot even be opened while another is
+// opened and cleanly rejected — incomplete acquisition, never confirmed
+// absence (the rejected device proves the directory was readable, not that
+// no touchpad exists).
+void testMixedOpenFailureIsNotNoDevice() {
+	reset();
+	addDevice("/dev/input/event0", touchpadProfile("Locked Touchpad"));
+	Profile keyboard;
+	keyboard.name = "Some Keyboard";
+	keyboard.keyBits = {KEY_A};
+	addDevice("/dev/input/event1", keyboard);
+	g_openFailures.insert("/dev/input/event0");
+	auto r = scanTouchpadDevices(makeOps());
+	CHECK(r.status == TouchpadScanStatus::ACCESS_ERROR);
+	CHECK(r.fds.empty());
+	CHECK_EQ(g_closed.size(), 1); // only the keyboard was ever opened
+}
+
+// A throw mid-scan must not leak descriptors already grabbed: the scanner
+// closes everything it owns and reports SCAN_ERROR (contract: non-OK status
+// means every opened fd is closed).
+void testOpenExceptionAfterGrabsClosesDescriptors() {
+	reset();
+	addDevice("/dev/input/event0", touchpadProfile("First"));
+	addDevice("/dev/input/event1", touchpadProfile("Second"));
+	addDevice("/dev/input/event2", touchpadProfile("Third"));
+	auto ops = makeOps();
+	int opens = 0;
+	ops.open = [&opens](const std::string& path) {
+		if (++opens == 3) throw std::runtime_error("open exploded");
+		return fakeOpen(path);
+	};
+	TouchpadScanResult r;
+	try {
+		r = scanTouchpadDevices(ops);
+	} catch (...) {
+		// Pre-fix behaviour: the exception escapes with fds still held.
+	}
+	CHECK(r.status == TouchpadScanStatus::SCAN_ERROR);
+	CHECK(r.fds.empty());
+	CHECK_EQ(g_closed.size(), 2); // both grabbed fds, exactly once
+	CHECK(contains(g_closed, 100));
+	CHECK(contains(g_closed, 101));
+}
+
+// A throw after a successful grab — while the current descriptor is still
+// owned by the scanner — must close the current fd through scoped ownership
+// and the already-collected ones through the loop-level guard.
+void testGrabExceptionClosesCurrentAndCollected() {
+	reset();
+	addDevice("/dev/input/event0", touchpadProfile("First"));
+	addDevice("/dev/input/event1", touchpadProfile("Second"));
+	auto ops = makeOps();
+	ops.ioctl = [](int fd, unsigned long request, void* arg) -> int {
+		// The second device's grab explodes mid-call; all else is faked.
+		if (fd == 101 && _IOC_NR(request) == 0x90)
+			throw std::runtime_error("grab exploded");
+		return fakeIoctl(fd, request, arg);
+	};
+	TouchpadScanResult r;
+	try {
+		r = scanTouchpadDevices(ops);
+	} catch (...) {
+		// Pre-fix behaviour: the exception escapes with fds still held.
+	}
+	CHECK(r.status == TouchpadScanStatus::SCAN_ERROR);
+	CHECK(r.fds.empty());
+	CHECK_EQ(g_closed.size(), 2); // collected (100) + current (101)
+	CHECK(contains(g_closed, 100));
+	CHECK(contains(g_closed, 101));
+}
+
 } // namespace
 
 int main() {
@@ -358,6 +431,9 @@ int main() {
 	testEnumerationFailureIsScanError();
 	testAllGrabsFailIsNotNoDevice();
 	testRequiredQueryFailureIsNotNoDevice();
+	testMixedOpenFailureIsNotNoDevice();
+	testOpenExceptionAfterGrabsClosesDescriptors();
+	testGrabExceptionClosesCurrentAndCollected();
 
 	if (g_failures != 0) {
 		std::fprintf(stderr, "%d check(s) FAILED\n", g_failures);

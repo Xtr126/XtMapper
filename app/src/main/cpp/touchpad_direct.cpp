@@ -83,14 +83,25 @@ touchpad::TouchpadLifecycle& lifecycle() {
 extern "C"
 JNIEXPORT jint JNICALL
 Java_xtr_keymapper_server_InputService_startTouchpadDirect(JNIEnv *env, jobject thiz) {
-	touchpad::LifecycleOps ops = touchpad::withCommonOps({});
-	ops.createVirtual = [](int device_fd) { return SetupUinputDevice(device_fd); };
-	ops.transform = [](int index, const input_event& in) { return directTransform(index, in); };
-	return touchpad::startTouchpad(env, thiz, lifecycle(), std::move(ops));
+	try {
+		touchpad::LifecycleOps ops = touchpad::withCommonOps({});
+		ops.createVirtual = [](int device_fd) { return SetupUinputDevice(device_fd); };
+		ops.transform = [](int index, const input_event& in) { return directTransform(index, in); };
+		return touchpad::startTouchpad(env, thiz, lifecycle(), std::move(ops));
+	} catch (...) {
+		// Nothing may cross the JNI boundary: ops construction and the
+		// lifecycle() static can allocate before any owner token exists.
+		return static_cast<jint>(touchpad::StartOutcome::INTERNAL_ERROR);
+	}
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
 Java_xtr_keymapper_server_InputService_stopTouchpadDirect(JNIEnv *env, jobject thiz) {
-	return touchpad::stopTouchpad(env, thiz, lifecycle());
+	try {
+		return touchpad::stopTouchpad(env, thiz, lifecycle());
+	} catch (...) {
+		// The probe never ran: report the retained-resource outcome.
+		return static_cast<jint>(touchpad::StopOutcome::INCOMPLETE);
+	}
 }

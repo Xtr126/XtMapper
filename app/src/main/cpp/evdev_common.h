@@ -24,8 +24,9 @@ struct TouchpadScanResult {
 	std::vector<int> fds;
 };
 
-// Enumeration result: ok=false means the input directory could not be listed
-// at all (a genuinely empty directory is ok=true with zero paths).
+// Enumeration result: ok=false means the directory could not be fully
+// listed (opendir failure, readdir error, or allocation failure mid-scan);
+// paths is empty then. A genuinely empty directory is ok=true, zero paths.
 struct DeviceList {
 	bool ok = true;
 	std::vector<std::string> paths;

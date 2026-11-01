@@ -25,6 +25,9 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := evdev_common
 LOCAL_SRC_FILES := $(JNI_SRC_PATH)/evdev_common.cpp
+# The scanner contains exceptions from the injectable ops seam (FdGuard and
+# the loop catch); ndk-build's default would reject try/catch outright.
+LOCAL_CPPFLAGS  := -fexceptions
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
