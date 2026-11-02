@@ -42,6 +42,7 @@ object SessionMarkers {
         durationNanos: Long,
         status: String,
         droppedRecords: Int,
+        uncertainRecords: Int = 0,
     ): String {
         val sb = StringBuilder(160)
             .append(END).append('\n')
@@ -50,6 +51,7 @@ object SessionMarkers {
             .append("Duration: ").append(formatDurationNanos(durationNanos)).append('\n')
             .append("Status: ").append(status)
         if (droppedRecords > 0) sb.append("\nDropped: ").append(droppedRecords)
+        if (uncertainRecords > 0) sb.append("\nUncertain: ").append(uncertainRecords)
         return sb.toString()
     }
 

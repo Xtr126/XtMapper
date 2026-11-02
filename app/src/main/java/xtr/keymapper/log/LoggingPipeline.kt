@@ -26,6 +26,10 @@ enum class Role(val tag: String) {
     }
 }
 
+enum class LogSubmission(val nativeCode: Int) {
+    ACCEPTED(0), CLOSED(1), UNAVAILABLE(2), INVALID(3), FILTERED(4);
+}
+
 class LoggingPipeline(
     val role: Role,
     sessionId: String,
@@ -40,6 +44,7 @@ class LoggingPipeline(
     private val logcat: (LogRecord) -> Unit = {},
     private val onFailure: (String) -> Unit = {},
     private val pruneRetention: Boolean = false,
+    private val beforeAdmission: () -> Unit = {},
 ) {
     val sessionId: String = sessionId
 
@@ -52,10 +57,11 @@ class LoggingPipeline(
     val droppedCount: Int get() = queue.droppedCount.get()
 
     val pendingRecords: Int get() = queue.size
+    val inFlightRecords: Int get() = queue.inFlightRecords
+    val uncertainCount: Int get() = queue.uncertainCount.get()
+    val isClosed: Boolean get() = worker.isClosed
 
-    val fileSinkAvailable: Boolean get() = !writer.unavailable
-
-    internal val sessionWriter: SessionLogWriter get() = writer
+    val fileSinkAvailable: Boolean get() = started.get() && !queue.isClosed && !writer.unavailable
 
     private val worker: AsyncLogWorker
 
@@ -69,11 +75,18 @@ class LoggingPipeline(
             sessionId = sessionId,
             onEvent = onFailure,
         )
-        worker = AsyncLogWorker(queue, config, writer, roleTag = role.tag)
+        worker = AsyncLogWorker(
+            queue, config, writer, roleTag = role.tag,
+            onStart = ::startSession, onStop = ::finishClose,
+        )
     }
 
     fun start() {
-        if (!started.compareAndSet(false, true)) return
+        if (queue.isClosed || !started.compareAndSet(false, true)) return
+        worker.start()
+    }
+
+    private fun startSession() {
         if (pruneRetention) runRetention()
         val previous = try {
             SessionState.previousDisposition(writer.store, role.fileNameTag)
@@ -82,7 +95,6 @@ class LoggingPipeline(
         }
         writer.configure(previous, metadata, startTime)
         writer.writeSessionStartMarker()
-        worker.start()
         infoInternal(
             "XtLogger",
             "logging started role=${role.tag} session=$sessionId previous=$previous fileSink=$fileSinkAvailable",
@@ -99,7 +111,7 @@ class LoggingPipeline(
     fun fatal(tag: String, message: String, throwable: Throwable? = null) =
         log(Level.FATAL, tag, message, throwable)
 
-    fun log(level: Level, tag: String, message: String, throwable: Throwable? = null) {
+    fun log(level: Level, tag: String, message: String, throwable: Throwable? = null): LogSubmission {
         val record = LogRecord.now(
             clock.instant(), level, tag, message, throwable, pid, role.tag, sessionId,
         )
@@ -110,56 +122,25 @@ class LoggingPipeline(
                 // Never let the diagnostic channel break the caller.
             }
         }
-        if (started.get()) {
-            if (level.enabled(config.minLevelFile)) queue.offer(record)
-            reportFirstDropIfNeeded()
-        }
+        if (!started.get()) return LogSubmission.CLOSED
+        if (!level.enabled(config.minLevelFile)) return LogSubmission.FILTERED
+        beforeAdmission()
+        val accepted = queue.offer(record)
+        reportFirstDropIfNeeded()
+        return if (accepted) LogSubmission.ACCEPTED else LogSubmission.CLOSED
     }
 
     fun flush(timeoutMillis: Long = config.flushTimeoutMillis): Boolean =
         worker.flush(timeoutMillis)
 
-    fun close(status: String = SessionStates.STATUS_CLEAN) {
-        if (!started.compareAndSet(true, false)) return
-        if (worker.stopDraining(config.flushTimeoutMillis)) {
-            finishClose(status)
-            return
-        }
-
-        val abandoned = queue.drainUpTo(Int.MAX_VALUE)?.size ?: 0
-        queue.markFailed(abandoned)
-        reportFirstDropIfNeeded()
-
-        val workerThread = worker.threadReference()
-        Thread({
-            var interrupted = false
-            while (workerThread.isAlive) {
-                try {
-                    workerThread.join()
-                } catch (_: InterruptedException) {
-                    interrupted = true
-                }
-            }
-            try {
-                finishClose(status)
-            } finally {
-                if (interrupted) Thread.currentThread().interrupt()
-            }
-        }, "xtlogger-session-close-" + role.tag).apply {
-            isDaemon = true
-            start()
-        }
-    }
+    fun close(status: String = SessionStates.STATUS_CLEAN): Boolean =
+        worker.close(config.flushTimeoutMillis, status).also { reportFirstDropIfNeeded() }
 
     private fun finishClose(status: String) {
-        try {
-            writer.endSession(
-                clock.instant(), durationNanos(), status,
-                queue.droppedCount.get() + writer.recordsDroppedByDayLimit.get(),
-            )
-        } finally {
-            worker.closeFile()
-        }
+        writer.endSession(
+            clock.instant(), durationNanos(), status,
+            queue.droppedCount.get() + writer.recordsDroppedByDayLimit.get(), queue.uncertainCount.get(),
+        )
     }
 
     private fun infoInternal(tag: String, message: String) {
@@ -182,10 +163,12 @@ class LoggingPipeline(
 
     private fun reportFirstDropIfNeeded() {
         if (queue.droppedCount.get() > 0 && dropReported.compareAndSet(false, true)) {
-            onFailure(
-                "XtLogger: records are being dropped (queue overflow or file-sink failure); " +
-                    "the total is reported in the session END marker"
-            )
+            runCatching {
+                onFailure(
+                    "XtLogger: records are being dropped (queue overflow, shutdown discard or unavailable sink); " +
+                        "the total is reported in the session END marker when the sink remains available"
+                )
+            }
         }
     }
 

@@ -8,7 +8,7 @@ class MutableClock(
     initial: Instant,
     val zoneId: ZoneId = ZoneId.of("Europe/Berlin"),
 ) : Clock() {
-    var current: Instant = initial
+    @Volatile var current: Instant = initial
 
     override fun instant(): Instant = current
 
@@ -37,8 +37,8 @@ class TestPipelineFactory(
         LoggingConfig(queueCapacity = 64, maxFileBytes = 4L * 1024 * 1024),
     private val pruneRetention: Boolean = false,
 ) {
-    val failureEvents: MutableList<String> = mutableListOf()
-    val logcatRecords: MutableList<LogRecord> = mutableListOf()
+    val failureEvents = java.util.concurrent.CopyOnWriteArrayList<String>()
+    val logcatRecords = java.util.concurrent.CopyOnWriteArrayList<LogRecord>()
 
     private var counter = 0
 

@@ -172,12 +172,13 @@ class LogStoreCoordinationTest {
         val pipeline = factory.start()
         try {
             assertFalse(pipeline.fileSinkAvailable)
-            assertTrue(pipeline.sessionWriter.unavailable)
             pipeline.info("Probe", "still on Logcat")
             assertTrue(factory.logcatRecords.any { it.message == "still on Logcat" })
             assertTrue(factory.logcatRecords.any { it.message.contains("fileSink=false") })
             assertEquals(1, factory.failureEvents.count { it.contains("file sink unavailable") })
             assertTrue(factory.failureEvents.any { it.contains("ambiguous locking IO failure") })
+            assertTrue(pipeline.flush(2_000))
+            assertEquals("unavailable sink records definite drops", 2, pipeline.droppedCount)
             assertTrue(channels.none { it.isOpen })
         } finally { pipeline.close() }
     }

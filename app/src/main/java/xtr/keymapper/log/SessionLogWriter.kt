@@ -7,6 +7,8 @@ import java.time.ZoneId
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 
+enum class BatchWriteOutcome { PROCESSED, UNAVAILABLE, UNCERTAIN }
+
 class SessionLogWriter(
     val store: LogStore,
     val role: String?,
@@ -24,7 +26,7 @@ class SessionLogWriter(
 
     private var currentDay: String? = null
     private var currentWriter: LogFileWriter? = null
-    private var currentFileName: String? = null
+    @Volatile private var currentFileName: String? = null
     private var exhaustedDay: String? = null
 
     @Volatile
@@ -37,6 +39,7 @@ class SessionLogWriter(
 
     private var sessionEnded = false
     private var dayLimitReported = false
+    private var closed = false
 
     fun configure(previousDisposition: String, metadata: SessionMetadata, sessionStart: Instant) {
         this.previousDisposition = previousDisposition
@@ -46,7 +49,7 @@ class SessionLogWriter(
     }
 
     fun writeSessionStartMarker() {
-        if (unavailable || sessionEnded || sessionStartDay == null) return
+        if (closed || unavailable || sessionEnded || sessionStartDay == null) return
         try {
             val day = sessionStartDay!!
             // START is a bounded session marker, so it may use the day's final part.
@@ -62,26 +65,30 @@ class SessionLogWriter(
         }
     }
 
-    fun write(records: List<LogRecord>) {
-        if (unavailable) return
+    fun write(records: List<LogRecord>): BatchWriteOutcome {
+        if (closed || sessionEnded || unavailable) return BatchWriteOutcome.UNAVAILABLE
         for (record in records) {
             try {
                 writeOne(record)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 sinkDown(e)
-                return
+                return BatchWriteOutcome.UNCERTAIN
             }
         }
+        return BatchWriteOutcome.PROCESSED
     }
 
-    fun endSession(endInstant: Instant, durationNanos: Long, status: String, droppedRecords: Int) {
-        if (unavailable || sessionEnded) return
+    fun endSession(
+        endInstant: Instant, durationNanos: Long, status: String, droppedRecords: Int,
+        uncertainRecords: Int = 0,
+    ) {
+        if (closed || unavailable || sessionEnded) return
         try {
             writerFor(dayOf(endInstant), endInstant, allowFullPart = true)
             sessionEnded = true
             writeBlock(
                 SessionMarkers.block(
-                    SessionMarkers.endLine(sessionId, endInstant, zone, durationNanos, status, droppedRecords)
+                    SessionMarkers.endLine(sessionId, endInstant, zone, durationNanos, status, droppedRecords, uncertainRecords)
                 )
             )
         } catch (e: Exception) {
@@ -92,6 +99,7 @@ class SessionLogWriter(
     }
 
     override fun close() {
+        closed = true
         closeCurrent()
     }
 
@@ -139,7 +147,7 @@ class SessionLogWriter(
         currentWriter = writer
         if (writer != null && continuedBody != null) {
             continuedDays.add(day)
-            try { writer.write(chunk(continuedBody)) } catch (e: Exception) { sinkDown(e) }
+            writer.write(chunk(continuedBody))
         }
     }
 
@@ -196,14 +204,17 @@ class SessionLogWriter(
     private fun closeCurrent() {
         try { currentWriter?.close() } catch (e: Exception) { /* best effort */ }
         currentWriter = null
+        currentFileName = null
     }
 
-    private fun sinkDown(e: Exception) {
+    private fun sinkDown(e: Throwable) {
         unavailable = true
-        onEvent(
-            "XtLogger: file sink unavailable for session $sessionId " +
-                "(${e.javaClass.simpleName}${e.message?.let { ": $it" } ?: ""})"
-        )
+        runCatching {
+            onEvent(
+                "XtLogger: file sink unavailable for session $sessionId " +
+                    "(${e.javaClass.simpleName}${e.message?.let { ": $it" } ?: ""}); attempted batch is unconfirmed"
+            )
+        }
         closeCurrent()
     }
 

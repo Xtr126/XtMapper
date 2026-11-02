@@ -50,6 +50,12 @@ jobs:
             platform-tools
           no-metrics: 'true'
 
+      - name: Run host Native diagnostics tests
+        run: |
+          cmake -S app/src/hostTest/nativeDiagnostics -B build/hostNativeDiagnostics -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build/hostNativeDiagnostics --parallel
+          ctest --test-dir build/hostNativeDiagnostics --output-on-failure --timeout 10
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 

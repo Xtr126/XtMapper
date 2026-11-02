@@ -17,6 +17,10 @@
 #include "evdev_common.h"
 #include "linux_key_table.h"
 
+extern "C" {
+#include "xt_diagnostics.h"
+}
+
 using std::string;
 using std::vector;
 
@@ -41,7 +45,12 @@ static KeyboardGrabContext g_ctx;
 static std::mutex g_lifecycle_mutex;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
+    JNIEnv *env = nullptr;
+    if (vm->GetEnv((void **)&env, JNI_VERSION_1_6) != JNI_OK) {
+        return JNI_ERR;
+    }
     g_ctx.javaVM = vm;
+    XtDiag_Init(env); // a failed diagnostics bridge must not fail library load
     return JNI_VERSION_1_6;
 }
 
@@ -69,6 +78,8 @@ static void run_keyboard_grab_loop() {
     }
 
     g_ctx.current_lock_state = g_ctx.keyboard_lock.load();
+    XtDiagEventGroup callback_failures;
+    XtDiagEvent_Init(&callback_failures);
     {
         std::lock_guard<std::mutex> guard(g_ctx.lock);
         for (int fd : g_ctx.device_fds) {
@@ -80,6 +91,8 @@ static void run_keyboard_grab_loop() {
 
     while (g_ctx.running.load()) {
         poll_fds.clear();
+        bool lock_changed = false;
+        int new_lock_state = 0;
         int pipe_fd = -1;
 
         {
@@ -95,12 +108,18 @@ static void run_keyboard_grab_loop() {
                 for (int fd : g_ctx.device_fds) {
                     ioctl(fd, EVIOCGRAB, target_lock);
                 }
-                printf("I: Keyboard grab lock changed to %d\n", target_lock);
+                lock_changed = true;
+                new_lock_state = target_lock;
             }
 
             for (int fd : g_ctx.device_fds) {
                 poll_fds.push_back({fd, POLLIN, 0});
             }
+        }
+
+        if (lock_changed) {
+            XtDiag_Submit(env, XT_DIAG_INFO, XT_DIAG_SOURCE_KEYBOARD,
+                          "keyboard grab lock changed to state ", new_lock_state);
         }
 
         if (poll_fds.empty()) {
@@ -152,6 +171,9 @@ static void run_keyboard_grab_loop() {
                                         env->CallVoidMethod(g_ctx.inputServiceObj, g_ctx.sendKeyboardEventMethod, jKeyName, ie.value);
                                         if (env->ExceptionCheck()) {
                                             env->ExceptionClear();
+                                            XtDiag_SubmitEvent(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_KEYBOARD,
+                                                               &callback_failures,
+                                                               "InputService.sendKeyboardEvent failed; suppressed=");
                                         }
                                         env->DeleteLocalRef(jKeyName);
                                     }
@@ -176,36 +198,48 @@ static void run_keyboard_grab_loop() {
         }
 
         if (!dead_fds.empty()) {
-            std::lock_guard<std::mutex> guard(g_ctx.lock);
-            for (int dead_fd : dead_fds) {
-                for (size_t j = 0; j < g_ctx.device_fds.size(); j++) {
-                    if (g_ctx.device_fds[j] == dead_fd) {
-                        printf("I: Removing disconnected keyboard device: %s (fd=%d)\n",
-                               g_ctx.device_paths[j].c_str(), dead_fd);
-                        ioctl(dead_fd, EVIOCGRAB, 0);
-                        close(dead_fd);
-                        g_ctx.device_fds.erase(g_ctx.device_fds.begin() + j);
-                        g_ctx.device_paths.erase(g_ctx.device_paths.begin() + j);
-                        break;
+            int remaining_devices = -1;
+            {
+                std::lock_guard<std::mutex> guard(g_ctx.lock);
+                for (int dead_fd : dead_fds) {
+                    for (size_t j = 0; j < g_ctx.device_fds.size(); j++) {
+                        if (g_ctx.device_fds[j] == dead_fd) {
+                            ioctl(dead_fd, EVIOCGRAB, 0);
+                            close(dead_fd);
+                            g_ctx.device_fds.erase(g_ctx.device_fds.begin() + j);
+                            g_ctx.device_paths.erase(g_ctx.device_paths.begin() + j);
+                            break;
+                        }
                     }
                 }
+                remaining_devices = (int) g_ctx.device_fds.size();
             }
+            XtDiag_Submit(env, XT_DIAG_WARN, XT_DIAG_SOURCE_KEYBOARD,
+                          "keyboard device removed; remaining=", remaining_devices);
         }
     }
 
+    uint64_t residual = XtDiagEvent_TakeResidual(&callback_failures);
+    if (residual > 0) {
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_KEYBOARD,
+                      "InputService.sendKeyboardEvent failures suppressed at worker exit count=", (long)residual);
+    }
     g_ctx.javaVM->DetachCurrentThread();
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_xtr_keymapper_server_InputService_startKeyboardGrab(JNIEnv *env, jobject thiz) {
-    std::lock_guard<std::mutex> lifecycle_guard(g_lifecycle_mutex);
+    std::unique_lock<std::mutex> lifecycle_lock(g_lifecycle_mutex);
     if (g_ctx.running.load()) {
         return JNI_TRUE;
     }
 
     if (pipe2(g_ctx.wakeup_pipe, O_CLOEXEC | O_NONBLOCK) < 0) {
-        perror("pipe2 wakeup_pipe");
+        int pipe_errno = errno;
+        lifecycle_lock.unlock();
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_KEYBOARD,
+                      "keyboard grab wakeup pipe failed errno=", pipe_errno);
         return JNI_FALSE;
     }
 
@@ -241,13 +275,18 @@ Java_xtr_keymapper_server_InputService_startKeyboardGrab(JNIEnv *env, jobject th
         }
 
         if (g_ctx.device_fds.empty()) {
-            printf("I: No keyboard devices found to grab\n");
             close(g_ctx.wakeup_pipe[0]);
             close(g_ctx.wakeup_pipe[1]);
             g_ctx.wakeup_pipe[0] = -1;
             g_ctx.wakeup_pipe[1] = -1;
-            return JNI_FALSE;
         }
+    }
+
+    if (g_ctx.device_fds.empty()) {
+        lifecycle_lock.unlock();
+        XtDiag_Submit(env, XT_DIAG_WARN, XT_DIAG_SOURCE_KEYBOARD,
+                      "keyboard grab found no keyboard devices", -1);
+        return JNI_FALSE;
     }
 
     jclass clz = env->GetObjectClass(thiz);
@@ -263,18 +302,23 @@ Java_xtr_keymapper_server_InputService_startKeyboardGrab(JNIEnv *env, jobject th
         g_ctx.inputServiceClz = nullptr;
         g_ctx.inputServiceObj = nullptr;
 
-        std::lock_guard<std::mutex> guard(g_ctx.lock);
-        if (g_ctx.wakeup_pipe[0] != -1) close(g_ctx.wakeup_pipe[0]);
-        if (g_ctx.wakeup_pipe[1] != -1) close(g_ctx.wakeup_pipe[1]);
-        g_ctx.wakeup_pipe[0] = -1;
-        g_ctx.wakeup_pipe[1] = -1;
+        {
+            std::lock_guard<std::mutex> guard(g_ctx.lock);
+            if (g_ctx.wakeup_pipe[0] != -1) close(g_ctx.wakeup_pipe[0]);
+            if (g_ctx.wakeup_pipe[1] != -1) close(g_ctx.wakeup_pipe[1]);
+            g_ctx.wakeup_pipe[0] = -1;
+            g_ctx.wakeup_pipe[1] = -1;
 
-        for (int fd : g_ctx.device_fds) {
-            ioctl(fd, EVIOCGRAB, 0);
-            close(fd);
+            for (int fd : g_ctx.device_fds) {
+                ioctl(fd, EVIOCGRAB, 0);
+                close(fd);
+            }
+            g_ctx.device_fds.clear();
+            g_ctx.device_paths.clear();
         }
-        g_ctx.device_fds.clear();
-        g_ctx.device_paths.clear();
+        lifecycle_lock.unlock();
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_KEYBOARD,
+                      "keyboard unable to resolve InputService.sendKeyboardEvent", -1);
         return JNI_FALSE;
     }
 

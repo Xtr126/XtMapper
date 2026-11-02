@@ -11,7 +11,7 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE    := mouse_read
-LOCAL_SRC_FILES := $(JNI_SRC_PATH)/mouse_read.c
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/mouse_read.c $(JNI_SRC_PATH)/xt_diagnostics.c $(JNI_SRC_PATH)/xt_diag_events.c
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
@@ -49,6 +49,6 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE    := keyboard_grab
-LOCAL_SRC_FILES := $(JNI_SRC_PATH)/keyboard_grab.cpp
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/keyboard_grab.cpp $(JNI_SRC_PATH)/xt_diagnostics.c $(JNI_SRC_PATH)/xt_diag_events.c
 LOCAL_SHARED_LIBRARIES := evdev_common
 include $(BUILD_SHARED_LIBRARY)

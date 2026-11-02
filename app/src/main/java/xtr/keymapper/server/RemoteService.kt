@@ -28,6 +28,7 @@ import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.databinding.CursorBinding
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
+import xtr.keymapper.log.DeviceTelemetry
 import xtr.keymapper.log.Role
 import xtr.keymapper.log.SessionStates
 import xtr.keymapper.log.XtLogger
@@ -469,6 +470,8 @@ class RemoteService @JvmOverloads constructor(
             return
         }
 
+        DeviceTelemetry.start(context)
+
         if (!isWaylandClient) {
             Log.i(TAG, "startServer: setting mouse lock before connecting discovered device")
             newService.setMouseLock(true)
@@ -536,6 +539,7 @@ class RemoteService @JvmOverloads constructor(
     }
 
     private fun stopServer(exitProcess: Boolean, clientAlive: Boolean = true) {
+        DeviceTelemetry.stop()
         val service = mInputService.get()
         Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient clientAlive=$clientAlive")
         if (service != null && clientAlive) {
