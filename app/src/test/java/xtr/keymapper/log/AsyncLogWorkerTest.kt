@@ -162,7 +162,8 @@ class AsyncLogWorkerTest {
         assertEquals(0, queue.size)
         assertEquals(1, worker.uncertainCount)
         assertEquals(0, worker.droppedCount)
-        worker.close(2_000)
+        assertTrue("worker closes successfully", worker.close(2_000))
+        worker.threadReference().join(2_000)
         assertFalse(worker.threadReference().isAlive)
     }
 
