@@ -133,8 +133,10 @@ object XtLogger {
     }
 
     fun endSession(status: String = SessionStates.STATUS_CLEAN) {
-        val active = pipeline ?: return
+        val active = pipeline
         synchronized(initLock) {
+            deferredStart = null
+            if (active == null) return
             val current = pipeline
             if (current === active) {
                 pipeline = null

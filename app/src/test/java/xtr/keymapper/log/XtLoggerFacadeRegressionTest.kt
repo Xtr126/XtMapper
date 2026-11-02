@@ -49,12 +49,17 @@ class XtLoggerFacadeRegressionTest {
         override fun delete(name: String) = false
     }
 
-    private fun pipelineFor(store: LogStore, flushMillis: Long = 100): LoggingPipeline {
+    private fun pipelineFor(
+        store: LogStore,
+        flushMillis: Long = 100,
+        afterClose: () -> Unit = {},
+    ): LoggingPipeline {
         val config = LoggingConfig(
             queueCapacity = 16, flushTimeoutMillis = flushMillis, batchMaxRecords = 1,
         )
         val pipeline = LoggingPipeline(
             Role.APP, "facade-old", store, config, clock, clock.zoneId, clock.instant(), { 0 },
+            afterClose = afterClose,
         )
         pipeline.start()
         return pipeline
@@ -199,6 +204,37 @@ class XtLoggerFacadeRegressionTest {
         )
         assertTrue(awaitTrue(2_000) { store.startCount == 2 })
         assertEquals("the deferred init parameters restart", Role.SHELL, XtLogger.currentRole)
+    }
+
+    @Test
+    fun `ending a session cancels a deferred init before the owner retires`() {
+        val store = FacadeStore()
+        val callbackFinished = CountDownLatch(1)
+        val old = pipelineFor(store, afterClose = {
+            facadeMethod("retryDeferredInit").invoke(XtLogger)
+            callbackFinished.countDown()
+        })
+        install(old, Role.APP)
+        old.info("Facade", "probe=old-session")
+        assertTrue(store.oldWriteEntered.await(2, TimeUnit.SECONDS))
+        try {
+            XtLogger.endSession("Facade stopped")
+            facadeMethod("initInternal", Role::class.java, LogStore::class.java)
+                .invoke(XtLogger, Role.SHELL, store)
+            assertFalse(XtLogger.isInitialized)
+            assertTrue(stateField("deferredStart").get(XtLogger) != null)
+
+            XtLogger.endSession("Cancel deferred start")
+            assertNull(stateField("deferredStart").get(XtLogger))
+        } finally {
+            store.releaseOldWrite.countDown()
+        }
+        assertTrue("the retirement callback completed", callbackFinished.await(2, TimeUnit.SECONDS))
+        assertTrue(old.isClosed)
+        assertFalse(XtLogger.isInitialized)
+        assertNull(XtLogger.currentRole)
+        assertEquals(1, store.startCount)
+        assertEquals(1, store.endCount)
     }
 
     @Test
