@@ -81,7 +81,9 @@ class AsyncLogWorker(
             }
         } catch (e: Throwable) {
             lastError.set(e)
-            queue.markUncertain(batch.size)
+            // A single consumer owns all in-flight credit: settle whatever is still held
+            // so a batch-construction failure cannot leave permanent orphaned credit.
+            queue.markUncertain(queue.inFlightRecords)
         } finally {
             initialized.countDown()
             queue.closeAdmission()

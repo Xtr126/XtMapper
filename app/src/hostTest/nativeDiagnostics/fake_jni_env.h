@@ -37,6 +37,10 @@ struct FakeBridge {
     int globalRefCount = 0;
     int deleteLocalRefCount = 0;
     int deleteGlobalRefCount = 0;
+    bool utfCharsFail = false;
+    int utfCharsCount = 0;
+    int utfReleaseCount = 0;
+    std::string utfCharsValue;
 
     void reset() { *this = FakeBridge(); }
 };
@@ -120,6 +124,20 @@ inline void JNICALL fakeExceptionClear(JNIEnv *) {
 inline void JNICALL fakeDeleteLocalRef(JNIEnv *, jobject) { g_bridge.deleteLocalRefCount += 1; }
 inline void JNICALL fakeDeleteGlobalRef(JNIEnv *, jobject) { g_bridge.deleteGlobalRefCount += 1; }
 
+inline const char *JNICALL fakeGetStringUTFChars(JNIEnv *, jstring, jboolean *isCopy) {
+    if (g_bridge.utfCharsFail) {
+        g_bridge.pending = true;
+        return nullptr;
+    }
+    g_bridge.utfCharsCount += 1;
+    if (isCopy != nullptr) *isCopy = JNI_TRUE;
+    return g_bridge.utfCharsValue.c_str();
+}
+
+inline void JNICALL fakeReleaseStringUTFChars(JNIEnv *, jstring, const char *) {
+    g_bridge.utfReleaseCount += 1;
+}
+
 inline jclass JNICALL fakeGetObjectClass(JNIEnv *, jobject) { return fakeClassHandle(); }
 
 inline jmethodID JNICALL fakeGetMethodID(JNIEnv *, jclass, const char *, const char *) {
@@ -157,6 +175,8 @@ inline JNIEnv *make_fake_env() {
     table.GetObjectClass = fakeGetObjectClass;
     table.GetMethodID = fakeGetMethodID;
     table.NewStringUTF = fakeNewStringUTF;
+    table.GetStringUTFChars = fakeGetStringUTFChars;
+    table.ReleaseStringUTFChars = fakeReleaseStringUTFChars;
     table.CallVoidMethod = fakeCallVoidMethod;
     table.CallVoidMethodV = fakeCallVoidMethodV;
     static JNIEnv holder{};

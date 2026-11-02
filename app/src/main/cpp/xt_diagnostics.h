@@ -35,6 +35,9 @@ XT_DIAG_API jint XtDiag_Init(JNIEnv *env);
 XT_DIAG_API jint XtDiag_Submit(JNIEnv *env, int priority, int source,
                                const char *text, long n);
 
+// Host-test hook: clears the once-per-process stderr fallback so a later unavailable result writes the notice again.
+XT_DIAG_API void XtDiag_ResetUnavailableFallback(void);
+
 // Aggregates repeated producer failures: the first occurrence and at most one report per second cross the bridge; everything else must be summarized through XtDiagEvent_TakeResidual at worker exit.
 XT_DIAG_API jint XtDiag_SubmitEvent(JNIEnv *env, int priority, int source,
                                     XtDiagEventGroup *group, const char *text);

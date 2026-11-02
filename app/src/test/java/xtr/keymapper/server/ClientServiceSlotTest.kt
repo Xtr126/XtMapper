@@ -5,6 +5,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 class ClientServiceSlotTest {
     private val slot = ClientServiceSlot<String, String>()
@@ -117,5 +120,58 @@ class ClientServiceSlotTest {
         assertFalse(slot.deferUntilAvailable { retried = true })
         assertFalse(retried)
         assertTrue(slot.install("session-a", "service-a"))
+    }
+
+    @Test
+    fun `runIfOwner runs only while the exact session still occupies the slot`() {
+        assertFalse(
+            "no owner installed yet",
+            slot.runIfOwner("session-a") { throw AssertionError("must not run") },
+        )
+
+        slot.install("session-a", "service-a")
+        var invocations = 0
+        assertTrue(slot.runIfOwner("session-a") { invocations++ })
+        assertEquals(1, invocations)
+
+        assertFalse("a different owner must not run another owner's block", slot.runIfOwner("session-b") { invocations++ })
+        assertEquals(1, invocations)
+
+        assertEquals("service-a" to false, slot.claimForShutdown("session-a"))
+        assertFalse("a committed shutdown revokes pending side effects", slot.runIfOwner("session-a") { invocations++ })
+        assertEquals(1, invocations)
+    }
+
+    @Test
+    fun `a claim completes only after the running ownership block returns`() {
+        slot.install("session-a", "service-a")
+        val blockRunning = CountDownLatch(1)
+        val releaseBlock = CountDownLatch(1)
+        val claimOutcome = AtomicReference<Pair<String?, Boolean>?>(null)
+
+        val owner = Thread {
+            val decided = slot.runIfOwner("session-a") {
+                blockRunning.countDown()
+                assertTrue("block released in time", releaseBlock.await(2, TimeUnit.SECONDS))
+            }
+            assertTrue("ownership block ran", decided)
+        }
+        owner.isDaemon = true
+        owner.start()
+        assertTrue("block must be entered", blockRunning.await(2, TimeUnit.SECONDS))
+
+        // Shutdown can only enter the shared slot monitor after the block returns;
+        // a session teardown can therefore never overtake a pending side effect.
+        val claimer = Thread { claimOutcome.set(slot.claimForShutdown("session-a")) }
+        claimer.isDaemon = true
+        claimer.start()
+        releaseBlock.countDown()
+
+        owner.join(2_000)
+        claimer.join(2_000)
+        assertFalse("owner run finished", owner.isAlive)
+        assertFalse("claimer finished", claimer.isAlive)
+        assertEquals("shutdown revokes only after the block returned", "service-a" to false, claimOutcome.get())
+        assertNull(slot.get())
     }
 }

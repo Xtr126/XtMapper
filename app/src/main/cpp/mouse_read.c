@@ -321,6 +321,8 @@ int startMouseThread(JNIEnv *env, jobject thiz) {
     }
 
     LOGE("starting mouse thread failed: result=%d (%s)", result, strerror(result));
+    XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                  "mouse reader thread start failed errno=", result);
     pthread_mutex_lock(&g_ctx.lock);
     jclass failedClass = g_ctx.inputServiceClz;
     jobject failedObject = g_ctx.inputServiceObj;
@@ -350,7 +352,10 @@ Java_xtr_keymapper_server_InputService_openDevice(JNIEnv *env, jobject thiz, jst
     LOGI("openDevice: opening %s", evdev);
     int mouse_fd = open(evdev, O_RDONLY);
     if (mouse_fd == -1) {
-        LOGE("open(%s, O_RDONLY) failed: errno=%d (%s)", evdev, errno, strerror(errno));
+        int open_errno = errno;
+        LOGE("open(%s, O_RDONLY) failed: errno=%d (%s)", evdev, open_errno, strerror(open_errno));
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                      "mouse device open failed errno=", open_errno);
         (*env)->ReleaseStringUTFChars(env, device, evdev);
         return -1;
     }

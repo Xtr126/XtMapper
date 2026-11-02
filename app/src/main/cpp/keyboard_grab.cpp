@@ -6,6 +6,7 @@
 #include <sys/poll.h>
 #include <dirent.h>
 #include <string>
+#include <utility>
 #include <vector>
 #include <thread>
 #include <atomic>
@@ -39,6 +40,10 @@ struct KeyboardGrabContext {
     vector<string> device_paths;
     std::thread worker_thread;
     int wakeup_pipe[2] = {-1, -1};
+
+    // Diagnostics staged until the worker runs: XtDiag_Submit must not execute while
+    // the producer holds any of its locks.
+    vector<std::pair<int, string>> staged_submit;
 };
 
 static KeyboardGrabContext g_ctx;
@@ -80,11 +85,17 @@ static void run_keyboard_grab_loop() {
     g_ctx.current_lock_state = g_ctx.keyboard_lock.load();
     XtDiagEventGroup callback_failures;
     XtDiagEvent_Init(&callback_failures);
+    vector<std::pair<int, string>> staged;
     {
         std::lock_guard<std::mutex> guard(g_ctx.lock);
+        staged.swap(g_ctx.staged_submit);
         for (int fd : g_ctx.device_fds) {
             ioctl(fd, EVIOCGRAB, g_ctx.current_lock_state);
         }
+    }
+    // Startup outcomes wait until no producer lock is held before crossing the bridge.
+    for (const auto &item : staged) {
+        XtDiag_Submit(env, item.first, XT_DIAG_SOURCE_KEYBOARD, item.second.c_str(), -1);
     }
 
     vector<pollfd> poll_fds;
@@ -93,6 +104,8 @@ static void run_keyboard_grab_loop() {
         poll_fds.clear();
         bool lock_changed = false;
         int new_lock_state = 0;
+        int lock_change_failures = 0;
+        int lock_change_errno = 0;
         int pipe_fd = -1;
 
         {
@@ -106,7 +119,11 @@ static void run_keyboard_grab_loop() {
             if (target_lock != g_ctx.current_lock_state) {
                 g_ctx.current_lock_state = target_lock;
                 for (int fd : g_ctx.device_fds) {
-                    ioctl(fd, EVIOCGRAB, target_lock);
+                    if (ioctl(fd, EVIOCGRAB, target_lock) != 0) {
+                        // Every device counts; the last errno is the message's sample.
+                        lock_change_failures++;
+                        lock_change_errno = errno;
+                    }
                 }
                 lock_changed = true;
                 new_lock_state = target_lock;
@@ -118,8 +135,16 @@ static void run_keyboard_grab_loop() {
         }
 
         if (lock_changed) {
-            XtDiag_Submit(env, XT_DIAG_INFO, XT_DIAG_SOURCE_KEYBOARD,
-                          "keyboard grab lock changed to state ", new_lock_state);
+            if (lock_change_failures == 0) {
+                XtDiag_Submit(env, XT_DIAG_INFO, XT_DIAG_SOURCE_KEYBOARD,
+                              "keyboard grab lock changed to state ", new_lock_state);
+            } else {
+                char detail[128];
+                snprintf(detail, sizeof(detail),
+                         "keyboard grab lock change incomplete state=%d devices_failed=%d errno=%d",
+                         new_lock_state, lock_change_failures, lock_change_errno);
+                XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_KEYBOARD, detail, -1);
+            }
         }
 
         if (poll_fds.empty()) {
@@ -227,6 +252,54 @@ static void run_keyboard_grab_loop() {
     g_ctx.javaVM->DetachCurrentThread();
 }
 
+// Scans /dev/input and EVIOCGRABs every keyboard device found; caller owns g_lifecycle_mutex.
+// Outcomes stage until the worker drains g_ctx.staged_submit, so submissions never run
+// with a producer lock held.
+static void scanAndGrabKeyboardDevices() {
+    std::lock_guard<std::mutex> guard(g_ctx.lock);
+    g_ctx.device_fds.clear();
+    g_ctx.device_paths.clear();
+    g_ctx.staged_submit.clear();
+
+    vector<string> allDevices = ListInputDevices();
+    for (const auto &devPath : allDevices) {
+        int fd = open(devPath.c_str(), O_RDONLY | O_NONBLOCK);
+        if (fd < 0) continue;
+
+        char name[128];
+        memset(name, 0, sizeof(name));
+        if (ioctl(fd, EVIOCGNAME(sizeof(name) - 1), name) < 0) {
+            close(fd);
+            continue;
+        }
+
+        if (isKeyboardDevice(fd, name)) {
+            if (ioctl(fd, EVIOCGRAB, 1) == 0) {
+                char message[256];
+                snprintf(message, sizeof(message), "keyboard grabbed %s (%s)",
+                         name, devPath.c_str());
+                g_ctx.staged_submit.push_back({XT_DIAG_INFO, message});
+                g_ctx.device_fds.push_back(fd);
+                g_ctx.device_paths.push_back(devPath);
+            } else {
+                char message[96];
+                snprintf(message, sizeof(message), "keyboard initial EVIOCGRAB failed errno=%d", errno);
+                g_ctx.staged_submit.push_back({XT_DIAG_ERROR, message});
+                close(fd);
+            }
+        } else {
+            close(fd);
+        }
+    }
+
+    if (g_ctx.device_fds.empty()) {
+        close(g_ctx.wakeup_pipe[0]);
+        close(g_ctx.wakeup_pipe[1]);
+        g_ctx.wakeup_pipe[0] = -1;
+        g_ctx.wakeup_pipe[1] = -1;
+    }
+}
+
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_xtr_keymapper_server_InputService_startKeyboardGrab(JNIEnv *env, jobject thiz) {
@@ -243,44 +316,7 @@ Java_xtr_keymapper_server_InputService_startKeyboardGrab(JNIEnv *env, jobject th
         return JNI_FALSE;
     }
 
-    {
-        std::lock_guard<std::mutex> guard(g_ctx.lock);
-        g_ctx.device_fds.clear();
-        g_ctx.device_paths.clear();
-
-        vector<string> allDevices = ListInputDevices();
-        for (const auto &devPath : allDevices) {
-            int fd = open(devPath.c_str(), O_RDONLY | O_NONBLOCK);
-            if (fd < 0) continue;
-
-            char name[128];
-            memset(name, 0, sizeof(name));
-            if (ioctl(fd, EVIOCGNAME(sizeof(name) - 1), name) < 0) {
-                close(fd);
-                continue;
-            }
-
-            if (isKeyboardDevice(fd, name)) {
-                if (ioctl(fd, EVIOCGRAB, 1) == 0) {
-                    printf("I: Grabbed keyboard: %s (%s)\n", name, devPath.c_str());
-                    g_ctx.device_fds.push_back(fd);
-                    g_ctx.device_paths.push_back(devPath);
-                } else {
-                    perror("EVIOCGRAB failed");
-                    close(fd);
-                }
-            } else {
-                close(fd);
-            }
-        }
-
-        if (g_ctx.device_fds.empty()) {
-            close(g_ctx.wakeup_pipe[0]);
-            close(g_ctx.wakeup_pipe[1]);
-            g_ctx.wakeup_pipe[0] = -1;
-            g_ctx.wakeup_pipe[1] = -1;
-        }
-    }
+    scanAndGrabKeyboardDevices();
 
     if (g_ctx.device_fds.empty()) {
         lifecycle_lock.unlock();
@@ -393,42 +429,64 @@ Java_xtr_keymapper_server_InputService_grabKeyboardDevice(JNIEnv *env, jobject t
         return JNI_FALSE;
     }
     const char *dev = env->GetStringUTFChars(device, nullptr);
+    if (dev == nullptr) {
+        return JNI_FALSE;
+    }
     string devPath(dev);
     env->ReleaseStringUTFChars(device, dev);
 
-    std::lock_guard<std::mutex> guard(g_ctx.lock);
-    if (!g_ctx.running.load()) {
-        return JNI_FALSE;
-    }
-    for (const auto &p : g_ctx.device_paths) {
-        if (p == devPath) return JNI_TRUE;
-    }
-
-    int fd = open(devPath.c_str(), O_RDONLY | O_NONBLOCK);
-    if (fd < 0) return JNI_FALSE;
-
+    // The device name must outlive the mutex: the message is submitted after the guard.
     char name[128];
-    memset(name, 0, sizeof(name));
-    if (ioctl(fd, EVIOCGNAME(sizeof(name) - 1), name) < 0) {
-        close(fd);
-        return JNI_FALSE;
-    }
+    name[0] = '\0';
+    bool dynamic_grabbed = false;
+    int dynamic_errno = 0; /* 0 = EVIOCGRAB succeeded or was never reached */
 
-    if (isKeyboardDevice(fd, name)) {
-        if (ioctl(fd, EVIOCGRAB, g_ctx.keyboard_lock.load()) == 0) {
-            printf("I: Dynamically grabbed keyboard: %s (%s)\n", name, devPath.c_str());
-            g_ctx.device_fds.push_back(fd);
-            g_ctx.device_paths.push_back(devPath);
-            if (g_ctx.wakeup_pipe[1] != -1) {
-                write(g_ctx.wakeup_pipe[1], "u", 1);
-            }
-            return JNI_TRUE;
-        } else {
+    jboolean result = JNI_FALSE;
+    {
+        std::lock_guard<std::mutex> guard(g_ctx.lock);
+        if (!g_ctx.running.load()) {
+            return JNI_FALSE;
+        }
+        for (const auto &p : g_ctx.device_paths) {
+            if (p == devPath) return JNI_TRUE;
+        }
+
+        int fd = open(devPath.c_str(), O_RDONLY | O_NONBLOCK);
+        if (fd < 0) return JNI_FALSE;
+
+        memset(name, 0, sizeof(name));
+        if (ioctl(fd, EVIOCGNAME(sizeof(name) - 1), name) < 0) {
             close(fd);
             return JNI_FALSE;
         }
-    } else {
-        close(fd);
-        return JNI_FALSE;
+
+        if (isKeyboardDevice(fd, name)) {
+            if (ioctl(fd, EVIOCGRAB, g_ctx.keyboard_lock.load()) == 0) {
+                g_ctx.device_fds.push_back(fd);
+                g_ctx.device_paths.push_back(devPath);
+                if (g_ctx.wakeup_pipe[1] != -1) {
+                    write(g_ctx.wakeup_pipe[1], "u", 1);
+                }
+                dynamic_grabbed = true;
+                result = JNI_TRUE;
+            } else {
+                dynamic_errno = errno;
+                close(fd);
+            }
+        } else {
+            close(fd);
+        }
     }
+
+    // XtDiag_Submit must run outside native locks.
+    if (dynamic_grabbed) {
+        char message[256];
+        snprintf(message, sizeof(message), "keyboard dynamically grabbed %s (%s)",
+                 name, devPath.c_str());
+        XtDiag_Submit(env, XT_DIAG_INFO, XT_DIAG_SOURCE_KEYBOARD, message, -1);
+    } else if (dynamic_errno != 0) {
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_KEYBOARD,
+                      "keyboard dynamic grab failed errno=", dynamic_errno);
+    }
+    return result;
 }

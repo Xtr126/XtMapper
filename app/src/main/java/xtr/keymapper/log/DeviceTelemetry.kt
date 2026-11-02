@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
+import android.os.Process
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -47,22 +48,34 @@ class DeviceTelemetry internal constructor(
     private val thermalSource: ThermalSource,
     private val sdkInt: Int,
     private val emit: (String) -> Unit = { XtLogger.info(TAG, it) },
+    // Milliseconds of whole-process (multicore, safe) CPU time; null means unavailable.
+    private val selfCpuMillis: () -> Long? = { runCatching { Process.getElapsedCpuTime() }.getOrNull() },
+    private val sessionBudget: Int = SESSION_BUDGET,
+    private val captureMillis: Long = CAPTURE_MILLIS,
 ) {
+    // Saturating: Long.MAX_VALUE * 1_000_000 would wrap negative and expire instantly.
+    private val captureNanos =
+        if (captureMillis >= Long.MAX_VALUE / 1_000_000L) Long.MAX_VALUE else captureMillis * 1_000_000L
     private val lock = Any()
     private var running = false
     private var generation = 0L
     private var sessionRecords = 0
     private var dropped = 0
     private var budgetNoticeEmitted = false
+    private var captureEnded = false
+    private var captureReason: String? = null
     private val lastCanonical = mutableMapOf<String, String>()
     private var taskCancel: TelemetryCancellation? = null
     private var statTotal = -1L
     private var statIdle = -1L
     private var selfCpu = -1L
-    private var sampleNanos = 0L
+    private var systemSampleNanos = 0L
+    private var selfSampleNanos = 0L
+    private var captureStartNanos = 0L
     private var lastPct = -1
     private var lastChangePct = -1
     private var lastChangeNanos = 0L
+    private var lastTrendState: Pair<Boolean, String?>? = null
     private var zones: List<Pair<String, String>> = emptyList()
 
     fun start(role: Role): Unit = synchronized(lock) {
@@ -72,14 +85,18 @@ class DeviceTelemetry internal constructor(
         sessionRecords = 0
         dropped = 0
         budgetNoticeEmitted = false
+        captureEnded = false
+        captureReason = null
+        captureStartNanos = nanoTime()
         lastCanonical.clear()
         statTotal = -1
         statIdle = -1
         selfCpu = -1
         lastPct = -1
         lastChangePct = -1
+        lastTrendState = null
         zones = discoverZones()
-        budgeted("telemetry start role=${role.name} period_ms=$PERIOD_MILLIS budget=$SESSION_BUDGET")
+        budgeted("telemetry start role=${role.name} period_ms=$PERIOD_MILLIS budget=$sessionBudget")
         taskCancel = scheduler.schedule(0, PERIOD_MILLIS, Runnable { sample(session) })
     }
 
@@ -90,13 +107,23 @@ class DeviceTelemetry internal constructor(
             taskCancel?.cancel()
         } finally {
             taskCancel = null
-            // Budget-exempt so the final drop count always surfaces.
-            emit("telemetry stop records=$sessionRecords dropped=$dropped")
+            // Budget-exempt so the final drop count and capture reason always surface.
+            emit(
+                "telemetry stop records=$sessionRecords dropped=$dropped" +
+                    (captureReason?.let { " early=$it" } ?: ""),
+            )
         }
     }
 
     private fun sample(session: Long): Unit = synchronized(lock) {
-        if (!running || session != generation) return
+        // Both stop policies gate before any source read: expired capture and exhausted
+        // budget leave this session with zero further collection cost.
+        if (!running || session != generation || captureEnded) return
+        if (nanoTime() - captureStartNanos >= captureNanos) {
+            captureEnded = true
+            captureReason = "capture_expired"
+            return
+        }
         batterySample()
         cpuSample()
         memSample()
@@ -130,6 +157,16 @@ class DeviceTelemetry internal constructor(
         if (level == null || level !in 0..100) {
             lastPct = -1
             lastChangePct = -1
+            lastTrendState = null
+            return
+        }
+        val mode = reading.charging to reading.source
+        if (mode != lastTrendState) {
+            // Charging-state and power-source changes invalidate the previous rate window.
+            lastTrendState = mode
+            lastPct = level
+            lastChangePct = -1
+            lastChangeNanos = 0L
             return
         }
         val now = nanoTime()
@@ -160,60 +197,78 @@ class DeviceTelemetry internal constructor(
     }
 
     private fun cpuSample() {
-        val stat = readProc("/proc/stat") ?: return cpuUnavailable()
-        val cpuLine = stat.lineSequence().firstOrNull { it.startsWith("cpu ") } ?: return cpuUnavailable()
-        val fields = cpuLine.trim().split(WHITESPACE)
-        if (fields.size < 9) return cpuUnavailable()
-        val values = LongArray(8)
-        for (i in 0 until 8) {
-            values[i] = fields[i + 1].toLongOrNull() ?: return cpuUnavailable()
-        }
-        val total = values.sum()
-        val idle = values[3] + values[4]
-        val cpuCount = stat.lineSequence().count { it.matches(CPU_LINE) }
-        val self = selfCpuTotal(readProc("/proc/self/stat"))
         val now = nanoTime()
+        // System and process CPU are measured independently: a restricted, malformed or
+        // regressed system counter must not withhold the process-side measurement.
+        val systemPart = systemCpuPart(now)
+        val selfPart = selfCpuPart(now)
+        if (systemPart == null && selfPart == null) return
+        publish(
+            "cpu",
+            "cpu system_pct=${systemPart ?: "unavailable"} process_pct=${selfPart ?: "unavailable"}",
+        )
+    }
+
+    // null: no new system measurement this tick (baseline pending or unusable interval).
+    private fun systemCpuPart(now: Long): String? {
+        val (total, idle) = systemCpuTotals() ?: run {
+            statTotal = -1
+            statIdle = -1
+            return "unavailable"
+        }
         if (statTotal < 0) {
             statTotal = total
             statIdle = idle
-            selfCpu = self ?: -1
-            sampleNanos = now
-            return
+            systemSampleNanos = now
+            return null
         }
-        val elapsedNanos = now - sampleNanos
+        val elapsedNanos = now - systemSampleNanos
+        if (elapsedNanos <= 0) return null
         val diffTotal = total - statTotal
         val diffIdle = idle - statIdle
-        val elapsedSeconds = elapsedNanos / 1_000_000_000.0
-        if (elapsedNanos <= 0 || diffTotal <= 0 || diffIdle < 0 || diffTotal < diffIdle) return
-        if (diffTotal > elapsedSeconds * 100.0 * maxOf(cpuCount, 1) * 1.5) return
-        val systemPct = oneDecimal(bucket(100.0 * (diffTotal - diffIdle) / diffTotal, 5))
-        var processPart = "unavailable"
-        if (self != null && selfCpu >= 0) {
-            val diffSelf = self - selfCpu
-            if (diffSelf >= 0 && diffSelf <= elapsedSeconds * 150.0) {
-                processPart = oneDecimal(bucket(100.0 * diffSelf / (elapsedSeconds * 100.0), 1))
-            }
-        }
-        publish("cpu", "cpu system_pct=$systemPct process_pct=$processPart")
+        // A regressed or impossible counter stays unpublishable; the old interval is kept
+        // so the measurement recovers with the next comparable sample.
+        if (diffTotal <= 0 || diffIdle < 0 || diffTotal < diffIdle) return null
         statTotal = total
         statIdle = idle
-        sampleNanos = now
-        selfCpu = self ?: -1
+        systemSampleNanos = now
+        return oneDecimal(bucket(100.0 * (diffTotal - diffIdle) / diffTotal, 5))
     }
 
-    private fun cpuUnavailable() {
-        statTotal = -1
-        statIdle = -1
-        selfCpu = -1
-        publish("cpu", "cpu system_pct=unavailable process_pct=unavailable")
+    private fun systemCpuTotals(): Pair<Long, Long>? {
+        val stat = readProc("/proc/stat") ?: return null
+        val cpuLine = stat.lineSequence().firstOrNull { it.startsWith("cpu ") } ?: return null
+        val fields = cpuLine.trim().split(WHITESPACE)
+        if (fields.size < 9) return null
+        val values = LongArray(8)
+        for (i in 0 until 8) {
+            values[i] = fields[i + 1].toLongOrNull() ?: return null
+        }
+        // The idle time also covers iowait, matching the classic utilization fraction.
+        return values.sum() to (values[3] + values[4])
     }
 
-    private fun selfCpuTotal(stat: String?): Long? {
-        val fields = stat?.trim()?.split(WHITESPACE) ?: return null
-        if (fields.size < 15) return null
-        val utime = fields[13].toLongOrNull() ?: return null
-        val stime = fields[14].toLongOrNull() ?: return null
-        return utime + stime
+    // null: no new process measurement this tick (baseline pending or unusable interval).
+    private fun selfCpuPart(now: Long): String? {
+        val self = selfCpuMillis()
+        // getElapsedCpuTime is safe whole-process millisecond CPU time; the reading is
+        // one-core-equivalent percent and multithreaded values above 100% are kept.
+        if (self == null) {
+            selfCpu = -1
+            return "unavailable"
+        }
+        if (selfCpu < 0) {
+            selfCpu = self
+            selfSampleNanos = now
+            return null
+        }
+        val elapsedNanos = now - selfSampleNanos
+        val diffMs = self - selfCpu
+        if (elapsedNanos <= 0 || diffMs < 0) return null
+        selfCpu = self
+        selfSampleNanos = now
+        val elapsedSeconds = elapsedNanos / 1_000_000_000.0
+        return oneDecimal(bucket(100.0 * diffMs / (elapsedSeconds * 1000.0), 1))
     }
 
     private fun memSample() {
@@ -297,12 +352,15 @@ class DeviceTelemetry internal constructor(
     }
 
     private fun budgeted(record: String) {
-        if (sessionRecords >= SESSION_BUDGET) {
+        if (sessionRecords >= sessionBudget) {
             dropped++
             if (!budgetNoticeEmitted) {
                 budgetNoticeEmitted = true
                 emit("telemetry budget_exhausted dropped=$dropped")
             }
+            // The first exhausted attempt ends the capture: no further source reads.
+            captureEnded = true
+            captureReason = "budget_exhausted"
             return
         }
         sessionRecords++
@@ -320,8 +378,12 @@ class DeviceTelemetry internal constructor(
         const val PERIOD_MILLIS = 15_000L
         const val SESSION_BUDGET = 1024
 
+        // Explicit product decision: telemetry collects automatically for privileged shell
+        // sessions (not opt-in). The record budget and this wall-clock deadline bound every
+        // capture; a stop can happen earlier only through service teardown.
+        const val CAPTURE_MILLIS = 60 * 60 * 1000L
+
         private val WHITESPACE = Regex("\\s+")
-        private val CPU_LINE = Regex("cpu\\d+.*")
 
         private val instanceLock = Any()
         private var instance: DeviceTelemetry? = null
@@ -364,13 +426,15 @@ class DeviceTelemetry internal constructor(
     }
 }
 
-private class PlatformScheduler : TelemetryScheduler {
+internal class PlatformScheduler : TelemetryScheduler {
     override fun schedule(initialMillis: Long, periodMillis: Long, task: Runnable): TelemetryCancellation {
         val executor = Executors.newSingleThreadScheduledExecutor { runnable ->
             Thread(runnable, "xtlogger-telemetry").apply { isDaemon = true }
         }
         val future = try {
-            executor.scheduleAtFixedRate(task, initialMillis, periodMillis, TimeUnit.MILLISECONDS)
+            // Fixed delay, not fixed rate: a late or slow sample must not trigger
+            // catch-up collection of a backlogged queue.
+            executor.scheduleWithFixedDelay(task, initialMillis, periodMillis, TimeUnit.MILLISECONDS)
         } catch (t: Throwable) {
             executor.shutdown()
             throw t

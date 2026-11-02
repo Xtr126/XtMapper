@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.lang.reflect.Field
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
 
 class DeviceTelemetryTest {
     private val clock = MutableClock.at("2026-11-01T12:00:00Z")
@@ -25,7 +26,9 @@ class DeviceTelemetryTest {
     private class FakeBatterySource : BatterySource {
         var reading: BatteryReading? = null
         var failure: RuntimeException? = null
+        var calls = 0
         override fun read(): BatteryReading? {
+            calls++
             failure?.let { throw it }
             return reading
         }
@@ -57,13 +60,21 @@ class DeviceTelemetryTest {
         }
     }
 
-    private inner class Harness(sdk: Int = 34) {
+    private inner class Harness(
+        sdk: Int = 34,
+        sessionBudget: Int = DeviceTelemetry.SESSION_BUDGET,
+        captureMillis: Long = DeviceTelemetry.CAPTURE_MILLIS,
+    ) {
         val emitted = mutableListOf<String>()
         val scheduler = FakeScheduler()
         val battery = FakeBatterySource()
         val thermal = FakeThermalSource()
         val proc = MapProcSource()
         var nanos = 0L
+
+        // Process-CPU seam in milliseconds; null means the counter is unavailable.
+        var selfCpuMillis: Long? = null
+
         val telemetry = DeviceTelemetry(
             nanoTime = { nanos },
             scheduler = scheduler,
@@ -72,6 +83,9 @@ class DeviceTelemetryTest {
             thermalSource = thermal,
             sdkInt = sdk,
             emit = emitted::add,
+            selfCpuMillis = { selfCpuMillis },
+            sessionBudget = sessionBudget,
+            captureMillis = captureMillis,
         )
 
         fun advance(seconds: Long) {
@@ -105,10 +119,6 @@ class DeviceTelemetryTest {
         append("cpu0 ${user / 2} 0 ${system / 2} ${idle / 2} 0 0 0 0\n")
         append("cpu1 ${user / 2} 0 ${system / 2} ${idle / 2} 0 0 0 0")
     }
-
-    private fun selfStat(utime: Long, stime: Long): String =
-        (listOf("1", "(x)", "S") + List(10) { "0" } +
-            listOf(utime.toString(), stime.toString()) + List(5) { "0" }).joinToString(" ")
 
     private val meminfo = "MemTotal:  1000000 kB\nMemFree:  100000 kB\nMemAvailable:  600000 kB\n"
     private val procStatus = "Name:\tx\nVmRSS:  512000 kB\n"
@@ -220,16 +230,46 @@ class DeviceTelemetryTest {
     }
 
     @Test
+    fun `charging mode change restarts the battery trend rate window`() {
+        val h = Harness()
+        h.start()
+        h.batteryTick(BatteryReading(40, 3, false, "BATTERY", 300))
+        h.advance(60)
+        h.batteryTick(BatteryReading(39, 3, false, "BATTERY", 300))
+        h.advance(600)
+        h.batteryTick(BatteryReading(38, 3, false, "BATTERY", 300))
+        assertEquals(
+            listOf("battery_trend direction=DISCHARGING rate_pct_per_hour=-6.0 window_s=600"),
+            h.trendRecords(),
+        )
+
+        // Connecting power restarts the window; a rate must never span the transition.
+        h.advance(60)
+        h.batteryTick(BatteryReading(38, 2, true, "AC", 300))
+        h.advance(60)
+        h.batteryTick(BatteryReading(39, 2, true, "AC", 300))
+        h.advance(60)
+        h.batteryTick(BatteryReading(40, 2, true, "AC", 300))
+        assertEquals(
+            listOf(
+                "battery_trend direction=DISCHARGING rate_pct_per_hour=-6.0 window_s=600",
+                "battery_trend direction=CHARGING rate_pct_per_hour=60.0 window_s=60",
+            ),
+            h.trendRecords(),
+        )
+    }
+
+    @Test
     fun `cpu first tick is a baseline and second tick publishes system and process pct`() {
         val h = Harness()
         h.proc.files["/proc/stat"] = procStat(user = 100, system = 100, idle = 800)
-        h.proc.files["/proc/self/stat"] = selfStat(utime = 100, stime = 100)
+        h.selfCpuMillis = 2_000L
         h.start()
         h.advance(15)
         h.tick()
         assertTrue(h.cpuRecords().isEmpty())
         h.proc.files["/proc/stat"] = procStat(user = 200, system = 200, idle = 1400)
-        h.proc.files["/proc/self/stat"] = selfStat(utime = 150, stime = 100)
+        h.selfCpuMillis = 2_500L
         h.advance(15)
         h.tick()
         assertEquals("cpu system_pct=25.0 process_pct=3.0", h.cpuRecords().single())
@@ -253,7 +293,7 @@ class DeviceTelemetryTest {
     fun `cpu availability recovers through a fresh baseline after missing stat`() {
         val h = Harness()
         h.proc.files["/proc/stat"] = procStat(100, 100, 800)
-        h.proc.files["/proc/self/stat"] = selfStat(100, 100)
+        h.selfCpuMillis = 2_000L
         h.start()
         h.tick()
         h.proc.files["/proc/stat"] = procStat(200, 200, 1400)
@@ -271,7 +311,7 @@ class DeviceTelemetryTest {
         assertEquals(
             listOf(
                 "cpu system_pct=25.0 process_pct=0.0",
-                "cpu system_pct=unavailable process_pct=unavailable",
+                "cpu system_pct=unavailable process_pct=0.0",
                 "cpu system_pct=25.0 process_pct=0.0",
             ),
             h.cpuRecords(),
@@ -282,19 +322,19 @@ class DeviceTelemetryTest {
     fun `process cpu cannot combine an old counter with a newer interval timestamp`() {
         val h = Harness()
         h.proc.files["/proc/stat"] = procStat(100, 100, 800)
-        h.proc.files["/proc/self/stat"] = selfStat(100, 100)
+        h.selfCpuMillis = 2_000L
         h.start()
         h.tick()
         h.proc.files["/proc/stat"] = procStat(200, 200, 1400)
-        h.proc.files["/proc/self/stat"] = null
+        h.selfCpuMillis = null
         h.advance(15)
         h.tick()
         h.proc.files["/proc/stat"] = procStat(300, 300, 2000)
-        h.proc.files["/proc/self/stat"] = selfStat(200, 100)
+        h.selfCpuMillis = 3_000L
         h.advance(15)
         h.tick()
         h.proc.files["/proc/stat"] = procStat(400, 400, 2600)
-        h.proc.files["/proc/self/stat"] = selfStat(215, 100)
+        h.selfCpuMillis = 3_150L
         h.advance(15)
         h.tick()
         assertEquals(
@@ -350,42 +390,46 @@ class DeviceTelemetryTest {
     }
 
     @Test
-    fun `cpu zero interval or counter regression produces no record`() {
+    fun `cpu zero intervals and counter regressions only suppress the affected side`() {
         val h = Harness()
         h.proc.files["/proc/stat"] = procStat(user = 100, system = 100, idle = 800)
-        h.proc.files["/proc/self/stat"] = selfStat(utime = 100, stime = 100)
+        h.selfCpuMillis = 2_000L
         h.start()
         h.advance(15)
         h.tick()
         h.proc.files["/proc/stat"] = procStat(user = 200, system = 200, idle = 1400)
-        h.proc.files["/proc/self/stat"] = selfStat(utime = 150, stime = 100)
         h.tick()
         assertTrue("zero interval must not publish", h.cpuRecords().isEmpty())
         h.advance(15)
         h.proc.files["/proc/stat"] = procStat(user = 50, system = 50, idle = 400)
-        h.proc.files["/proc/self/stat"] = selfStat(utime = 160, stime = 100)
+        h.selfCpuMillis = 2_600L
         h.tick()
-        assertTrue("counter regression must not publish", h.cpuRecords().isEmpty())
+        assertEquals(
+            "counter regression on the system side must not withhold the process reading",
+            "cpu system_pct=unavailable process_pct=4.0",
+            h.cpuRecords().single(),
+        )
         h.advance(15)
         h.proc.files["/proc/stat"] = procStat(user = 200, system = 200, idle = 1400)
-        h.proc.files["/proc/self/stat"] = selfStat(utime = 170, stime = 100)
+        h.selfCpuMillis = 2_700L
         h.tick()
-        assertEquals("cpu system_pct=25.0 process_pct=2.0", h.cpuRecords().single())
+        assertEquals("cpu system_pct=25.0 process_pct=0.0", h.cpuRecords().last())
     }
 
     @Test
-    fun `cpu implausible jump beyond the plausibility cap produces no record`() {
+    fun `cpu utilization beyond the old one-core plausibility caps is published`() {
         val h = Harness()
         h.proc.files["/proc/stat"] = procStat(user = 100, system = 100, idle = 800)
-        h.proc.files["/proc/self/stat"] = selfStat(utime = 100, stime = 100)
+        h.selfCpuMillis = 1_000L
         h.start()
         h.advance(15)
         h.tick()
-        h.proc.files["/proc/stat"] = "cpu  500000000 0 500000000 0 0 0 0 0\ncpu0 0 0 0 0 0 0 0 0\ncpu1 0 0 0 0 0 0 0 0"
-        h.proc.files["/proc/self/stat"] = selfStat(utime = 500000, stime = 500000)
+        h.proc.files["/proc/stat"] =
+            "cpu  375000000 0 375000000 240000000 0 0 0 0\ncpu0 0 0 0 0 0 0 0 0\ncpu1 0 0 0 0 0 0 0 0"
+        h.selfCpuMillis = 2_500_000L
         h.advance(15)
         h.tick()
-        assertTrue(h.cpuRecords().isEmpty())
+        assertEquals("cpu system_pct=75.0 process_pct=16660.0", h.cpuRecords().single())
     }
 
     @Test
@@ -393,7 +437,7 @@ class DeviceTelemetryTest {
         val h = Harness()
         h.proc.files["/proc/stat"] =
             "cpu  273 0 200 1527 0 0 0 0\ncpu0 100 0 100 800 0 0 0 0\ncpu1 173 0 100 727 0 0 0 0"
-        h.proc.files["/proc/self/stat"] = selfStat(utime = 100, stime = 100)
+        h.selfCpuMillis = 2_000L
         h.proc.files["/proc/meminfo"] = meminfo
         h.proc.files["/proc/self/status"] = "Name:\tx\nVmRSS:  513000 kB\n"
         h.proc.files["/proc/self/smaps_rollup"] = smapsRollup
@@ -402,7 +446,7 @@ class DeviceTelemetryTest {
         h.tick()
         h.proc.files["/proc/stat"] =
             "cpu  473 0 300 2327 0 0 0 0\ncpu0 100 0 100 800 0 0 0 0\ncpu1 373 0 200 1527 0 0 0 0"
-        h.proc.files["/proc/self/stat"] = selfStat(utime = 120, stime = 100)
+        h.selfCpuMillis = 2_200L
         h.advance(15)
         h.tick()
         assertEquals("cpu system_pct=25.0 process_pct=1.0", h.cpuRecords().single())
@@ -563,7 +607,7 @@ class DeviceTelemetryTest {
 
     @Test
     fun `session budget caps total records and reports drops in the stop record`() {
-        val h = Harness()
+        val h = Harness(captureMillis = Long.MAX_VALUE)
         h.start()
         var i = 0
         while (h.emitted.size < DeviceTelemetry.SESSION_BUDGET && i < DeviceTelemetry.SESSION_BUDGET * 2) {
@@ -572,13 +616,73 @@ class DeviceTelemetryTest {
             h.advance(15)
         }
         assertEquals(DeviceTelemetry.SESSION_BUDGET, h.emitted.size)
+        // The first post-budget tick still reads the source, hits the budget and is dropped.
+        val readsAtBudget = h.battery.calls
         h.batteryTick(validBattery(level = 50).copy(temperatureDeciC = i + 1))
+        assertEquals(readsAtBudget + 1, h.battery.calls)
         h.batteryTick(validBattery(level = 50).copy(temperatureDeciC = i + 2))
         h.telemetry.stop()
         assertEquals(1, h.emitted.count { it.startsWith("telemetry budget_exhausted ") })
         assertEquals("telemetry budget_exhausted dropped=1", h.emitted[DeviceTelemetry.SESSION_BUDGET])
         assertTrue(h.emitted.last().startsWith("telemetry stop records="))
-        assertTrue(h.emitted.last().contains("dropped=2"))
+        assertEquals("source reads stop once the budget is exhausted", readsAtBudget + 1, h.battery.calls)
+        assertTrue(h.emitted.last().contains("dropped=1"))
+        assertTrue(h.emitted.last().contains("early=budget_exhausted"))
+    }
+
+    @Test
+    fun `budget exhaustion emits its one notice then stops reading the sources`() {
+        val h = Harness(sessionBudget = 8, captureMillis = Long.MAX_VALUE)
+        h.start()
+        h.tick() // first unavailable sweep: start plus five source records
+        h.batteryTick(validBattery(level = 50).copy(temperatureDeciC = 1))
+        h.batteryTick(validBattery(level = 50).copy(temperatureDeciC = 2))
+        h.batteryTick(validBattery(level = 50).copy(temperatureDeciC = 3))
+        assertEquals(9, h.emitted.size)
+        assertEquals("telemetry budget_exhausted dropped=1", h.emitted[8])
+        val reads = h.battery.calls
+        h.batteryTick(validBattery(level = 50).copy(temperatureDeciC = 4))
+        assertEquals("no source is read after the exhausted budget", reads, h.battery.calls)
+        h.telemetry.stop()
+        assertTrue(h.emitted.last().contains("telemetry stop records=8 dropped=1"))
+        assertTrue(h.emitted.last().contains("early=budget_exhausted"))
+        assertEquals(1, h.emitted.count { it.startsWith("telemetry budget_exhausted ") })
+    }
+
+    @Test
+    fun `capture expiry stops sampling and is named in the stop record`() {
+        val h = Harness(captureMillis = 1_000)
+        h.start()
+        h.tick()
+        assertEquals(6, h.emitted.size)
+        assertEquals(1, h.battery.calls)
+        h.advance(15)
+        h.tick()
+        assertEquals("no source is read after the capture expires", 1, h.battery.calls)
+        assertEquals("no record is emitted after the capture expires", 6, h.emitted.size)
+        h.telemetry.stop()
+        assertTrue(h.emitted.last().contains("telemetry stop records=6 dropped=0"))
+        assertTrue(h.emitted.last().contains("early=capture_expired"))
+    }
+
+    @Test
+    fun `process cpu is still measured while the system counters are unavailable`() {
+        val h = Harness()
+        h.start()
+        h.tick()
+        assertEquals("cpu system_pct=unavailable process_pct=unavailable", h.cpuRecords().single())
+        h.selfCpuMillis = 2_000L
+        h.tick()
+        h.advance(15)
+        h.selfCpuMillis = 2_600L
+        h.tick()
+        assertEquals(
+            listOf(
+                "cpu system_pct=unavailable process_pct=unavailable",
+                "cpu system_pct=unavailable process_pct=4.0",
+            ),
+            h.cpuRecords(),
+        )
     }
 
     @Test
@@ -600,6 +704,7 @@ class DeviceTelemetryTest {
         h.telemetry.stop()
         assertEquals(1, h.scheduler.cancels)
         assertTrue(h.emitted.last().startsWith("telemetry stop records="))
+        assertFalse(h.emitted.last().contains("early="))
     }
 
     @Test
@@ -650,6 +755,26 @@ class DeviceTelemetryTest {
         h.start(Role.APP)
         assertTrue(h.scheduler.tasks.isEmpty())
         assertTrue(h.emitted.isEmpty())
+    }
+
+    @Test
+    fun `platform scheduler spaces runs by fixed delay so a slow sample cannot catch up`() {
+        val starts = CopyOnWriteArrayList<Long>()
+        val cancel = PlatformScheduler().schedule(0, 50, {
+            starts.add(System.nanoTime())
+            Thread.sleep(80)
+        })
+        try {
+            Thread.sleep(1_500)
+        } finally {
+            cancel.cancel()
+        }
+        assertTrue("at least three samples ran", starts.size >= 3)
+        for (i in 1 until starts.size) {
+            val gapMillis = TimeUnit.NANOSECONDS.toMillis(starts[i] - starts[i - 1])
+            // 80ms of work plus the 50ms fixed delay leaves a >=130ms gap; fixed rate would not.
+            assertTrue("fixed delay must space runs beyond work+gap: $gapMillis", gapMillis >= 120)
+        }
     }
 
     private class RecordingStore : LogStore {

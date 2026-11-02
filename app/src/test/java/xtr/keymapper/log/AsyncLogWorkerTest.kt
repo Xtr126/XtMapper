@@ -31,9 +31,10 @@ class AsyncLogWorkerTest {
     private fun buildWorker(
         store: LogStore,
         capacity: Int = 16,
+        batchMaxRecords: Int = 256,
     ): Triple<SessionLogWriter, LoggingQueue, AsyncLogWorker> {
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
-        val config = LoggingConfig(queueCapacity = capacity)
+        val config = LoggingConfig(queueCapacity = capacity, batchMaxRecords = batchMaxRecords)
         val writer = SessionLogWriter(
             store, role = null, config = config,
             clock = clock, zone = clock.zoneId, sessionId = "s-worker", onEvent = {},
@@ -148,6 +149,21 @@ class AsyncLogWorkerTest {
         assertEquals("absorbed records reported as dropped", 4, worker.droppedCount)
         assertEquals(0, worker.queue.pendingWrites.get())
         worker.close(2_000)
+    }
+
+    @Test
+    fun `batch construction failure settles the polled record as uncertain`() {
+        // drainUpTo(-1) throws before `batch` is assigned; the polled credit must not orphan.
+        val (_, queue, worker) = buildWorker(FileSystemLogStore(tmp.newFolder()), batchMaxRecords = 0)
+        queue.offer(record("crash-me"))
+        worker.start()
+        assertTrue("flush drains despite the dead worker", worker.flush(2_000))
+        assertEquals(0, queue.pendingWrites.get())
+        assertEquals(0, queue.size)
+        assertEquals(1, worker.uncertainCount)
+        assertEquals(0, worker.droppedCount)
+        worker.close(2_000)
+        assertFalse(worker.threadReference().isAlive)
     }
 
     private class SimulatedWriteError(message: String) : Error(message)

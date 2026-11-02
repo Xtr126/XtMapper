@@ -45,6 +45,14 @@ internal class ClientServiceSlot<K : Any, V : Any> {
         }
     }
 
+    // Post-admission side effects may run only while this exact session still occupies
+    // the slot; shares the claimForShutdown monitor so shutdown cannot overtake the block.
+    fun runIfOwner(owner: K, block: () -> Unit): Boolean = synchronized(this) {
+        val owned = entry?.first == owner
+        if (owned) block()
+        owned
+    }
+
     fun releaseTerminal() {
         val callbacks = synchronized(this) {
             if (pendingReleases > 0) pendingReleases -= 1

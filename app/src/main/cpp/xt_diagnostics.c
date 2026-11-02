@@ -1,6 +1,7 @@
 #include "xt_diagnostics.h"
 
 #include <errno.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
@@ -10,6 +11,20 @@
 static jclass xt_diag_facade_class;
 static jmethodID xt_diag_log_native_method;
 static int xt_diag_unavailable;
+
+// Set at most once per process: the only stderr output a losing bridge produces.
+static atomic_flag xt_diag_fallback_written = ATOMIC_FLAG_INIT;
+
+// One bounded stderr line when the bridge is unavailable (no init, foreign pending
+// exception, JNI failure); preserves errno and depends on no JNI.
+static void xt_diag_report_unavailable_fallback(void) {
+    if (atomic_flag_test_and_set_explicit(&xt_diag_fallback_written, memory_order_seq_cst)) {
+        return;
+    }
+    const int saved_errno = errno;
+    fputs("xtdiag: diagnostics bridge unavailable; producer diagnostics suppressed for this process\n", stderr);
+    errno = saved_errno;
+}
 
 jint XtDiag_Init(JNIEnv *env) {
     const int saved_errno = errno;
@@ -162,8 +177,16 @@ jint XtDiag_Submit(JNIEnv *env, int priority, int source, const char *text, long
         result = xt_diag_submit_encoded(env, (jint)priority, (jint)source, message);
     }
 done:
+    if (result == XT_DIAG_UNAVAILABLE) {
+        xt_diag_report_unavailable_fallback();
+    }
     errno = saved_errno;
     return result;
+}
+
+// Host-test hook: lets a later unavailable result write the notice again.
+XT_DIAG_API void XtDiag_ResetUnavailableFallback(void) {
+    atomic_flag_clear_explicit(&xt_diag_fallback_written, memory_order_seq_cst);
 }
 
 jint XtDiag_SubmitEvent(JNIEnv *env, int priority, int source,
