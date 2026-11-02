@@ -33,6 +33,12 @@ object XtLogger {
     @Volatile
     private var retiringOwner: LoggingPipeline? = null
 
+    // Startup request parked while the retiring owner above finishes its close on its own.
+    private class DeferredInit(val role: Role, val store: LogStore, val behind: LoggingPipeline)
+
+    @Volatile
+    private var deferredStart: DeferredInit? = null
+
     val isInitialized: Boolean get() = pipeline != null
 
     val currentRole: Role? get() = initializationRole
@@ -212,6 +218,7 @@ object XtLogger {
         if (retiring != null) {
             if (!retiring.isClosed) {
                 Log.w(TAG, "previous file owner still closing; logger initialization deferred")
+                deferredStart = DeferredInit(role, store, retiring)
                 return
             }
             retiringOwner = null
@@ -244,6 +251,7 @@ object XtLogger {
             logcat = ::logcatSink,
             onFailure = ::onPipelineFailure,
             pruneRetention = role == Role.APP,
+            afterClose = ::retryDeferredInit,
         )
         try {
             newPipeline.start()
@@ -251,6 +259,20 @@ object XtLogger {
             initializationRole = role
         } catch (e: Throwable) {
             Log.e(TAG, "XtLogger failed to start: ${e.message}", e)
+        }
+    }
+
+    // Runs from the retiring owner's close; restart so file logging does not stay disabled until the next init call.
+    private fun retryDeferredInit() {
+        synchronized(initLock) {
+            val deferred = deferredStart ?: return
+            deferredStart = null
+            if (pipeline != null || retiringOwner !== deferred.behind || !deferred.behind.isClosed) {
+                deferredStart = deferred
+                return
+            }
+            retiringOwner = null
+            internalsStart(deferred.role, deferred.store)
         }
     }
 

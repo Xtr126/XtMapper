@@ -319,7 +319,15 @@ Java_xtr_keymapper_server_InputService_startKeyboardGrab(JNIEnv *env, jobject th
     scanAndGrabKeyboardDevices();
 
     if (g_ctx.device_fds.empty()) {
+        vector<std::pair<int, string>> staged;
+        {
+            std::lock_guard<std::mutex> guard(g_ctx.lock);
+            staged.swap(g_ctx.staged_submit);
+        }
         lifecycle_lock.unlock();
+        for (const auto &item : staged) {
+            XtDiag_Submit(env, item.first, XT_DIAG_SOURCE_KEYBOARD, item.second.c_str(), -1);
+        }
         XtDiag_Submit(env, XT_DIAG_WARN, XT_DIAG_SOURCE_KEYBOARD,
                       "keyboard grab found no keyboard devices", -1);
         return JNI_FALSE;

@@ -129,6 +129,7 @@ int main() {
     noDevices = true;
     CHECK(!Java_xtr_keymapper_server_InputService_startKeyboardGrab(env, fakeClassHandle()), "empty scan admitted");
     CHECK(closed.size() == 2, "empty scan did not close both pipe fds");
+    CHECK(g_bridge.staticCallCount == 1, "an empty scan must submit only the generic warning");
 
     reset();
     g_bridge.objectMethodLookupFails = true;
@@ -181,6 +182,20 @@ int main() {
     CHECK(g_ctx.staged_submit.front().second == "keyboard initial EVIOCGRAB failed errno=5",
           "wrong initial grab failure text");
     CHECK(closed.size() == 3 && closed.front() == 42, "failed grab did not close its fd");
+
+    reset();
+    grabFails = true;
+    CHECK(!Java_xtr_keymapper_server_InputService_startKeyboardGrab(env, fakeClassHandle()),
+          "failed scan admitted");
+    CHECK(g_bridge.staticCallCount == 2,
+          "staged EVIOCGRAB failures plus the generic warning must reach the bridge");
+    CHECK(messages.size() == 2, "unexpected failed-scan message count");
+    if (messages.size() == 2) {
+        CHECK(messages[0] == u"keyboard initial EVIOCGRAB failed errno=5",
+              "staged failure was discarded by the empty branch");
+        CHECK(messages[1] == u"keyboard grab found no keyboard devices",
+              "staged failure broke the generic warning order");
+    }
 
     reset();
     scanAndGrabKeyboardDevices();

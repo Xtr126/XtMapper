@@ -45,6 +45,7 @@ class LoggingPipeline(
     private val onFailure: (String) -> Unit = {},
     private val pruneRetention: Boolean = false,
     private val beforeAdmission: () -> Unit = {},
+    private val afterClose: () -> Unit = {},
 ) {
     val sessionId: String = sessionId
 
@@ -77,7 +78,7 @@ class LoggingPipeline(
         )
         worker = AsyncLogWorker(
             queue, config, writer, roleTag = role.tag,
-            onStart = ::startSession, onStop = ::finishClose,
+            onStart = ::startSession, onStop = ::finishClose, afterClose = afterClose,
         )
     }
 

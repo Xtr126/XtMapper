@@ -226,9 +226,13 @@ class DeviceTelemetry internal constructor(
         if (elapsedNanos <= 0) return null
         val diffTotal = total - statTotal
         val diffIdle = idle - statIdle
-        // A regressed or impossible counter stays unpublishable; the old interval is kept
-        // so the measurement recovers with the next comparable sample.
-        if (diffTotal <= 0 || diffIdle < 0 || diffTotal < diffIdle) return null
+        // A regressed or impossible counter rebases the window; the next tick measures a fresh interval.
+        if (diffTotal <= 0 || diffIdle < 0 || diffTotal < diffIdle) {
+            statTotal = total
+            statIdle = idle
+            systemSampleNanos = now
+            return null
+        }
         statTotal = total
         statIdle = idle
         systemSampleNanos = now

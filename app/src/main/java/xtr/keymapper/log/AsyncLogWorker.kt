@@ -12,6 +12,7 @@ class AsyncLogWorker(
     private val roleTag: String,
     private val onStart: () -> Unit = {},
     private val onStop: (String) -> Unit = {},
+    private val afterClose: () -> Unit = {},
 ) {
     private val lifecycle = Any()
     private var launched = false
@@ -148,6 +149,11 @@ class AsyncLogWorker(
             } finally {
                 initialized.countDown()
                 finished.countDown()
+            }
+            try {
+                afterClose()
+            } catch (e: Throwable) {
+                lastError.compareAndSet(null, e)
             }
         }
     }

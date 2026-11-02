@@ -413,7 +413,11 @@ class DeviceTelemetryTest {
         h.proc.files["/proc/stat"] = procStat(user = 200, system = 200, idle = 1400)
         h.selfCpuMillis = 2_700L
         h.tick()
-        assertEquals("cpu system_pct=25.0 process_pct=0.0", h.cpuRecords().last())
+        assertEquals(
+            "regressed counters rebase so the next tick measures a fresh interval",
+            "cpu system_pct=20.0 process_pct=0.0",
+            h.cpuRecords().last(),
+        )
     }
 
     @Test

@@ -89,7 +89,7 @@ class XtLoggerFacadeRegressionTest {
         runCatching {
             (stateField("pipeline").get(XtLogger) as? LoggingPipeline)?.close("Teardown")
         }
-        for (name in listOf("pipeline", "initializationRole", "retiringOwner")) {
+        for (name in listOf("pipeline", "initializationRole", "retiringOwner", "deferredStart")) {
             runCatching { stateField(name).set(XtLogger, null) }
         }
         runCatching { stateField("fatalEventRecorded").set(XtLogger, false) }
@@ -172,6 +172,33 @@ class XtLoggerFacadeRegressionTest {
             .invoke(XtLogger, Role.SHELL, store)
         assertEquals(Role.SHELL, XtLogger.currentRole)
         assertEquals(2, store.startCount)
+    }
+
+    @Test
+    fun `a deferred init restarts automatically when the blocking owner retires`() {
+        val store = FacadeStore()
+        facadeMethod("internalsStart", Role::class.java, LogStore::class.java)
+            .invoke(XtLogger, Role.APP, store)
+        val old = stateField("pipeline").get(XtLogger) as LoggingPipeline
+        old.info("Facade", "probe=old-session")
+        assertTrue(store.oldWriteEntered.await(2, TimeUnit.SECONDS))
+        try {
+            XtLogger.endSession("Facade stopped")
+            facadeMethod("initInternal", Role::class.java, LogStore::class.java)
+                .invoke(XtLogger, Role.SHELL, store)
+            assertFalse(XtLogger.isInitialized)
+            assertEquals("still only the old session", 1, store.startCount)
+        } finally {
+            store.releaseOldWrite.countDown()
+        }
+        assertTrue(awaitTrue(2_000) { old.isClosed })
+        assertEquals(1, store.endCount)
+        assertTrue(
+            "file logging recovers automatically without a later resume or init call",
+            awaitTrue(2_000) { XtLogger.isInitialized },
+        )
+        assertTrue(awaitTrue(2_000) { store.startCount == 2 })
+        assertEquals("the deferred init parameters restart", Role.SHELL, XtLogger.currentRole)
     }
 
     @Test
