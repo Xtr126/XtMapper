@@ -13,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class XtLoggerFacadeRegressionTest {
     private val clock = MutableClock.at("2026-10-22T09:00:00Z")
@@ -87,6 +88,15 @@ class XtLoggerFacadeRegressionTest {
             Thread.sleep(10)
         }
         return predicate()
+    }
+
+    private fun awaitBlocked(thread: Thread, timeoutMillis: Long): Boolean {
+        val deadline = System.nanoTime() + timeoutMillis * 1_000_000
+        while (System.nanoTime() < deadline) {
+            if (thread.state == Thread.State.BLOCKED) return true
+            Thread.sleep(5)
+        }
+        return thread.state == Thread.State.BLOCKED
     }
 
     @After
@@ -235,6 +245,61 @@ class XtLoggerFacadeRegressionTest {
         assertNull(XtLogger.currentRole)
         assertEquals(1, store.startCount)
         assertEquals(1, store.endCount)
+    }
+
+    @Test
+    fun `endSession closes a deferred replacement installed before it acquires initLock`() {
+        val store = FacadeStore()
+        val old = pipelineFor(store, flushMillis = 100)
+        install(old, Role.APP)
+        old.info("Facade", "probe=old-session")
+        assertTrue(store.oldWriteEntered.await(2, TimeUnit.SECONDS))
+
+        val initLock = stateField("initLock").get(XtLogger)
+        val stopperFailure = AtomicReference<Throwable?>()
+        val stopperFinished = CountDownLatch(1)
+        val stopper = Thread {
+            try {
+                XtLogger.endSession("Stop after deferred restart")
+            } catch (failure: Throwable) {
+                stopperFailure.set(failure)
+            } finally {
+                stopperFinished.countDown()
+            }
+        }.apply { isDaemon = true }
+
+        try {
+            XtLogger.endSession("Retire old owner")
+            assertNull(stateField("pipeline").get(XtLogger))
+            facadeMethod("initInternal", Role::class.java, LogStore::class.java)
+                .invoke(XtLogger, Role.SHELL, store)
+            assertTrue("replacement request is deferred", stateField("deferredStart").get(XtLogger) != null)
+
+            store.releaseOldWrite.countDown()
+            assertTrue("old owner eventually retires", awaitTrue(2_000) { old.isClosed })
+
+            synchronized(initLock) {
+                stopper.start()
+                assertTrue("stopper captured the pre-restart null pipeline and is waiting for initLock",
+                    awaitBlocked(stopper, 2_000))
+
+                // Re-entering the monitor lets the retirement callback install the
+                // deferred pipeline before the blocked endSession can acquire it.
+                facadeMethod("retryDeferredInit").invoke(XtLogger)
+                val replacement = stateField("pipeline").get(XtLogger) as? LoggingPipeline
+                assertTrue("deferred replacement was installed", replacement != null)
+                assertEquals(Role.SHELL, XtLogger.currentRole)
+            }
+
+            assertTrue("endSession completed", stopperFinished.await(2_000))
+            assertNull("stopper thread failed: ${stopperFailure.get()}", stopperFailure.get())
+            assertFalse("replacement must be closed by the stop request", XtLogger.isInitialized)
+            assertNull(XtLogger.currentRole)
+        } finally {
+            store.releaseOldWrite.countDown()
+            stopper.join(2_000)
+        }
+        assertFalse("stopper thread terminated", stopper.isAlive)
     }
 
     @Test
