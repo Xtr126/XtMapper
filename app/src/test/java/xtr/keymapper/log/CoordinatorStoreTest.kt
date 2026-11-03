@@ -7,6 +7,7 @@ import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
+import org.junit.Assume
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -94,6 +95,91 @@ class CoordinatorStoreTest {
         assertEquals(listOf(0L, 1L, 2L), frames.filter { it.sid == "unicode" }.map { it.seq })
         assertEquals(unicode, frames.filter { it.sid == "unicode" }.map { it.payload })
         assertEquals(List(6) { trace }, frames.filter { it.sid == "exception" }.map { it.payload })
+    }
+
+    @Test fun `checksum failing complete line is exposed and blocks the day`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        store.append(name, listOf(FrameCodec.encode(1, "s1", "good")))
+        val bad = "X1 1 s2 4 deadbeef five"
+        val later = FrameCodec.encode(2, "s2", "later")
+        RandomAccessFile(File(dir, name), "rw").use {
+            it.seek(it.length())
+            it.write((bad + "\n" + later.decodeToString()).toByteArray())
+        }
+        val recovery = store.readRecovery(name)
+        assertEquals(2, recovery.frames.size)
+        assertTrue(FrameCodec.isDayHeader(recovery.frames[0]))
+        assertTrue("corrupt region must be reported: $recovery", recovery.discardedBytes > 0)
+        val lengthBefore = File(dir, name).length()
+        val error = assertThrows(IOException::class.java) {
+            store.append(name, listOf(FrameCodec.encode(3, "s1", "blocked")))
+        }
+        assertTrue("must be an integrity block, got: ${error.message}", error.message!!.contains("corruption"))
+        assertEquals("corrupt bytes are preserved, never truncated", lengthBefore, File(dir, name).length())
+    }
+
+    @Test fun `torn tail beyond one window still finds its boundary farther back`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        store.append(name, listOf(FrameCodec.encode(1, "s1", "seed")))
+        val garbage = ByteArray(80 * 1024) { 'x'.code.toByte() }
+        RandomAccessFile(File(dir, name), "rw").use {
+            it.seek(it.length())
+            it.write(garbage)
+        }
+        store.append(name, listOf(FrameCodec.encode(2, "s1", "after")))
+        val frames = store.readFrames(name)
+        assertTrue(frames.any { it.sid == "recovery" })
+        assertEquals("after", frames.last().payload)
+    }
+
+    @Test fun `torn tail with no boundary inside the search window refuses repair`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        store.append(name, listOf(FrameCodec.encode(1, "s1", "seed")))
+        val garbage = ByteArray(200 * 1024) { 'x'.code.toByte() }
+        RandomAccessFile(File(dir, name), "rw").use {
+            it.seek(it.length())
+            it.write(garbage)
+        }
+        val lengthBefore = File(dir, name).length()
+        assertThrows(IOException::class.java) {
+            store.append(name, listOf(FrameCodec.encode(2, "s1", "after")))
+        }
+        assertEquals("unrepairable tail must keep its bytes", lengthBefore, File(dir, name).length())
+        assertEquals(listOf("seed"), store.readFrames(name).filter { it.sid == "s1" }.map { it.payload })
+    }
+
+    @Test fun `failed data file open releases coordination for the process (V4b)`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        store.append(name, listOf(FrameCodec.encode(0, "seed", "seed")))
+        Assume.assumeFalse("chmod-based failure injection needs non-root", System.getProperty("user.name") == "root")
+        val data = File(dir, name)
+        assertTrue(data.setWritable(false))
+        try {
+            assertThrows(IOException::class.java) { store.append(name, listOf(FrameCodec.encode(1, "s1", "nope"))) }
+        } finally {
+            assertTrue(data.setWritable(true))
+        }
+        // A failed open must never wedge coordination: immediately re-entering succeeds.
+        store.append(name, listOf(FrameCodec.encode(1, "s1", "recovered")))
+        assertEquals("recovered", store.readFrames(name).last().payload)
+    }
+
+    @Test fun `duplicate sequential coordinator descriptors leave no exclusion residue (V4b)`() {
+        val dir = tmp.newFolder()
+        val first = CoordinatorStore(dir)
+        val second = CoordinatorStore(dir)
+        first.append(name, listOf(FrameCodec.encode(0, "s1", "one")))
+        second.append(name, listOf(FrameCodec.encode(1, "s1", "two")))
+        second.readRecovery(name)
+        first.append(name, listOf(FrameCodec.encode(2, "s1", "three")))
+        assertEquals(
+            listOf("one", "two", "three"),
+            CoordinatorStore(dir).readFrames(name).filter { it.sid == "s1" }.map { it.payload },
+        )
     }
 
     @Test fun `mid transaction exclusion holds against a second writer process (V3b)`() {

@@ -16,10 +16,16 @@ object FrameCodec {
     private val SID = Regex("[0-9A-Za-z-]{1,40}")
     private val HEX = Regex("[0-9a-f]{8}")
 
+    // Protocol limits: 32 KiB hard maximum for the ENCODED frame (envelope + escaping +
+    // terminator included); the payload budget is chosen so maximal escaping stays inside.
+    const val MAX_PAYLOAD_BYTES = 15 * 1024
+    const val MAX_FRAME_BYTES = 32 * 1024
+
     fun isDayHeader(frame: Frame) = frame.seq == 0L && frame.sid == "protocol" && frame.payload == "P1"
 
     fun encode(seq: Long, sid: String, payload: String): ByteArray {
         val raw = payload.toByteArray(Charsets.UTF_8)
+        require(raw.size <= MAX_PAYLOAD_BYTES) { "payload exceeds the protocol limit" }
         // len covers the raw payload bytes; crc covers a canonical pre-image of the record
         // metadata plus those bytes, so valid-looking edits to sid/seq/len are caught too.
         return "X1 $seq $sid ${raw.size} ${crc(sid, seq, raw.size.toLong(), raw)} ${escape(payload)}\n"
@@ -40,7 +46,9 @@ object FrameCodec {
     }
 
     // After the first unparseable region everything is uninterpreted: valid frames are
-    // recovered whole, plainlined bytes are counted for the recovery record.
+    // recovered whole, plainlined bytes are counted for the recovery record. The FINAL
+    // region must carry its terminator — a delimiter-less tail is reported as discarded
+    // (matching tail repair), never decoded as a frame.
     fun scanRecovery(raw: ByteArray): FrameRecovery {
         val frames = ArrayList<Frame>()
         var good = 0
@@ -48,11 +56,11 @@ object FrameCodec {
         while (pos < raw.size) {
             var end = pos
             while (end < raw.size && raw[end] != '\n'.code.toByte()) end++
-            val lineEnd = if (end < raw.size) end + 1 else raw.size
+            if (end == raw.size) break
             val frame = decode(String(raw, pos, end - pos, Charsets.UTF_8)) ?: break
             frames += frame
-            good = lineEnd
-            pos = lineEnd
+            good = end + 1
+            pos = end + 1
         }
         return FrameRecovery(frames, (raw.size - good).toLong())
     }

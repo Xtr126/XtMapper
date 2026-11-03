@@ -33,6 +33,15 @@ class FrameRecoveryTest {
         assertNull(FrameCodec.decode(""))
     }
 
+    @Test fun `unterminated final frame is not accepted as valid`() {
+        val complete = FrameCodec.encode(1, "sid-1", "alpha")
+        val noTerminator = complete.copyOfRange(0, complete.size - 1)
+        val scan = FrameCodec.scanRecovery(noTerminator)
+        assertTrue("a frame without its final delimiter is incomplete", scan.frames.isEmpty())
+        assertEquals(noTerminator.size.toLong(), scan.discardedBytes)
+        assertEquals(1, FrameCodec.scanRecovery(complete).frames.size)
+    }
+
     @Test fun `day header is frame zero with the protocol payload`() {
         val line = DayProtocol.header().trimEnd('\n')
         assertTrue(FrameCodec.isDayHeader(FrameCodec.decode(line)!!))
