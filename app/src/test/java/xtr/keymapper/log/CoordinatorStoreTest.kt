@@ -71,6 +71,31 @@ class CoordinatorStoreTest {
         assertFalse(File(dir, name).readBytes().decodeToString().contains(torn))
     }
 
+    @Test fun `concurrent transactions keep unicode and stack traces intact (V5)`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        val unicode = listOf("стена „ú“ 🐉", "l1\nl2\nl3", "back\\slash\tend")
+        val trace = "java.io.IOException: boom\n\tatFrames:1)\n\tatMain:2) arg=-1"
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            val a = pool.submit {
+                unicode.forEachIndexed { i, m -> store.append(name, listOf(FrameCodec.encode(i.toLong(), "unicode", m))) }
+            }
+            val b = pool.submit {
+                repeat(6) { i -> store.append(name, listOf(FrameCodec.encode(i.toLong(), "exception", trace))) }
+            }
+            a.get(20, TimeUnit.SECONDS)
+            b.get(20, TimeUnit.SECONDS)
+        } finally {
+            pool.shutdownNow()
+        }
+        val frames = store.readFrames(name)
+        assertEquals(10, frames.size)
+        assertEquals(listOf(0L, 1L, 2L), frames.filter { it.sid == "unicode" }.map { it.seq })
+        assertEquals(unicode, frames.filter { it.sid == "unicode" }.map { it.payload })
+        assertEquals(List(6) { trace }, frames.filter { it.sid == "exception" }.map { it.payload })
+    }
+
     @Test fun `mid transaction exclusion holds against a second writer process (V3b)`() {
         val dir = tmp.newFolder()
         CoordinatorStore(dir).append(name, listOf(FrameCodec.encode(0, "seed", "seed")))
