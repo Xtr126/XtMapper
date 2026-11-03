@@ -181,7 +181,10 @@ class ClientServiceSlotTest {
         try {
             claimer.start()
             assertTrue("claimer started", claimStarted.await(2, TimeUnit.SECONDS))
-            claimer.join(100)
+            val blockedDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+            while (claimer.state != Thread.State.BLOCKED && System.nanoTime() < blockedDeadline) {
+                Thread.sleep(5)
+            }
             assertEquals(
                 "claim must be blocked on the slot monitor while the ownership block runs",
                 Thread.State.BLOCKED,
