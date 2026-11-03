@@ -133,22 +133,18 @@ object XtLogger {
     }
 
     fun endSession(status: String = SessionStates.STATUS_CLEAN) {
-        val active = pipeline
         synchronized(initLock) {
             deferredStart = null
-            if (active == null) return
-            val current = pipeline
-            if (current === active) {
-                pipeline = null
-                initializationRole = null
-                val finished = try {
-                    current.close(status) // bounded internally
-                } catch (e: Exception) {
-                    Log.e(TAG, "endSession failure ignored", e)
-                    false
-                }
-                if (!finished) retiringOwner = current
+            val current = pipeline ?: return
+            pipeline = null
+            initializationRole = null
+            val finished = try {
+                current.close(status) // bounded internally
+            } catch (e: Exception) {
+                Log.e(TAG, "endSession failure ignored", e)
+                false
             }
+            if (!finished) retiringOwner = current
         }
     }
 
