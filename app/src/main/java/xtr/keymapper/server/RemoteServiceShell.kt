@@ -29,17 +29,15 @@ object RemoteServiceShell {
         }
 
         try {
-            RemoteService.loadLibraries()
             Looper.prepareMainLooper()
-            val mService = RemoteService(getContext())
-            mService.startedFromShell = true
             var noLogcat = false
+            var isWaylandClient = false
 
             var autoLaunchClientActivity = true
             for (arg in args) {
                 when (arg) {
                     "--wayland-client" -> {
-                        mService.isWaylandClient = true
+                        isWaylandClient = true
                         println("using wayland client")
                     }
                     "--no-auto-launch" -> autoLaunchClientActivity = false
@@ -47,10 +45,6 @@ object RemoteServiceShell {
                     else -> println("Invalid argument: $arg")
                 }
             }
-            ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start()
-            val settingsArgs = "settings put system alert_window_bypass_low_ram 1".split(Regex("\\s+"))
-            ProcessBuilder(settingsArgs).inheritIO().start()
-
             val fakeTouch = SystemProperties.get("persist.waydroid.fake_touch", null)
             if (fakeTouch != null && !fakeTouch.isBlank()) {
                 val ANSI_RED = "\u001B[31m"
@@ -61,6 +55,17 @@ object RemoteServiceShell {
                 // Don't flood the console with logcat if warning is being shown
                 ProcessBuilder("logcat", "-v", "color", "--pid=" + Process.myPid()).inheritIO().start()
             }
+
+            // Do everything after logcat
+            RemoteService.loadLibraries()
+
+            val mService = RemoteService(getContext())
+            mService.startedFromShell = true
+            mService.isWaylandClient = isWaylandClient
+
+            ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start()
+            val settingsArgs = "settings put system alert_window_bypass_low_ram 1".split(Regex("\\s+"))
+            ProcessBuilder(settingsArgs).inheritIO().start()
 
             if (autoLaunchClientActivity) {
                 val intent = Intent(Intent.ACTION_MAIN).apply {
