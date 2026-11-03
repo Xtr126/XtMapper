@@ -291,7 +291,7 @@ class XtLoggerFacadeRegressionTest {
                 assertEquals(Role.SHELL, XtLogger.currentRole)
             }
 
-            assertTrue("endSession completed", stopperFinished.await(2_000))
+            assertTrue("endSession completed", stopperFinished.await(2_000, TimeUnit.MILLISECONDS))
             assertNull("stopper thread failed: ${stopperFailure.get()}", stopperFailure.get())
             assertFalse("replacement must be closed by the stop request", XtLogger.isInitialized)
             assertNull(XtLogger.currentRole)
