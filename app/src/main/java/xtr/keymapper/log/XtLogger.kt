@@ -262,6 +262,8 @@ object XtLogger {
 
     // Runs from the retiring owner's close; restart so file logging does not stay disabled until the next init call.
     private fun retryDeferredInit() {
+        // A close() caller holds initLock while joining this worker; an idle hook entering the monitor stalls that join.
+        if (deferredStart == null) return
         synchronized(initLock) {
             val deferred = deferredStart ?: return
             deferredStart = null
