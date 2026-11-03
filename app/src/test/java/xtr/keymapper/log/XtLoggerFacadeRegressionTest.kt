@@ -280,7 +280,7 @@ class XtLoggerFacadeRegressionTest {
 
             synchronized(initLock) {
                 stopper.start()
-                assertTrue("stopper captured the pre-restart null pipeline and is waiting for initLock",
+                assertTrue("stopper is waiting for initLock",
                     awaitBlocked(stopper, 2_000))
 
                 // Re-entering the monitor lets the retirement callback install the
