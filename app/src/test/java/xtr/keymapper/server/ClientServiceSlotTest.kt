@@ -148,29 +148,51 @@ class ClientServiceSlotTest {
         val blockRunning = CountDownLatch(1)
         val releaseBlock = CountDownLatch(1)
         val claimOutcome = AtomicReference<Pair<String?, Boolean>?>(null)
+        val ownerFailure = AtomicReference<Throwable?>(null)
+        val claimerFailure = AtomicReference<Throwable?>(null)
+        val claimStarted = CountDownLatch(1)
 
         val owner = Thread {
-            val decided = slot.runIfOwner("session-a") {
-                blockRunning.countDown()
-                assertTrue("block released in time", releaseBlock.await(2, TimeUnit.SECONDS))
+            try {
+                val decided = slot.runIfOwner("session-a") {
+                    blockRunning.countDown()
+                    assertTrue("block released in time", releaseBlock.await(2, TimeUnit.SECONDS))
+                }
+                assertTrue("ownership block ran", decided)
+            } catch (failure: Throwable) {
+                ownerFailure.set(failure)
             }
-            assertTrue("ownership block ran", decided)
         }
         owner.isDaemon = true
         owner.start()
         assertTrue("block must be entered", blockRunning.await(2, TimeUnit.SECONDS))
 
-        // Shutdown can only enter the shared slot monitor after the block returns;
-        // a session teardown can therefore never overtake a pending side effect.
-        val claimer = Thread { claimOutcome.set(slot.claimForShutdown("session-a")) }
+        // Shutdown shares the slot monitor with the ownership block and must wait
+        // until that block returns before it can revoke the session.
+        val claimer = Thread {
+            try {
+                claimStarted.countDown()
+                claimOutcome.set(slot.claimForShutdown("session-a"))
+            } catch (failure: Throwable) {
+                claimerFailure.set(failure)
+            }
+        }
         claimer.isDaemon = true
-        claimer.start()
-        releaseBlock.countDown()
+        try {
+            claimer.start()
+            assertTrue("claimer started", claimStarted.await(2, TimeUnit.SECONDS))
+            claimer.join(100)
+            assertTrue("claim must wait while the ownership block runs", claimer.isAlive)
+        } finally {
+            releaseBlock.countDown()
+        }
 
         owner.join(2_000)
         claimer.join(2_000)
         assertFalse("owner run finished", owner.isAlive)
         assertFalse("claimer finished", claimer.isAlive)
+        assertNull("ownership thread failed: ${ownerFailure.get()}", ownerFailure.get())
+        assertNull("claim thread failed: ${claimerFailure.get()}", claimerFailure.get())
         assertEquals("shutdown revokes only after the block returned", "service-a" to false, claimOutcome.get())
         assertNull(slot.get())
     }
