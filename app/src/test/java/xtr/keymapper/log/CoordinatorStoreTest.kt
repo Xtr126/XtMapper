@@ -87,4 +87,22 @@ class CoordinatorStoreTest {
         assertEquals(4, frames.size)
         assertEquals(2, frames.count { it.sid != "seed" && it.sid != "protocol" })
     }
+
+    @Test fun `closing the data descriptor inside a held transaction does not release the coordinator lock (V4)`() {
+        val dir = tmp.newFolder()
+        CoordinatorStore(dir).append(name, listOf(FrameCodec.encode(0, "seed", "seed")))
+        LogProbeChild(dir, "coordinator-hook").use { child ->
+            assertEquals("ARMED", child.command("ARM"))
+            assertEquals("HOOK_REACHED", child.command("TRYAPPEND $name"))
+            assertEquals("READCLOSED", child.command("READCLOSE $name"))
+            assertThrows(IOException::class.java) {
+                CoordinatorStore(dir).append(name, listOf(FrameCodec.encode(1, "s2", "denied")))
+            }
+            assertThrows(IOException::class.java) { CoordinatorStore(dir).readFrames(name) }
+            assertEquals("WROTE", child.command("CONTINUE"))
+            CoordinatorStore(dir).append(name, listOf(FrameCodec.encode(1, "s2", "after")))
+        }
+        val frames = CoordinatorStore(dir).readFrames(name)
+        assertEquals(2, frames.count { it.sid != "seed" && it.sid != "protocol" })
+    }
 }

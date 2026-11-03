@@ -1,6 +1,7 @@
 package xtr.keymapper.log
 
 import java.io.File
+import java.io.RandomAccessFile
 
 object LogStoreProcessProbe {
     @JvmStatic
@@ -21,7 +22,16 @@ object LogStoreProcessProbe {
                 if (armHook) {
                     armHook = false
                     println("HOOK_REACHED")
-                    check(input.readLine() == "CONTINUE")
+                    while (true) {
+                        val pauseLine = input.readLine() ?: break
+                        when (pauseLine.substringBefore(' ')) {
+                            "CONTINUE" -> break
+                            "READCLOSE" -> {
+                                RandomAccessFile(File(args[0], pauseLine.substringAfter(' ')), "r").use { }
+                                println("READCLOSED")
+                            }
+                        }
+                    }
                 }
             }
         }
