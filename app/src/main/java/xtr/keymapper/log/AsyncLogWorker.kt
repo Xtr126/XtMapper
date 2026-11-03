@@ -112,6 +112,9 @@ class AsyncLogWorker(
     fun stopDraining(flushTimeoutMillis: Long): Boolean = close(flushTimeoutMillis)
 
     fun close(flushTimeoutMillis: Long, status: String = SessionStates.STATUS_CLEAN): Boolean {
+        val timeoutMillis = flushTimeoutMillis.coerceAtLeast(0)
+        val timeoutNanos = TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+        val startedAt = System.nanoTime()
         val unstarted = synchronized(lifecycle) {
             if (stopStatus == null) stopStatus = status
             queue.closeAdmission()
@@ -123,13 +126,31 @@ class AsyncLogWorker(
         }
         val completed = try {
             Thread.currentThread() !== thread &&
-                finished.await(flushTimeoutMillis.coerceAtLeast(0), TimeUnit.MILLISECONDS)
+                finished.await(timeoutMillis, TimeUnit.MILLISECONDS)
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
             false
         }
-        if (!completed) queue.discardQueued()
-        return completed
+        if (!completed) {
+            queue.discardQueued()
+            return false
+        }
+
+        // The completion latch is released during final cleanup, just before the
+        // worker thread returns. Join as well so close() does not report success
+        // while afterClose or the worker's final instructions are still running.
+        val remainingNanos = timeoutNanos - (System.nanoTime() - startedAt)
+        if (remainingNanos > 0L && Thread.currentThread() !== thread) {
+            val joinMillis = TimeUnit.NANOSECONDS.toMillis(remainingNanos)
+            val joinNanos = (remainingNanos - TimeUnit.MILLISECONDS.toNanos(joinMillis)).toInt()
+            try {
+                thread.join(joinMillis, joinNanos)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                return false
+            }
+        }
+        return !thread.isAlive
     }
 
     fun closeFile() {
