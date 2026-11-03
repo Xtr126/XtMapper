@@ -1,8 +1,12 @@
 package xtr.keymapper.log
 
+import java.io.Closeable
+import java.io.File
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class MutableClock(
     initial: Instant,
@@ -68,4 +72,32 @@ class TestPipelineFactory(
 object LogFiles {
     fun readAll(store: LogStore, name: String): String =
         store.readTail(name, Int.MAX_VALUE).joinToString("\n")
+}
+
+class LogProbeChild(dir: File) : Closeable {
+    private val classpath = listOf(LogStoreProcessProbe::class.java, FileSystemLogStore::class.java, Unit::class.java)
+        .map { File(requireNotNull(it.protectionDomain).codeSource.location.toURI()).path }.distinct().joinToString(File.pathSeparator)
+    private val process = ProcessBuilder(
+        File(System.getProperty("java.home"), "bin/java").path,
+        "-cp", classpath, LogStoreProcessProbe::class.java.name, dir.path,
+    ).redirectError(ProcessBuilder.Redirect.INHERIT).start()
+    private val input = process.inputStream.bufferedReader()
+    private val output = process.outputStream.bufferedWriter()
+    private val reader = Executors.newSingleThreadExecutor()
+
+    init { check("READY" == response()) { "LogStoreProcessProbe did not reach READY" } }
+    private fun response(): String = reader.submit<String> { input.readLine() ?: error("LogStoreProcessProbe exited") }
+        .get(10, TimeUnit.SECONDS)
+    fun command(line: String): String {
+        output.write(line + "\n")
+        output.flush()
+        return response()
+    }
+    override fun close() {
+        process.destroyForcibly()
+        process.waitFor(10, TimeUnit.SECONDS)
+        reader.shutdownNow()
+        input.close()
+        output.close()
+    }
 }
