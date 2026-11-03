@@ -74,12 +74,14 @@ object LogFiles {
         store.readTail(name, Int.MAX_VALUE).joinToString("\n")
 }
 
-class LogProbeChild(dir: File) : Closeable {
+class LogProbeChild(dir: File, mode: String? = null) : Closeable {
     private val classpath = listOf(LogStoreProcessProbe::class.java, FileSystemLogStore::class.java, Unit::class.java)
         .map { File(requireNotNull(it.protectionDomain).codeSource.location.toURI()).path }.distinct().joinToString(File.pathSeparator)
     private val process = ProcessBuilder(
-        File(System.getProperty("java.home"), "bin/java").path,
-        "-cp", classpath, LogStoreProcessProbe::class.java.name, dir.path,
+        listOf(
+            File(System.getProperty("java.home"), "bin/java").path,
+            "-cp", classpath, LogStoreProcessProbe::class.java.name, dir.path,
+        ) + listOfNotNull(mode),
     ).redirectError(ProcessBuilder.Redirect.INHERIT).start()
     private val input = process.inputStream.bufferedReader()
     private val output = process.outputStream.bufferedWriter()

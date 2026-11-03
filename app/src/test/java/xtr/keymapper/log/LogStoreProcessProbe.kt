@@ -15,6 +15,16 @@ object LogStoreProcessProbe {
             }
             channel.tryLock()
         }
+        var armHook = false
+        val coordinator = args.getOrNull(1)?.takeIf { it == "coordinator-hook" }?.let {
+            CoordinatorStore(File(args[0])) {
+                if (armHook) {
+                    armHook = false
+                    println("HOOK_REACHED")
+                    check(input.readLine() == "CONTINUE")
+                }
+            }
+        }
         var writer: LogFileWriter? = null
         println("READY")
         try {
@@ -31,6 +41,13 @@ object LogStoreProcessProbe {
                         "WRITE" -> { checkNotNull(writer).write((value + "\n").toByteArray()); println("WROTE") }
                         "TAIL" -> println("TAIL " + store.readTail(value, 10).joinToString("|"))
                         "CLOSE" -> { writer?.close(); writer = null; println("CLOSED") }
+                        "ARM" -> { armHook = true; println("ARMED") }
+                        "TRYAPPEND" -> {
+                            checkNotNull(coordinator).append(
+                                value, listOf(FrameCodec.encode(1, "probe-${ProcessHandle.current().pid()}", "probe")),
+                            )
+                            println("WROTE")
+                        }
                         "EXIT" -> break
                         else -> error("Unknown command $command")
                     }
