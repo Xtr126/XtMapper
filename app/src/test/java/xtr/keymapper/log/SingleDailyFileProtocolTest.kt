@@ -1,6 +1,7 @@
 package xtr.keymapper.log
 
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import org.junit.Assert.*
 import org.junit.Rule
@@ -17,11 +18,13 @@ class SingleDailyFileProtocolTest {
         val dir = tmp.newFolder()
         val store = FileSystemLogStore(dir)
         val factory = TestPipelineFactory(store, MutableClock.at("2026-10-01T12:00:00Z"))
-        val pipelines = listOf(Role.APP, Role.SHELL, Role.SHIZUKU).map { role ->
-            factory.start(role).also { it.info("Probe", "role record from $role") }
-        }
-        pipelines.forEach { it.close() }
+        Role.entries.map { role -> factory.start(role).also { it.info("Probe", "role record from $role") } }
+            .forEach { it.close() }
         assertEquals(listOf(name), store.listFiles().map { it.name })
+        val contents = LogFiles.readAll(store, name)
+        Role.entries.forEach { role ->
+            assertTrue("record from $role must survive in the unified file: $contents", contents.contains("role record from $role"))
+        }
     }
 
     @Test fun `V2 new session persists while previous writer stays alive and idle`() {
@@ -61,25 +64,37 @@ class SingleDailyFileProtocolTest {
                 assertEquals("CLOSED", holder.command("CLOSE"))
             }
         }
-        assertEquals("parent\n", LogFiles.readAll(FileSystemLogStore(dir), name))
+        val contents = LogFiles.readAll(FileSystemLogStore(dir), name)
+        assertTrue("parent record must land as its own line, got: \"$contents\"", contents.lines().contains("parent"))
     }
 
-    @Test fun `V4 writer exclusion survives same-process descriptor open and close`() {
+    @Test fun `V4 lifetime-writer descriptor hazard kept as evidence with coordinator acceptance`() {
         val dir = tmp.newFolder()
         val store = FileSystemLogStore(dir)
         val writer = store.openAppendWriter(name).also { it.write("first\n".toByteArray()) }
-        try {
-            // POSIX drops all this process's fcntl locks on the inode when any fd closes;
-            // the read path must never create that window.
-            RandomAccessFile(File(dir, name), "r").use { it.read() }
-            LogProbeChild(dir).use { foreign ->
-                val response = foreign.command("OPEN $name")
-                assertTrue(
-                    "writer exclusion must survive foreign read descriptors, but child reported: $response",
-                    response.startsWith("ERROR"),
-                )
+        // Evidence (not acceptance): POSIX drops this process's fcntl locks on the inode when
+        // any fd closes, so the legacy lifetime writer cannot hold exclusion across fd churn.
+        RandomAccessFile(File(dir, name), "r").use { it.read() }
+        LogProbeChild(dir).use { foreign ->
+            assertEquals(
+                "legacy descriptor hazard: idle lifetime writer lost exclusion",
+                "OPENED",
+                foreign.command("OPEN $name"),
+            )
+        }
+        writer.close()
+        // Acceptance per review: coordinator exclusion must hold during an ACTIVE transaction.
+        // Fresh day file — legacy-to-P1 migration of the poisoned day file is its own batch.
+        val accept = "xtmapper-2026-10-02.log"
+        CoordinatorStore(dir).append(accept, listOf(FrameCodec.encode(0, "seed", "seed")))
+        LogProbeChild(dir, "coordinator-hook").use { holder ->
+            assertEquals("ARMED", holder.command("ARM"))
+            assertEquals("HOOK_REACHED", holder.command("TRYAPPEND $accept"))
+            assertThrows(IOException::class.java) {
+                CoordinatorStore(dir).append(accept, listOf(FrameCodec.encode(1, "s2", "denied")))
             }
-        } finally { writer.close() }
+            assertEquals("WROTE", holder.command("CONTINUE"))
+        }
     }
 
     private fun awaitSink(pipeline: LoggingPipeline): Boolean {

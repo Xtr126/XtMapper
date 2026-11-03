@@ -20,8 +20,10 @@ object FrameCodec {
 
     fun encode(seq: Long, sid: String, payload: String): ByteArray {
         val raw = payload.toByteArray(Charsets.UTF_8)
-        // len/crc cover the raw payload bytes BEFORE escaping: counts stay stable if the escape table ever evolves.
-        return "X1 $seq $sid ${raw.size} ${crc(raw)} ${escape(payload)}\n".toByteArray(Charsets.UTF_8)
+        // len covers the raw payload bytes; crc covers a canonical pre-image of the record
+        // metadata plus those bytes, so valid-looking edits to sid/seq/len are caught too.
+        return "X1 $seq $sid ${raw.size} ${crc(sid, seq, raw.size.toLong(), raw)} ${escape(payload)}\n"
+            .toByteArray(Charsets.UTF_8)
     }
 
     fun decode(line: String): Frame? {
@@ -33,7 +35,7 @@ object FrameCodec {
         if (!HEX.matches(fields[4])) return null
         val payload = unescape(fields[5]) ?: return null
         val raw = payload.toByteArray(Charsets.UTF_8)
-        if (raw.size.toLong() != len || crc(raw) != fields[4]) return null
+        if (raw.size.toLong() != len || crc(fields[2], seq, len, raw) != fields[4]) return null
         return Frame(seq, fields[2], payload)
     }
 
@@ -55,7 +57,13 @@ object FrameCodec {
         return FrameRecovery(frames, (raw.size - good).toLong())
     }
 
-    private fun crc(raw: ByteArray) = "%08x".format(CRC32().apply { update(raw) }.getValue())
+    // "P1|<sid>|<seq>|<len>|" + raw payload bytes: '|' cannot occur in the restricted sid
+    // alphabet or in the numeric fields, so the pre-image is unambiguous and canonical.
+    private fun crc(sid: String, seq: Long, len: Long, raw: ByteArray) =
+        "%08x".format(CRC32().apply {
+            update("P1|$sid|$seq|$len|".toByteArray(Charsets.US_ASCII))
+            update(raw)
+        }.getValue())
     private fun escape(p: String) = p.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r")
 
     private fun unescape(s: String): String? {

@@ -17,6 +17,14 @@ class FrameRecoveryTest {
         assertNull(FrameCodec.decode(line.replace(field, field.replace('a', 'b'))))
     }
 
+    @Test fun `valid looking metadata tamper fails the checksum gate`() {
+        val line = FrameCodec.encode(1, "s", "banana").decodeToString().trimEnd('\n')
+        val f = line.split(' ', limit = 6)
+        assertNull("seq swap with intact checksum must be caught", FrameCodec.decode("X1 2 ${f[2]} ${f[3]} ${f[4]} ${f[5]}"))
+        assertNull("sid swap with intact checksum must be caught", FrameCodec.decode("X1 ${f[1]} t ${f[3]} ${f[4]} ${f[5]}"))
+        assertNull("len swap with intact checksum must be caught", FrameCodec.decode("X1 ${f[1]} ${f[2]} 7 ${f[4]} ${f[5]}"))
+    }
+
     @Test fun `corrupted envelope fails the grammar gate`() {
         assertNull(FrameCodec.decode("X1 1 bad|sid 1 00000000 x"))
         assertNull(FrameCodec.decode("X1 x s 1 00000000 x"))
