@@ -182,7 +182,11 @@ class ClientServiceSlotTest {
             claimer.start()
             assertTrue("claimer started", claimStarted.await(2, TimeUnit.SECONDS))
             claimer.join(100)
-            assertTrue("claim must wait while the ownership block runs", claimer.isAlive)
+            assertEquals(
+                "claim must be blocked on the slot monitor while the ownership block runs",
+                Thread.State.BLOCKED,
+                claimer.state,
+            )
         } finally {
             releaseBlock.countDown()
         }
