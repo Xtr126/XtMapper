@@ -214,11 +214,13 @@ object XtLogger {
     private fun internalsStart(role: Role, store: LogStore) {
         val retiring = retiringOwner
         if (retiring != null) {
+            // Publish before the isClosed check so the owner's afterClose hook cannot read null.
+            deferredStart = DeferredInit(role, store, retiring)
             if (!retiring.isClosed) {
                 Log.w(TAG, "previous file owner still closing; logger initialization deferred")
-                deferredStart = DeferredInit(role, store, retiring)
                 return
             }
+            deferredStart = null
             retiringOwner = null
         }
         val sessionStartInstant = systemClock.instant()
