@@ -3,6 +3,7 @@ package xtr.keymapper.log
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
+import java.nio.channels.OverlappingFileLockException
 import java.util.concurrent.Callable
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
@@ -209,13 +210,15 @@ class CoordinatorStoreTest {
     @Test fun `transaction never starts past the acquisition deadline`() {
         val dir = tmp.newFolder()
         val deadlineNanos = 1_000_000_000L
-        // Scripted clock: reads 1–2 (deadline computation + loop-top remainder) are not
-        // expired; every read from the post-OS-lock check onward is past the deadline, so
-        // a SUCCESSFUL lock acquisition must skip the whole transaction.
+        // Scripted clock: reads 1–3 (deadline computation, loop-top remainder, post-mutex
+        // pre-tryLock check) are not expired; every read from the post-OS-lock check onward
+        // is past the deadline, so a SUCCESSFUL lock acquisition must skip the whole
+        // transaction (and the pre-tryLock check can never reach the lock path when it
+        // fires on the scripted boundary).
         var reads = 0
         val store = CoordinatorStore(
             dir, null, deadlineNanos,
-            { if (reads++ < 2) 0L else deadlineNanos + 1 },
+            { if (reads++ < 3) 0L else deadlineNanos + 1 },
         )
         val error = assertThrows(IOException::class.java) {
             store.append(name, listOf(FrameCodec.encode(0, "late", "late")))
@@ -223,6 +226,37 @@ class CoordinatorStoreTest {
         assertEquals("log coordination timed out", error.message)
         assertFalse("expired acquisition must not create or touch the day file", File(dir, name).exists())
         assertTrue(store.readFrames(name).isEmpty())
+    }
+
+    // Review round 13 on 8debaa6f: failed gate attempts must never release a same-process
+    // holder's exclusion. POSIX-record-lock kernels free every lock on the inode when ANY
+    // descriptor is closed, so the coordinator keeps ONE longitudinal gate descriptor;
+    // this host-JVM guard is green both under OFD and after the fix, and the separate
+    // process half of the regression stays with the on-device acceptance list.
+    @Test fun `failed overlap attempts never release a same-process holder's lock`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir, null, 250_000_000L)
+        val holder = RandomAccessFile(File(dir, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw")
+        val held = holder.channel.lock()
+        try {
+            val error = assertThrows(IOException::class.java) {
+                store.append(name, listOf(FrameCodec.encode(1, "s1", "blocked")))
+            }
+            assertEquals("log coordination timed out", error.message)
+            assertTrue("holder's exclusion must outlive failed attempts", held.isValid)
+            val outsider = RandomAccessFile(File(dir, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw")
+            try {
+                assertThrows(OverlappingFileLockException::class.java) { outsider.channel.tryLock() }
+            } finally {
+                outsider.close()
+            }
+            assertTrue("exclusion intact end-to-end", held.isValid)
+        } finally {
+            held.release()
+            holder.close()
+        }
+        store.append(name, listOf(FrameCodec.encode(1, "s1", "after")))
+        assertEquals("after", CoordinatorStore(dir).readFrames(name).last().payload)
     }
 
     // V7: a crash mid-frame is simulated by writing a PREFIX of the victim frame's bytes

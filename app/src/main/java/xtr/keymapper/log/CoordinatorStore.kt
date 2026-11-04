@@ -23,6 +23,14 @@ class CoordinatorStore(
 
     init { rootDirectory.mkdirs() }
 
+    // §2 gate ownership: opened lazily on the first coordinated call (inside the local
+    // mutex, after the post-acquisition deadline check) and held for the instance
+    // lifetime — the coordinator never closes it, so failed attempts can never trigger
+    // close-release semantics against a same-process gate lock holder.
+    private val gate: RandomAccessFile by lazy {
+        RandomAccessFile(File(rootDirectory, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw")
+    }
+
     fun append(name: String, frames: List<ByteArray>) {
         // Contract validation happens BEFORE any coordination: violations never touch the file.
         frames.forEach { frame ->
@@ -132,6 +140,14 @@ class CoordinatorStore(
     // and releases everything. The deadline is re-checked after the local acquisition,
     // BEFORE any gate I/O, and both the local wait and the backoff sleep stay inside the
     // remainder — a caller never parks beyond its deadline inside coordination.
+    //
+    // Gate ownership (review round 13): ONE longitudinal descriptor per store instance,
+    // never closed by the coordinator. POSIX-record-lock kernels release every lock the
+    // process holds on an inode when ANY descriptor is closed, so a per-attempt
+    // open/close could silently free a same-process holder's exclusion (e.g. the legacy
+    // lifetime store) and let a foreign writer in while it still believes it owns the
+    // gate. Longitudinal ownership keeps coordinator descriptor operations in one
+    // domain, independent of kernel lock semantics (fd cost: one per store instance).
     private fun <T> coordinated(work: () -> T): T {
         val deadline = clock() + coordinationDeadlineNanos
         var attempt = 0
@@ -142,22 +158,23 @@ class CoordinatorStore(
             var entered = false
             val localWaitMillis = TimeUnit.NANOSECONDS.toMillis(remainingNanos).coerceAtMost(LOCAL_ATTEMPT_MILLIS)
             acquireLocal(localWaitMillis) {
-                RandomAccessFile(File(rootDirectory, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw").use { gate ->
-                    val lock = try {
-                        gate.channel.tryLock()
-                    } catch (_: OverlappingFileLockException) {
-                        // Same-JVM holder (e.g. the lifetime store's channel): a failed attempt.
-                        null
-                    }
-                    if (lock != null) {
-                        try {
-                            // Post-acquisition deadline check: expired ⇒ release, close, no data work.
-                            if (clock() < deadline) {
-                                entered = true
-                                verdict = work()
-                            }
-                        } finally { lock.release() }
-                    }
+                // Post-mutex, pre-gate-I/O deadline check: expired ⇒ this attempt does
+                // not even touch the gate; the loop top then raises the timeout.
+                if (clock() >= deadline) return@acquireLocal
+                val lock = try {
+                    gate.channel.tryLock()
+                } catch (_: OverlappingFileLockException) {
+                    // Same-JVM holder (e.g. the lifetime store's channel): a failed attempt; no close follows, so the holder's lock survives.
+                    null
+                }
+                if (lock != null) {
+                    try {
+                        // Post-acquisition deadline check: expired ⇒ release, no data work.
+                        if (clock() < deadline) {
+                            entered = true
+                            verdict = work()
+                        }
+                    } finally { lock.release() }
                 }
             }
             if (entered) return verdict as T
