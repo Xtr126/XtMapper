@@ -253,6 +253,22 @@ class CoordinatorStoreTest {
         assertEquals("after", CoordinatorStore(dir).readFrames(name).last().payload)
     }
 
+    // Deadline regression reviewer-required: expiry right after local-mutex acquisition
+    // (scripted read #3 = the pre-tryLock check) must open no coordinator descriptor for
+    // this call — neither the gate file nor the day file is created.
+    @Test fun `expiry after local-mutex acquisition creates neither gate nor day file`() {
+        val dir = tmp.newFolder()
+        val deadlineNanos = 1_000_000_000L
+        var reads = 0
+        val store = CoordinatorStore(dir, null, deadlineNanos, { if (reads++ < 2) 0L else deadlineNanos + 1 })
+        val error = assertThrows(IOException::class.java) {
+            store.append(name, listOf(FrameCodec.encode(0, "late", "late")))
+        }
+        assertEquals("log coordination timed out", error.message)
+        assertFalse("no coordinator descriptor may be opened for an expired attempt", File(dir, FileSystemLogStore.LIFECYCLE_LOCK_NAME).exists())
+        assertFalse("day file never created past the deadline", File(dir, name).exists())
+    }
+
     // V7: a crash mid-frame is simulated by writing a PREFIX of the victim frame's bytes
     // (process gone, no completion, no flush) and then reopening the store — the exact
     // recovery policy per prefix length k. Earlier frames always survive, the torn suffix

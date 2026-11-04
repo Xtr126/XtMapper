@@ -5,6 +5,7 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.channels.OverlappingFileLockException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.random.Random
@@ -22,13 +23,6 @@ class CoordinatorStore(
 ) {
 
     init { rootDirectory.mkdirs() }
-
-    // Opened once per instance and NEVER closed by the coordinator: closing any
-    // descriptor for the inode frees this process's POSIX-record locks on it, stripping
-    // a same-process gate holder's (e.g. legacy lifetime store's) exclusion.
-    private val gate: RandomAccessFile by lazy {
-        RandomAccessFile(File(rootDirectory, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw")
-    }
 
     fun append(name: String, frames: List<ByteArray>) {
         // Contract validation happens BEFORE any coordination: violations never touch the file.
@@ -137,8 +131,9 @@ class CoordinatorStore(
     // and releases everything. The deadline is re-checked after the local acquisition,
     // BEFORE any gate I/O, and both the local wait and the backoff sleep stay inside the
     // remainder — a caller never parks beyond its deadline inside coordination.
-    // Gate ownership: see `gate` — the descriptor is never closed here, so a failed
-    // attempt can never free a same-process holder's lock via close-release.
+    // Gate ownership: the descriptor is opened once per root by the process-wide owner
+    // and never closed here, so a failed attempt can never free a same-process holder's
+    // lock via close-release.
     private fun <T> coordinated(work: () -> T): T {
         val deadline = clock() + coordinationDeadlineNanos
         var attempt = 0
@@ -151,6 +146,8 @@ class CoordinatorStore(
             acquireLocal(localWaitMillis) {
                 // Expired past the mutex: this attempt touches no gate I/O at all.
                 if (clock() >= deadline) return@acquireLocal
+                // Process-wide owner, lazily opened inside the mutex, never closed.
+                val gate = gateFor(rootDirectory)
                 val lock = try {
                     gate.channel.tryLock()
                 } catch (_: OverlappingFileLockException) {
@@ -198,6 +195,19 @@ class CoordinatorStore(
 
     companion object {
         private val LOCAL_LOCK = ReentrantLock()
+        // Process-wide gate owner keyed by canonical root (review round 14): ONE
+        // descriptor per root per process, opened inside the coordination mutex and
+        // NEVER closed — closing any descriptor for the inode can free this process's
+        // POSIX-record locks on it (stripping a sibling holder's, e.g. legacy store's,
+        // exclusion), so no coordinator close may ever happen. Deliberately leaked:
+        // one fd per root, process lifetime, bounded — refcount+close is not a safe
+        // alternative because a close at zero can still strip a sibling's held lock.
+        private val GATES = ConcurrentHashMap<String, RandomAccessFile>()
+
+        private fun gateFor(root: File): RandomAccessFile =
+            GATES.computeIfAbsent(root.canonicalFile.path) {
+                RandomAccessFile(File(it, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw")
+            }
         private const val BOUNDARY_SEARCH = 4L * FrameCodec.MAX_FRAME_BYTES
         private const val COORDINATION_DEADLINE_NANOS = 2_000_000_000L
         private const val LOCAL_ATTEMPT_MILLIS = 500L
