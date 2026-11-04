@@ -19,7 +19,7 @@ object LogStoreProcessProbe {
         var armHook = false
         var probeSeq = 0
         val coordinator = args.getOrNull(1)?.takeIf { it == "coordinator-hook" }?.let {
-            CoordinatorStore(File(args[0])) {
+            CoordinatorStore(File(args[0]), onCoordinatorLock = {
                 if (armHook) {
                     armHook = false
                     println("HOOK_REACHED")
@@ -34,7 +34,7 @@ object LogStoreProcessProbe {
                         }
                     }
                 }
-            }
+            })
         }
         var writer: LogFileWriter? = null
         println("READY")
@@ -54,6 +54,15 @@ object LogStoreProcessProbe {
                         "CLOSE" -> { writer?.close(); writer = null; println("CLOSED") }
                         "ARM" -> { armHook = true; println("ARMED") }
                         "TRYAPPEND" -> {
+                            probeSeq++
+                            checkNotNull(coordinator).append(
+                                value, listOf(FrameCodec.encode(probeSeq.toLong(), "probe-${ProcessHandle.current().pid()}", "probe")),
+                            )
+                            println("WROTE")
+                        }
+                        "BARRIERAPPEND" -> {
+                            println("HELD")
+                            while (true) { if (input.readLine() == "RELEASE") break }
                             probeSeq++
                             checkNotNull(coordinator).append(
                                 value, listOf(FrameCodec.encode(probeSeq.toLong(), "probe-${ProcessHandle.current().pid()}", "probe")),

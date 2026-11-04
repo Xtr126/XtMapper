@@ -13,7 +13,12 @@ import kotlin.random.Random
 // corruption classified before any byte change (pure unterminated suffix is the only
 // repairable region), and Deadline-enforced bounded acquisition. Budget/outcomes/retention
 // land with their batches.
-class CoordinatorStore(private val rootDirectory: File, private val onCoordinatorLock: (() -> Unit)? = null) {
+class CoordinatorStore(
+    private val rootDirectory: File,
+    private val onCoordinatorLock: (() -> Unit)? = null,
+    private val coordinationDeadlineNanos: Long = COORDINATION_DEADLINE_NANOS,
+    private val clock: () -> Long = { System.nanoTime() },
+) {
 
     init { rootDirectory.mkdirs() }
 
@@ -117,27 +122,30 @@ class CoordinatorStore(private val rootDirectory: File, private val onCoordinato
     // BEFORE any gate I/O, and both the local wait and the backoff sleep stay inside the
     // remainder — a caller never parks beyond its deadline inside coordination.
     private fun <T> coordinated(work: () -> T): T {
-        val deadline = System.nanoTime() + COORDINATION_DEADLINE_NANOS
+        val deadline = clock() + coordinationDeadlineNanos
         var attempt = 0
         while (true) {
-            val remainingNanos = deadline - System.nanoTime()
+            val remainingNanos = deadline - clock()
             if (remainingNanos <= 0) throw IOException("log coordination timed out")
             var verdict: T? = null
             var entered = false
             val localWaitMillis = TimeUnit.NANOSECONDS.toMillis(remainingNanos).coerceAtMost(LOCAL_ATTEMPT_MILLIS)
             acquireLocal(localWaitMillis) {
-                if (System.nanoTime() < deadline) {
-                    RandomAccessFile(File(rootDirectory, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw").use { gate ->
-                        val lock = gate.channel.tryLock()
-                        if (lock != null) {
-                            entered = true
-                            try { verdict = work() } finally { lock.release() }
-                        }
+                RandomAccessFile(File(rootDirectory, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw").use { gate ->
+                    val lock = gate.channel.tryLock()
+                    if (lock != null) {
+                        try {
+                            // Post-acquisition deadline check: expired ⇒ release, close, no data work.
+                            if (clock() < deadline) {
+                                entered = true
+                                verdict = work()
+                            }
+                        } finally { lock.release() }
                     }
                 }
             }
             if (entered) return verdict as T
-            val waitNanos = deadline - System.nanoTime()
+            val waitNanos = deadline - clock()
             if (waitNanos <= 0) throw IOException("log coordination timed out")
             val backoffMillis =
                 (minOf(50, 5L shl minOf(attempt++, 4)) + Random.nextLong(0, 5))

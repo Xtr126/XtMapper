@@ -4,6 +4,7 @@ import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.util.concurrent.Callable
+import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
@@ -166,17 +167,35 @@ class CoordinatorStoreTest {
         assertEquals("abc", store.readFrames(name).last().payload)
     }
 
-    @Test fun `parent and two processes interleave frames with exact per-session counts (V5x)`() {
+    @Test fun `child processes and the parent append simultaneously with exact per-session records (V5x)`() {
         val dir = tmp.newFolder()
         val store = CoordinatorStore(dir)
         LogProbeChild(dir, "coordinator-hook").use { c1 ->
             LogProbeChild(dir, "coordinator-hook").use { c2 ->
-                assertEquals("WROTE", c1.command("TRYAPPEND $name"))
+                // Park both children BEFORE their append, then release the two children and the
+                // parent at one barrier: append attempts really overlap across three writers.
+                assertEquals("HELD", c1.command("BARRIERAPPEND $name"))
+                assertEquals("HELD", c2.command("BARRIERAPPEND $name"))
+                val barrier = CyclicBarrier(3)
+                val pool = Executors.newFixedThreadPool(3)
+                try {
+                    pool.submit(Callable {
+                        barrier.await(); store.append(name, listOf(FrameCodec.encode(0, "parent", "p0"))); store.append(name, listOf(FrameCodec.encode(1, "parent", "p1")))
+                    })
+                    pool.submit(Callable {
+                        barrier.await(); assertEquals("WROTE", c1.command("RELEASE"))
+                    })
+                    pool.submit(Callable {
+                        barrier.await(); assertEquals("WROTE", c2.command("RELEASE"))
+                    })
+                    pool.shutdown()
+                    assertTrue("simultaneous phase must settle", pool.awaitTermination(20, TimeUnit.SECONDS))
+                } finally {
+                    pool.shutdownNow()
+                }
+                // Post-overlap tail keeps meaningful per-sid sequence checks.
                 assertEquals("WROTE", c1.command("TRYAPPEND $name"))
                 assertEquals("WROTE", c2.command("TRYAPPEND $name"))
-                assertEquals("WROTE", c2.command("TRYAPPEND $name"))
-                store.append(name, listOf(FrameCodec.encode(0, "parent", "p0")))
-                store.append(name, listOf(FrameCodec.encode(1, "parent", "p1")))
             }
         }
         val frames = CoordinatorStore(dir).readFrames(name)
@@ -185,6 +204,25 @@ class CoordinatorStoreTest {
         val probeSids = frames.map { it.sid }.filter { it.startsWith("probe-") }.distinct()
         assertEquals(2, probeSids.size)
         probeSids.forEach { sid -> assertEquals(listOf(1L, 2L), frames.filter { it.sid == sid }.map { it.seq }) }
+    }
+
+    @Test fun `transaction never starts past the acquisition deadline`() {
+        val dir = tmp.newFolder()
+        val deadlineNanos = 1_000_000_000L
+        // Scripted clock: reads 1–2 (deadline computation + loop-top remainder) are not
+        // expired; every read from the post-OS-lock check onward is past the deadline, so
+        // a SUCCESSFUL lock acquisition must skip the whole transaction.
+        var reads = 0
+        val store = CoordinatorStore(
+            dir, null, deadlineNanos,
+            { if (reads++ < 2) 0L else deadlineNanos + 1 },
+        )
+        val error = assertThrows(IOException::class.java) {
+            store.append(name, listOf(FrameCodec.encode(0, "late", "late")))
+        }
+        assertEquals("log coordination timed out", error.message)
+        assertFalse("expired acquisition must not create or touch the day file", File(dir, name).exists())
+        assertTrue(store.readFrames(name).isEmpty())
     }
 
     @Test fun `failed data file open releases coordination for the process (V4b)`() {
