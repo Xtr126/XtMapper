@@ -23,10 +23,9 @@ class CoordinatorStore(
 
     init { rootDirectory.mkdirs() }
 
-    // §2 gate ownership: opened lazily on the first coordinated call (inside the local
-    // mutex, after the post-acquisition deadline check) and held for the instance
-    // lifetime — the coordinator never closes it, so failed attempts can never trigger
-    // close-release semantics against a same-process gate lock holder.
+    // Opened once per instance and NEVER closed by the coordinator: closing any
+    // descriptor for the inode frees this process's POSIX-record locks on it, stripping
+    // a same-process gate holder's (e.g. legacy lifetime store's) exclusion.
     private val gate: RandomAccessFile by lazy {
         RandomAccessFile(File(rootDirectory, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw")
     }
@@ -71,9 +70,7 @@ class CoordinatorStore(
     private fun transact(raf: RandomAccessFile, name: String, frames: List<ByteArray>) {
         val effective = ArrayList(frames)
         val header = DayProtocol.header().toByteArray(Charsets.UTF_8)
-        // A crash mid-header-write leaves 1..header.size-1 terminator-less bytes: an exact
-        // header prefix is repaired by truncating so the empty path below rewrites the
-        // full header; any other short content keeps failing validation honestly.
+        // Torn header write: an exact 1..size-1 prefix truncates here so the empty path rewrites it; other short content fails validation.
         if (raf.length() in 1L until header.size.toLong()) {
             val head = ByteArray(raf.length().toInt())
             raf.seek(0)
@@ -140,14 +137,8 @@ class CoordinatorStore(
     // and releases everything. The deadline is re-checked after the local acquisition,
     // BEFORE any gate I/O, and both the local wait and the backoff sleep stay inside the
     // remainder — a caller never parks beyond its deadline inside coordination.
-    //
-    // Gate ownership (review round 13): ONE longitudinal descriptor per store instance,
-    // never closed by the coordinator. POSIX-record-lock kernels release every lock the
-    // process holds on an inode when ANY descriptor is closed, so a per-attempt
-    // open/close could silently free a same-process holder's exclusion (e.g. the legacy
-    // lifetime store) and let a foreign writer in while it still believes it owns the
-    // gate. Longitudinal ownership keeps coordinator descriptor operations in one
-    // domain, independent of kernel lock semantics (fd cost: one per store instance).
+    // Gate ownership: see `gate` — the descriptor is never closed here, so a failed
+    // attempt can never free a same-process holder's lock via close-release.
     private fun <T> coordinated(work: () -> T): T {
         val deadline = clock() + coordinationDeadlineNanos
         var attempt = 0
@@ -158,8 +149,7 @@ class CoordinatorStore(
             var entered = false
             val localWaitMillis = TimeUnit.NANOSECONDS.toMillis(remainingNanos).coerceAtMost(LOCAL_ATTEMPT_MILLIS)
             acquireLocal(localWaitMillis) {
-                // Post-mutex, pre-gate-I/O deadline check: expired ⇒ this attempt does
-                // not even touch the gate; the loop top then raises the timeout.
+                // Expired past the mutex: this attempt touches no gate I/O at all.
                 if (clock() >= deadline) return@acquireLocal
                 val lock = try {
                     gate.channel.tryLock()

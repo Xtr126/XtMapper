@@ -210,11 +210,8 @@ class CoordinatorStoreTest {
     @Test fun `transaction never starts past the acquisition deadline`() {
         val dir = tmp.newFolder()
         val deadlineNanos = 1_000_000_000L
-        // Scripted clock: reads 1–3 (deadline computation, loop-top remainder, post-mutex
-        // pre-tryLock check) are not expired; every read from the post-OS-lock check onward
-        // is past the deadline, so a SUCCESSFUL lock acquisition must skip the whole
-        // transaction (and the pre-tryLock check can never reach the lock path when it
-        // fires on the scripted boundary).
+        // Scripted clock: reads 1–3 (deadline, loop top, post-mutex pre-tryLock) unexpired;
+        // from the post-OS-lock check on, expired ⇒ a successful acquisition skips the work.
         var reads = 0
         val store = CoordinatorStore(
             dir, null, deadlineNanos,
@@ -228,11 +225,8 @@ class CoordinatorStoreTest {
         assertTrue(store.readFrames(name).isEmpty())
     }
 
-    // Review round 13 on 8debaa6f: failed gate attempts must never release a same-process
-    // holder's exclusion. POSIX-record-lock kernels free every lock on the inode when ANY
-    // descriptor is closed, so the coordinator keeps ONE longitudinal gate descriptor;
-    // this host-JVM guard is green both under OFD and after the fix, and the separate
-    // process half of the regression stays with the on-device acceptance list.
+    // On POSIX-record-lock kernels a close frees every lock the process holds on the
+    // inode: failed attempts must never be that close. Separate-process proof is on-device.
     @Test fun `failed overlap attempts never release a same-process holder's lock`() {
         val dir = tmp.newFolder()
         val store = CoordinatorStore(dir, null, 250_000_000L)
@@ -379,10 +373,7 @@ class CoordinatorStoreTest {
         assertEquals(listOf("good"), recovery.frames.filter { it.sid == "s1" }.map { it.payload })
     }
 
-    // Review #4468331050: a crash mid-header-write leaves 1..header.size-1 bytes with no
-    // terminator. Every cut must be repaired (truncate + the empty path rewrites the full
-    // header) BEFORE validateHeader, not rejected as a protocol mismatch (most cuts) nor
-    // repaired into a header-less file (the full-header-minus-terminator cut).
+    // Torn header review: every prefix cut must repair, not reject, and never rescue header-less.
     @Test fun `torn day header prefix is repaired before validation`() {
         val header = DayProtocol.header().toByteArray(Charsets.UTF_8)
         val after = FrameCodec.encode(1, "s1", "after")
@@ -400,9 +391,8 @@ class CoordinatorStoreTest {
         }
     }
 
-    // Review #4468331110: a channel in the same JVM holding the gate file (lifetime store,
-    // another thread) makes tryLock throw OverlappingFileLockException; that must arrive as
-    // a bounded failed attempt ("log coordination timed out"), then recover after release.
+    // Overlap review: a same-JVM channel holding the gate must arrive as a bounded
+    // failed attempt, never an escaped OverlappingFileLockException, and must recover.
     @Test fun `same-jvm gate overlap fails bounded and recovers after release`() {
         val dir = tmp.newFolder()
         val store = CoordinatorStore(dir, null, 250_000_000L)

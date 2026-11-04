@@ -170,9 +170,8 @@ class AsyncLogWorkerTest {
 
     private class SimulatedWriteError(message: String) : Error(message)
 
-    // Freezes the consumer exactly between a null poll return and its isClosed check: the
-    // window where a producer's accepted offer followed by closeAdmission() used to flip
-    // the break condition and make the finally block discard the accepted record.
+    // Freezes the consumer between a null poll and its isClosed check: the window where
+    // offer-then-closeAdmission used to flip the break and drop the accepted record.
     private class PausedAfterFirstNullQueue(capacity: Int) : LoggingQueue(capacity) {
         val paused = CountDownLatch(1)
         private val release = CountDownLatch(1)
