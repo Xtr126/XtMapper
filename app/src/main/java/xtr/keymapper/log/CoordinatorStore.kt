@@ -10,15 +10,26 @@ import kotlin.random.Random
 
 // design-single-file.md §2 transaction shape: bounded per-process mutex RELEASED between
 // OS attempts, one gate tryLock per attempt, the data file opened/closed INSIDE the gate,
-// tail repaired only at a provable frame boundary, and corruption blocks writes honestly
-// instead of being silently re-scanned. Budget/outcomes/retention land with their batches.
+// corruption classified before any byte change (pure unterminated suffix is the only
+// repairable region), and Deadline-enforced bounded acquisition. Budget/outcomes/retention
+// land with their batches.
 class CoordinatorStore(private val rootDirectory: File, private val onCoordinatorLock: (() -> Unit)? = null) {
 
     init { rootDirectory.mkdirs() }
 
-    fun append(name: String, frames: List<ByteArray>) = coordinated {
-        onCoordinatorLock?.invoke()
-        RandomAccessFile(target(name), "rw").use { transact(it, name, frames) }
+    fun append(name: String, frames: List<ByteArray>) {
+        // Contract validation happens BEFORE any coordination: violations never touch the file.
+        frames.forEach { frame ->
+            val parsed = FrameCodec.decode(frame.decodeToString().removeSuffix("\n"))
+                ?: throw IllegalArgumentException("frame violates the envelope grammar")
+            require(frame.contentEquals(FrameCodec.encode(parsed.seq, parsed.sid, parsed.payload))) {
+                "frame is not canonically encoded"
+            }
+        }
+        coordinated {
+            onCoordinatorLock?.invoke()
+            RandomAccessFile(target(name), "rw").use { transact(it, name, frames) }
+        }
     }
 
     fun readFrames(name: String): List<Frame> = readRecovery(name).frames
@@ -49,13 +60,31 @@ class CoordinatorStore(private val rootDirectory: File, private val onCoordinato
             effective.add(0, DayProtocol.header().toByteArray(Charsets.UTF_8))
         } else {
             validateHeader(raf, name)
-            val discarded = repairTail(raf)
-            if (discarded > 0) effective.add(0, FrameCodec.encode(0, "recovery", "discarded=$discarded"))
-            if (corruptRegionExists(raf)) {
-                throw IOException(
-                    "day file $name holds unrecoverable corruption after a checksum-failing line; " +
-                        "writes are blocked for this day (retention prunes it by age), the valid prefix stays readable",
-                )
+            // Full-file classification happens BEFORE any byte change: only a PURE
+            // unterminated suffix inside the search window is repairable (truncated
+            // exactly at the last complete frame + recovery frame). Complete-line
+            // corruption anywhere refuses the transaction byte-identical.
+            // shortcut: full-file scan per transaction; ceiling = bytes-per-append cost,
+            // upgrade = incremental scan windows with a persisted validation cursor.
+            val bytes = ByteArray(raf.length().toInt())
+            raf.seek(0)
+            raf.readFully(bytes)
+            val scan = FrameCodec.scanRecovery(bytes)
+            if (scan.discardedBytes > 0) {
+                val validPrefixEnd = bytes.size.toLong() - scan.discardedBytes
+                val finalNl = bytes.lastIndexOf('\n'.code.toByte())
+                val suffixBytes = bytes.size.toLong() - (finalNl + 1L)
+                if (validPrefixEnd != finalNl + 1L) {
+                    throw IOException(
+                        "day file $name holds unrecoverable corruption after a checksum-failing line; " +
+                            "writes are blocked for this day (retention prunes it by age), the valid prefix stays readable",
+                    )
+                }
+                if (suffixBytes >= BOUNDARY_SEARCH) {
+                    throw IOException("corrupt tail: no frame boundary inside the search window; refusing repair")
+                }
+                raf.setLength(validPrefixEnd)
+                effective.add(0, FrameCodec.encode(0, "recovery", "discarded=$suffixBytes"))
             }
         }
         raf.seek(raf.length())
@@ -77,64 +106,45 @@ class CoordinatorStore(private val rootDirectory: File, private val onCoordinato
         }
     }
 
-    // shortcut: full-file scan per transaction; ceiling = bytes-per-append cost,
-    // upgrade = incremental scan windows with a persisted validation cursor.
-    private fun corruptRegionExists(raf: RandomAccessFile): Boolean {
-        val bytes = ByteArray(raf.length().toInt())
-        if (bytes.isEmpty()) return false
-        raf.seek(0)
-        raf.readFully(bytes)
-        return FrameCodec.scanRecovery(bytes).discardedBytes > 0
-    }
-
-    // Bytes after the final newline can never form a complete frame, so truncating them is
-    // the demonstrably invalid-suffix rule; complete frames always survive. The boundary
-    // search reaches 4 × MAX_FRAME_BYTES; a tail WITHOUT any boundary inside it is refused
-    // without modifying a single byte (never cut what the protocol cannot interpret).
-    private fun repairTail(raf: RandomAccessFile): Long {
-        val size = raf.length()
-        if (size == 0L) return 0
-        val windowStart = (size - BOUNDARY_SEARCH).coerceAtLeast(0)
-        val window = ByteArray((size - windowStart).toInt())
-        raf.seek(windowStart)
-        raf.readFully(window)
-        val lastNl = window.indexOfLast { it == '\n'.code.toByte() }
-        if (lastNl < 0) {
-            throw IOException("corrupt tail: no frame boundary inside the search window; refusing repair")
-        }
-        val keep = windowStart + lastNl + 1
-        if (keep == size) return 0
-        raf.setLength(keep)
-        return size - keep
-    }
-
     private fun target(name: String): File {
         require(name != FileSystemLogStore.LIFECYCLE_LOCK_NAME && File(name).name == name)
         return File(rootDirectory, name).canonicalFile
     }
 
-    // Bounded acquisition with the LOCAL MUTEX RELEASED BETWEEN ATTEMPTS: each attempt
-    // under a short local tryLock performs ONE gate tryLock and releases everything —
-    // failures sleep outside the local mutex; a caller never parks inside coordination.
+    // Bounded acquisition with the LOCAL MUTEX RELEASED BETWEEN ATTEMPTS: per attempt a
+    // short local tryLock (bounded by the REMAINING deadline) performs ONE gate tryLock
+    // and releases everything. The deadline is re-checked after the local acquisition,
+    // BEFORE any gate I/O, and both the local wait and the backoff sleep stay inside the
+    // remainder — a caller never parks beyond its deadline inside coordination.
     private fun <T> coordinated(work: () -> T): T {
         val deadline = System.nanoTime() + COORDINATION_DEADLINE_NANOS
         var attempt = 0
         while (true) {
+            val remainingNanos = deadline - System.nanoTime()
+            if (remainingNanos <= 0) throw IOException("log coordination timed out")
             var verdict: T? = null
             var entered = false
-            acquireLocal {
-                RandomAccessFile(File(rootDirectory, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw").use { gate ->
-                    val lock = gate.channel.tryLock()
-                    if (lock != null) {
-                        entered = true
-                        try { verdict = work() } finally { lock.release() }
+            val localWaitMillis = TimeUnit.NANOSECONDS.toMillis(remainingNanos).coerceAtMost(LOCAL_ATTEMPT_MILLIS)
+            acquireLocal(localWaitMillis) {
+                if (System.nanoTime() < deadline) {
+                    RandomAccessFile(File(rootDirectory, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw").use { gate ->
+                        val lock = gate.channel.tryLock()
+                        if (lock != null) {
+                            entered = true
+                            try { verdict = work() } finally { lock.release() }
+                        }
                     }
                 }
             }
             if (entered) return verdict as T
-            if (System.nanoTime() >= deadline) throw IOException("log coordination timed out")
+            val waitNanos = deadline - System.nanoTime()
+            if (waitNanos <= 0) throw IOException("log coordination timed out")
+            val backoffMillis =
+                (minOf(50, 5L shl minOf(attempt++, 4)) + Random.nextLong(0, 5))
+                    .coerceAtLeast(1)
+                    .coerceAtMost(TimeUnit.NANOSECONDS.toMillis(waitNanos) + 1)
             try {
-                Thread.sleep(minOf(50, 5L shl minOf(attempt++, 4)) + Random.nextLong(0, 5))
+                Thread.sleep(backoffMillis)
             } catch (e: InterruptedException) {
                 Thread.currentThread().interrupt()
                 throw IOException("log coordination interrupted", e)
@@ -143,9 +153,9 @@ class CoordinatorStore(private val rootDirectory: File, private val onCoordinato
     }
 
     // Local-busy is a failed attempt (no park-drift): body simply never runs this round.
-    private fun acquireLocal(body: () -> Unit) {
+    private fun acquireLocal(waitMillis: Long, body: () -> Unit) {
         val locked = try {
-            LOCAL_LOCK.tryLock(LOCAL_ATTEMPT_MILLIS, TimeUnit.MILLISECONDS)
+            LOCAL_LOCK.tryLock(waitMillis, TimeUnit.MILLISECONDS)
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
             throw IOException("log coordination interrupted", e)

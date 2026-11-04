@@ -42,6 +42,19 @@ class FrameRecoveryTest {
         assertEquals(1, FrameCodec.scanRecovery(complete).frames.size)
     }
 
+    @Test fun `encode rejects malformed envelope inputs`() {
+        assertThrows(IllegalArgumentException::class.java) { FrameCodec.encode(0, "bad|sid", "x") }
+        assertThrows(IllegalArgumentException::class.java) { FrameCodec.encode(0, "a".repeat(41), "x") }
+        assertThrows(IllegalArgumentException::class.java) { FrameCodec.encode(-1, "s", "x") }
+        assertThrows(IllegalArgumentException::class.java) { FrameCodec.encode(0, "s", "x".repeat(FrameCodec.MAX_PAYLOAD_BYTES + 1)) }
+    }
+
+    @Test fun `decode enforces size and sequence limits`() {
+        assertNull(FrameCodec.decode("X1 -1 s 1 00000000 x"))
+        assertNull(FrameCodec.decode("X1 1 s 99999999999999999999 ffffffff x"))
+        assertNull(FrameCodec.decode("X1 1 s 1 ffffffff x${"y".repeat(FrameCodec.MAX_FRAME_BYTES)}"))
+    }
+
     @Test fun `day header is frame zero with the protocol payload`() {
         val line = DayProtocol.header().trimEnd('\n')
         assertTrue(FrameCodec.isDayHeader(FrameCodec.decode(line)!!))

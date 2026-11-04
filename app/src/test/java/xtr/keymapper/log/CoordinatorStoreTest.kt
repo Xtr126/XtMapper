@@ -151,6 +151,42 @@ class CoordinatorStoreTest {
         assertEquals(listOf("seed"), store.readFrames(name).filter { it.sid == "s1" }.map { it.payload })
     }
 
+    @Test fun `append rejects frames that violate the encoding contract`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        store.append(name, listOf(FrameCodec.encode(0, "protocol-canonical-seed", "seed")))
+        val canonical = FrameCodec.encode(1, "s1", "abc").decodeToString()
+        val nonCanonical = canonical.replaceFirst("X1 1", "X1 01")
+        val malformed = "X1 1 s|1 3 00000000 abc\n"
+        val lengthBefore = File(dir, name).length()
+        assertThrows(IllegalArgumentException::class.java) { store.append(name, listOf(nonCanonical.toByteArray())) }
+        assertThrows(IllegalArgumentException::class.java) { store.append(name, listOf(malformed.toByteArray())) }
+        assertEquals("contract violations never touch the file", lengthBefore, File(dir, name).length())
+        store.append(name, listOf(canonical.toByteArray()))
+        assertEquals("abc", store.readFrames(name).last().payload)
+    }
+
+    @Test fun `parent and two processes interleave frames with exact per-session counts (V5x)`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        LogProbeChild(dir, "coordinator-hook").use { c1 ->
+            LogProbeChild(dir, "coordinator-hook").use { c2 ->
+                assertEquals("WROTE", c1.command("TRYAPPEND $name"))
+                assertEquals("WROTE", c1.command("TRYAPPEND $name"))
+                assertEquals("WROTE", c2.command("TRYAPPEND $name"))
+                assertEquals("WROTE", c2.command("TRYAPPEND $name"))
+                store.append(name, listOf(FrameCodec.encode(0, "parent", "p0")))
+                store.append(name, listOf(FrameCodec.encode(1, "parent", "p1")))
+            }
+        }
+        val frames = CoordinatorStore(dir).readFrames(name)
+        assertEquals(7, frames.size)
+        assertEquals(listOf(0L, 1L), frames.filter { it.sid == "parent" }.map { it.seq })
+        val probeSids = frames.map { it.sid }.filter { it.startsWith("probe-") }.distinct()
+        assertEquals(2, probeSids.size)
+        probeSids.forEach { sid -> assertEquals(listOf(1L, 2L), frames.filter { it.sid == sid }.map { it.seq }) }
+    }
+
     @Test fun `failed data file open releases coordination for the process (V4b)`() {
         val dir = tmp.newFolder()
         val store = CoordinatorStore(dir)
@@ -180,6 +216,25 @@ class CoordinatorStoreTest {
             listOf("one", "two", "three"),
             CoordinatorStore(dir).readFrames(name).filter { it.sid == "s1" }.map { it.payload },
         )
+    }
+
+    @Test fun `complete line corruption is classified before any truncation`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        store.append(name, listOf(FrameCodec.encode(1, "s1", "good")))
+        val bad = "X1 1 s2 4 deadbeef five"
+        RandomAccessFile(File(dir, name), "rw").use {
+            it.seek(it.length())
+            it.write((bad + "\n" + "corn tail").toByteArray())
+        }
+        val before = File(dir, name).readBytes()
+        assertThrows(IOException::class.java) {
+            store.append(name, listOf(FrameCodec.encode(3, "s1", "blocked")))
+        }
+        assertArrayEquals("blocked day must be byte-identical, nothing truncated", before, File(dir, name).readBytes())
+        val recovery = store.readRecovery(name)
+        assertTrue(FrameCodec.isDayHeader(recovery.frames[0]))
+        assertEquals(listOf("good"), recovery.frames.filter { it.sid == "s1" }.map { it.payload })
     }
 
     @Test fun `mid transaction exclusion holds against a second writer process (V3b)`() {

@@ -17,6 +17,7 @@ object LogStoreProcessProbe {
             channel.tryLock()
         }
         var armHook = false
+        var probeSeq = 0
         val coordinator = args.getOrNull(1)?.takeIf { it == "coordinator-hook" }?.let {
             CoordinatorStore(File(args[0])) {
                 if (armHook) {
@@ -53,8 +54,9 @@ object LogStoreProcessProbe {
                         "CLOSE" -> { writer?.close(); writer = null; println("CLOSED") }
                         "ARM" -> { armHook = true; println("ARMED") }
                         "TRYAPPEND" -> {
+                            probeSeq++
                             checkNotNull(coordinator).append(
-                                value, listOf(FrameCodec.encode(1, "probe-${ProcessHandle.current().pid()}", "probe")),
+                                value, listOf(FrameCodec.encode(probeSeq.toLong(), "probe-${ProcessHandle.current().pid()}", "probe")),
                             )
                             println("WROTE")
                         }
