@@ -60,7 +60,9 @@ class AsyncLogWorker(
             while (true) {
                 val first = queue.poll(POLL_MILLIS)
                 if (first == null) {
-                    if (queue.isClosed) break
+                    // A poll timeout can race a producer accepted just before
+                    // closeAdmission(); the queue is final only when it is also empty.
+                    if (queue.isClosed && queue.size == 0) break
                     continue
                 }
                 val collected = ArrayList<LogRecord>(config.batchMaxRecords)

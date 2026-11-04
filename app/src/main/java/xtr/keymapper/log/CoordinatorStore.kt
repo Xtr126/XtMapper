@@ -4,6 +4,7 @@ import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
+import java.nio.channels.OverlappingFileLockException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.random.Random
@@ -61,8 +62,18 @@ class CoordinatorStore(
 
     private fun transact(raf: RandomAccessFile, name: String, frames: List<ByteArray>) {
         val effective = ArrayList(frames)
+        val header = DayProtocol.header().toByteArray(Charsets.UTF_8)
+        // A crash mid-header-write leaves 1..header.size-1 terminator-less bytes: an exact
+        // header prefix is repaired by truncating so the empty path below rewrites the
+        // full header; any other short content keeps failing validation honestly.
+        if (raf.length() in 1L until header.size.toLong()) {
+            val head = ByteArray(raf.length().toInt())
+            raf.seek(0)
+            raf.readFully(head)
+            if (head.contentEquals(header.copyOfRange(0, head.size))) raf.setLength(0)
+        }
         if (raf.length() == 0L) {
-            effective.add(0, DayProtocol.header().toByteArray(Charsets.UTF_8))
+            effective.add(0, header)
         } else {
             validateHeader(raf, name)
             // Full-file classification happens BEFORE any byte change: only a PURE
@@ -132,7 +143,12 @@ class CoordinatorStore(
             val localWaitMillis = TimeUnit.NANOSECONDS.toMillis(remainingNanos).coerceAtMost(LOCAL_ATTEMPT_MILLIS)
             acquireLocal(localWaitMillis) {
                 RandomAccessFile(File(rootDirectory, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw").use { gate ->
-                    val lock = gate.channel.tryLock()
+                    val lock = try {
+                        gate.channel.tryLock()
+                    } catch (_: OverlappingFileLockException) {
+                        // Same-JVM holder (e.g. the lifetime store's channel): a failed attempt.
+                        null
+                    }
                     if (lock != null) {
                         try {
                             // Post-acquisition deadline check: expired ⇒ release, close, no data work.

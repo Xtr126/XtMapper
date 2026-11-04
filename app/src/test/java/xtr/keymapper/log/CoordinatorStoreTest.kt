@@ -345,6 +345,54 @@ class CoordinatorStoreTest {
         assertEquals(listOf("good"), recovery.frames.filter { it.sid == "s1" }.map { it.payload })
     }
 
+    // Review #4468331050: a crash mid-header-write leaves 1..header.size-1 bytes with no
+    // terminator. Every cut must be repaired (truncate + the empty path rewrites the full
+    // header) BEFORE validateHeader, not rejected as a protocol mismatch (most cuts) nor
+    // repaired into a header-less file (the full-header-minus-terminator cut).
+    @Test fun `torn day header prefix is repaired before validation`() {
+        val header = DayProtocol.header().toByteArray(Charsets.UTF_8)
+        val after = FrameCodec.encode(1, "s1", "after")
+        for (k in 1 until header.size) {
+            val dir = tmp.newFolder()
+            File(dir, name).writeBytes(header.copyOfRange(0, k))
+            CoordinatorStore(dir).append(name, listOf(after))
+            val frames = CoordinatorStore(dir).readFrames(name)
+            assertTrue("header rewritten (k=$k)", FrameCodec.isDayHeader(frames[0]))
+            assertTrue("post-crash write lands (k=$k)", "after" in frames.map { it.payload })
+            assertTrue(
+                "no fabricated recovery frame (k=$k)",
+                frames.none { it.sid == "recovery" },
+            )
+        }
+    }
+
+    // Review #4468331110: a channel in the same JVM holding the gate file (lifetime store,
+    // another thread) makes tryLock throw OverlappingFileLockException; that must arrive as
+    // a bounded failed attempt ("log coordination timed out"), then recover after release.
+    @Test fun `same-jvm gate overlap fails bounded and recovers after release`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir, null, 250_000_000L)
+        val holder = RandomAccessFile(File(dir, FileSystemLogStore.LIFECYCLE_LOCK_NAME), "rw")
+        val held = holder.channel.lock()
+        try {
+            val error = assertThrows(IOException::class.java) {
+                store.append(name, listOf(FrameCodec.encode(1, "s1", "blocked")))
+            }
+            assertEquals(
+                "overlap must be a failed attempt, not an escaped lock exception",
+                "log coordination timed out",
+                error.message,
+            )
+        } finally {
+            held.release()
+            holder.close()
+        }
+        store.append(name, listOf(FrameCodec.encode(1, "s1", "after")))
+        val frames = CoordinatorStore(dir).readFrames(name)
+        assertTrue(FrameCodec.isDayHeader(frames[0]))
+        assertEquals("after", frames.last().payload)
+    }
+
     @Test fun `mid transaction exclusion holds against a second writer process (V3b)`() {
         val dir = tmp.newFolder()
         CoordinatorStore(dir).append(name, listOf(FrameCodec.encode(0, "seed", "seed")))

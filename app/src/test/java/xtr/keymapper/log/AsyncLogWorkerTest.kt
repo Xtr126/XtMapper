@@ -7,6 +7,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class AsyncLogWorkerTest {
@@ -32,6 +33,7 @@ class AsyncLogWorkerTest {
         store: LogStore,
         capacity: Int = 16,
         batchMaxRecords: Int = 256,
+        queue: LoggingQueue = LoggingQueue(capacity),
     ): Triple<SessionLogWriter, LoggingQueue, AsyncLogWorker> {
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
         val config = LoggingConfig(queueCapacity = capacity, batchMaxRecords = batchMaxRecords)
@@ -41,7 +43,6 @@ class AsyncLogWorkerTest {
         )
         writer.configure(SessionState.DISPOSITION_FIRST, SessionMetadata(), clock.instant())
         writer.writeSessionStartMarker()
-        val queue = LoggingQueue(capacity)
         val worker = AsyncLogWorker(queue, config, writer, "test")
         return Triple(writer, queue, worker)
     }
@@ -168,6 +169,46 @@ class AsyncLogWorkerTest {
     }
 
     private class SimulatedWriteError(message: String) : Error(message)
+
+    // Freezes the consumer exactly between a null poll return and its isClosed check: the
+    // window where a producer's accepted offer followed by closeAdmission() used to flip
+    // the break condition and make the finally block discard the accepted record.
+    private class PausedAfterFirstNullQueue(capacity: Int) : LoggingQueue(capacity) {
+        val paused = CountDownLatch(1)
+        private val release = CountDownLatch(1)
+        private var pausedOnce = false
+
+        override fun poll(timeoutMillis: Long): LogRecord? {
+            val result = super.poll(timeoutMillis)
+            if (result == null && !pausedOnce) {
+                pausedOnce = true
+                paused.countDown()
+                release.await()
+            }
+            return result
+        }
+
+        fun resume() = release.countDown()
+    }
+
+    @Test
+    fun `clean close does not drop a record accepted before admission closes`() {
+        val pausedQueue = PausedAfterFirstNullQueue(16)
+        val (writer, queue, worker) =
+            buildWorker(FileSystemLogStore(tmp.newFolder()), queue = pausedQueue)
+        worker.start()
+        try {
+            assertTrue("worker must reach the poll-timeout window", pausedQueue.paused.await(5, TimeUnit.SECONDS))
+            assertTrue("offer must be accepted before closeAdmission", queue.offer(record("lost-before-close")))
+            queue.closeAdmission()
+        } finally {
+            pausedQueue.resume()
+        }
+        assertTrue("worker finishes the accepted record and closes", worker.close(2_000))
+        assertEquals("accepted record must not count as dropped", 0, worker.droppedCount)
+        val text = LogFiles.readAll(writer.store, "xtmapper-2026-10-22.log")
+        assertTrue("accepted record must persist", text.contains("message=\"lost-before-close\""))
+    }
 
     @Test
     fun `flush times out instead of hanging when the sink is stuck`() {

@@ -630,6 +630,9 @@ class RemoteService @JvmOverloads constructor(
                 }
             )
         }
+        // A shell-started process survives stopServer: admission reopens only after the
+        // non-exit cleanup completes, never where the destroy request was recorded.
+        synchronized(mStartRequestLock) { destroyRequested = false }
     }
 
     private val mKeyEventListenerDeathRecipient = IBinder.DeathRecipient {

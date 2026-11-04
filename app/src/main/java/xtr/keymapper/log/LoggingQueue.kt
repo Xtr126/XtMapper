@@ -5,7 +5,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class LoggingQueue(private val capacity: Int) {
+// open: tests freeze the consumer between a null poll and its isClosed check.
+open class LoggingQueue(private val capacity: Int) {
 
     private val lock = ReentrantLock()
     private val notEmpty = lock.newCondition()
@@ -78,7 +79,7 @@ class LoggingQueue(private val capacity: Int) {
         }
     }
 
-    fun poll(timeoutMillis: Long): LogRecord? = lock.withLock {
+    open fun poll(timeoutMillis: Long): LogRecord? = lock.withLock {
         if (deque.isEmpty() && !closed) {
             notEmpty.awaitNanos(timeoutMillis * 1_000_000L)
         }
