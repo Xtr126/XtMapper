@@ -225,6 +225,76 @@ class CoordinatorStoreTest {
         assertTrue(store.readFrames(name).isEmpty())
     }
 
+    // V7: a crash mid-frame is simulated by writing a PREFIX of the victim frame's bytes
+    // (process gone, no completion, no flush) and then reopening the store — the exact
+    // recovery policy per prefix length k. Earlier frames always survive, the torn suffix
+    // truncates at the last complete frame with ONE recovery frame, and no synthesized
+    // END or filler frame may appear.
+    @Test fun `V7 kill offset matrix - earlier frames preserved and torn suffix recovered`() {
+        val first = FrameCodec.encode(0, "s1", "first")
+        val victim = FrameCodec.encode(1, "s1", "café\nline2 ü")
+        // Interesting cut points (k bytes of the victim frame kept):
+        // 0 = nothing torn; 5 = ASCII region; 15 = mid UTF-8 code point (é split);
+        // mergedEscape = right after the payload's escaped-\n backslash; size-1 = everything
+        // except the terminator; size = the whole frame including its terminator.
+        val mergedEscape = victim.indexOfFirst { it == '\\'.code.toByte() } + 1
+        val next = FrameCodec.encode(2, "s1", "after")
+        for (k in listOf(0, 5, 15, mergedEscape, victim.size - 1, victim.size)) {
+            val dir = tmp.newFolder()
+            RandomAccessFile(File(dir, name), "rw").use { file ->
+                val head = DayProtocol.header().toByteArray(Charsets.UTF_8)
+                file.write(head)
+                file.write(first)
+                file.write(victim.copyOfRange(0, k))
+            }
+            CoordinatorStore(dir).append(name, listOf(next))
+            val frames = CoordinatorStore(dir).readFrames(name)
+            val payloads = frames.map { it.payload }
+            // the day header and the earlier frame always survive
+            assertTrue(FrameCodec.isDayHeader(frames[0]))
+            assertTrue("earlier frame must survive (k=$k)", "first" in payloads)
+            // no synthesized END ever appears
+            assertTrue("no synthesized END (k=$k)", "END" !in payloads)
+            val recoveryCount = frames.count { it.sid == "recovery" }
+            if (k == 0) {
+                assertEquals(0, recoveryCount)
+            } else if (k < victim.size) {
+                assertEquals("torn suffix truncates exactly once (k=$k)", 1, recoveryCount)
+                assertEquals("discarded=$k", frames.first { it.sid == "recovery" }.payload)
+            } else {
+                assertEquals(0, recoveryCount)
+                assertTrue("complete victim frame survives when its terminator landed (k=$k)", "café\nline2 ü" in payloads)
+            }
+            assertTrue("post-crash write lands (k=$k)", "after" in payloads)
+            // seq gap when the victim was torn: the §2 recoverable-write discrepancy that
+            // the writer slice (outcomes batch) reports in diagnostics — never synthesized.
+            val s1Seqs = frames.filter { it.sid == "s1" }.map { it.seq }
+            when (k) {
+                victim.size -> assertEquals(listOf(0L, 1L, 2L), s1Seqs)
+                else -> assertEquals(listOf(0L, 2L), s1Seqs)
+            }
+        }
+    }
+
+    @Test fun `cross date continuation keeps framings isolated (V8 store level)`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        store.append("xtmapper-2026-10-01.log", listOf(FrameCodec.encode(0, "s1", "a-start")))
+        store.append("xtmapper-2026-10-02.log", listOf(FrameCodec.encode(0, "s1", "b-start")))
+        val readOne = store.readRecovery("xtmapper-2026-10-01.log")
+        val readTwo = store.readRecovery("xtmapper-2026-10-02.log")
+        assertTrue(FrameCodec.isDayHeader(readOne.frames[0]))
+        assertTrue(FrameCodec.isDayHeader(readTwo.frames[0]))
+        assertEquals(
+            listOf("P1", "a-start"),
+            readOne.frames.map { it.payload },
+        )
+        assertEquals(listOf("P1", "b-start"), readTwo.frames.map { it.payload })
+        // the continuation records the same session on its own day with its own seq space
+        assertEquals(listOf(0L), readOne.frames.filter { it.sid == "s1" }.map { it.seq })
+        assertEquals(listOf(0L), readTwo.frames.filter { it.sid == "s1" }.map { it.seq })
+    }
+
     @Test fun `failed data file open releases coordination for the process (V4b)`() {
         val dir = tmp.newFolder()
         val store = CoordinatorStore(dir)
