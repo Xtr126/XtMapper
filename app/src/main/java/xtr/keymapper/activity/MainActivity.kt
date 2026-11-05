@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.i("xtmapper-startup", "MainActivity.onCreate: shellMarker=${intent.getStringExtra("data") == SHELL_INIT} binderPresent=${intent.extras?.getBinder(SHELL_SERVICE_BINDER) != null}")
         intent.extras?.getBinder(SHELL_SERVICE_BINDER)?.let {
             RemoteServiceHelper.setShellServiceBinder(it)
         }
@@ -84,6 +85,7 @@ class MainActivity : AppCompatActivity() {
         val isShellInit = isShellInitialization()
         shellInitStartupPending = isShellInit
         selectedProfileName = profiles.getStartupProfileName(isShellInit)
+        Log.i("xtmapper-startup", "MainActivity: shellInit=$isShellInit profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode}")
         TouchPointer.currentSelectedProfile = selectedProfileName
 
         /*

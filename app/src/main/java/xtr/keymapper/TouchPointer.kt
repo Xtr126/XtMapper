@@ -196,12 +196,14 @@ class TouchPointer : Service() {
     }
 
     private fun connectRemoteService(profile: KeymapProfile) {
+        Log.i("xtmapper-startup", "connectRemoteService: profile=$selectedProfile disabled=${profile.disabled}")
         if (activityCallback != null) activityCallback!!.updateCmdView1("connecting to server..")
         val config = KeymapConfig(this)
         RemoteServiceHelper.useShizuku = config.isShizukuMode
         RemoteServiceHelper.getInstance(
             this
         ) { service: IRemoteService? ->
+            Log.i("xtmapper-startup", "connectRemoteService: callback servicePresent=${service != null} alive=${service?.asBinder()?.isBinderAlive}")
             if (service == null) {
                 Log.w("TouchPointer", "Remote service is null, cannot start server")
                 activityCallback?.updateCmdView1("Failed to connect to server (root/shizuku not available)")
@@ -217,10 +219,12 @@ class TouchPointer : Service() {
                 this.displayContext?.getSystemService(WindowManager::class.java)
             try {
                 if (!activityRemoteCallback && !keymapConfig.disableAutoProfiling) {
+                    Log.i("xtmapper-startup", "connectRemoteService: registering activity observer")
                     service.registerActivityObserver(mActivityObserverCallback)
                     activityRemoteCallback = true
                 }
                 if (!profile.disabled) {
+                    Log.i("xtmapper-startup", "connectRemoteService: calling startServer display=$displayId")
                     service.startServer(
                         profile,
                         keymapConfig,
@@ -230,6 +234,7 @@ class TouchPointer : Service() {
                         displayId
                     )
                 }
+                if (profile.disabled) Log.w("xtmapper-startup", "connectRemoteService: profile disabled; startServer skipped")
                 if (keymapConfig.showControls) {
                     ShowKeymapService.start(this, selectedProfile)
                 }

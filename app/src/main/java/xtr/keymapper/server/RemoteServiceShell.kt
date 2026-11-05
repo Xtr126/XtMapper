@@ -67,6 +67,7 @@ object RemoteServiceShell {
             val settingsArgs = "settings put system alert_window_bypass_low_ram 1".split(Regex("\\s+"))
             ProcessBuilder(settingsArgs).inheritIO().start()
 
+            Log.i(RemoteService.TAG, "shell startup: uid=${Process.myUid()} package=${BuildConfig.APPLICATION_ID} autoLaunch=$autoLaunchClientActivity wayland=$isWaylandClient")
             if (autoLaunchClientActivity) {
                 val intent = Intent(Intent.ACTION_MAIN).apply {
                     component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
@@ -76,7 +77,9 @@ object RemoteServiceShell {
                         putBinder(MainActivity.SHELL_SERVICE_BINDER, mService.asBinder())
                     })
                 }
+                Log.i(RemoteService.TAG, "shell startup: delivering service Binder to MainActivity")
                 startActivityAsShell(intent)
+                Log.i(RemoteService.TAG, "shell startup: MainActivity launch returned")
             }
 
         } catch (e: Exception) {
@@ -154,6 +157,7 @@ object RemoteServiceShell {
         }
 
         val result = method.invoke(activityManager, *args) as? Int
+        Log.i(RemoteService.TAG, "shell startup: startActivityAsUser result=$result user=$currentUserId")
         check(result == null || result >= 0) { "ActivityManager failed to start MainActivity: $result" }
     }
 

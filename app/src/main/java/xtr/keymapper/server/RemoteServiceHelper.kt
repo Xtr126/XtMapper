@@ -74,6 +74,7 @@ object RemoteServiceHelper {
 
     class RemoteServiceConnection(private val cb: RootRemoteServiceCallback) : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            Log.i("xtmapper-startup", "onServiceConnected: component=$name alive=${service.isBinderAlive}")
             val remote = IRemoteService.Stub.asInterface(service)
             RemoteServiceHelper.service = remote
             try {
@@ -96,6 +97,7 @@ object RemoteServiceHelper {
     fun setShellServiceBinder(binder: IBinder?) {
         val remote = binder?.let { IRemoteService.Stub.asInterface(it) }
         service = remote
+        Log.i("xtmapper-startup", "setShellServiceBinder: present=${binder != null} alive=${binder?.isBinderAlive}")
         try {
             val remoteBinder = remote?.asBinder()
             remoteBinder?.linkToDeath({
@@ -143,11 +145,13 @@ object RemoteServiceHelper {
     @JvmStatic
     fun getInstance(context: Context, callback: RootRemoteServiceCallback) {
         useShizuku = KeymapConfig(context).isShizukuMode
+        Log.i("xtmapper-startup", "getInstance: shizuku=$useShizuku cachedPresent=${service != null} cachedAlive=${service?.asBinder()?.isBinderAlive}")
 
         // 1. Check if TouchPointer has an active, running service instance
         val activePointerService = TouchPointer.activeInstance?.mService
         if (activePointerService != null && activePointerService.asBinder().isBinderAlive) {
             service = activePointerService
+            Log.i("xtmapper-startup", "getInstance: using active TouchPointer service")
             callback.onConnection(activePointerService)
             return
         }
@@ -161,11 +165,13 @@ object RemoteServiceHelper {
         // 3. Check an existing live service, including one delivered by RemoteServiceShell.
         val existing = service
         if (existing != null && existing.asBinder().isBinderAlive) {
+            Log.i("xtmapper-startup", "getInstance: using cached service Binder")
             callback.onConnection(existing)
             return
         }
 
         // 4. Connect via Shizuku or Root
+        Log.i("xtmapper-startup", "getInstance: falling back to ${if (useShizuku) "Shizuku" else "root"} binding")
         val connection = RemoteServiceConnection(callback)
         if (useShizuku) {
             if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
