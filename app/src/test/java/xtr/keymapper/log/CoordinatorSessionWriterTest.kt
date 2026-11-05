@@ -320,11 +320,11 @@ class CoordinatorSessionWriterTest {
             marker(1, "latest", SessionMarkers.startLine("latest", clock.instant().plusSeconds(1), zone, SessionMetadata(), "open")),
             marker(2, "older", SessionMarkers.endLine("older", clock.instant().plusSeconds(2), zone, 0, SessionStates.STATUS_CLEAN, 0)),
         ))
-        assertEquals(SessionFrames.DISPOSITION_OPEN, SessionFrames.previousDisposition(coordinator, dir))
+        assertEquals("${SessionFrames.DISPOSITION_OPEN} (session=latest role=unknown pid=unknown)", SessionFrames.previousDisposition(coordinator, dir))
         coordinator.append(name, listOf(
             marker(2, "latest", SessionMarkers.endLine("latest", clock.instant().plusSeconds(3), zone, 0, SessionStates.STATUS_SERVICE_STOP, 0)),
         ))
-        assertEquals(SessionState.DISPOSITION_UNCLEAN, SessionFrames.previousDisposition(coordinator, dir))
+        assertEquals("${SessionState.DISPOSITION_UNCLEAN} (session=latest role=unknown pid=unknown)", SessionFrames.previousDisposition(coordinator, dir))
     }
 
     @Test
@@ -338,7 +338,7 @@ class CoordinatorSessionWriterTest {
         }
         assertEquals(
             "the END of the only session closes it",
-            SessionState.DISPOSITION_CLOSED,
+            "${SessionState.DISPOSITION_CLOSED} (session=sess-g role=unknown pid=unknown)",
             SessionFrames.previousDisposition(CoordinatorStore(dir), dir),
         )
         // An abandoned session (START without END) is reported open, not unclean.
@@ -349,7 +349,7 @@ class CoordinatorSessionWriterTest {
         }
         assertEquals(
             "START without END stays open",
-            SessionFrames.DISPOSITION_OPEN,
+            "${SessionFrames.DISPOSITION_OPEN} (session=sess-h role=unknown pid=unknown)",
             SessionFrames.previousDisposition(CoordinatorStore(dir2), dir2),
         )
     }

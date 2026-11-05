@@ -67,8 +67,16 @@ class CoordinatorStore(
 
     fun readFrames(name: String): List<Frame> = readRecovery(name).frames
 
-    fun readRecovery(name: String): FrameRecovery = coordinated {
-        val file = target(name)
+    fun readRecovery(name: String): FrameRecovery = coordinated { readRecoveryLocked(target(name)) }
+
+    internal fun readHistory(directory: File): List<FrameRecovery> = coordinated {
+        require(directory.canonicalFile == rootDirectory.canonicalFile)
+        val files = directory.listFiles() ?: throw IOException("log history could not be enumerated")
+        files.filter { it.isFile && LogFileNames.parse(it.name) != null }.sortedBy { it.name }
+            .map { readRecoveryLocked(target(it.name)) }
+    }
+
+    private fun readRecoveryLocked(file: File): FrameRecovery =
         if (!file.isFile) {
             FrameRecovery(emptyList(), 0)
         } else {
@@ -83,7 +91,6 @@ class CoordinatorStore(
                 FrameCodec.scanRecovery(bytes)
             }
         }
-    }
 
     fun delete(name: String, eligible: () -> Boolean = { true }): Boolean = coordinated {
         eligible() && target(name).delete()

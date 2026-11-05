@@ -110,7 +110,7 @@ class LoggingPipeline(
         } catch (e: Exception) {
             SessionState.DISPOSITION_UNKNOWN
         }
-        writer.configure(previous, metadata, startTime)
+        writer.configure(previous, metadata.copy(role = role.tag, pid = pid), startTime)
         writer.writeSessionStartMarker()
         infoInternal(
             "XtLogger",

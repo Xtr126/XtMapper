@@ -55,6 +55,7 @@ class CoordinatorSessionWriter(
     private val blockedDays = HashSet<String>()
 
     private val seqByDay = HashMap<String, Long>()
+    private val reportedDiscrepancies = HashSet<String>()
 
     private var startWritten = false
     private var sessionEnded = false
@@ -191,31 +192,38 @@ class CoordinatorSessionWriter(
         if (sessionEnded || sessionStartDay == null || sessionStart == null) return null
         if (day == sessionStartDay || day in continuedDays) return null
         return SessionMarkers.block(
-            SessionMarkers.continuedLine(sessionId, sessionStart!!, clock.instant(), zone),
+            SessionMarkers.continuedLine(sessionId, sessionStart!!, clock.instant(), zone, headerMetadata),
         )
     }
 
     private fun commit(day: String, fallbackDay: String? = null, payloadsFor: (String) -> List<String>) {
         var seq = 0L
+        var discrepancy: String? = null
         val (name, verdict) = coordinator.append(
             LogFileNames.dailyName(day, null),
             fallbackDay?.let { LogFileNames.dailyName(it, null) },
         ) { selected, persisted ->
             val writtenDay = LogFileNames.parse(selected)!!.date
+            discrepancy = SessionFrames.sequenceDiscrepancy(persisted, sessionId, seqByDay[writtenDay] ?: 0L)
             seq = maxOf(seqByDay[writtenDay] ?: 0L, persisted.filter { it.sid == sessionId }.maxOfOrNull { it.seq } ?: 0L)
             payloadsFor(writtenDay).map { payload -> FrameCodec.encode(++seq, sessionId, payload) }
         }
         val writtenDay = LogFileNames.parse(name)!!.date
         // NOT_ATTEMPTED leaves the cursor and marker state unchanged.
-        seqByDay[writtenDay] = seq
         for (bytes in verdict.frames) {
             val frame = FrameCodec.decode(bytes.decodeToString().removeSuffix("\n"))!!
             if (frame.sid != sessionId) continue
+            seqByDay[writtenDay] = maxOf(seqByDay[writtenDay] ?: 0L, frame.seq)
             currentDay = writtenDay
             currentFileName = name
             when (frame.payload.lineSequence().mapNotNull(SessionMarkers::markerTypeOf).firstOrNull()) {
                 SessionMarkers.START -> startWritten = true
                 SessionMarkers.CONTINUED -> continuedDays.add(writtenDay)
+            }
+        }
+        discrepancy?.let { detail ->
+            if (reportedDiscrepancies.add("$writtenDay:$detail")) {
+                report("XtLogger: sequence discrepancy for session=$sessionId day=$writtenDay $detail; committed history is incomplete")
             }
         }
         recordsDroppedByDayLimit.addAndGet(verdict.recordsDropped)
@@ -255,28 +263,61 @@ class CoordinatorSessionWriter(
 
 object SessionFrames {
     const val DISPOSITION_OPEN = "No END observed"
+    const val DISPOSITION_UNKNOWN = "Unknown (history pruned or inspection incomplete)"
 
     fun previousDisposition(coordinator: CoordinatorStore, directory: File): String {
-        val files = directory.listFiles()
-            ?.mapNotNull { info -> LogFileNames.parse(info.name)?.let { it.date to it.baseName } }
-            ?.sortedBy { it.first }
-            ?: emptyList()
+        val history = try { coordinator.readHistory(directory) } catch (_: IOException) { return DISPOSITION_UNKNOWN }
+        if (history.isEmpty()) return SessionState.DISPOSITION_FIRST
         var latestSession: String? = null
+        var latestStart: Instant? = null
+        var incomplete = history.any { it.discardedBytes != 0L }
+        val starts = HashSet<String>()
+        val metadata = HashMap<String, Frame>()
         val ended = HashMap<String, String?>()
-        for ((_, name) in files) {
-            for (frame in coordinator.readRecovery(name).frames) {
+        for (day in history) {
+            if (day.frames.groupBy { it.sid }.any { (sid, frames) -> sequenceDiscrepancy(frames, sid) != null }) incomplete = true
+            for (frame in day.frames) {
                 val type = frame.payload.lineSequence().mapNotNull(SessionMarkers::markerTypeOf).firstOrNull() ?: continue
-                if (type == SessionMarkers.START) latestSession = frame.sid
-                if (type == SessionMarkers.END) {
-                    ended[frame.sid] = frame.payload.lineSequence()
-                        .firstOrNull { it.startsWith("Status: ") }
-                        ?.removePrefix("Status: ")
+                when (type) {
+                    SessionMarkers.START, SessionMarkers.CONTINUED -> {
+                        if (type == SessionMarkers.START) {
+                            starts.add(frame.sid)
+                            metadata[frame.sid] = frame
+                        } else metadata.putIfAbsent(frame.sid, frame)
+                        val time = field(frame, if (type == SessionMarkers.START) "Start Time" else "Original Start Time")
+                        val start = time?.let { runCatching { Instant.parse(it) }.getOrNull() }
+                        if (start == null) incomplete = true
+                        else if (latestStart == null || start >= latestStart) {
+                            latestStart = start
+                            latestSession = frame.sid
+                        }
+                    }
+                    SessionMarkers.END -> ended[frame.sid] = field(frame, "Status")
                 }
             }
         }
-        val sid = latestSession ?: return if (files.isEmpty()) SessionState.DISPOSITION_FIRST else SessionState.DISPOSITION_UNKNOWN
-        return if (sid !in ended) DISPOSITION_OPEN
-        else if (ended[sid] == SessionStates.STATUS_CLEAN) SessionState.DISPOSITION_CLOSED
-        else SessionState.DISPOSITION_UNCLEAN
+        val sid = latestSession ?: return DISPOSITION_UNKNOWN
+        val disposition = when {
+            incomplete || sid !in starts -> DISPOSITION_UNKNOWN
+            sid !in ended -> DISPOSITION_OPEN
+            ended[sid] == null -> DISPOSITION_UNKNOWN
+            ended[sid] == SessionStates.STATUS_CLEAN -> SessionState.DISPOSITION_CLOSED
+            else -> SessionState.DISPOSITION_UNCLEAN
+        }
+        val meta = metadata[sid]
+        return "$disposition (session=$sid role=${meta?.let { field(it, "Role") } ?: "unknown"} pid=${meta?.let { field(it, "PID") } ?: "unknown"})"
     }
+
+    internal fun sequenceDiscrepancy(frames: List<Frame>, sid: String, committed: Long = 0L): String? {
+        if (sid == "protocol" || sid == "recovery" || sid == DailyBudget.NOTICE_SID) return null
+        var expected = 1L
+        for (frame in frames.filter { it.sid == sid }) {
+            if (frame.seq != expected) return "expected=$expected observed=${frame.seq}"
+            expected++
+        }
+        return if (committed >= expected) "expected=$committed observed=missing" else null
+    }
+
+    private fun field(frame: Frame, name: String): String? = frame.payload.lineSequence()
+        .firstOrNull { it.startsWith("$name: ") }?.removePrefix("$name: ")
 }

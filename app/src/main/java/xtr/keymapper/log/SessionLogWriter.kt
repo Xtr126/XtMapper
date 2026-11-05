@@ -147,7 +147,7 @@ class SessionLogWriter(
                 day != sessionStartDay && day !in continuedDays
             ) {
                 SessionMarkers.block(
-                    SessionMarkers.continuedLine(sessionId, requireNotNull(sessionStart), atInstant, zone)
+                    SessionMarkers.continuedLine(sessionId, requireNotNull(sessionStart), atInstant, zone, headerMetadata)
                 )
             } else {
                 null

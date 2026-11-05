@@ -4,8 +4,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.security.SecureRandom
-import java.time.LocalDateTime
+import java.util.UUID
 
 object SessionMarkers {
 
@@ -29,11 +28,13 @@ object SessionMarkers {
         return sb.toString()
     }
 
-    fun continuedLine(id: String, originalStart: Instant, continuationTime: Instant, zone: ZoneId): String {
-        return "$CONTINUED\n" +
-                "Session ID: $id\n" +
-                "Continuation Time: ${timestampFormatter.format(continuationTime.atZone(zone))}\n" +
-                "Original Start Time: ${timestampFormatter.format(originalStart.atZone(zone))}"
+    fun continuedLine(id: String, originalStart: Instant, continuationTime: Instant, zone: ZoneId, meta: SessionMetadata = SessionMetadata()): String {
+        return buildString {
+            append("$CONTINUED\nSession ID: $id\n")
+            append("Continuation Time: ${timestampFormatter.format(continuationTime.atZone(zone))}\n")
+            append("Original Start Time: ${timestampFormatter.format(originalStart.atZone(zone))}\n")
+            meta.renderInto(this)
+        }.trimEnd()
     }
 
     // Delayed-record routing proof: a record whose day file was pruned is rerouted into the
@@ -84,15 +85,19 @@ object SessionMarkers {
         else null
 }
 
-class SessionMetadata(
+data class SessionMetadata(
     val appVersion: String? = null,
     val buildType: String? = null,
     val androidVersion: String? = null,
     val sdkInt: Int? = null,
     val deviceModel: String? = null,
     val environment: String? = null,
+    val role: String? = null,
+    val pid: Int? = null,
 ) {
     internal fun renderInto(sb: StringBuilder) {
+        role?.let { sb.append("Role: ").append(it).append('\n') }
+        pid?.let { sb.append("PID: ").append(it).append('\n') }
         appVersion?.let { sb.append("App Version: ").append(it).append('\n') }
         buildType?.let { sb.append("Build Type: ").append(it).append('\n') }
         if (androidVersion != null) {
@@ -106,14 +111,6 @@ class SessionMetadata(
 }
 
 object SessionIds {
-    private val random = SecureRandom()
-
-    fun generate(clock: java.time.Clock): String {
-        val now = LocalDateTime.now(clock)
-        val suffix = "%04X".format(Locale.ROOT, random.nextInt(0x10000))
-        return "%04d%02d%02d-%02d%02d%02d-%s".format(
-            Locale.ROOT, now.year, now.monthValue, now.dayOfMonth,
-            now.hour, now.minute, now.second, suffix,
-        )
-    }
+    // Keep the clock parameter for callers; identity must not depend on clock or PID reuse.
+    fun generate(clock: java.time.Clock): String = UUID.randomUUID().toString()
 }
