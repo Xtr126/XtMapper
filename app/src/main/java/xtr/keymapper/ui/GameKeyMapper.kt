@@ -964,9 +964,7 @@ private fun ProfileCard(
                     color = KeymapperTheme.Warning,
                     fontSize = 11.sp
                 )
-            }
-
-            if (profile.isActive) {
+            } else if (profile.isActive) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
@@ -1165,7 +1163,8 @@ private fun getSampleProfiles(): List<GameProfile> = listOf(
         fallbackIcon = Icons.Default.Shield,
         isActive = true,
         keyCount = 24,
-        lastUsed = "2 hours ago"
+        lastUsed = "2 hours ago",
+        isEnabled = false
     ),
     GameProfile(
         id = "2",
