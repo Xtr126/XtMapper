@@ -4,15 +4,16 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.RemoteException
 import android.util.DisplayMetrics
+import android.view.Display
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.OnLayoutChangeListener
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -177,12 +178,15 @@ class EditorUI(
 
     private fun getRealScreenDimensions(): Pair<Int, Int> {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val windowContext = context.createWindowContext(
-                context.display,
-                WindowManager.LayoutParams.TYPE_APPLICATION,
+            val displayManager = context.getSystemService(DisplayManager::class.java)
+            val display = try {
+                context.display
+            } catch (_: UnsupportedOperationException) {
                 null
-            )
-            val bounds = windowContext.getSystemService(WindowManager::class.java)
+            } ?: keysContainerView.display
+                ?: displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+            val displayContext = context.createDisplayContext(display)
+            val bounds = displayContext.getSystemService(WindowManager::class.java)
                 .maximumWindowMetrics.bounds
             Pair(bounds.width(), bounds.height())
         } else {

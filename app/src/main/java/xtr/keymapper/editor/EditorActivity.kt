@@ -18,7 +18,6 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import xtr.keymapper.IRemoteService
 import xtr.keymapper.R
-import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.server.RemoteServiceHelper
 
@@ -62,7 +61,6 @@ class EditorActivity : ComponentActivity() {
             editor!!.open(keymapConfig.editorOverlay)
         } else {
             editor!!.open(false)
-            MainActivity.checkOverlayPermission(this)
         }
 
         RemoteServiceHelper.getInstance(this, this::onConnection)
@@ -103,11 +101,11 @@ class EditorActivity : ComponentActivity() {
         editor = null
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (editor?.onKey(null, event.keyCode, event) == true) {
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (editor?.onKey(null, keyCode, event) == true) {
             return true
         }
-        return super.dispatchKeyEvent(event)
+        return super.onKeyDown(keyCode, event)
     }
 
     companion object {

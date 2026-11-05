@@ -157,7 +157,6 @@ void* send_mouse_events(void* context) {
             case BTN_EXTRA :
             case BTN_SIDE :
                 if (mouse_lock) {
-                    LOGD("dispatching mouse event to Java: code=%u value=%d", ie.code, ie.value);
                     (*env)->CallVoidMethod(env, pctx->inputServiceObj, mouseEvent, ie.code, ie.value);
                     if ((*env)->ExceptionCheck(env)) {
                         LOGE("Java exception while dispatching mouse event code=%u value=%d", ie.code, ie.value);
