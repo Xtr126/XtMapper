@@ -71,6 +71,31 @@ class KeymapProfilesTest {
     }
 
     @Test
+    fun togglesDefaultWithoutAnAppAndPreservesItsContents() {
+        val original = setOf("APPLICATION ", "SCREENSIZE 1080 1920", "KEY_A 100 100")
+        val data = mutableMapOf<String, Any?>("Default" to original)
+        val (context, prefs) = createFakeContextAndPrefs(data)
+        val profiles = KeymapProfiles(context, prefs)
+
+        profiles.setProfileEnabled("Default", true)
+        assertTrue(!profiles.getProfile("Default", false).disabled)
+        assertEquals(original + "ENABLED", data["Default"])
+        profiles.setProfileEnabled("Default", false)
+        assertTrue(profiles.getProfile("Default", false).disabled)
+        assertEquals(original, data["Default"])
+    }
+
+    @Test
+    fun togglingOneProfileDoesNotChangeOtherProfilesForTheSameApp() {
+        val lines = setOf("APPLICATION com.example.game", "ENABLED")
+        val data = mutableMapOf<String, Any?>("First" to lines, "Second" to lines)
+        val (context, prefs) = createFakeContextAndPrefs(data)
+        KeymapProfiles(context, prefs).setProfileEnabled("First", false)
+        assertEquals(lines - "ENABLED", data["First"])
+        assertEquals(lines, data["Second"])
+    }
+
+    @Test
     fun testSetProfileEnabledDoesNotThrowClassCastExceptionWithDesignatedProfileEntries() {
         val initialData = mutableMapOf<String, Any?>(
             "Default" to setOf("APPLICATION com.example.game", "ENABLED", "KEY_A 100 100"),

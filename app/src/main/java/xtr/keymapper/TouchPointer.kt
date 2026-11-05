@@ -197,7 +197,7 @@ class TouchPointer : Service() {
 
     private fun connectRemoteService(profile: KeymapProfile) {
         Log.i("xtmapper-startup", "connectRemoteService: profile=$selectedProfile disabled=${profile.disabled}")
-        if (activityCallback != null) activityCallback!!.updateCmdView1("connecting to server..")
+        if (!profile.disabled) activityCallback?.updateCmdView1("connecting to server..")
         val config = KeymapConfig(this)
         RemoteServiceHelper.useShizuku = config.isShizukuMode
         RemoteServiceHelper.getInstance(
@@ -234,7 +234,17 @@ class TouchPointer : Service() {
                         displayId
                     )
                 }
-                if (profile.disabled) Log.w("xtmapper-startup", "connectRemoteService: profile disabled; startServer skipped")
+                if (profile.disabled) {
+                    Log.w("xtmapper-startup", "connectRemoteService: profile disabled; startServer skipped")
+                    val profileName = selectedProfile.orEmpty()
+                    mHandler.post {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.profile_disabled_activation, profileName),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
                 if (keymapConfig.showControls) {
                     ShowKeymapService.start(this, selectedProfile)
                 }

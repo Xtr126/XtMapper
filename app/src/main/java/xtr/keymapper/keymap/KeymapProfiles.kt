@@ -122,27 +122,10 @@ class KeymapProfiles @JvmOverloads constructor(
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun setProfileEnabled(profileName: String, enabled: Boolean) {
-        val stringSet = sharedPref.getStringSet(profileName, null) ?: return
-        var packageName: String? = null
-        for (line in stringSet) {
-            val data = line.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            if (data[0] == "APPLICATION" && data.size >= 2)
-                packageName = data[1]
-        }
-        if (packageName == null) return
-
-        for ((key, value) in sharedPref.all) {
-            if (key.startsWith("designated_profile_") || key == KEY_LAST_SELECTED_PROFILE) continue
-            if (value !is Set<*>) continue
-            // disable or enable all profiles for app for consistency
-            val profile = getProfile(value as Set<String>)
-            if (profile.packageName == packageName) {
-                val lines = sharedPref.getStringSet(key, null) ?: continue
-                saveProfile(key, ArrayList<String?>(lines), packageName, enabled, profile.xRes, profile.yRes)
-            }
-        }
+        val lines = sharedPref.getStringSet(profileName, null)?.toMutableSet() ?: return
+        if (enabled) lines.add("ENABLED") else lines.remove("ENABLED")
+        sharedPref.edit().putStringSet(profileName, lines).apply()
     }
 
     fun saveProfile(

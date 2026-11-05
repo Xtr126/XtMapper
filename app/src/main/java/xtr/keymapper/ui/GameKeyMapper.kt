@@ -61,6 +61,7 @@ internal data class GameProfile(
     val icon: Drawable? = null,
     val fallbackIcon: ImageVector? = Icons.Default.Gamepad,
     val isActive: Boolean = false,
+    val isEnabled: Boolean = true,
     val keyCount: Int = 0,
     val lastUsed: String? = null
 )
@@ -104,6 +105,7 @@ private fun KeymapperApp(
     onRenameProfile: (GameProfile) -> Unit = {},
     onChangeProfileApp: (GameProfile) -> Unit = {},
     onDeleteProfile: (GameProfile) -> Unit = {},
+    onToggleProfileEnabled: (GameProfile) -> Unit = {},
     onStopService: () -> Unit = {},
     onHelp: () -> Unit = {},
     onAddProfile: () -> Unit = {},
@@ -189,6 +191,7 @@ private fun KeymapperApp(
                             onRenameProfile = onRenameProfile,
                             onChangeProfileApp = onChangeProfileApp,
                             onDeleteProfile = onDeleteProfile,
+                            onToggleProfileEnabled = onToggleProfileEnabled,
                             onStopService = onStopService,
                             onHelp = onHelp,
                             onToggleOverlay = onToggleOverlay,
@@ -251,6 +254,7 @@ private fun createComposeState(activity: MainActivity): AppState {
             packageName = packageName,
             icon = icon,
             isActive = profileName == activity.selectedProfileNameForCompose(),
+            isEnabled = !profile.disabled,
             keyCount = keyCount
         )
     }
@@ -342,6 +346,10 @@ private fun GameKeyMapperActivityContent(activity: MainActivity) {
         },
         onChangeProfileApp = {
             activity.changeProfileAppFromCompose(it.profileNameForActivity()) { refresh() }
+        },
+        onToggleProfileEnabled = {
+            KeymapProfiles(activity).setProfileEnabled(it.id, !it.isEnabled)
+            refresh()
         },
         onDeleteProfile = {
             activity.deleteProfileFromCompose(it.profileNameForActivity())
@@ -700,6 +708,7 @@ private fun LazyListScope.profileGrid(
     onRenameProfile: (GameProfile) -> Unit,
     onChangeProfileApp: (GameProfile) -> Unit,
     onDeleteProfile: (GameProfile) -> Unit,
+    onToggleProfileEnabled: (GameProfile) -> Unit,
     onStopService: () -> Unit,
     onHelp: () -> Unit,
     onToggleOverlay: () -> Unit,
@@ -798,6 +807,7 @@ private fun LazyListScope.profileGrid(
                     onRename = { onRenameProfile(rowItems[0]) },
                     onChangeApp = { onChangeProfileApp(rowItems[0]) },
                     onDelete = { onDeleteProfile(rowItems[0]) },
+                    onToggleEnabled = { onToggleProfileEnabled(rowItems[0]) },
                     onStop = onStopService,
                     onHelp = onHelp
                 )
@@ -813,6 +823,7 @@ private fun LazyListScope.profileGrid(
                         onRename = { onRenameProfile(rowItems[1]) },
                         onChangeApp = { onChangeProfileApp(rowItems[1]) },
                         onDelete = { onDeleteProfile(rowItems[1]) },
+                        onToggleEnabled = { onToggleProfileEnabled(rowItems[1]) },
                         onStop = onStopService,
                         onHelp = onHelp
                     )
@@ -863,6 +874,7 @@ private fun ProfileCard(
     onRename: () -> Unit,
     onChangeApp: () -> Unit,
     onDelete: () -> Unit,
+    onToggleEnabled: () -> Unit,
     onStop: () -> Unit,
     onHelp: () -> Unit
 ) {
@@ -946,6 +958,14 @@ private fun ProfileCard(
                 )
             }
 
+            if (!profile.isEnabled) {
+                Text(
+                    text = stringResource(R.string.profile_disabled_label),
+                    color = KeymapperTheme.Warning,
+                    fontSize = 11.sp
+                )
+            }
+
             if (profile.isActive) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Box(
@@ -997,6 +1017,11 @@ private fun ProfileCard(
         expanded = showMenu,
         onDismissRequest = { showMenu = false }
     ) {
+        ProfileMenuItem(
+            stringResource(if (profile.isEnabled) R.string.disable_profile else R.string.enable_profile),
+            if (profile.isEnabled) Icons.Default.Block else Icons.Default.CheckCircle,
+            onToggleEnabled
+        ) { showMenu = false }
         ProfileMenuItem("Edit Keymap", Icons.Default.Edit, onEdit) { showMenu = false }
         ProfileMenuItem("Rename", Icons.Default.DriveFileRenameOutline, onRename) { showMenu = false }
         ProfileMenuItem("Change App", Icons.Default.Apps, onChangeApp) { showMenu = false }
