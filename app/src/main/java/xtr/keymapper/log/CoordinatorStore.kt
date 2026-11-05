@@ -15,6 +15,14 @@ import kotlin.random.Random
 // corruption classified before any byte change (pure unterminated suffix is the only
 // repairable region), and Deadline-enforced bounded acquisition. The shared daily budget
 // (§2 step 5) is accounted under the same lock; outcomes/retention land with their batches.
+
+// §8 outcome classes: an acquisition timeout is a retryable NOT-ATTEMPTED failure (no bytes
+// touched, sink recovers on the next batch); a day-integrity refusal is a real sink-down
+// class for the offending day. Both are IOExceptions, so IOException catchers are unaffected.
+class CoordinationTimeoutException(message: String) : IOException(message)
+
+class DayIntegrityBlockedException(message: String) : IOException(message)
+
 class CoordinatorStore(
     private val rootDirectory: File,
     private val onCoordinatorLock: (() -> Unit)? = null,
@@ -98,13 +106,13 @@ class CoordinatorStore(
                 val finalNl = bytes.lastIndexOf('\n'.code.toByte())
                 val suffixBytes = bytes.size.toLong() - (finalNl + 1L)
                 if (validPrefixEnd != finalNl + 1L) {
-                    throw IOException(
+                    throw DayIntegrityBlockedException(
                         "day file $name holds unrecoverable corruption after a checksum-failing line; " +
                             "writes are blocked for this day (retention prunes it by age), the valid prefix stays readable",
                     )
                 }
                 if (suffixBytes >= BOUNDARY_SEARCH) {
-                    throw IOException("corrupt tail: no frame boundary inside the search window; refusing repair")
+                    throw DayIntegrityBlockedException("corrupt tail: no frame boundary inside the search window; refusing repair")
                 }
                 tailDiscard = scan.discardedBytes
                 effective.add(0, FrameCodec.encode(0, "recovery", "discarded=$suffixBytes"))
@@ -135,7 +143,7 @@ class CoordinatorStore(
         val line = String(head, 0, if (eol >= 0) eol else head.size, Charsets.UTF_8)
         val first = FrameCodec.decode(line)
         if (first == null || !FrameCodec.isDayHeader(first)) {
-            throw IOException("protocol mismatch: day files must start with the P1 header ($name)")
+            throw DayIntegrityBlockedException("protocol mismatch: day files must start with the P1 header ($name)")
         }
     }
 
@@ -157,7 +165,7 @@ class CoordinatorStore(
         var attempt = 0
         while (true) {
             val remainingNanos = deadline - clock()
-            if (remainingNanos <= 0) throw IOException("log coordination timed out")
+            if (remainingNanos <= 0) throw CoordinationTimeoutException("log coordination timed out")
             var verdict: T? = null
             var entered = false
             val localWaitMillis = TimeUnit.NANOSECONDS.toMillis(remainingNanos).coerceAtMost(LOCAL_ATTEMPT_MILLIS)
@@ -184,7 +192,7 @@ class CoordinatorStore(
             }
             if (entered) return verdict as T
             val waitNanos = deadline - clock()
-            if (waitNanos <= 0) throw IOException("log coordination timed out")
+            if (waitNanos <= 0) throw CoordinationTimeoutException("log coordination timed out")
             val backoffMillis =
                 (minOf(50, 5L shl minOf(attempt++, 4)) + Random.nextLong(0, 5))
                     .coerceAtLeast(1)

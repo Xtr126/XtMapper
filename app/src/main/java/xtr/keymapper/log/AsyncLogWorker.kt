@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit
 class AsyncLogWorker(
     val queue: LoggingQueue,
     private val config: LoggingConfig,
-    val writer: SessionLogWriter,
+    val writer: SessionWriter,
     private val roleTag: String,
     private val onStart: () -> Unit = {},
     private val onStop: (String) -> Unit = {},

@@ -10,14 +10,14 @@ import java.util.concurrent.atomic.AtomicInteger
 enum class BatchWriteOutcome { PROCESSED, UNAVAILABLE, UNCERTAIN }
 
 class SessionLogWriter(
-    val store: LogStore,
+    override val store: LogStore,
     val role: String?,
     private val config: LoggingConfig,
     private val clock: Clock,
     private val zone: ZoneId,
-    val sessionId: String,
+    override val sessionId: String,
     private val onEvent: (String) -> Unit = {},
-) : Closeable {
+) : SessionWriter {
 
     private var sessionStart: Instant? = null
     private var sessionStartDay: String? = null
@@ -30,25 +30,27 @@ class SessionLogWriter(
     private var exhaustedDay: String? = null
 
     @Volatile
-    var unavailable = false
+    override var unavailable = false
         private set
 
-    fun currentlyOpenName(): String? = currentFileName
+    override fun currentlyOpenName(): String? = currentFileName
 
-    val recordsDroppedByDayLimit = AtomicInteger(0)
+    override val recordsDroppedByDayLimit = AtomicInteger(0)
+
+    override fun previousDisposition(): String = SessionState.previousDisposition(store, role)
 
     private var sessionEnded = false
     private var dayLimitReported = false
     private var closed = false
 
-    fun configure(previousDisposition: String, metadata: SessionMetadata, sessionStart: Instant) {
+    override fun configure(previousDisposition: String, metadata: SessionMetadata, sessionStart: Instant) {
         this.previousDisposition = previousDisposition
         this.headerMetadata = metadata
         this.sessionStart = sessionStart
         this.sessionStartDay = dayOf(sessionStart)
     }
 
-    fun writeSessionStartMarker() {
+    override fun writeSessionStartMarker() {
         if (closed || unavailable || sessionEnded || sessionStartDay == null) return
         try {
             val day = sessionStartDay!!
@@ -65,7 +67,7 @@ class SessionLogWriter(
         }
     }
 
-    fun write(records: List<LogRecord>): BatchWriteOutcome {
+    override fun write(records: List<LogRecord>): BatchWriteOutcome {
         if (closed || sessionEnded || unavailable) return BatchWriteOutcome.UNAVAILABLE
         for (record in records) {
             try {
@@ -78,9 +80,9 @@ class SessionLogWriter(
         return BatchWriteOutcome.PROCESSED
     }
 
-    fun endSession(
+    override fun endSession(
         endInstant: Instant, durationNanos: Long, status: String, droppedRecords: Int,
-        uncertainRecords: Int = 0,
+        uncertainRecords: Int,
     ) {
         if (closed || unavailable || sessionEnded) return
         try {
