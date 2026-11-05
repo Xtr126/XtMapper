@@ -18,8 +18,8 @@ object LogStoreProcessProbe {
         }
         var armHook = false
         var probeSeq = 0
-        val coordinator = args.getOrNull(1)?.takeIf { it == "coordinator-hook" }?.let {
-            CoordinatorStore(File(args[0]), onCoordinatorLock = {
+        var coordinator = when (args.getOrNull(1)) {
+            "coordinator-hook" -> CoordinatorStore(File(args[0]), onCoordinatorLock = {
                 if (armHook) {
                     armHook = false
                     println("HOOK_REACHED")
@@ -35,6 +35,8 @@ object LogStoreProcessProbe {
                     }
                 }
             })
+            "coordinator-budget" -> CoordinatorStore(File(args[0]))
+            else -> null
         }
         var writer: LogFileWriter? = null
         println("READY")
@@ -53,6 +55,25 @@ object LogStoreProcessProbe {
                         "TAIL" -> println("TAIL " + store.readTail(value, 10).joinToString("|"))
                         "CLOSE" -> { writer?.close(); writer = null; println("CLOSED") }
                         "ARM" -> { armHook = true; println("ARMED") }
+                        "BUDGET" -> {
+                            val (cap, reserve) = value.split(' ').map { it.toLong() }
+                            coordinator = CoordinatorStore(File(args[0]), maxDailyBytes = cap, reserveBytes = reserve)
+                            println("SIZED")
+                        }
+                        "BAPPEND" -> {
+                            val (name, sid, payload) = value.split(' ')
+                            probeSeq++
+                            val verdict = checkNotNull(coordinator).append(name, listOf(FrameCodec.encode(probeSeq.toLong(), sid, payload)))
+                            println("WROTE drops=${verdict.recordsDropped}")
+                        }
+                        "BBAPPEND" -> {
+                            println("HELD")
+                            while (true) { if (input.readLine() == "RELEASE") break }
+                            val (name, sid, payload) = value.split(' ')
+                            probeSeq++
+                            val verdict = checkNotNull(coordinator).append(name, listOf(FrameCodec.encode(probeSeq.toLong(), sid, payload)))
+                            println("WROTE drops=${verdict.recordsDropped}")
+                        }
                         "TRYAPPEND" -> {
                             probeSeq++
                             checkNotNull(coordinator).append(

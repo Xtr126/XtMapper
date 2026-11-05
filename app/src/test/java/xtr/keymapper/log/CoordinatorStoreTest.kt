@@ -516,7 +516,9 @@ class CoordinatorStoreTest {
         val store = budgetStore(dir)
         val probe = FrameCodec.encode(100_000L, "probe", "y".repeat(9))
         assertTrue("test invariant: probe exceeds the residue", probe.size > residue)
-        store.append(name, listOf(probe))
+        val verdict = store.append(name, listOf(probe))
+        assertTrue("the non-fit switches the day with written evidence", verdict.noticeWritten && verdict.emergency)
+        assertEquals("exactly the probe dropped", 1, verdict.recordsDropped)
         var frames = store.readFrames(name)
         assertEquals("probe dropped, notice lands in its place", padCount.toInt() + 2, frames.size)
         val notice = frames.last()
@@ -592,7 +594,8 @@ class CoordinatorStoreTest {
             List(noteCount.toInt()) { seq -> FrameCodec.encode(100_000L + seq, DailyBudget.NOTICE_SID, DailyBudget.NOTICE_PAYLOAD) },
         )
         val before = File(dir, name).readBytes()
-        budgetStore(dir).append(name, listOf(sessionEndFrame(100_000L)))
+        val verdict = budgetStore(dir).append(name, listOf(sessionEndFrame(100_000L)))
+        assertTrue("the verdict reports the vanished end", verdict.endUnpersisted)
         assertArrayEquals("nothing lands when the reserve cannot hold the end", before, File(dir, name).readBytes())
         val frames = CoordinatorStore(dir).readFrames(name)
         assertTrue(
@@ -601,28 +604,42 @@ class CoordinatorStoreTest {
         )
     }
 
-    @Test fun `a record exactly filling the normal allowance lands and the next one drops with the notice (V11)`() {
+    @Test fun `exact-boundary fill evolves through append at a tiny budget (V11)`() {
         val dir = tmp.newFolder()
-        val (padCount, residue) = padding()
-        // A filler record sized to residue + 2*padSize leaves the normal allowance EXACTLY
-        // 0; payload length tunes the size continuously inside the 2-digit len block.
-        val fillerTarget = residue + 2 * FrameCodec.encode(100_000L, "p", "x").size
-        val filler = FrameCodec.encode(100_000L, "filler", "z".repeat(residue.toInt() + 20))
-        assertEquals("test invariant: filler hits the exact boundary", fillerTarget, filler.size.toLong())
-        prefill(dir, padCount - 2, listOf(filler))
+        val tinyCap = 2_000L
+        val tinyReserve = 600L
+        fun tinyStore() = CoordinatorStore(dir, null, 250_000_000L, { System.nanoTime() }, tinyCap, tinyReserve)
+        val store = tinyStore()
         val headerSize = DayProtocol.header().toByteArray(Charsets.UTF_8).size.toLong()
-        assertEquals(headerSize + allowance, File(dir, name).length())
-        val store = budgetStore(dir)
-        store.append(name, listOf(FrameCodec.encode(100_000L, "probe", "tiny")))
+        val allowance = tinyCap - tinyReserve
+        val pad = FrameCodec.encode(100_000L, "p", "x")
+        // The last pad slice of the data allowance is (allowance - header - k*pad); 53 pads
+        // leave 47 bytes, and a payload tuned to 47 then lands as the exact-boundary record.
+        val exactFiller = FrameCodec.encode(100_000L, "p", "z".repeat(22))
+        val remainder = allowance - headerSize - 53 * pad.size
+        assertEquals("test invariant: filler exactly fills the remaining allowance", remainder, exactFiller.size.toLong())
+        repeat(53) { i ->
+            assertEquals(0, store.append(name, listOf(FrameCodec.encode(100_000L + i, "p", "x"))).recordsDropped)
+        }
+        assertEquals(0, store.append(name, listOf(exactFiller)).recordsDropped)
+        assertEquals("exact fill sits at the physical data allowance (header included)", allowance, File(dir, name).length())
+        val spill = store.append(name, listOf(FrameCodec.encode(100_000L, "p", "x")))
+        assertEquals("the next record is refused and switches the day", 1, spill.recordsDropped)
+        assertTrue(spill.noticeWritten && spill.emergency)
         assertEquals(
-            "exact fill holds the boundary: only the notice is added",
-            headerSize + allowance + exhaustionNotice().size.toLong(),
+            "only the notice joins the exhausted day",
+            allowance + exhaustionNotice().size.toLong(),
             File(dir, name).length(),
         )
-        val frames = store.readFrames(name)
-        assertEquals("the boundary record survives", 1, frames.count { it.sid == "filler" })
-        assertTrue("the next record was dropped", "tiny" !in frames.map { it.payload })
-        assertEquals("notice written in the same transaction, last", "RESERVE_EXHAUSTED", frames.last().payload)
+        val fresh = tinyStore()
+        val late = fresh.append(name, listOf(FrameCodec.encode(100_000L, "p", "x")))
+        assertEquals("restart keeps the day switched", 1, late.recordsDropped)
+        assertFalse("the notice stays single after restart", late.noticeWritten)
+        assertEquals(
+            "nothing beyond the notice lands after restart",
+            allowance + exhaustionNotice().size.toLong(),
+            File(dir, name).length(),
+        )
     }
 
     @Test fun `no same-day rollover or extra day files after exhaustion (V10)`() {
@@ -641,5 +658,149 @@ class CoordinatorStoreTest {
         )
         assertEquals("post-exhaustion appends change nothing", framesBefore, store.readFrames(name).size)
         assertEquals(1, store.readFrames(name).count { it.sid == DailyBudget.NOTICE_SID })
+    }
+
+    @Test fun `a batch whose records fit individually but exceed together latches at the tail member (V10)`() {
+        val dir = tmp.newFolder()
+        val headerSize = DayProtocol.header().toByteArray(Charsets.UTF_8).size.toLong()
+        // 5596 pads leave the data allowance exactly 72 bytes: each 45/44-byte record fits
+        // on its own, and the running allowance refuses the second one mid-batch.
+        prefill(dir, (allowance - headerSize - 72L) / 25L)
+        val store = budgetStore(dir)
+        val headMember = FrameCodec.encode(100_000L, "rec", "z".repeat(18))
+        val tailMember = FrameCodec.encode(100_001L, "rec", "z".repeat(17))
+        val verdict = store.append(name, listOf(headMember, tailMember))
+        assertEquals("the tail member refuses after its sibling charged", 1, verdict.recordsDropped)
+        assertTrue("the shared exhaustion writes the notice in the same transaction", verdict.noticeWritten && verdict.emergency)
+        var frames = store.readFrames(name)
+        assertEquals("the tail member never lands", 0, frames.count { it.sid == "rec" && it.seq == 100_001L })
+        assertEquals(1, frames.count { it.sid == "rec" })
+        assertTrue(
+            "reserved-first ordering: the notice precedes the surviving sibling",
+            frames.indexOfFirst { it.sid == DailyBudget.NOTICE_SID } < frames.indexOfLast { it.sid == "rec" },
+        )
+        assertTrue(File(dir, name).length() <= cap)
+        // The switch persists: even a record that fits the leftover bytes cannot write
+        // normally — in this process, or through a fresh store that re-derives the day.
+        val smallVerdict = store.append(name, listOf(FrameCodec.encode(100_002L, "r", "x")))
+        assertEquals("even a fitting record stays out after the switch", 1, smallVerdict.recordsDropped)
+        val freshStore = budgetStore(dir)
+        val freshVerdict = freshStore.append(name, listOf(FrameCodec.encode(100_002L, "r", "x")))
+        assertEquals("a fresh store inherits the same refusal", 1, freshVerdict.recordsDropped)
+        assertEquals(
+            "the day's bytes are exactly header + pads + notice + the one survivor",
+            headerSize + 5596L * 25L + headMember.size + exhaustionNotice().size.toLong(),
+            File(dir, name).length(),
+        )
+        assertEquals("the notice stays single", 1, frames.count { it.sid == DailyBudget.NOTICE_SID })
+    }
+
+    @Test fun `repeated session ends respect the cap and then stop through the reserve (V10-V11)`() {
+        val dir = tmp.newFolder()
+        val (padCount, _) = padding()
+        prefill(dir, padCount)
+        val store = budgetStore(dir)
+        val endSize = sessionEndFrame(100_000L).size.toLong()
+        val noticeSize = exhaustionNotice().size.toLong()
+        val fitsTheReserve = ((reserve - noticeSize) / endSize).toInt()
+        var verdict: DailyBudget.Verdict? = null
+        repeat(fitsTheReserve + 1) { i ->
+            verdict = store.append(name, listOf(sessionEndFrame(100_000L + i)))
+            assertTrue("every step respects the cap", File(dir, name).length() <= cap)
+            assertTrue("the day stays in reserve mode", verdict!!.emergency)
+        }
+        assertTrue("the final end cannot fit the spent reserve", verdict!!.endUnpersisted)
+        assertEquals("one notice marks the exhaustion", 1, store.readFrames(name).count { it.sid == DailyBudget.NOTICE_SID })
+        val bytesAtFailure = File(dir, name).readBytes()
+        val restartVerdict = budgetStore(dir).append(name, listOf(sessionEndFrame(200_000L)))
+        assertTrue("restart re-derives the spent reserve", restartVerdict.endUnpersisted)
+        assertArrayEquals("a restarted store writes nothing to a spent day", bytesAtFailure, File(dir, name).readBytes())
+    }
+
+    @Test fun `a recovery frame that cannot fit keeps the torn tail byte-identical (V11)`() {
+        val dir = tmp.newFolder()
+        val torn = FrameCodec.encode(100_000L, "p", "x").copyOfRange(0, 24)
+        // Layout: data allowance down to 22 bytes, reserve down to 24 bytes, tail torn;
+        // neither allowance can hold the synthesized 39-byte recovery frame.
+        File(dir, name).outputStream().use { out ->
+            out.write(DayProtocol.header().toByteArray(Charsets.UTF_8))
+            repeat(54) { i -> out.write(FrameCodec.encode(100_000L + i, "p", "x")) }
+            repeat(16) { seq -> out.write(FrameCodec.encode(100_000L + seq, DailyBudget.NOTICE_SID, DailyBudget.NOTICE_PAYLOAD)) }
+            out.write(torn)
+        }
+        val before = File(dir, name).readBytes()
+        val store = CoordinatorStore(dir, null, 250_000_000L, { System.nanoTime() }, 2_000L, 600L)
+        val verdict = store.append(name, listOf(FrameCodec.encode(100_000L, "p", "x")))
+        assertTrue("the verdict reports the salvage refusal", verdict.recoveryUnpersisted)
+        assertArrayEquals("the transaction yields byte-identical, torn suffix included", before, File(dir, name).readBytes())
+        assertEquals(
+            "readRecovery still yields the valid prefix (header + 54 pads + 16 notices)",
+            71,
+            store.readFrames(name).size,
+        )
+        val again = store.append(name, listOf(FrameCodec.encode(200_000L, "p", "x")))
+        assertTrue("the refusal repeats deterministically", again.recoveryUnpersisted)
+        assertArrayEquals("the day stays byte-identical across attempts", before, File(dir, name).readBytes())
+    }
+
+    @Test fun `fresh day keeps the P1 header first when the first record cannot fit (V10)`() {
+        val dir = tmp.newFolder()
+        val headerSize = DayProtocol.header().toByteArray(Charsets.UTF_8).size.toLong()
+        // D - R = exactly the header: nothing else can ever fit, yet the day must still open.
+        val store = CoordinatorStore(dir, null, 250_000_000L, { System.nanoTime() }, 60_000L + headerSize, 60_000L)
+        val verdict = store.append(name, listOf(FrameCodec.encode(1, "probe", "y".repeat(9))))
+        assertEquals(1, verdict.recordsDropped)
+        assertTrue("the degenerate day still marks its exhaustion", verdict.noticeWritten)
+        val frames = store.readFrames(name)
+        assertEquals(2, frames.size)
+        assertTrue("the day header is first, not the notice", FrameCodec.isDayHeader(frames.first()))
+        assertEquals("RESERVE_EXHAUSTED", frames.last().payload)
+        assertEquals(
+            "exactly a header and a notice land",
+            headerSize + exhaustionNotice().size.toLong(),
+            File(dir, name).length(),
+        )
+    }
+
+    @Test fun `barrier-released child processes share daily accounting near the cap (V10)`() {
+        val dir = tmp.newFolder()
+        val headerSize = DayProtocol.header().toByteArray(Charsets.UTF_8).size.toLong()
+        val pad = FrameCodec.encode(100_000L, "p", "x")
+        // 5595 pads leave the data allowance exactly 97 bytes: two child records (28 bytes)
+        // and nothing beyond them can fit, in any raced interleaving.
+        prefill(dir, (allowance - headerSize - 97L) / pad.size)
+        LogProbeChild(dir, "coordinator-budget").use { c1 ->
+            LogProbeChild(dir, "coordinator-budget").use { c2 ->
+                assertEquals("SIZED", c1.command("BUDGET $cap $reserve"))
+                assertEquals("SIZED", c2.command("BUDGET $cap $reserve"))
+                assertEquals("HELD", c1.command("BBAPPEND $name budgeta zzz"))
+                assertEquals("HELD", c2.command("BBAPPEND $name budgetb zzz"))
+                val barrier = CyclicBarrier(2)
+                val pool = Executors.newFixedThreadPool(2)
+                try {
+                    val released = listOf(
+                        pool.submit(Callable { barrier.await(); c1.command("RELEASE") }),
+                        pool.submit(Callable { barrier.await(); c2.command("RELEASE") }),
+                    )
+                    released.forEach { assertEquals("WROTE drops=0", it.get(20, TimeUnit.SECONDS)) }
+                    // Serialized after the race: the first still fits the leftover data
+                    // allowance, the second trips the shared, file-backed exhaustion switch.
+                    assertEquals("WROTE drops=0", c1.command("BAPPEND $name budgeta zzz"))
+                    assertEquals("WROTE drops=1", c2.command("BAPPEND $name budgetb zzz"))
+                } finally {
+                    pool.shutdownNow()
+                }
+            }
+        }
+        val bytesAfterChildren = File(dir, name).readBytes()
+        val late = budgetStore(dir).append(name, listOf(pad))
+        assertEquals("a fresh parent store agrees with the child processes' file ledger", 1, late.recordsDropped)
+        assertArrayEquals("the audit write changes nothing", bytesAfterChildren, File(dir, name).readBytes())
+        val frames = CoordinatorStore(dir).readFrames(name)
+        assertTrue("the cap holds across three writers and a restart", File(dir, name).length() <= cap)
+        assertEquals("children write payloads verbatim", 3, frames.count { it.payload == "zzz" })
+        assertEquals("one notice under cross-process accounting", 1, frames.count { it.sid == DailyBudget.NOTICE_SID })
+        assertEquals(listOf(1L, 2L), frames.filter { it.sid == "budgeta" }.map { it.seq })
+        assertEquals(listOf(1L), frames.filter { it.sid == "budgetb" }.map { it.seq })
     }
 }

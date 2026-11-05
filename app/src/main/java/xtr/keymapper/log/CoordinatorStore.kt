@@ -76,6 +76,7 @@ class CoordinatorStore(
             if (head.contentEquals(header.copyOfRange(0, head.size))) raf.setLength(0)
         }
         val persisted: List<Frame>
+        var tailDiscard = 0L
         if (raf.length() == 0L) {
             persisted = emptyList()
             effective.add(0, header)
@@ -83,8 +84,8 @@ class CoordinatorStore(
             validateHeader(raf, name)
             // Full-file classification happens BEFORE any byte change: only a PURE
             // unterminated suffix inside the search window is repairable (truncated
-            // exactly at the last complete frame + recovery frame). Complete-line
-            // corruption anywhere refuses the transaction byte-identical.
+            // exactly at the last complete frame). Complete-line corruption anywhere
+            // refuses the transaction byte-identical.
             // shortcut: full-file scan per transaction; ceiling = bytes-per-append cost,
             // upgrade = incremental scan windows with a persisted validation cursor.
             val bytes = ByteArray(raf.length().toInt())
@@ -105,7 +106,7 @@ class CoordinatorStore(
                 if (suffixBytes >= BOUNDARY_SEARCH) {
                     throw IOException("corrupt tail: no frame boundary inside the search window; refusing repair")
                 }
-                raf.setLength(validPrefixEnd)
+                tailDiscard = scan.discardedBytes
                 effective.add(0, FrameCodec.encode(0, "recovery", "discarded=$suffixBytes"))
             }
         }
@@ -113,7 +114,11 @@ class CoordinatorStore(
             // Candidates were contract-validated on entry (or synthesized above), so decode cannot fail.
             DailyBudget.Entry(DailyBudget.kindOf(FrameCodec.decode(bytes.decodeToString().removeSuffix("\n"))!!), bytes)
         }
+        // Selection happens before truncation: a rejected recovery frame must keep the torn
+        // suffix intact — appending after an untruncated tail merges into an undecodable line.
         val verdict = budget.charge(persisted, entries)
+        if (verdict.recoveryUnpersisted) return verdict
+        if (tailDiscard > 0L) raf.setLength(raf.length() - tailDiscard)
         raf.seek(raf.length())
         verdict.frames.forEach { frame ->
             val buffer = ByteBuffer.wrap(frame)

@@ -17,6 +17,7 @@ class DailyBudget(val dailyCapBytes: Long, val reserveBytes: Long) {
         val recordsDropped: Int,
         val noticeWritten: Boolean,
         val endUnpersisted: Boolean,
+        val recoveryUnpersisted: Boolean,
         val emergency: Boolean,
     )
 
@@ -44,57 +45,62 @@ class DailyBudget(val dailyCapBytes: Long, val reserveBytes: Long) {
         }
         var normalLeft = (dailyCapBytes - reserveBytes - normalCharged).coerceAtLeast(0)
         var reserveLeft = (reserveBytes - controlCharged).coerceAtLeast(0)
-        // A day switches to reserve-writes at the first normal-kind candidate its remaining
-        // data allowance cannot hold; a notice already on disk keeps the switch sticky.
-        val latchIndex = if (noticeOnDisk) -1 else entries.indexOfFirst { e ->
-            e.kind != Kind.HEADER && e.kind != Kind.NOTICE && e.bytes.size.toLong() > normalLeft
-        }
-        val emergency = noticeOnDisk || latchIndex >= 0
-
+        // A day switches to reserve-writes at the first normal-kind candidate its RUNNING data
+        // allowance cannot hold (in-transaction charges count); a notice on disk keeps it sticky.
+        var latched = noticeOnDisk
         val out = ArrayList<ByteArray>(entries.size + 1)
-        var noticesWritten = false
-        // Priority 1: the exhaustion notice, from the reserve, ahead of END and recovery.
-        if (emergency && !noticeOnDisk) {
-            val notice = FrameCodec.encode(0, NOTICE_SID, NOTICE_PAYLOAD)
-            if (notice.size.toLong() <= reserveLeft) {
-                out.add(notice)
-                reserveLeft -= notice.size
-                controlCharged += notice.size
-                noticesWritten = true
-            }
-        }
+        var headerSeen = false
+        var noticeWritten = false
         var recordsDropped = 0
         var endUnpersisted = false
-        fun normalWrite(e: Entry) {
-            normalLeft -= e.bytes.size
-            normalCharged += e.bytes.size
-            out.add(e.bytes)
-        }
-        fun reserveWrite(e: Entry) {
-            reserveLeft -= e.bytes.size
-            controlCharged += e.bytes.size
-            out.add(e.bytes)
-        }
-        for ((i, e) in entries.withIndex()) {
-            val size = e.bytes.size.toLong()
-            when (e.kind) {
-                // Priority 2, session END, then priority 3, recovery: normal-first while
-                // the day still has data room, always reserve-eligible after the switch.
-                Kind.SESSION_END, Kind.RECOVERY -> when {
-                    (latchIndex < 0 || i < latchIndex) && size <= normalLeft -> normalWrite(e)
-                    size <= reserveLeft -> reserveWrite(e)
-                    else -> if (e.kind == Kind.SESSION_END) endUnpersisted = true
-                }
-                // The day header is protocol infrastructure: it must land, so a config too tight to hold it is rejected loudly.
-                Kind.HEADER -> when {
-                    size <= normalLeft -> normalWrite(e)
-                    size <= reserveLeft -> reserveWrite(e)
-                    else -> throw IllegalStateException("daily budget cannot hold the day header")
-                }
-                else -> if ((latchIndex < 0 || i < latchIndex) && size <= normalLeft) normalWrite(e) else recordsDropped++
+        var recoveryUnpersisted = false
+        fun switch() {
+            latched = true
+            if (noticeOnDisk) return
+            val notice = FrameCodec.encode(0, NOTICE_SID, NOTICE_PAYLOAD)
+            if (notice.size.toLong() <= reserveLeft) {
+                reserveLeft -= notice.size
+                // Reserved-first file order: the notice precedes this transaction's selections.
+                out.add(if (headerSeen) 1 else 0, notice)
+                noticeWritten = true
             }
         }
-        return Verdict(out, recordsDropped, noticesWritten, endUnpersisted, emergency)
+        for (e in entries) {
+            val size = e.bytes.size.toLong()
+            when (e.kind) {
+                // The day header is protocol infrastructure: it must land, so a config too
+                // tight to hold it is rejected loudly.
+                Kind.HEADER -> when {
+                    size <= normalLeft -> { normalLeft -= size; out.add(e.bytes); headerSeen = true }
+                    size <= reserveLeft -> { reserveLeft -= size; out.add(e.bytes); headerSeen = true }
+                    else -> throw IllegalStateException("daily budget cannot hold the day header")
+                }
+                // Priority: session END first, then recovery — normal-first while data room
+                // survives (also the latch trigger), reserve-eligible once switched.
+                Kind.SESSION_END, Kind.RECOVERY -> {
+                    if (!latched && size <= normalLeft) {
+                        normalLeft -= size
+                        out.add(e.bytes)
+                    } else {
+                        if (!latched) switch()
+                        if (size <= reserveLeft) {
+                            reserveLeft -= size
+                            out.add(e.bytes)
+                        } else if (e.kind == Kind.RECOVERY) recoveryUnpersisted = true else endUnpersisted = true
+                    }
+                }
+                else -> {
+                    if (!latched && size <= normalLeft) {
+                        normalLeft -= size
+                        out.add(e.bytes)
+                    } else {
+                        if (!latched) switch()
+                        recordsDropped++
+                    }
+                }
+            }
+        }
+        return Verdict(out, recordsDropped, noticeWritten, endUnpersisted, recoveryUnpersisted, latched)
     }
 
     companion object {
