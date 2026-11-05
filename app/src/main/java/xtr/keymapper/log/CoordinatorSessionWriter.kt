@@ -199,14 +199,24 @@ class CoordinatorSessionWriter(
     private fun commit(day: String, fallbackDay: String? = null, payloadsFor: (String) -> List<String>) {
         var seq = 0L
         var discrepancy: String? = null
-        val (name, verdict) = coordinator.append(
-            LogFileNames.dailyName(day, null),
-            fallbackDay?.let { LogFileNames.dailyName(it, null) },
-        ) { selected, persisted ->
-            val writtenDay = LogFileNames.parse(selected)!!.date
-            discrepancy = SessionFrames.sequenceDiscrepancy(persisted, sessionId, seqByDay[writtenDay] ?: 0L)
-            seq = maxOf(seqByDay[writtenDay] ?: 0L, persisted.filter { it.sid == sessionId }.maxOfOrNull { it.seq } ?: 0L)
-            payloadsFor(writtenDay).map { payload -> FrameCodec.encode(++seq, sessionId, payload) }
+        var discrepancyDay = day
+        val (name, verdict) = try {
+            coordinator.append(
+                LogFileNames.dailyName(day, null),
+                fallbackDay?.let { LogFileNames.dailyName(it, null) },
+            ) { selected, persisted ->
+                val writtenDay = LogFileNames.parse(selected)!!.date
+                discrepancyDay = writtenDay
+                discrepancy = SessionFrames.sequenceDiscrepancy(persisted, sessionId, seqByDay[writtenDay] ?: 0L)
+                seq = maxOf(seqByDay[writtenDay] ?: 0L, persisted.filter { it.sid == sessionId }.maxOfOrNull { it.seq } ?: 0L)
+                payloadsFor(writtenDay).map { payload -> FrameCodec.encode(++seq, sessionId, payload) }
+            }
+        } finally {
+            discrepancy?.let { detail ->
+                if (reportedDiscrepancies.add("$discrepancyDay:$detail")) {
+                    report("XtLogger: sequence discrepancy for session=$sessionId day=$discrepancyDay $detail; committed history is incomplete")
+                }
+            }
         }
         val writtenDay = LogFileNames.parse(name)!!.date
         // NOT_ATTEMPTED leaves the cursor and marker state unchanged.
@@ -219,11 +229,6 @@ class CoordinatorSessionWriter(
             when (frame.payload.lineSequence().mapNotNull(SessionMarkers::markerTypeOf).firstOrNull()) {
                 SessionMarkers.START -> startWritten = true
                 SessionMarkers.CONTINUED -> continuedDays.add(writtenDay)
-            }
-        }
-        discrepancy?.let { detail ->
-            if (reportedDiscrepancies.add("$writtenDay:$detail")) {
-                report("XtLogger: sequence discrepancy for session=$sessionId day=$writtenDay $detail; committed history is incomplete")
             }
         }
         recordsDroppedByDayLimit.addAndGet(verdict.recordsDropped)
@@ -270,7 +275,7 @@ object SessionFrames {
         if (history.isEmpty()) return SessionState.DISPOSITION_FIRST
         var latestSession: String? = null
         var latestStart: Instant? = null
-        var incomplete = history.any { it.discardedBytes != 0L }
+        var incomplete = history.any { it.discardedBytes != 0L || it.frames.firstOrNull()?.let(FrameCodec::isDayHeader) != true }
         val starts = HashSet<String>()
         val metadata = HashMap<String, Frame>()
         val ended = HashMap<String, String?>()
@@ -296,6 +301,7 @@ object SessionFrames {
                 }
             }
         }
+        incomplete = incomplete || (metadata.keys + ended.keys).any { it !in starts }
         val sid = latestSession ?: return DISPOSITION_UNKNOWN
         val disposition = when {
             incomplete || sid !in starts -> DISPOSITION_UNKNOWN
