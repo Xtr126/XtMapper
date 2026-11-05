@@ -65,6 +65,15 @@ jobs:
       - name: Run JVM unit tests and assemble debug APK
         run: ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug
 
+      - name: Upload JVM test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xtmapper-jvm-tests-${{ github.event.pull_request.head.sha || github.sha }}
+          path: app/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
