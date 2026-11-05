@@ -67,6 +67,38 @@ class CoordinatorRetentionRegressionTest {
     }
 
     @Test
+    fun `retention rechecks the count budget after another deletion wins`() {
+        val dir = tmp.newFolder()
+        val first = "xtmapper-2026-10-20.log"
+        val second = "xtmapper-2026-10-21.log"
+        val coordinator = CoordinatorStore(dir)
+        listOf(first, second, "xtmapper-2026-10-23.log").forEach {
+            coordinator.append(it, listOf(FrameCodec.encode(1, "seed", "kept")))
+        }
+        val pause = AcquisitionPause()
+        val clock = MutableClock.at("2026-10-23T09:00:00Z")
+        val store = CoordinatorSessionWriter(CoordinatorStore(dir, clock = pause::now), dir, null, clock, clock.zoneId, "retention").store
+        val pipeline = TestPipelineFactory(FileSystemLogStore(dir), clock).start(manualStart = false)
+        val executor = Executors.newSingleThreadExecutor()
+        try {
+            pause.armed.set(true)
+            val deletion = executor.submit {
+                pipeline.applyRetention(store, LoggingConfig(maxFiles = 2), LocalDate.of(2026, 10, 23))
+            }
+            assertTrue(pause.entered.await(3, TimeUnit.SECONDS))
+            assertTrue(coordinator.delete(second))
+            pause.release.countDown()
+            deletion.get(5, TimeUnit.SECONDS)
+            assertTrue("the remaining files fit the count budget before acquisition", File(dir, first).isFile)
+        } finally {
+            pause.release.countDown()
+            executor.shutdownNow()
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS))
+            pipeline.close()
+        }
+    }
+
+    @Test
     fun `retention winning after old-day selection cannot resurrect that day`() {
         val dir = tmp.newFolder()
         val oldName = "xtmapper-2026-10-01.log"

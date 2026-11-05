@@ -147,6 +147,18 @@ class RetentionPolicyTest {
     }
 
     @Test
+    fun `a future-dated file never makes today eligible for budget deletion`() {
+        val deleted = run(
+            listOf(
+                entry("xtmapper-2026-10-20.log", size = 1024 * 1024L),
+                entry("xtmapper-2026-10-23.log", size = 9 * 1024 * 1024L),
+                entry("xtmapper-2026-10-27.log", size = 1024 * 1024L),
+            ),
+        )
+        assertEquals(listOf("xtmapper-2026-10-20.log"), deleted)
+    }
+
+    @Test
     fun `empty input is a no-op`() {
         assertEquals(emptyList<String>(), run(emptyList()))
     }
