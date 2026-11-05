@@ -107,11 +107,11 @@ class DailyBudget(val dailyCapBytes: Long, val reserveBytes: Long) {
                     }
                 }
                 else -> {
-                    submittedRecords++
+                    if (e.kind == Kind.RECORD) submittedRecords++
                     if (!latched && size <= normalLeft && size <= physicalLeft) commitNormal(e.bytes)
                     else {
                         if (!latched) switch()
-                        recordsDropped++
+                        if (e.kind == Kind.RECORD) recordsDropped++
                     }
                 }
             }
@@ -138,7 +138,7 @@ class DailyBudget(val dailyCapBytes: Long, val reserveBytes: Long) {
             frame.sid == "recovery" -> Kind.RECOVERY
             frame.sid == NOTICE_SID -> Kind.NOTICE
             frame.payload.lineSequence().any { SessionMarkers.markerTypeOf(it) == SessionMarkers.END } -> Kind.SESSION_END
-            frame.payload.lineSequence().any { SessionMarkers.markerTypeOf(it) != null } -> Kind.SESSION_START
+            frame.payload.lineSequence().any { SessionMarkers.markerTypeOf(it) != null || it == SessionMarkers.LATE } -> Kind.SESSION_START
             else -> Kind.RECORD
         }
     }

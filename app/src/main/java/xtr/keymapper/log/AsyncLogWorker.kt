@@ -70,11 +70,15 @@ class AsyncLogWorker(
                 queue.drainUpTo(config.batchMaxRecords - collected.size)?.let { collected.addAll(it) }
                 batch = collected
                 val dayDropsBefore = writer.recordsDroppedByDayLimit.get()
-                when (writer.write(batch)) {
+                val outcome = writer.write(batch)
+                val dayDrops = writer.recordsDroppedByDayLimit.get() - dayDropsBefore
+                when (outcome) {
                     BatchWriteOutcome.PROCESSED -> queue.markProcessed(batch.size)
-                    BatchWriteOutcome.UNAVAILABLE -> queue.markFailed(batch.size)
+                    BatchWriteOutcome.UNAVAILABLE -> {
+                        queue.markFailed(batch.size - dayDrops)
+                        queue.markProcessed(dayDrops)
+                    }
                     BatchWriteOutcome.UNCERTAIN -> {
-                        val dayDrops = writer.recordsDroppedByDayLimit.get() - dayDropsBefore
                         queue.markUncertain(batch.size - dayDrops)
                         queue.markProcessed(dayDrops)
                     }
