@@ -44,7 +44,6 @@ import xtr.keymapper.keymap.KeymapProfiles
 import xtr.keymapper.macro.MacroIdUtils
 import xtr.keymapper.macro.MacroStatus
 import xtr.keymapper.macro.MacroView
-import xtr.keymapper.macro.MacroView.OnFinishListener
 import xtr.keymapper.server.RemoteServiceHelper
 
 class EditorUI(
@@ -115,7 +114,7 @@ class EditorUI(
                 mService!!.unregisterOnKeyEventListener(this)
                 mService!!.resumeMouse()
                 mService!!.reloadKeymap()
-            } catch (ignored: RemoteException) {
+            } catch (_: RemoteException) {
             }
         }
         mService = null
@@ -151,13 +150,7 @@ class EditorUI(
 
         mainView.isFocusable = true
         mainView.isFocusableInTouchMode = true
-        mainView.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
-            this.onKey(
-                v,
-                keyCode,
-                event!!
-            )
-        })
+        mainView.setOnKeyListener { _, keyCode, event -> onKey(keyCode, event!!) }
 
         loadKeymapAndObserveSizeChanges()
     }
@@ -176,6 +169,7 @@ class EditorUI(
         openOverlayWindow(alpha)
     }
 
+    @Suppress("DEPRECATION") // The pre-Android 11 fallback uses the legacy display metrics API.
     private fun getRealScreenDimensions(): Pair<Int, Int> {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val displayManager = context.getSystemService(DisplayManager::class.java)
@@ -198,9 +192,10 @@ class EditorUI(
         }
     }
 
+    @Suppress("DEPRECATION") // TYPE_SYSTEM_ALERT is needed on Android versions before O.
     private fun openOverlayWindow(alpha: Float = -1f) {
         val overlayView =
-            (if (startMode == EditorUI.Companion.SHOW_KEYMAP_ONLY) keysContainerView else mainView)!!
+            (if (startMode == SHOW_KEYMAP_ONLY) keysContainerView else mainView)!!
         if (overlayOpen) {
             removeView(overlayView)
         }
@@ -209,7 +204,7 @@ class EditorUI(
         val mParams =
             if (startMode == SHOW_KEYMAP_ONLY) Utils.getPointerLayoutParams(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) else windowManagerLayoutParams()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             mParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
         }
 
@@ -227,6 +222,7 @@ class EditorUI(
         if (startMode != SHOW_KEYMAP_ONLY) hideSystemBars()
     }
 
+    @Suppress("DEPRECATION") // Legacy window type and flags are required below Android O.
     private fun windowManagerLayoutParams(): WindowManager.LayoutParams = WindowManager.LayoutParams(
         WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
@@ -252,7 +248,7 @@ class EditorUI(
      * For events received by view
      * @return true if we consume the event
      */
-    fun onKey(v: View?, keyCode: Int, event: KeyEvent): Boolean {
+    fun onKey(keyCode: Int, event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN) return false
         val key = KeyUtils.resolveKeyName(keyCode, event) ?: return false
         if (macroDialog != null) {
@@ -334,13 +330,13 @@ class EditorUI(
 
     private fun showMacroDialog() {
         macroDialog = MacroDialog(context, overlayOpen, profile!!)
-        macroDialog!!.show(View.OnClickListener { v: View? ->
+        macroDialog!!.show { v ->
             if (v != null) addMacro()
             if (macroDialog != null) {
                 macroDialog!!.dismiss()
                 macroDialog = null
             }
-        })
+        }
     }
 
     /**
@@ -353,7 +349,7 @@ class EditorUI(
             mainView!!.setFocusable(true)
         }
         val macroStatus = MacroStatus(context, settingsOverlay!!.binding.catalog)
-        val macroView = MacroView(context, OnFinishListener { macroView_: MacroView? ->
+        val macroView = MacroView(context) { macroView_: MacroView? ->
             // Stop counting time in stopwatch
             macroStatus.stop()
 
@@ -362,30 +358,22 @@ class EditorUI(
             macroView_!!.invalidate()
 
             // Redirect keyboard input
-            mainView!!.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
-                this@EditorUI.onKey(
-                    v,
-                    keyCode,
-                    event!!
-                )
-            })
+            mainView!!.setOnKeyListener { _, keyCode, event ->
+                this@EditorUI.onKey(keyCode, event!!)
+            }
             settingsOverlay.unHideButtons()
             if (mService == null) mainView.setFocusable(false)
             showMacroDialog()
-        })
+        }
         // Hide existing buttons in catalog till macro finish
         settingsOverlay.hideButtons()
         macroStatus.start()
 
         keysContainerView.addView(macroView)
         // Redirect keyboard input
-        mainView!!.setOnKeyListener(View.OnKeyListener { v: View?, keyCode: Int, event: KeyEvent? ->
-            macroView.onKey(
-                event!!
-            )
-        })
+        mainView!!.setOnKeyListener { _, _, event -> macroView.onKey(event!!) }
 
-        settingsOverlay.binding.catalog.setOnClickListener(View.OnClickListener { v: View? -> macroView.clearCanvasAndFinish() })
+        settingsOverlay.binding.catalog.setOnClickListener { macroView.clearCanvasAndFinish() }
     }
 
     /** saves, unregisters listeners, removes views, and triggers Activity or service cleanup. */
@@ -402,9 +390,9 @@ class EditorUI(
             // Load keymap config after settingsOverlay wrote config
             val keymapConfig = KeymapConfig(context)
             // We stopped the service, so we must restart it
-            RemoteServiceHelper.runIfActive(context, Runnable {
+            RemoteServiceHelper.runIfActive(context) {
                 if (keymapConfig.showControls) ShowKeymapService.start(context, profileName)
-            })
+            }
         } else removeView(keysContainerView)
         
         // Cleanup Compose Dialog if it's open
@@ -438,7 +426,7 @@ class EditorUI(
                 reloadKeymap()
             }
         }
-        keysContainerView.post(Runnable { this.loadKeymap() })
+        keysContainerView.post { loadKeymap() }
     }
 
     private fun reloadKeymap() {
@@ -633,8 +621,6 @@ class EditorUI(
     }
 
     companion object {
-        private val TAG = "EditorUI"
-
         /* Start modes */
         const val START_SETTINGS: Int = 0 // Shows full editor with catalog/menu
         const val START_EDITOR: Int = 1 // Shows editor without catalog (save/reset available)

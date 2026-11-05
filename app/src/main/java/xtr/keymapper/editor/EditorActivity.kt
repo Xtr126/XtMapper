@@ -71,6 +71,7 @@ class EditorActivity : ComponentActivity() {
         finish()
     }
 
+    @Suppress("DEPRECATION") // TYPE_SYSTEM_ALERT is needed on Android versions before O.
     private fun onConnection(service: IRemoteService?) {
         if (editor != null) {
             val keymapConfig = KeymapConfig(this)
@@ -102,7 +103,7 @@ class EditorActivity : ComponentActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (editor?.onKey(null, keyCode, event) == true) {
+        if (editor?.onKey(keyCode, event) == true) {
             return true
         }
         return super.onKeyDown(keyCode, event)
