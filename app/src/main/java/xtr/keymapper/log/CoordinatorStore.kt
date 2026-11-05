@@ -4,6 +4,7 @@ import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 import java.nio.channels.OverlappingFileLockException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -35,6 +36,9 @@ class CoordinatorStore(
     init { rootDirectory.mkdirs() }
 
     private val budget = DailyBudget(maxDailyBytes, reserveBytes)
+
+    internal var writeChannel: (FileChannel, ByteBuffer) -> Int = { channel, buffer -> channel.write(buffer) }
+    internal var forceChannel: (FileChannel) -> Unit = { it.force(true) }
 
     fun append(name: String, frames: List<ByteArray>): DailyBudget.Verdict {
         validateFrames(frames)
@@ -159,7 +163,7 @@ class CoordinatorStore(
         raf.seek(raf.length())
         verdict.frames.forEach { frame ->
             val buffer = ByteBuffer.wrap(frame)
-            while (buffer.hasRemaining()) raf.channel.write(buffer)
+            while (buffer.hasRemaining()) writeChannel(raf.channel, buffer)
         }
         return verdict
     }

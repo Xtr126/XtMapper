@@ -1,6 +1,9 @@
 package xtr.keymapper.log
 
 import java.io.File
+import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.file.Files
 import java.security.MessageDigest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -181,5 +184,144 @@ class LegacyMigrationTest {
         file.writeBytes(before)
         assertThrows(DayIntegrityBlockedException::class.java) { CoordinatorStore(dir).append(name, listOf(next)) }
         assertArrayEquals(before, file.readBytes())
+    }
+
+    @Test fun `migration forces the actual receipt on the stable gate before changing legacy bytes`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy\n".encodeToByteArray()
+        val file = File(dir, name).apply { writeBytes(prefix) }
+        val gate = File(dir, FileSystemLogStore.LIFECYCLE_LOCK_NAME).apply { createNewFile() }
+        val inode = Files.getAttribute(gate.toPath(), "unix:ino")
+        var forced = 0
+        val store = CoordinatorStore(dir).apply {
+            forceChannel = { channel ->
+                assertArrayEquals("legacy stays unchanged until receipt force", prefix, file.readBytes())
+                val bytes = ByteBuffer.allocate(channel.size().toInt())
+                while (bytes.hasRemaining()) assertTrue(channel.read(bytes, bytes.position().toLong()) > 0)
+                assertArrayEquals(receipt(prefix), bytes.array())
+                channel.force(true)
+                forced++
+            }
+        }
+        store.append(name, listOf(next))
+        assertEquals(1, forced)
+        assertEquals(inode, Files.getAttribute(gate.toPath(), "unix:ino"))
+        assertArrayEquals(prefix + header + next, file.readBytes())
+    }
+
+    @Test fun `receipt force failure leaves every legacy byte untouched and retry forces before recovery`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy without newline".encodeToByteArray()
+        val file = File(dir, name).apply { writeBytes(prefix) }
+        var attemptedForce = false
+        val store = CoordinatorStore(dir).apply {
+            forceChannel = { attemptedForce = true; throw IOException("receipt force failed") }
+        }
+        val error = assertThrows(IOException::class.java) { store.append(name, listOf(next)) }
+        assertTrue(attemptedForce)
+        assertEquals("receipt force failed", error.message)
+        assertArrayEquals(prefix, file.readBytes())
+        var retryForced = false
+        val retry = CoordinatorStore(dir).apply {
+            forceChannel = { channel ->
+                assertArrayEquals(prefix, file.readBytes())
+                channel.force(true)
+                retryForced = true
+            }
+        }
+        retry.append(name, listOf(next))
+        assertTrue(retryForced)
+        assertArrayEquals(prefix + byteArrayOf('\n'.code.toByte()) + header + next, file.readBytes())
+    }
+
+    @Test fun `partial receipt write failure cannot authorize data mutation`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy\n".encodeToByteArray()
+        val file = File(dir, name).apply { writeBytes(prefix) }
+        var writes = 0
+        val store = CoordinatorStore(dir).apply {
+            writeChannel = { channel, buffer ->
+                if (writes++ > 0) throw IOException("receipt disk full")
+                val limit = buffer.limit()
+                buffer.limit(buffer.position() + minOf(7, buffer.remaining()))
+                try { channel.write(buffer) } finally { buffer.limit(limit) }
+            }
+        }
+        val error = assertThrows(IOException::class.java) { store.append(name, listOf(next)) }
+        assertEquals("receipt disk full", error.message)
+        assertEquals(2, writes)
+        assertArrayEquals(prefix, file.readBytes())
+        assertThrows(DayIntegrityBlockedException::class.java) { CoordinatorStore(dir).append(name, listOf(next)) }
+        assertArrayEquals(prefix, file.readBytes())
+    }
+
+    @Test fun `prepared receipt is forced again before resuming an interrupted boundary`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy tail".encodeToByteArray()
+        seedReceipt(dir, prefix)
+        val before = prefix + byteArrayOf('\n'.code.toByte()) + header.copyOf(header.size / 2)
+        val file = File(dir, name).apply { writeBytes(before) }
+        var forced = false
+        val store = CoordinatorStore(dir).apply {
+            forceChannel = { channel ->
+                assertArrayEquals(before, file.readBytes())
+                channel.force(true)
+                forced = true
+            }
+        }
+        store.append(name, listOf(next))
+        assertTrue(forced)
+        assertArrayEquals(prefix + byteArrayOf('\n'.code.toByte()) + header + next, file.readBytes())
+    }
+
+    @Test fun `deletion forces receipt revocation before unlink on the same gate inode`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy\n".encodeToByteArray()
+        seedReceipt(dir, prefix)
+        val before = prefix + header + next
+        val file = File(dir, name).apply { writeBytes(before) }
+        val gate = File(dir, FileSystemLogStore.LIFECYCLE_LOCK_NAME)
+        val inode = Files.getAttribute(gate.toPath(), "unix:ino")
+        var forced = false
+        val store = CoordinatorStore(dir).apply {
+            forceChannel = { channel ->
+                assertArrayEquals(before, file.readBytes())
+                val bytes = ByteBuffer.allocate(channel.size().toInt())
+                while (bytes.hasRemaining()) assertTrue(channel.read(bytes, bytes.position().toLong()) > 0)
+                assertEquals("D1|$name", FrameCodec.scanRecovery(bytes.array()).frames.last().payload)
+                channel.force(true)
+                forced = true
+            }
+        }
+        assertTrue(store.delete(name))
+        assertTrue(forced)
+        assertFalse(file.exists())
+        assertEquals(inode, Files.getAttribute(gate.toPath(), "unix:ino"))
+    }
+
+    @Test fun `failed revocation force never deletes data and a retry re-forces its tombstone`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy\n".encodeToByteArray()
+        seedReceipt(dir, prefix)
+        val before = prefix + header + next
+        val file = File(dir, name).apply { writeBytes(before) }
+        var attemptedForce = false
+        val store = CoordinatorStore(dir).apply {
+            forceChannel = { attemptedForce = true; throw IOException("revocation force failed") }
+        }
+        assertThrows(IOException::class.java) { store.delete(name) }
+        assertTrue(attemptedForce)
+        assertArrayEquals(before, file.readBytes())
+        var retryForced = false
+        val retry = CoordinatorStore(dir).apply {
+            forceChannel = { channel ->
+                assertArrayEquals(before, file.readBytes())
+                channel.force(true)
+                retryForced = true
+            }
+        }
+        assertTrue(retry.delete(name))
+        assertTrue(retryForced)
+        assertFalse(file.exists())
     }
 }
