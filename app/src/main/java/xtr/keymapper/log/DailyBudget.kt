@@ -27,8 +27,8 @@ class DailyBudget(val dailyCapBytes: Long, val reserveBytes: Long) {
 
     // Selects the frames that survive, under the caller's coordinator lock, refreshed from
     // the validated file prefix each transaction.
-    internal fun charge(persisted: List<Frame>, entries: List<Entry>): Verdict {
-        var normalCharged = 0L
+    internal fun charge(persisted: List<Frame>, entries: List<Entry>, legacyBytes: Long = 0): Verdict {
+        var normalCharged = legacyBytes
         var controlCharged = 0L
         var noticeOnDisk = false
         for (frame in persisted) {

@@ -6,6 +6,7 @@ import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.channels.OverlappingFileLockException
+import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -49,11 +50,16 @@ class CoordinatorStore(
         name: String,
         fallbackName: String?,
         framesFor: (String, List<Frame>) -> List<ByteArray>,
-    ): Pair<String, DailyBudget.Verdict> = coordinated {
+    ): Pair<String, DailyBudget.Verdict> = coordinated { gate ->
         onCoordinatorLock?.invoke()
         val selected = if (fallbackName != null && !target(name).isFile) fallbackName else name
-        RandomAccessFile(target(selected), "rw").use { raf ->
-            selected to transact(raf, selected) { persisted ->
+        val receipt = migrationReceipts(gate, selected)[selected]
+        val file = target(selected)
+        if (receipt != null && !file.isFile) {
+            throw DayIntegrityBlockedException("migration receipt has no original file ($selected)", selected)
+        }
+        RandomAccessFile(file, "rw").use { raf ->
+            selected to transact(raf, selected, gate, receipt) { persisted ->
                 framesFor(selected, persisted).also(::validateFrames)
             }
         }
@@ -71,72 +77,96 @@ class CoordinatorStore(
 
     fun readFrames(name: String): List<Frame> = readRecovery(name).frames
 
-    fun readRecovery(name: String): FrameRecovery = coordinated { readRecoveryLocked(target(name)) }
-
-    internal fun readHistory(directory: File): List<FrameRecovery> = coordinated {
-        require(directory.canonicalFile == rootDirectory.canonicalFile)
-        val files = directory.listFiles() ?: throw IOException("log history could not be enumerated")
-        files.filter { it.isFile && LogFileNames.parse(it.name) != null }.sortedBy { it.name }
-            .map { readRecoveryLocked(target(it.name)) }
+    fun readRecovery(name: String): FrameRecovery = coordinated { gate ->
+        readRecoveryLocked(target(name), migrationReceipts(gate, name)[name])
     }
 
-    private fun readRecoveryLocked(file: File): FrameRecovery =
+    internal fun readHistory(directory: File): List<FrameRecovery> = coordinated { gate ->
+        require(directory.canonicalFile == rootDirectory.canonicalFile)
+        val receipts = migrationReceipts(gate)
+        val files = directory.listFiles() ?: throw IOException("log history could not be enumerated")
+        files.filter { it.isFile && LogFileNames.parse(it.name) != null }.sortedBy { it.name }
+            .map { readRecoveryLocked(target(it.name), receipts[it.name]) }
+    }
+
+    private fun readRecoveryLocked(file: File, receipt: MigrationReceipt?): FrameRecovery =
         if (!file.isFile) {
+            if (receipt != null) throw DayIntegrityBlockedException("migration receipt has no original file (${file.name})", file.name)
             FrameRecovery(emptyList(), 0)
         } else {
-            // shortcut: reads the whole file into memory; ceiling = memory on multi-MB day files,
-            // upgrade = streaming scan under the same gate.
             RandomAccessFile(file, "r").use { raf ->
-                val bytes = ByteArray(raf.length().toInt())
-                if (bytes.isNotEmpty()) {
-                    raf.seek(0)
-                    raf.readFully(bytes)
-                }
-                FrameCodec.scanRecovery(bytes)
+                val bytes = readBytes(raf)
+                val offset = receipt?.let { migrationOffset(bytes, it, file.name) } ?: 0
+                FrameCodec.scanRecovery(bytes.copyOfRange(minOf(offset, bytes.size), bytes.size))
             }
         }
 
-    fun delete(name: String, eligible: () -> Boolean = { true }): Boolean = coordinated {
-        eligible() && target(name).delete()
+    fun delete(name: String, eligible: () -> Boolean = { true }): Boolean = coordinated { gate ->
+        if (!eligible()) false else {
+            if (migrationReceipts(gate, name).containsKey(name)) writeReceipt(gate, "D1|$name")
+            target(name).delete()
+        }
     }
 
     private fun transact(
         raf: RandomAccessFile,
         name: String,
+        gate: RandomAccessFile,
+        receipt: MigrationReceipt?,
         framesFor: (List<Frame>) -> List<ByteArray>,
     ): DailyBudget.Verdict {
         val effective = ArrayList<ByteArray>()
-        val header = DayProtocol.header().toByteArray(Charsets.UTF_8)
-        // Torn header write: an exact 1..size-1 prefix truncates here so the empty path rewrites it; other short content fails validation.
-        if (raf.length() in 1L until header.size.toLong()) {
-            val head = ByteArray(raf.length().toInt())
-            raf.seek(0)
-            raf.readFully(head)
-            if (head.contentEquals(header.copyOfRange(0, head.size))) raf.setLength(0)
+        val header = DayProtocol.header().encodeToByteArray()
+        val bytes = readBytes(raf)
+        var prefixBytes = 0
+        var originalLength = 0
+        var newReceipt: String? = null
+        var rebuildHeader = false
+        val protocolBytes = when {
+            receipt != null -> {
+                prefixBytes = migrationOffset(bytes, receipt, name)
+                originalLength = receipt.length
+                rebuildHeader = bytes.size.toLong() < prefixBytes.toLong() + header.size
+                if (rebuildHeader) byteArrayOf() else bytes.copyOfRange(prefixBytes, bytes.size)
+            }
+            bytes.isEmpty() || (bytes.size < header.size && bytes.contentEquals(header.copyOf(bytes.size))) -> {
+                rebuildHeader = true
+                byteArrayOf()
+            }
+            hasDayHeader(bytes) -> bytes
+            else -> {
+                if (containsFrameRegion(bytes)) {
+                    throw DayIntegrityBlockedException("preexisting frame region blocks legacy migration ($name)", name)
+                }
+                val day = LogFileNames.parse(name)
+                if (day == null || name != LogFileNames.dailyName(day.date, null)) {
+                    throw DayIntegrityBlockedException("legacy migration requires a daily filename ($name)", name)
+                }
+                originalLength = bytes.size
+                prefixBytes = originalLength + if (bytes.last() == '\n'.code.toByte()) 0 else 1
+                newReceipt = "M1|$name|$originalLength|${prefixHash(bytes, originalLength)}"
+                rebuildHeader = true
+                byteArrayOf()
+            }
         }
-        val persisted: List<Frame>
+        if (rebuildHeader && prefixBytes.toLong() + header.size > maxDailyBytes) {
+            throw DayIntegrityBlockedException("daily cap cannot hold the legacy migration boundary ($name)", name)
+        }
+        val scan = FrameCodec.scanRecovery(protocolBytes)
+        val persisted = scan.frames
         var tailDiscard = 0L
-        if (raf.length() == 0L) {
-            persisted = emptyList()
-            effective.add(0, header)
-        } else {
-            validateHeader(raf, name)
-            // Full-file classification happens BEFORE any byte change: only a PURE
-            // unterminated suffix inside the search window is repairable (truncated
-            // exactly at the last complete frame). Complete-line corruption anywhere
-            // refuses the transaction byte-identical.
-            // shortcut: full-file scan per transaction; ceiling = bytes-per-append cost,
-            // upgrade = incremental scan windows with a persisted validation cursor.
-            val bytes = ByteArray(raf.length().toInt())
-            raf.seek(0)
-            raf.readFully(bytes)
-            val scan = FrameCodec.scanRecovery(bytes)
-            persisted = scan.frames
+        if (rebuildHeader) effective += header else {
+            if (persisted.firstOrNull()?.let(FrameCodec::isDayHeader) != true) {
+                throw DayIntegrityBlockedException("protocol mismatch: day files must start with the P1 header ($name)", name)
+            }
             if (scan.discardedBytes > 0) {
-                val validPrefixEnd = bytes.size.toLong() - scan.discardedBytes
-                val finalNl = bytes.lastIndexOf('\n'.code.toByte())
-                val suffixBytes = bytes.size.toLong() - (finalNl + 1L)
+                val validPrefixEnd = protocolBytes.size.toLong() - scan.discardedBytes
+                val finalNl = protocolBytes.lastIndexOf('\n'.code.toByte())
+                val suffixBytes = protocolBytes.size.toLong() - (finalNl + 1L)
                 if (validPrefixEnd != finalNl + 1L) {
+                    if (receipt != null && !String(protocolBytes, validPrefixEnd.toInt(), minOf(3, scan.discardedBytes.toInt()), Charsets.UTF_8).startsWith("X1 ")) {
+                        throw DayIntegrityBlockedException("legacy writer detected after migration marker ($name)", name)
+                    }
                     throw DayIntegrityBlockedException(
                         "day file $name holds unrecoverable corruption after a checksum-failing line; " +
                             "writes are blocked for this day (retention prunes it by age), the valid prefix stays readable",
@@ -157,27 +187,109 @@ class CoordinatorStore(
         }
         // Selection happens before truncation: a rejected recovery frame must keep the torn
         // suffix intact — appending after an untruncated tail merges into an undecodable line.
-        val verdict = budget.charge(persisted, entries)
+        val verdict = budget.charge(persisted, entries, prefixBytes.toLong())
         if (verdict.recoveryUnpersisted) return verdict
-        if (tailDiscard > 0L) raf.setLength(raf.length() - tailDiscard)
+        if (newReceipt != null) writeReceipt(gate, newReceipt)
+        else if (receipt != null && rebuildHeader) forceChannel(gate.channel)
+        val keepBytes = if (rebuildHeader) originalLength.toLong() else bytes.size - tailDiscard
+        if (keepBytes != raf.length()) raf.setLength(keepBytes)
         raf.seek(raf.length())
-        verdict.frames.forEach { frame ->
-            val buffer = ByteBuffer.wrap(frame)
-            while (buffer.hasRemaining()) writeChannel(raf.channel, buffer)
-        }
+        if (rebuildHeader && prefixBytes > originalLength) writeBytes(raf, byteArrayOf('\n'.code.toByte()))
+        verdict.frames.forEach { writeBytes(raf, it) }
         return verdict
     }
 
-    private fun validateHeader(raf: RandomAccessFile, name: String) {
-        raf.seek(0)
-        val head = ByteArray(minOf(raf.length(), 64L).toInt())
-        raf.readFully(head)
-        val eol = head.indexOf('\n'.code.toByte())
-        val line = String(head, 0, if (eol >= 0) eol else head.size, Charsets.UTF_8)
-        val first = FrameCodec.decode(line)
-        if (first == null || !FrameCodec.isDayHeader(first)) {
-            throw DayIntegrityBlockedException("protocol mismatch: day files must start with the P1 header ($name)", name)
+    private data class MigrationReceipt(val length: Int, val hash: String)
+
+    private fun migrationReceipts(gate: RandomAccessFile, name: String? = null): Map<String, MigrationReceipt?> {
+        val scan = FrameCodec.scanRecovery(readBytes(gate))
+        fun invalid(): Nothing = throw DayIntegrityBlockedException("invalid migration receipt journal", name)
+        if (scan.discardedBytes != 0L) invalid()
+        val receipts = HashMap<String, MigrationReceipt?>()
+        for (frame in scan.frames) {
+            val fields = frame.payload.split('|')
+            val fileName = fields.getOrNull(1) ?: invalid()
+            val day = LogFileNames.parse(fileName) ?: invalid()
+            if (frame.sid != "migration" || frame.seq != 0L || fileName != LogFileNames.dailyName(day.date, null)) invalid()
+            when (fields[0]) {
+                "M1" -> {
+                    val length = fields.getOrNull(2)?.toIntOrNull() ?: invalid()
+                    val hash = fields.getOrNull(3) ?: invalid()
+                    if (fields.size != 4 || length <= 0 || !hash.matches(Regex("[0-9a-f]{64}")) || receipts[fileName] != null) invalid()
+                    receipts[fileName] = MigrationReceipt(length, hash)
+                }
+                "D1" -> {
+                    if (fields.size != 2) invalid()
+                    receipts[fileName] = null
+                }
+                else -> invalid()
+            }
         }
+        return receipts
+    }
+
+    private fun migrationOffset(bytes: ByteArray, receipt: MigrationReceipt, name: String): Int {
+        if (bytes.size < receipt.length || prefixHash(bytes, receipt.length) != receipt.hash) {
+            throw DayIntegrityBlockedException("migration receipt original prefix mismatch ($name)", name)
+        }
+        val alignment = if (bytes[receipt.length - 1] == '\n'.code.toByte()) byteArrayOf() else byteArrayOf('\n'.code.toByte())
+        val boundary = alignment + DayProtocol.header().encodeToByteArray()
+        val present = minOf(boundary.size, bytes.size - receipt.length)
+        if (!bytes.copyOfRange(receipt.length, receipt.length + present).contentEquals(boundary.copyOf(present))) {
+            throw DayIntegrityBlockedException("migration receipt boundary mismatch ($name)", name)
+        }
+        return receipt.length + alignment.size
+    }
+
+    private fun writeReceipt(gate: RandomAccessFile, payload: String) {
+        gate.seek(gate.length())
+        writeBytes(gate, FrameCodec.encode(0, "migration", payload))
+        forceChannel(gate.channel)
+    }
+
+    private fun writeBytes(raf: RandomAccessFile, bytes: ByteArray) {
+        val buffer = ByteBuffer.wrap(bytes)
+        while (buffer.hasRemaining()) {
+            if (writeChannel(raf.channel, buffer) <= 0) throw IOException("log write made no progress")
+        }
+    }
+
+    private fun readBytes(raf: RandomAccessFile): ByteArray {
+        // shortcut: scans whole files under the gate; stream when per-append scan cost becomes material.
+        if (raf.length() > Int.MAX_VALUE) throw IOException("log file is too large to inspect")
+        val bytes = ByteArray(raf.length().toInt())
+        raf.seek(0)
+        raf.readFully(bytes)
+        return bytes
+    }
+
+    private fun prefixHash(bytes: ByteArray, length: Int): String =
+        MessageDigest.getInstance("SHA-256").apply { update(bytes, 0, length) }.digest().joinToString("") { "%02x".format(it) }
+
+    private fun hasDayHeader(bytes: ByteArray): Boolean {
+        val eol = bytes.indexOf('\n'.code.toByte())
+        return eol in 0 until 64 && FrameCodec.decode(String(bytes, 0, eol, Charsets.UTF_8))?.let(FrameCodec::isDayHeader) == true
+    }
+
+    private fun containsFrameRegion(bytes: ByteArray): Boolean {
+        val text = String(bytes, Charsets.ISO_8859_1)
+        val envelopes = Regex("X1 [0-9]+ [0-9A-Za-z-]{1,40} ([0-9]+) [0-9a-f]{8} ")
+        for (match in envelopes.findAll(text)) {
+            val length = match.groupValues[1].toIntOrNull() ?: continue
+            if (length !in 0..FrameCodec.MAX_PAYLOAD_BYTES) continue
+            var end = match.range.last + 1
+            var rawBytes = 0
+            while (rawBytes < length && end < bytes.size && bytes[end] != '\n'.code.toByte()) {
+                if (bytes[end] == '\\'.code.toByte()) {
+                    if (bytes.getOrNull(end + 1)?.toInt()?.toChar() !in listOf('\\', 'n', 'r')) break
+                    end++
+                }
+                end++
+                rawBytes++
+            }
+            if (rawBytes == length && FrameCodec.decode(String(bytes, match.range.first, end - match.range.first, Charsets.UTF_8)) != null) return true
+        }
+        return false
     }
 
     private fun target(name: String): File {
@@ -193,7 +305,7 @@ class CoordinatorStore(
     // Gate ownership: the descriptor is opened once per root by the process-wide owner
     // and never closed here, so a failed attempt can never free a same-process holder's
     // lock via close-release.
-    private fun <T> coordinated(work: () -> T): T {
+    private fun <T> coordinated(work: (RandomAccessFile) -> T): T {
         val deadline = clock() + coordinationDeadlineNanos
         var attempt = 0
         while (true) {
@@ -218,7 +330,7 @@ class CoordinatorStore(
                         // Post-acquisition deadline check: expired ⇒ release, no data work.
                         if (clock() < deadline) {
                             entered = true
-                            verdict = work()
+                            verdict = work(gate)
                         }
                     } finally { lock.release() }
                 }
