@@ -40,6 +40,7 @@ class TestPipelineFactory(
     private val config: LoggingConfig =
         LoggingConfig(queueCapacity = 64, maxFileBytes = 4L * 1024 * 1024),
     private val pruneRetention: Boolean = false,
+    private val coordinator: CoordinatorStore? = null,
 ) {
     val failureEvents = java.util.concurrent.CopyOnWriteArrayList<String>()
     val logcatRecords = java.util.concurrent.CopyOnWriteArrayList<LogRecord>()
@@ -63,6 +64,7 @@ class TestPipelineFactory(
             logcat = { logcatRecords.add(it) },
             onFailure = { failureEvents.add(it) },
             pruneRetention = pruneRetention,
+            coordinator = coordinator,
         )
         if (manualStart) pipeline.start()
         return pipeline

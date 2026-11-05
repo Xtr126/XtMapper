@@ -2,6 +2,9 @@ package xtr.keymapper.log
 
 import java.io.File
 import java.io.RandomAccessFile
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 object LogStoreProcessProbe {
     @JvmStatic
@@ -39,6 +42,20 @@ object LogStoreProcessProbe {
             else -> null
         }
         var writer: LogFileWriter? = null
+        val pipeline = if (args.getOrNull(1) == "coordinator-pipeline") {
+            val start = Instant.parse("2026-10-01T12:00:00Z")
+            LoggingPipeline(
+                role = Role.SHELL,
+                sessionId = "probe-${ProcessHandle.current().pid()}",
+                store = store,
+                config = LoggingConfig(),
+                clock = Clock.fixed(start, ZoneOffset.UTC),
+                zone = ZoneOffset.UTC,
+                startTime = start,
+                durationNanos = { 0L },
+                coordinator = CoordinatorStore(File(args[0])),
+            ).also { it.start() }
+        } else null
         println("READY")
         try {
             while (true) {
@@ -54,6 +71,13 @@ object LogStoreProcessProbe {
                         "WRITE" -> { checkNotNull(writer).write((value + "\n").toByteArray()); println("WROTE") }
                         "TAIL" -> println("TAIL " + store.readTail(value, 10).joinToString("|"))
                         "CLOSE" -> { writer?.close(); writer = null; println("CLOSED") }
+                        "PIPELINE_WRITE" -> {
+                            val active = checkNotNull(pipeline)
+                            check(active.info("Probe", value) == LogSubmission.ACCEPTED)
+                            check(active.flush(2_000))
+                            println("WROTE")
+                        }
+                        "PIPELINE_CLOSE" -> { check(checkNotNull(pipeline).close()); println("CLOSED") }
                         "ARM" -> { armHook = true; println("ARMED") }
                         "BUDGET" -> {
                             val (cap, reserve) = value.split(' ').map { it.toLong() }
@@ -98,6 +122,7 @@ object LogStoreProcessProbe {
                 }
             }
         } finally {
+            pipeline?.close()
             writer?.close()
         }
     }

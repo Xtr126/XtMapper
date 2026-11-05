@@ -4,27 +4,18 @@ import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
 import org.junit.Assert.*
-import org.junit.Assume
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
-// RED batch 1 for design-single-file.md v2 (CodeRabbit start list): fails until the
-// single-daily-file protocol lands; V7/V5/V8.. follow in batch 2 once framing exists.
-// The designed-RED tests assume-absent CI so PR CI stays green on `--no-daemon` runs;
-// locally they still execute and fail (failure evidence is preserved in the PR thread).
 class SingleDailyFileProtocolTest {
     @get:Rule val tmp = TemporaryFolder()
     private val name = "xtmapper-2026-10-01.log"
 
-    private fun redByDesign() =
-        Assume.assumeTrue("designed RED until the single-daily-file integration lands (evidence in PR thread)", System.getenv("CI") == null)
-
     @Test fun `V1 all roles append one unified daily file`() {
-        redByDesign()
         val dir = tmp.newFolder()
         val store = FileSystemLogStore(dir)
-        val factory = TestPipelineFactory(store, MutableClock.at("2026-10-01T12:00:00Z"))
+        val factory = TestPipelineFactory(store, MutableClock.at("2026-10-01T12:00:00Z"), coordinator = CoordinatorStore(dir))
         Role.entries.map { role -> factory.start(role).also { it.info("Probe", "role record from $role") } }
             .forEach { it.close() }
         assertEquals(listOf(name), store.listFiles().map { it.name })
@@ -35,10 +26,9 @@ class SingleDailyFileProtocolTest {
     }
 
     @Test fun `V2 new session persists while previous writer stays alive and idle`() {
-        redByDesign()
         val dir = tmp.newFolder()
         val store = FileSystemLogStore(dir)
-        val factory = TestPipelineFactory(store, MutableClock.at("2026-10-01T12:00:00Z"))
+        val factory = TestPipelineFactory(store, MutableClock.at("2026-10-01T12:00:00Z"), coordinator = CoordinatorStore(dir))
         val idle = factory.start().also { it.info("Idle", "held-forever") }
         try {
             assertTrue("idle writer A must open its sink", awaitSink(idle))
@@ -54,27 +44,33 @@ class SingleDailyFileProtocolTest {
     }
 
     @Test fun `V3 second process writes while first process idles between transactions`() {
-        redByDesign()
         val dir = tmp.newFolder()
-        LogProbeChild(dir).use { holder ->
-            assertEquals("OPENED", holder.command("OPEN $name"))
-            var parent: LogFileWriter? = null
-            var failure: Exception? = null
+        val store = FileSystemLogStore(dir)
+        val coordinator = CoordinatorStore(dir)
+        LogProbeChild(dir, "coordinator-pipeline").use { holder ->
+            assertEquals("WROTE", holder.command("PIPELINE_WRITE child-before-parent"))
+            val parent = TestPipelineFactory(store, MutableClock.at("2026-10-01T12:00:00Z"), coordinator = coordinator).start()
             try {
-                parent = FileSystemLogStore(dir).openAppendWriter(name)
-                parent.write("parent\n".toByteArray())
-            } catch (e: Exception) {
-                failure = e
-            }
-            parent?.close()
-            try {
-                assertNull("idle holder must not exclude a fresh writer: $failure", failure)
+                assertEquals(LogSubmission.ACCEPTED, parent.info("Probe", "parent"))
+                assertTrue(parent.flush(2_000))
+                val duringIdle = coordinator.readRecovery(name)
+                assertEquals(0L, duringIdle.discardedBytes)
+                assertEquals("parent record must land as one frame while the child remains alive", 1, duringIdle.frames.count {
+                    it.sid == parent.sessionId && it.payload.endsWith("tag=\"Probe\" message=\"parent\"")
+                })
+                assertEquals("WROTE", holder.command("PIPELINE_WRITE child-after-parent"))
             } finally {
-                assertEquals("CLOSED", holder.command("CLOSE"))
+                assertTrue(parent.close())
+                assertEquals("CLOSED", holder.command("PIPELINE_CLOSE"))
             }
         }
-        val contents = LogFiles.readAll(FileSystemLogStore(dir), name)
-        assertTrue("parent record must land as its own line, got: \"$contents\"", contents.lines().contains("parent"))
+        val recovery = coordinator.readRecovery(name)
+        assertEquals(0L, recovery.discardedBytes)
+        val childRecords = recovery.frames.filter { it.sid.startsWith("probe-") && it.payload.contains("child-") }
+        assertEquals(2, childRecords.size)
+        assertTrue(childRecords[0].payload.contains("child-before-parent"))
+        assertTrue(childRecords[1].payload.contains("child-after-parent"))
+        assertEquals(listOf(name), store.listFiles().map { it.name })
     }
 
     @Test fun `V4 lifetime-writer descriptor hazard kept as evidence with coordinator acceptance`() {
