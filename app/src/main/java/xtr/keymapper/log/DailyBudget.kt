@@ -45,6 +45,11 @@ class DailyBudget(val dailyCapBytes: Long, val reserveBytes: Long) {
         }
         var normalLeft = (dailyCapBytes - reserveBytes - normalCharged).coerceAtLeast(0)
         var reserveLeft = (reserveBytes - controlCharged).coerceAtLeast(0)
+        // Reconstruction buckets by frame kind, not by the allowance a byte was written from,
+        // so the seat split can drift from the file's true shape across transactions; the
+        // physical roof (the whole day, D) is therefore enforced independently of the seats,
+        // guaranteeing file ≤ D no matter how bytes were re-slotted.
+        var physicalLeft = (dailyCapBytes - normalCharged - controlCharged).coerceAtLeast(0)
         // A day switches to reserve-writes at the first normal-kind candidate its RUNNING data
         // allowance cannot hold (in-transaction charges count); a notice on disk keeps it sticky.
         var latched = noticeOnDisk
@@ -54,53 +59,72 @@ class DailyBudget(val dailyCapBytes: Long, val reserveBytes: Long) {
         var recordsDropped = 0
         var endUnpersisted = false
         var recoveryUnpersisted = false
+        var submittedRecords = 0
+        var submittedEnd = false
+        fun commitNormal(bytes: ByteArray) {
+            normalLeft -= bytes.size
+            physicalLeft -= bytes.size
+            out.add(bytes)
+        }
+        fun commitReserve(bytes: ByteArray) {
+            reserveLeft -= bytes.size
+            physicalLeft -= bytes.size
+            out.add(bytes)
+        }
         fun switch() {
             latched = true
             if (noticeOnDisk) return
             val notice = FrameCodec.encode(0, NOTICE_SID, NOTICE_PAYLOAD)
-            if (notice.size.toLong() <= reserveLeft) {
-                reserveLeft -= notice.size
+            if (notice.size.toLong() <= reserveLeft && notice.size.toLong() <= physicalLeft) {
                 // Reserved-first file order: the notice precedes this transaction's selections.
                 out.add(if (headerSeen) 1 else 0, notice)
+                reserveLeft -= notice.size
+                physicalLeft -= notice.size
                 noticeWritten = true
             }
         }
+        // Reserve-eligible duals queue here: the notice must precede them, and ENDs must exhaust
+        // the reserve before a recovery frame may claim any of it (notice → END → recovery).
+        val reserveQueue = ArrayList<Entry>()
         for (e in entries) {
             val size = e.bytes.size.toLong()
             when (e.kind) {
                 // The day header is protocol infrastructure: it must land, so a config too
                 // tight to hold it is rejected loudly.
                 Kind.HEADER -> when {
-                    size <= normalLeft -> { normalLeft -= size; out.add(e.bytes); headerSeen = true }
-                    size <= reserveLeft -> { reserveLeft -= size; out.add(e.bytes); headerSeen = true }
+                    size <= normalLeft && size <= physicalLeft -> { commitNormal(e.bytes); headerSeen = true }
+                    size <= reserveLeft && size <= physicalLeft -> { commitReserve(e.bytes); headerSeen = true }
                     else -> throw IllegalStateException("daily budget cannot hold the day header")
                 }
-                // Priority: session END first, then recovery — normal-first while data room
-                // survives (also the latch trigger), reserve-eligible once switched.
+                // Session END and recovery are normal-first while data room survives (also the
+                // latch trigger); reserve allocation happens after the pass, in priority order.
                 Kind.SESSION_END, Kind.RECOVERY -> {
-                    if (!latched && size <= normalLeft) {
-                        normalLeft -= size
-                        out.add(e.bytes)
-                    } else {
+                    submittedEnd = submittedEnd || e.kind == Kind.SESSION_END
+                    if (!latched && size <= normalLeft && size <= physicalLeft) commitNormal(e.bytes)
+                    else {
                         if (!latched) switch()
-                        if (size <= reserveLeft) {
-                            reserveLeft -= size
-                            out.add(e.bytes)
-                        } else if (e.kind == Kind.RECOVERY) recoveryUnpersisted = true else endUnpersisted = true
+                        reserveQueue += e
                     }
                 }
                 else -> {
-                    if (!latched && size <= normalLeft) {
-                        normalLeft -= size
-                        out.add(e.bytes)
-                    } else {
+                    submittedRecords++
+                    if (!latched && size <= normalLeft && size <= physicalLeft) commitNormal(e.bytes)
+                    else {
                         if (!latched) switch()
                         recordsDropped++
                     }
                 }
             }
         }
-        return Verdict(out, recordsDropped, noticeWritten, endUnpersisted, recoveryUnpersisted, latched)
+        for (e in reserveQueue.filter { it.kind == Kind.SESSION_END } + reserveQueue.filter { it.kind == Kind.RECOVERY }) {
+            val size = e.bytes.size.toLong()
+            if (size <= reserveLeft && size <= physicalLeft) commitReserve(e.bytes)
+            else if (e.kind == Kind.RECOVERY) recoveryUnpersisted = true else endUnpersisted = true
+        }
+        // Recovery refusal aborts the transaction: nothing committed. The verdict separates
+        // the selection plan from the outcome — submitted records and ENDs are unpersisted.
+        return if (recoveryUnpersisted) Verdict(emptyList(), submittedRecords, false, submittedEnd, true, latched)
+        else Verdict(out, recordsDropped, noticeWritten, endUnpersisted, false, latched)
     }
 
     companion object {
