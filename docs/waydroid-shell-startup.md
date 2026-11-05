@@ -15,3 +15,6 @@ enabled profile with an associated package launches that package. The setting
 defaults to enabled when it has not been saved. When auto profiling is enabled
 (the setting is off), XtMapper instead watches the foreground app and switches
 to its designated profile; that observer does not launch the app.
+
+For logcat capture commands and startup/input checkpoints, see
+[Debugging startup and mouse input](input-debugging.md).
