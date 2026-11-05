@@ -105,7 +105,27 @@ class SessionLogWriter(
 
     private fun writeOne(record: LogRecord) {
         val bytes = chunk(RecordFormatter.format(record, zone))
-        writerFor(dayOf(record.time), record.time, requiredBytes = bytes.size)
+        val day = dayOf(record.time)
+        // Delayed records route by their own date while its day file exists; a pruned or
+        // never-written older day never resurrects — the record lands in the anchor day
+        // behind an explicit late marker.
+        val anchorDay = currentDay ?: sessionStartDay
+        if (anchorDay != null && day < anchorDay) {
+            val ownFile = store.listFiles().any {
+                LogFileNames.parse(it.name)?.let { e -> e.date == day && e.role == role } ?: false
+            }
+            if (!ownFile) {
+                val lateBytes = chunk(
+                    SessionMarkers.block(SessionMarkers.lateLine(sessionId, record.time, day, zone)),
+                )
+                writerFor(anchorDay, record.time, requiredBytes = lateBytes.size + bytes.size)
+                val writer = currentWriter ?: run { recordsDroppedByDayLimit.incrementAndGet(); return }
+                writer.write(lateBytes)
+                writer.write(bytes)
+                return
+            }
+        }
+        writerFor(day, record.time, requiredBytes = bytes.size)
         val writer = currentWriter ?: run {
             recordsDroppedByDayLimit.incrementAndGet()
             return

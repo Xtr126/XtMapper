@@ -45,6 +45,60 @@ class LoggingPipelineTest {
     }
 
     @Test
+    fun `retention deletes at most eight files per run and defers the remainder`() {
+        val store = FileSystemLogStore(tmp.newFolder())
+        val config = LoggingConfig(maxAgeDays = 14, maxFiles = 8)
+        (1..10).forEach {
+            store.openAppendWriter("xtmapper-2026-08-%02d.log".format(java.util.Locale.ROOT, it)).use { w ->
+                w.write("old\n".toByteArray())
+            }
+        }
+        // A current-day file anchors the newest-date protection so all ten old files are
+        // deletable; the pipeline holds no writer, so none of them is active.
+        store.openAppendWriter("xtmapper-2026-10-23.log").use { w -> w.write("today\n".toByteArray()) }
+        val pipeline = TestPipelineFactory(store, MutableClock.at("2026-10-23T09:00:00Z")).start()
+        try {
+            val today = java.time.LocalDate.of(2026, 10, 23)
+            pipeline.applyRetention(store, config, today)
+            assertEquals(
+                "at most eight deletions per run, oldest first",
+                setOf("xtmapper-2026-08-09.log", "xtmapper-2026-08-10.log", "xtmapper-2026-10-23.log"),
+                store.listFiles().map { it.name }.toSet(),
+            )
+            pipeline.applyRetention(store, config, today)
+            assertEquals(
+                "the deferred remainder lands in a later run",
+                listOf("xtmapper-2026-10-23.log"),
+                store.listFiles().map { it.name },
+            )
+        } finally {
+            pipeline.close("Clean shutdown")
+        }
+    }
+
+    @Test
+    fun `retention rechecks eligibility at delete time and leaves a newly active file alone`() {
+        val store = FileSystemLogStore(tmp.newFolder())
+        val config = LoggingConfig(maxAgeDays = 14, maxFiles = 8)
+        listOf("xtmapper-2026-08-01.log", "xtmapper-2026-08-02.log").forEach {
+            store.openAppendWriter(it).use { w -> w.write("old\n".toByteArray()) }
+        }
+        val queried = intArrayOf(0)
+        val pipeline = TestPipelineFactory(store, MutableClock.at("2026-10-23T09:00:00Z")).start()
+        try {
+            pipeline.applyRetention(store, config, java.time.LocalDate.of(2026, 10, 23), activeNames = {
+                // Enumeration pass sees nothing active; the delete-time recheck is invoked
+                // again per candidate and now reports the first file as active.
+                if (queried[0]++ == 0) emptySet() else setOf("xtmapper-2026-08-01.log")
+            })
+            assertTrue("the newly active candidate is never removed", store.listFiles().any { it.name == "xtmapper-2026-08-01.log" })
+            assertFalse("the recheck did not spare the fully eligible candidate", store.listFiles().any { it.name == "xtmapper-2026-08-02.log" })
+        } finally {
+            pipeline.close("Clean shutdown")
+        }
+    }
+
+    @Test
     fun `session lifecycle produces start, events and end markers in one daily file`() {
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
         val store = FileSystemLogStore(tmp.newFolder())

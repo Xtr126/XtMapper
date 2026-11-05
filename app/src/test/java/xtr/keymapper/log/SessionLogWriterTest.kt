@@ -58,6 +58,71 @@ class SessionLogWriterTest {
         )
 
     @Test
+    fun `delayed record for a day with no on-disk file lands in the current day behind a late marker`() {
+        val clock = MutableClock.at("2026-10-03T12:00:00Z")
+        val store = newStore()
+        val writer = makeWriter(store, clock, "sess-late")
+        writer.writeSessionStartMarker()
+        val stale = record(MutableClock.at("2026-10-01T09:00:00Z"), "stale event")
+        writer.write(listOf(record(clock, "today event"), stale))
+        writer.close()
+
+        assertEquals(
+            "a pruned or never-written old day file never resurrects",
+            listOf("xtmapper-2026-10-03.log"),
+            store.listFiles().map { it.name },
+        )
+        val text = LogFiles.readAll(store, "xtmapper-2026-10-03.log")
+        assertTrue("the stale record is explicit, never dropped silently", text.contains("stale event"))
+        assertTrue("the late marker documents the routing", text.contains("SESSION LATE"))
+        assertTrue("the marker names the intended day", text.contains("Intended Day: 2026-10-01"))
+        assertTrue("the marker carries the record's own time", text.contains("Record Time: 2026-10-01T11:00:00.000+02:00"))
+    }
+
+    @Test
+    fun `delayed record for an existing day file routes by its own date`() {
+        val clock = MutableClock.at("2026-10-03T12:00:00Z")
+        val store = newStore()
+        store.openAppendWriter("xtmapper-2026-10-01.log").use { it.write("kept-backlog\n".toByteArray()) }
+        val writer = makeWriter(store, clock, "sess-delay")
+        writer.writeSessionStartMarker()
+        writer.write(listOf(record(MutableClock.at("2026-10-01T10:00:00Z"), "stale kept event")))
+        writer.close()
+
+        val old = LogFiles.readAll(store, "xtmapper-2026-10-01.log")
+        assertTrue("the record lands in its own day when that file exists", old.contains("stale kept event"))
+        assertFalse("no late marker for an existing day file", old.contains("SESSION LATE"))
+        assertTrue("cross-date continuation still marks the old day", old.contains("SESSION CONTINUED"))
+        assertFalse(LogFiles.readAll(store, "xtmapper-2026-10-03.log").contains("stale kept event"))
+    }
+
+    @Test
+    fun `clock change forward and backward routes records by their observed local date`() {
+        val clock = MutableClock.at("2026-10-03T12:00:00Z")
+        val store = newStore()
+        val writer = makeWriter(store, clock, "sess-clock")
+        writer.writeSessionStartMarker()
+        writer.write(
+            listOf(
+                record(MutableClock.at("2026-10-03T10:00:00Z"), "before jump"),
+                record(MutableClock.at("2026-10-05T10:00:00Z"), "after forward jump"),
+                record(MutableClock.at("2026-10-03T11:00:00Z"), "after backward jump"),
+            ),
+        )
+        writer.close()
+
+        assertEquals(
+            setOf("xtmapper-2026-10-03.log", "xtmapper-2026-10-05.log"),
+            store.listFiles().map { it.name }.toSet(),
+        )
+        val baseDay = LogFiles.readAll(store, "xtmapper-2026-10-03.log")
+        assertTrue(baseDay.indexOf("before jump") < baseDay.indexOf("after backward jump"))
+        val futureDay = LogFiles.readAll(store, "xtmapper-2026-10-05.log")
+        assertTrue(futureDay.contains("after forward jump"))
+        assertTrue("forward jump marks the continuation", futureDay.contains("SESSION CONTINUED"))
+    }
+
+    @Test
     fun `start marker is written into the day file with metadata and previous disposition`() {
         val clock = MutableClock.at("2026-10-22T09:15:32.400Z")
         val store = newStore()

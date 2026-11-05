@@ -12,6 +12,7 @@ object SessionMarkers {
     const val START = "SESSION START"
     const val CONTINUED = "SESSION CONTINUED"
     const val END = "SESSION END"
+    const val LATE = "SESSION LATE"
 
     private val timestampFormatter: DateTimeFormatter =
         DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.ROOT)
@@ -33,6 +34,15 @@ object SessionMarkers {
                 "Session ID: $id\n" +
                 "Continuation Time: ${timestampFormatter.format(continuationTime.atZone(zone))}\n" +
                 "Original Start Time: ${timestampFormatter.format(originalStart.atZone(zone))}"
+    }
+
+    // Delayed-record routing proof: a record whose day file was pruned is rerouted into the
+    // current day behind this marker, never silently dropped and never resurrecting a day.
+    fun lateLine(id: String, recordTime: Instant, intendedDay: String, zone: ZoneId): String {
+        return "$LATE\n" +
+                "Session ID: $id\n" +
+                "Record Time: ${timestampFormatter.format(recordTime.atZone(zone))}\n" +
+                "Intended Day: $intendedDay"
     }
 
     fun endLine(

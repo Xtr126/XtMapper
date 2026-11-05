@@ -185,7 +185,7 @@ class LoggingPipeline(
         store: LogStore,
         config: LoggingConfig,
         today: java.time.LocalDate,
-        activeNames: Set<String> = activeWriterNames(),
+        activeNames: () -> Set<String> = { activeWriterNames() },
     ) {
         val infos = store.listFiles()
         val entries = infos.mapNotNull {
@@ -197,9 +197,14 @@ class LoggingPipeline(
             sizeBytesOf = { entry -> entries.firstOrNull { it.first == entry }?.second ?: 0L },
             config = config,
             today = today,
-            activeNames = activeNames,
+            activeNames = activeNames(),
         )
-        val skipped = deletions.count { !store.delete(it) }
+        // Bounded units per run: at most eight deletions per invocation, remainder deferred
+        // to a future run.
+        val bounded = deletions.take(8)
+        // Eligibility recheck after acquisition: the actives are re-queried at delete time,
+        // so a file that became active while candidates were enumerated is never removed.
+        val skipped = bounded.filter { it !in activeNames() }.count { !store.delete(it) }
         if (skipped > 0) {
             onFailure(
                 "XtLogger: retention skipped $skipped candidate files " +
