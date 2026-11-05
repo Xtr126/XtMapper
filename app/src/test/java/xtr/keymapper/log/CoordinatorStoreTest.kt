@@ -26,9 +26,9 @@ class CoordinatorStoreTest {
         assertEquals("hello", frames[1].payload)
     }
 
-    @Test fun `legacy content is refused instead of being reinterpreted`() {
+    @Test fun `preexisting frames in legacy content are refused instead of reinterpreted`() {
         val dir = tmp.newFolder()
-        File(dir, name).writeText("old unframed appends\n")
+        File(dir, name).writeBytes("old unframed appends\n".encodeToByteArray() + FrameCodec.encode(1, "old", "embedded frame"))
         assertThrows(IOException::class.java) {
             CoordinatorStore(dir).append(name, listOf(FrameCodec.encode(1, "s1", "x")))
         }
