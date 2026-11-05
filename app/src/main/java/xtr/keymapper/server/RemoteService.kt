@@ -33,7 +33,8 @@ import java.io.InputStreamReader
 import java.lang.reflect.Method
 
 class RemoteService(context: Context) : IRemoteService.Stub() {
-    private var currentDevice = ""
+    private val mouseDevice = MouseDeviceConnection()
+    @Volatile
     internal var inputService: InputService? = null
     private var mOnKeyEventListener: OnKeyEventListener? = null
     internal var isWaylandClient = false
@@ -47,6 +48,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     internal var startedFromShell = false
 
     private var geteventProcess: Process? = null
+    private var lastLoggedMouseDevice: String? = null
 
     // shortcut: single-user check; multi-user/work-profile installs have a different uid per user
     private val appUid: Int by lazy {
@@ -229,18 +231,26 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                 inputService?.grabKeyboardDevice(evdev)
             }
         }
-        if (currentDevice != evdev)
-            if (input_event[1] == "EV_REL") {
-                println("add mouse device: $evdev")
-                inputService?.openDevice(evdev)
-                currentDevice = evdev
+        if (input_event.getOrNull(1) == "EV_REL") {
+            // Discovery runs on the getevent thread; service lifecycle runs on the main thread.
+            if (lastLoggedMouseDevice != evdev) {
+                Log.i(TAG, "getevent: queue mouse discovery device=$evdev serviceReady=${inputService != null} thread=${Thread.currentThread().name}")
+                lastLoggedMouseDevice = evdev
             }
+            if (!mHandler.post { mouseDevice.discover(evdev) }) {
+                Log.e(TAG, "getevent: main handler rejected mouse discovery device=$evdev")
+            }
+        }
         return true
     }
 
     private val mStartServerDeathRecipient = IBinder.DeathRecipient {
-        inputService = null
-        stopServer()
+        Log.w(TAG, "startServer callback binder died; queuing mouse disconnect")
+        mHandler.post {
+            mouseDevice.disconnect()
+            inputService = null
+            stopServer(true)
+        }
     }
 
     /**
@@ -262,8 +272,10 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         displayId: Int
     ) {
         enforceCaller()
+        Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
         cb.asBinder().linkToDeath(mStartServerDeathRecipient, 0)
         mHandler.post {
+            Log.i(TAG, "startServer: main handler running existingService=${inputService != null}")
             val service = inputService
             if (service != null) {
                 if (isWaylandClient) {
@@ -280,6 +292,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                 cursorView = null
             }
             try {
+                Log.i(TAG, "startServer: constructing InputService")
                 val newService = InputService(
                     profile, keymapConfig, cb, screenWidth, screenHeight,
                     cursorView, isWaylandClient, displayId
@@ -291,10 +304,20 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                         mOnKeyEventListener = null
                     }
                 }
+                Log.i(TAG, "startServer: InputService constructed id=${System.identityHashCode(newService)}")
                 inputService = newService
                 if (!isWaylandClient) {
+                    Log.i(TAG, "startServer: setting mouse lock before connecting discovered device")
                     newService.setMouseLock(true)
-                    newService.openDevice(currentDevice)
+                    mouseDevice.connect { device ->
+                        Log.i(TAG, "mouse openDevice: calling JNI device=$device service=${System.identityHashCode(newService)}")
+                        val fd = newService.openDevice(device)
+                        Log.i(TAG, "mouse openDevice: JNI returned fd=$fd device=$device service=${System.identityHashCode(newService)}")
+                        fd >= 0
+                    }
+                    Log.i(TAG, "startServer: mouse connection initialized isOpen=${mouseDevice.isOpen}")
+                } else {
+                    Log.i(TAG, "startServer: Wayland mode; skipping evdev mouse connection")
                 }
             } catch (e: RemoteException) {
                 throw RuntimeException(e)
@@ -327,6 +350,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
 
     private fun stopServer(exitProcess: Boolean) {
         val service = inputService
+        Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient")
         if (service != null) try {
             service.callback.disablePointer()
         } catch (e: RemoteException) {
@@ -340,7 +364,14 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
             service.stopEvents = true
             service.hideCursor()
             service.stop()
-            service.stopMouse()
+            if (mouseDevice.isOpen) {
+                Log.i(TAG, "stopServer: stopping native mouse thread")
+                service.stopMouse()
+                Log.i(TAG, "stopServer: native mouse thread stopped")
+            } else {
+                Log.i(TAG, "stopServer: skipping mouse stop because no device opened successfully")
+            }
+            mouseDevice.disconnect()
             service.stopTouchpad()
             service.destroyUinputDev()
             service.callback.asBinder().unlinkToDeath(mStartServerDeathRecipient, 0)
