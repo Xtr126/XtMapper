@@ -101,7 +101,7 @@ class MainActivity : AppCompatActivity() {
 
         if (startedFromShell == false) handleActivationFlow(keymapConfig)
 
-        displaySelector = DisplaySelector(this).register(this::startPointer)
+        displaySelector = DisplaySelector(this).register { displayId -> startPointer(displayId) }
         RemoteServiceHelper.runIfActive(this) {
             runOnUiThread { composeServiceActive = true }
         }
