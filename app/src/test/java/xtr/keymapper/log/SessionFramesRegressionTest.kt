@@ -3,6 +3,7 @@ package xtr.keymapper.log
 import java.io.File
 import java.time.Instant
 import java.time.ZoneOffset
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -110,6 +111,64 @@ class SessionFramesRegressionTest {
             assertEquals(listOf(1L, 3L, 4L), store.readFrames(name).filter { it.sid == "missing-seq" }.map { it.seq })
             assertTrue(events.any { it.contains("sequence discrepancy") && it.contains("missing-seq") && it.contains("2") })
             assertTrue(SessionFrames.previousDisposition(store, dir).startsWith("Unknown (history pruned or inspection incomplete)"))
+        }
+    }
+
+    @Test fun `orphan end cannot hide behind an older complete session`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        val orphan = marker(1, "orphan", SessionMarkers.endLine("orphan", start.plusSeconds(20), zone, 0, SessionStates.STATUS_CLEAN, 0))
+        store.append(name, listOf(started("closed"), ended("closed"), orphan))
+        assertTrue(SessionFrames.previousDisposition(store, dir).startsWith(SessionFrames.DISPOSITION_UNKNOWN))
+    }
+
+    @Test fun `nonselected orphan continuation still makes history incomplete`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        val orphan = marker(1, "orphan", SessionMarkers.continuedLine("orphan", start.minusSeconds(20), start, zone))
+        store.append(name, listOf(orphan, started("closed"), ended("closed")))
+        assertTrue(SessionFrames.previousDisposition(store, dir).startsWith(SessionFrames.DISPOSITION_UNKNOWN))
+    }
+
+    @Test fun `empty newer day prevents a confident previous disposition`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        store.append(name, listOf(started("closed"), ended("closed")))
+        File(dir, "xtmapper-2026-10-02.log").writeBytes(byteArrayOf())
+        assertTrue(SessionFrames.previousDisposition(store, dir).startsWith(SessionFrames.DISPOSITION_UNKNOWN))
+    }
+
+    @Test fun `headerless contiguous frames cannot establish a clean session`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        File(dir, name).writeBytes(started("closed") + ended("closed"))
+        assertTrue(SessionFrames.previousDisposition(store, dir).startsWith(SessionFrames.DISPOSITION_UNKNOWN))
+    }
+
+    @Test fun `encoding failure still reports the detected cursor loss after gate release`() {
+        val dir = tmp.newFolder()
+        val store = CoordinatorStore(dir)
+        val clock = MutableClock.at("2026-10-01T12:00:00Z")
+        var discrepancyReported = false
+        var inspectedAfterRelease = false
+        CoordinatorSessionWriter(store, dir, null, clock, clock.zone, "lost") { event ->
+            if (event.contains("sequence discrepancy")) {
+                discrepancyReported = true
+                inspectedAfterRelease = store.readFrames(name).any { it.sid == "lost" }
+            }
+        }.use { writer ->
+            writer.configure("first", SessionMetadata(), clock.instant())
+            writer.writeSessionStartMarker()
+            writer.write(listOf(LogRecord.now(clock.instant(), Level.INFO, "t", "committed", role = "app")))
+            val file = File(dir, name)
+            val surviving = store.readFrames(name).filter { it.sid != "lost" || it.seq != 2L }
+            file.writeBytes(surviving.flatMap { FrameCodec.encode(it.seq, it.sid, it.payload).asIterable() }.toByteArray())
+            val before = file.readBytes()
+            writer.endSession(clock.instant(), 0, "x".repeat(FrameCodec.MAX_PAYLOAD_BYTES), 0)
+            assertTrue(writer.unavailable)
+            assertArrayEquals(before, file.readBytes())
+            assertTrue("the already-observed missing cursor is reported", discrepancyReported)
+            assertTrue("the report runs after coordinator release", inspectedAfterRelease)
         }
     }
 }
