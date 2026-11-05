@@ -13,18 +13,22 @@ import kotlin.random.Random
 // design-single-file.md §2 transaction shape: bounded per-process mutex RELEASED between
 // OS attempts, one gate tryLock per attempt, the data file opened/closed INSIDE the gate,
 // corruption classified before any byte change (pure unterminated suffix is the only
-// repairable region), and Deadline-enforced bounded acquisition. Budget/outcomes/retention
-// land with their batches.
+// repairable region), and Deadline-enforced bounded acquisition. The shared daily budget
+// (§2 step 5) is accounted under the same lock; outcomes/retention land with their batches.
 class CoordinatorStore(
     private val rootDirectory: File,
     private val onCoordinatorLock: (() -> Unit)? = null,
     private val coordinationDeadlineNanos: Long = COORDINATION_DEADLINE_NANOS,
     private val clock: () -> Long = { System.nanoTime() },
+    private val maxDailyBytes: Long = DailyBudget.DEFAULT_DAILY_CAP_BYTES,
+    private val reserveBytes: Long = DailyBudget.RESERVE_BYTES,
 ) {
 
     init { rootDirectory.mkdirs() }
 
-    fun append(name: String, frames: List<ByteArray>) {
+    private val budget = DailyBudget(maxDailyBytes, reserveBytes)
+
+    fun append(name: String, frames: List<ByteArray>): DailyBudget.Verdict {
         // Contract validation happens BEFORE any coordination: violations never touch the file.
         frames.forEach { frame ->
             val parsed = FrameCodec.decode(frame.decodeToString().removeSuffix("\n"))
@@ -33,9 +37,9 @@ class CoordinatorStore(
                 "frame is not canonically encoded"
             }
         }
-        coordinated {
+        return coordinated {
             onCoordinatorLock?.invoke()
-            RandomAccessFile(target(name), "rw").use { transact(it, name, frames) }
+            RandomAccessFile(target(name), "rw").use { raf -> transact(raf, name, frames) }
         }
     }
 
@@ -61,7 +65,7 @@ class CoordinatorStore(
 
     fun delete(name: String): Boolean = coordinated { target(name).delete() }
 
-    private fun transact(raf: RandomAccessFile, name: String, frames: List<ByteArray>) {
+    private fun transact(raf: RandomAccessFile, name: String, frames: List<ByteArray>): DailyBudget.Verdict {
         val effective = ArrayList(frames)
         val header = DayProtocol.header().toByteArray(Charsets.UTF_8)
         // Torn header write: an exact 1..size-1 prefix truncates here so the empty path rewrites it; other short content fails validation.
@@ -71,7 +75,9 @@ class CoordinatorStore(
             raf.readFully(head)
             if (head.contentEquals(header.copyOfRange(0, head.size))) raf.setLength(0)
         }
+        val persisted: List<Frame>
         if (raf.length() == 0L) {
+            persisted = emptyList()
             effective.add(0, header)
         } else {
             validateHeader(raf, name)
@@ -85,6 +91,7 @@ class CoordinatorStore(
             raf.seek(0)
             raf.readFully(bytes)
             val scan = FrameCodec.scanRecovery(bytes)
+            persisted = scan.frames
             if (scan.discardedBytes > 0) {
                 val validPrefixEnd = bytes.size.toLong() - scan.discardedBytes
                 val finalNl = bytes.lastIndexOf('\n'.code.toByte())
@@ -102,11 +109,17 @@ class CoordinatorStore(
                 effective.add(0, FrameCodec.encode(0, "recovery", "discarded=$suffixBytes"))
             }
         }
+        val entries = effective.map { bytes ->
+            // Candidates were contract-validated on entry (or synthesized above), so decode cannot fail.
+            DailyBudget.Entry(DailyBudget.kindOf(FrameCodec.decode(bytes.decodeToString().removeSuffix("\n"))!!), bytes)
+        }
+        val verdict = budget.charge(persisted, entries)
         raf.seek(raf.length())
-        effective.forEach { frame ->
+        verdict.frames.forEach { frame ->
             val buffer = ByteBuffer.wrap(frame)
             while (buffer.hasRemaining()) raf.channel.write(buffer)
         }
+        return verdict
     }
 
     private fun validateHeader(raf: RandomAccessFile, name: String) {
