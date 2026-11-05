@@ -40,6 +40,7 @@ class CoordinatorStore(
 
     internal var writeChannel: (FileChannel, ByteBuffer) -> Int = { channel, buffer -> channel.write(buffer) }
     internal var forceChannel: (FileChannel) -> Unit = { it.force(true) }
+    internal var deleteFile: (File) -> Boolean = { it.delete() }
 
     fun append(name: String, frames: List<ByteArray>): DailyBudget.Verdict {
         validateFrames(frames)
@@ -53,7 +54,9 @@ class CoordinatorStore(
     ): Pair<String, DailyBudget.Verdict> = coordinated { gate ->
         onCoordinatorLock?.invoke()
         val selected = if (fallbackName != null && !target(name).isFile) fallbackName else name
-        val receipt = migrationReceipts(gate, selected)[selected]
+        val journal = migrationJournal(gate, selected)
+        if (journal[selected]?.revoked == true) forceChannel(gate.channel)
+        val receipt = journal[selected]?.receipt
         val file = target(selected)
         if (receipt != null && !file.isFile) {
             throw DayIntegrityBlockedException("migration receipt has no original file ($selected)", selected)
@@ -78,12 +81,12 @@ class CoordinatorStore(
     fun readFrames(name: String): List<Frame> = readRecovery(name).frames
 
     fun readRecovery(name: String): FrameRecovery = coordinated { gate ->
-        readRecoveryLocked(target(name), migrationReceipts(gate, name)[name])
+        readRecoveryLocked(target(name), migrationJournal(gate, name)[name]?.receipt)
     }
 
     internal fun readHistory(directory: File): List<FrameRecovery> = coordinated { gate ->
         require(directory.canonicalFile == rootDirectory.canonicalFile)
-        val receipts = migrationReceipts(gate)
+        val receipts = migrationJournal(gate).mapValues { it.value.receipt }
         val files = directory.listFiles() ?: throw IOException("log history could not be enumerated")
         files.filter { it.isFile && LogFileNames.parse(it.name) != null }.sortedBy { it.name }
             .map { readRecoveryLocked(target(it.name), receipts[it.name]) }
@@ -103,8 +106,21 @@ class CoordinatorStore(
 
     fun delete(name: String, eligible: () -> Boolean = { true }): Boolean = coordinated { gate ->
         if (!eligible()) false else {
-            if (migrationReceipts(gate, name).containsKey(name)) writeReceipt(gate, "D1|$name")
-            target(name).delete()
+            val file = target(name)
+            val state = migrationJournal(gate, name)[name]
+            val receipt = state?.receipt
+            if (receipt != null) {
+                if (!file.isFile) {
+                    throw DayIntegrityBlockedException("migration receipt has no original file ($name)", name)
+                }
+                RandomAccessFile(file, "r").use { migrationOffset(readBytes(it), receipt, name) }
+                if (state.deletionPending) forceChannel(gate.channel) else writeReceipt(gate, "D1|$name")
+                if (!deleteFile(file)) false
+                else {
+                    writeReceipt(gate, "D2|$name")
+                    true
+                }
+            } else deleteFile(file)
         }
     }
 
@@ -200,12 +216,23 @@ class CoordinatorStore(
     }
 
     private data class MigrationReceipt(val length: Int, val hash: String)
+    private data class MigrationState(
+        val receipt: MigrationReceipt?,
+        val deletionPending: Boolean = false,
+        val revoked: Boolean = false,
+    )
 
-    private fun migrationReceipts(gate: RandomAccessFile, name: String? = null): Map<String, MigrationReceipt?> {
-        val scan = FrameCodec.scanRecovery(readBytes(gate))
+    private fun migrationJournal(gate: RandomAccessFile, name: String? = null): Map<String, MigrationState> {
+        val bytes = readBytes(gate)
+        val scan = FrameCodec.scanRecovery(bytes)
         fun invalid(): Nothing = throw DayIntegrityBlockedException("invalid migration receipt journal", name)
-        if (scan.discardedBytes != 0L) invalid()
-        val receipts = HashMap<String, MigrationReceipt?>()
+        if (scan.discardedBytes != 0L) {
+            if (bytes.lastOrNull() == '\n'.code.toByte()) invalid()
+            val validLength = bytes.size - scan.discardedBytes.toInt()
+            gate.setLength(validLength.toLong())
+            forceChannel(gate.channel)
+        }
+        val states = HashMap<String, MigrationState>()
         for (frame in scan.frames) {
             val fields = frame.payload.split('|')
             val fileName = fields.getOrNull(1) ?: invalid()
@@ -215,17 +242,53 @@ class CoordinatorStore(
                 "M1" -> {
                     val length = fields.getOrNull(2)?.toIntOrNull() ?: invalid()
                     val hash = fields.getOrNull(3) ?: invalid()
-                    if (fields.size != 4 || length <= 0 || !hash.matches(Regex("[0-9a-f]{64}")) || receipts[fileName] != null) invalid()
-                    receipts[fileName] = MigrationReceipt(length, hash)
+                    val prior = states[fileName]
+                    if (fields.size != 4 || length <= 0 || !hash.matches(Regex("[0-9a-f]{64}")) ||
+                        (prior != null && !prior.revoked)
+                    ) invalid()
+                    states[fileName] = MigrationState(MigrationReceipt(length, hash))
                 }
                 "D1" -> {
-                    if (fields.size != 2) invalid()
-                    receipts[fileName] = null
+                    val prior = states[fileName]
+                    if (fields.size != 2 || prior?.receipt == null || prior.deletionPending) invalid()
+                    states[fileName] = prior.copy(deletionPending = true)
+                }
+                "D2" -> {
+                    val prior = states[fileName]
+                    if (fields.size != 2 || prior?.receipt == null || !prior.deletionPending) invalid()
+                    states[fileName] = MigrationState(receipt = null, revoked = true)
                 }
                 else -> invalid()
             }
         }
-        return receipts
+        states.toMap().forEach { (fileName, state) ->
+            if (state.deletionPending && (name == null || name == fileName)) {
+                val receipt = state.receipt ?: invalid()
+                val file = target(fileName)
+                val deleted = when {
+                    !file.exists() -> true
+                    !file.isFile -> throw DayIntegrityBlockedException(
+                        "pending migration deletion path is not a regular file ($fileName)",
+                        fileName,
+                    )
+                    else -> RandomAccessFile(file, "r").use { raf ->
+                        val fileBytes = readBytes(raf)
+                        try {
+                            migrationOffset(fileBytes, receipt, fileName)
+                            false
+                        } catch (e: DayIntegrityBlockedException) {
+                            if (!hasDayHeader(fileBytes)) throw e
+                            true
+                        }
+                    }
+                }
+                if (deleted) {
+                    writeReceipt(gate, "D2|$fileName")
+                    states[fileName] = MigrationState(receipt = null, revoked = true)
+                }
+            }
+        }
+        return states
     }
 
     private fun migrationOffset(bytes: ByteArray, receipt: MigrationReceipt, name: String): Int {

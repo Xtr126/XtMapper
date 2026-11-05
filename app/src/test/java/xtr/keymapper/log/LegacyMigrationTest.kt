@@ -186,6 +186,21 @@ class LegacyMigrationTest {
         assertArrayEquals(before, file.readBytes())
     }
 
+    @Test fun `legacy revocation marker recognizes a reused protocol file`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy\n".encodeToByteArray()
+        File(dir, FileSystemLogStore.LIFECYCLE_LOCK_NAME).writeBytes(
+            receipt(prefix) + FrameCodec.encode(0, "migration", "D1|$name"),
+        )
+        val file = File(dir, name).apply { writeBytes(header + next) }
+        val second = FrameCodec.encode(2, "new", "second")
+
+        CoordinatorStore(dir).append(name, listOf(second))
+
+        assertEquals(listOf("P1", "after migration", "second"), CoordinatorStore(dir).readFrames(name).map { it.payload })
+        assertTrue(file.isFile)
+    }
+
     @Test fun `migration forces the actual receipt on the stable gate before changing legacy bytes`() {
         val dir = tmp.newFolder()
         val prefix = "legacy\n".encodeToByteArray()
@@ -234,7 +249,7 @@ class LegacyMigrationTest {
         assertArrayEquals(prefix + byteArrayOf('\n'.code.toByte()) + header + next, file.readBytes())
     }
 
-    @Test fun `partial receipt write failure cannot authorize data mutation`() {
+    @Test fun `partial receipt write failure preserves legacy data and allows a safe retry`() {
         val dir = tmp.newFolder()
         val prefix = "legacy\n".encodeToByteArray()
         val file = File(dir, name).apply { writeBytes(prefix) }
@@ -251,8 +266,72 @@ class LegacyMigrationTest {
         assertEquals("receipt disk full", error.message)
         assertEquals(2, writes)
         assertArrayEquals(prefix, file.readBytes())
-        assertThrows(DayIntegrityBlockedException::class.java) { CoordinatorStore(dir).append(name, listOf(next)) }
+        CoordinatorStore(dir).append(name, listOf(next))
+        assertArrayEquals(prefix + header + next, file.readBytes())
+    }
+
+    @Test fun `torn migration receipt is recovered without blocking another date`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy\n".encodeToByteArray()
+        val file = File(dir, name).apply { writeBytes(prefix) }
+        var interrupt = true
+        var firstWrite = true
+        val store = CoordinatorStore(dir).apply {
+            writeChannel = { channel, buffer ->
+                if (!interrupt) channel.write(buffer)
+                else if (firstWrite) {
+                    firstWrite = false
+                    val limit = buffer.limit()
+                    buffer.limit(buffer.position() + minOf(7, buffer.remaining()))
+                    try { channel.write(buffer) } finally { buffer.limit(limit) }
+                } else {
+                    interrupt = false
+                    throw IOException("migration receipt interrupted")
+                }
+            }
+        }
+        assertThrows(IOException::class.java) { store.append(name, listOf(next)) }
         assertArrayEquals(prefix, file.readBytes())
+
+        val otherDay = "xtmapper-2026-10-02.log"
+        store.append(otherDay, listOf(FrameCodec.encode(1, "next", "other day")))
+        assertTrue(File(dir, otherDay).isFile)
+        assertArrayEquals(prefix, file.readBytes())
+        assertEquals(0, FrameCodec.scanRecovery(File(dir, FileSystemLogStore.LIFECYCLE_LOCK_NAME).readBytes()).frames.size)
+
+        store.append(name, listOf(next))
+        assertEquals(listOf("after migration"), store.readFrames(name).filter { it.sid == "new" }.map { it.payload })
+    }
+
+    @Test fun `torn deletion receipt preserves migration authority and other dates`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy\n".encodeToByteArray()
+        val file = File(dir, name).apply { writeBytes(prefix) }
+        CoordinatorStore(dir).append(name, listOf(next))
+        val before = file.readBytes()
+        var interrupt = true
+        var firstWrite = true
+        val store = CoordinatorStore(dir).apply {
+            writeChannel = { channel, buffer ->
+                if (!interrupt) channel.write(buffer)
+                else if (firstWrite) {
+                    firstWrite = false
+                    val limit = buffer.limit()
+                    buffer.limit(buffer.position() + minOf(7, buffer.remaining()))
+                    try { channel.write(buffer) } finally { buffer.limit(limit) }
+                } else {
+                    interrupt = false
+                    throw IOException("deletion receipt interrupted")
+                }
+            }
+        }
+        assertThrows(IOException::class.java) { store.delete(name) }
+        assertArrayEquals(before, file.readBytes())
+
+        val otherDay = "xtmapper-2026-10-02.log"
+        store.append(otherDay, listOf(FrameCodec.encode(1, "next", "other day")))
+        assertEquals(listOf("after migration"), store.readFrames(name).filter { it.sid == "new" }.map { it.payload })
+        assertTrue(File(dir, otherDay).isFile)
     }
 
     @Test fun `prepared receipt is forced again before resuming an interrupted boundary`() {
@@ -282,19 +361,24 @@ class LegacyMigrationTest {
         val file = File(dir, name).apply { writeBytes(before) }
         val gate = File(dir, FileSystemLogStore.LIFECYCLE_LOCK_NAME)
         val inode = Files.getAttribute(gate.toPath(), "unix:ino")
-        var forced = false
+        var forceCount = 0
         val store = CoordinatorStore(dir).apply {
             forceChannel = { channel ->
-                assertArrayEquals(before, file.readBytes())
                 val bytes = ByteBuffer.allocate(channel.size().toInt())
                 while (bytes.hasRemaining()) assertTrue(channel.read(bytes, bytes.position().toLong()) > 0)
-                assertEquals("D1|$name", FrameCodec.scanRecovery(bytes.array()).frames.last().payload)
+                val latest = FrameCodec.scanRecovery(bytes.array()).frames.last().payload
+                if (forceCount++ == 0) {
+                    assertArrayEquals(before, file.readBytes())
+                    assertEquals("D1|$name", latest)
+                } else {
+                    assertFalse(file.exists())
+                    assertEquals("D2|$name", latest)
+                }
                 channel.force(true)
-                forced = true
             }
         }
         assertTrue(store.delete(name))
-        assertTrue(forced)
+        assertEquals(2, forceCount)
         assertFalse(file.exists())
         assertEquals(inode, Files.getAttribute(gate.toPath(), "unix:ino"))
     }
@@ -312,16 +396,93 @@ class LegacyMigrationTest {
         assertThrows(IOException::class.java) { store.delete(name) }
         assertTrue(attemptedForce)
         assertArrayEquals(before, file.readBytes())
-        var retryForced = false
+        assertEquals(
+            listOf("P1", "after migration"),
+            CoordinatorStore(dir).readFrames(name).map { it.payload },
+        )
+        var retryForceCount = 0
         val retry = CoordinatorStore(dir).apply {
             forceChannel = { channel ->
-                assertArrayEquals(before, file.readBytes())
+                if (retryForceCount++ == 0) assertArrayEquals(before, file.readBytes())
+                else assertFalse(file.exists())
                 channel.force(true)
-                retryForced = true
             }
         }
         assertTrue(retry.delete(name))
-        assertTrue(retryForced)
+        assertEquals(2, retryForceCount)
         assertFalse(file.exists())
+    }
+
+    @Test fun `durable deletion intent keeps history readable until unlink completes`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy\n".encodeToByteArray()
+        val file = File(dir, name).apply { writeBytes(prefix) }
+        CoordinatorStore(dir).append(name, listOf(next))
+        val before = file.readBytes()
+        val store = CoordinatorStore(dir).apply {
+            forceChannel = { channel ->
+                channel.force(true)
+                throw IOException("interrupted before unlink")
+            }
+        }
+        assertThrows(IOException::class.java) { store.delete(name) }
+        assertArrayEquals(before, file.readBytes())
+        assertEquals(
+            listOf("P1", "after migration"),
+            CoordinatorStore(dir).readFrames(name).map { it.payload },
+        )
+    }
+
+    @Test fun `failed unlink leaves migrated history readable and deletion retryable`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy\n".encodeToByteArray()
+        val file = File(dir, name).apply { writeBytes(prefix) }
+        CoordinatorStore(dir).append(name, listOf(next))
+        val before = file.readBytes()
+        val store = CoordinatorStore(dir).apply { deleteFile = { false } }
+        assertFalse(store.delete(name))
+        assertArrayEquals(before, file.readBytes())
+        assertEquals(
+            listOf("P1", "after migration"),
+            CoordinatorStore(dir).readFrames(name).map { it.payload },
+        )
+
+        assertTrue(CoordinatorStore(dir).delete(name))
+        assertFalse(file.exists())
+    }
+
+    @Test fun `missing file with pending deletion completes revocation before pathname reuse`() {
+        val dir = tmp.newFolder()
+        val prefix = "legacy\n".encodeToByteArray()
+        val file = File(dir, name).apply { writeBytes(prefix) }
+        CoordinatorStore(dir).append(name, listOf(next))
+        var writeCount = 0
+        val interrupted = CoordinatorStore(dir).apply {
+            writeChannel = { channel, buffer ->
+                when (writeCount++) {
+                    0 -> channel.write(buffer)
+                    1 -> {
+                        val limit = buffer.limit()
+                        buffer.limit(buffer.position() + minOf(7, buffer.remaining()))
+                        try { channel.write(buffer) } finally { buffer.limit(limit) }
+                    }
+                    else -> throw IOException("completion receipt interrupted")
+                }
+            }
+        }
+        assertThrows(IOException::class.java) { interrupted.delete(name) }
+        assertFalse(file.exists())
+
+        val replacement = FrameCodec.encode(1, "replacement", "new file")
+        val reopened = CoordinatorStore(dir)
+        reopened.append(name, listOf(replacement))
+        assertEquals(listOf("P1", "new file"), reopened.readFrames(name).map { it.payload })
+        val journal = FrameCodec.scanRecovery(File(dir, FileSystemLogStore.LIFECYCLE_LOCK_NAME).readBytes())
+            .frames.map { it.payload }
+        assertTrue(journal.first().startsWith("M1|$name|${prefix.size}|"))
+        assertEquals(
+            listOf("D1|$name", "D2|$name"),
+            journal.drop(1),
+        )
     }
 }
