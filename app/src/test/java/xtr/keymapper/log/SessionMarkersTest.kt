@@ -2,7 +2,6 @@ package xtr.keymapper.log
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -116,11 +115,13 @@ class SessionMarkersTest {
     }
 
     @Test
-    fun `session ids include a random suffix and are not unique by timestamp alone`() {
+    fun `session ids use collision-resistant uuid randomness within the frame grammar`() {
         val clock = java.time.Clock.fixed(Instant.parse("2026-10-23T10:00:00Z"), zone)
         val ids = (1..64).map { SessionIds.generate(clock) }
-        assertTrue(ids.all { it.startsWith("20261023-100000-") })
-        assertTrue("random suffix distinguishes ids", ids.toSet().size > 1)
-        assertNotEquals(ids[0], ids[1].takeIf { it != ids[0] } ?: ids[2])
+        assertEquals(64, ids.toSet().size)
+        ids.forEach { id ->
+            assertEquals(4, java.util.UUID.fromString(id).version())
+            assertTrue(FrameCodec.decode(FrameCodec.encode(1, id, "record").decodeToString().removeSuffix("\n")) != null)
+        }
     }
 }
