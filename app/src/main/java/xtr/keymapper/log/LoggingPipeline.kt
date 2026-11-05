@@ -46,11 +46,12 @@ class LoggingPipeline(
     private val pruneRetention: Boolean = false,
     private val beforeAdmission: () -> Unit = {},
     private val afterClose: () -> Unit = {},
+    private val coordinator: CoordinatorStore? = null,
 ) {
     val sessionId: String = sessionId
 
     private val queue = LoggingQueue(config.queueCapacity)
-    private val writer: SessionLogWriter
+    private val writer: SessionWriter
     private val started = AtomicBoolean(false)
 
     private val dropReported = AtomicBoolean(false)
@@ -67,15 +68,30 @@ class LoggingPipeline(
     private val worker: AsyncLogWorker
 
     init {
-        writer = SessionLogWriter(
-            store = store,
-            role = role.fileNameTag,
-            config = config,
-            clock = clock,
-            zone = zone,
-            sessionId = sessionId,
-            onEvent = onFailure,
-        )
+        writer = if (coordinator != null) {
+            val dir = requireNotNull(store.directory) {
+                "coordinator logging requires a directory-backed LogStore"
+            }
+            CoordinatorSessionWriter(
+                coordinator = coordinator,
+                logDirectory = dir,
+                role = role.fileNameTag,
+                clock = clock,
+                zone = zone,
+                sessionId = sessionId,
+                onEvent = onFailure,
+            )
+        } else {
+            SessionLogWriter(
+                store = store,
+                role = role.fileNameTag,
+                config = config,
+                clock = clock,
+                zone = zone,
+                sessionId = sessionId,
+                onEvent = onFailure,
+            )
+        }
         worker = AsyncLogWorker(
             queue, config, writer, roleTag = role.tag,
             onStart = ::startSession, onStop = ::finishClose, afterClose = afterClose,
@@ -90,7 +106,7 @@ class LoggingPipeline(
     private fun startSession() {
         if (pruneRetention) runRetention()
         val previous = try {
-            SessionState.previousDisposition(writer.store, role.fileNameTag)
+            writer.previousDisposition()
         } catch (e: Exception) {
             SessionState.DISPOSITION_UNKNOWN
         }
@@ -187,24 +203,20 @@ class LoggingPipeline(
         today: java.time.LocalDate,
         activeNames: () -> Set<String> = { activeWriterNames() },
     ) {
-        val infos = store.listFiles()
-        val entries = infos.mapNotNull {
-            LogFileNames.parse(it.name)?.to(it.sizeBytes)
+        fun candidates(): List<String> {
+            val entries = store.listFiles().mapNotNull {
+                LogFileNames.parse(it.name)?.to(it.sizeBytes)
+            }
+            return Retention.candidatesForDeletion(
+                entries.map { it.first },
+                sizeBytesOf = { entry -> entries.firstOrNull { it.first == entry }?.second ?: 0L },
+                config = config,
+                today = today,
+                activeNames = activeNames(),
+            )
         }
-        if (entries.isEmpty()) return
-        val deletions = Retention.candidatesForDeletion(
-            entries.map { it.first },
-            sizeBytesOf = { entry -> entries.firstOrNull { it.first == entry }?.second ?: 0L },
-            config = config,
-            today = today,
-            activeNames = activeNames(),
-        )
-        // Bounded units per run: at most eight deletions per invocation, remainder deferred
-        // to a future run.
-        val bounded = deletions.take(8)
-        // Eligibility recheck after acquisition: the actives are re-queried at delete time,
-        // so a file that became active while candidates were enumerated is never removed.
-        val skipped = bounded.filter { it !in activeNames() }.count { !store.delete(it) }
+        val bounded = candidates().take(8)
+        val skipped = bounded.count { name -> !store.delete(name) { name in candidates() } }
         if (skipped > 0) {
             onFailure(
                 "XtLogger: retention skipped $skipped candidate files " +

@@ -21,7 +21,7 @@ import kotlin.random.Random
 // class for the offending day. Both are IOExceptions, so IOException catchers are unaffected.
 class CoordinationTimeoutException(message: String) : IOException(message)
 
-class DayIntegrityBlockedException(message: String) : IOException(message)
+class DayIntegrityBlockedException(message: String, val fileName: String? = null) : IOException(message)
 
 class CoordinatorStore(
     private val rootDirectory: File,
@@ -37,17 +37,31 @@ class CoordinatorStore(
     private val budget = DailyBudget(maxDailyBytes, reserveBytes)
 
     fun append(name: String, frames: List<ByteArray>): DailyBudget.Verdict {
-        // Contract validation happens BEFORE any coordination: violations never touch the file.
+        validateFrames(frames)
+        return append(name, null) { _, _ -> frames }.second
+    }
+
+    internal fun append(
+        name: String,
+        fallbackName: String?,
+        framesFor: (String, List<Frame>) -> List<ByteArray>,
+    ): Pair<String, DailyBudget.Verdict> = coordinated {
+        onCoordinatorLock?.invoke()
+        val selected = if (fallbackName != null && !target(name).isFile) fallbackName else name
+        RandomAccessFile(target(selected), "rw").use { raf ->
+            selected to transact(raf, selected) { persisted ->
+                framesFor(selected, persisted).also(::validateFrames)
+            }
+        }
+    }
+
+    private fun validateFrames(frames: List<ByteArray>) {
         frames.forEach { frame ->
             val parsed = FrameCodec.decode(frame.decodeToString().removeSuffix("\n"))
                 ?: throw IllegalArgumentException("frame violates the envelope grammar")
             require(frame.contentEquals(FrameCodec.encode(parsed.seq, parsed.sid, parsed.payload))) {
                 "frame is not canonically encoded"
             }
-        }
-        return coordinated {
-            onCoordinatorLock?.invoke()
-            RandomAccessFile(target(name), "rw").use { raf -> transact(raf, name, frames) }
         }
     }
 
@@ -71,10 +85,16 @@ class CoordinatorStore(
         }
     }
 
-    fun delete(name: String): Boolean = coordinated { target(name).delete() }
+    fun delete(name: String, eligible: () -> Boolean = { true }): Boolean = coordinated {
+        eligible() && target(name).delete()
+    }
 
-    private fun transact(raf: RandomAccessFile, name: String, frames: List<ByteArray>): DailyBudget.Verdict {
-        val effective = ArrayList(frames)
+    private fun transact(
+        raf: RandomAccessFile,
+        name: String,
+        framesFor: (List<Frame>) -> List<ByteArray>,
+    ): DailyBudget.Verdict {
+        val effective = ArrayList<ByteArray>()
         val header = DayProtocol.header().toByteArray(Charsets.UTF_8)
         // Torn header write: an exact 1..size-1 prefix truncates here so the empty path rewrites it; other short content fails validation.
         if (raf.length() in 1L until header.size.toLong()) {
@@ -109,15 +129,17 @@ class CoordinatorStore(
                     throw DayIntegrityBlockedException(
                         "day file $name holds unrecoverable corruption after a checksum-failing line; " +
                             "writes are blocked for this day (retention prunes it by age), the valid prefix stays readable",
+                        name,
                     )
                 }
                 if (suffixBytes >= BOUNDARY_SEARCH) {
-                    throw DayIntegrityBlockedException("corrupt tail: no frame boundary inside the search window; refusing repair")
+                    throw DayIntegrityBlockedException("corrupt tail: no frame boundary inside the search window; refusing repair", name)
                 }
                 tailDiscard = scan.discardedBytes
                 effective.add(0, FrameCodec.encode(0, "recovery", "discarded=$suffixBytes"))
             }
         }
+        effective.addAll(framesFor(persisted))
         val entries = effective.map { bytes ->
             // Candidates were contract-validated on entry (or synthesized above), so decode cannot fail.
             DailyBudget.Entry(DailyBudget.kindOf(FrameCodec.decode(bytes.decodeToString().removeSuffix("\n"))!!), bytes)
@@ -143,7 +165,7 @@ class CoordinatorStore(
         val line = String(head, 0, if (eol >= 0) eol else head.size, Charsets.UTF_8)
         val first = FrameCodec.decode(line)
         if (first == null || !FrameCodec.isDayHeader(first)) {
-            throw DayIntegrityBlockedException("protocol mismatch: day files must start with the P1 header ($name)")
+            throw DayIntegrityBlockedException("protocol mismatch: day files must start with the P1 header ($name)", name)
         }
     }
 

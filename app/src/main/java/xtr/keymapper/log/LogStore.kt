@@ -14,7 +14,10 @@ data class LogFileInfo(
     val sizeBytes: Long,
 )
 
+// Synthetic stores have no coordinator filesystem root.
 interface LogStore {
+    val directory: File? get() = null
+
     fun listFiles(): List<LogFileInfo>
 
     fun openAppendWriter(name: String): LogFileWriter
@@ -22,6 +25,8 @@ interface LogStore {
     fun readTail(name: String, maxLines: Int): List<String>
 
     fun delete(name: String): Boolean
+
+    fun delete(name: String, eligible: () -> Boolean): Boolean = eligible() && delete(name)
 }
 
 interface LogFileWriter : Closeable {
@@ -36,6 +41,8 @@ class FileSystemLogStore internal constructor(
 ) : LogStore {
 
     constructor(rootDirectory: File) : this(rootDirectory, { it.tryLock() })
+
+    override val directory: File get() = rootDirectory
 
     init {
         // mkdirs() is idempotent; failure surfaces later at openAppendWriter.
@@ -126,10 +133,12 @@ class FileSystemLogStore internal constructor(
         return buffer.array().copyOf(buffer.position())
     }
 
-    override fun delete(name: String): Boolean = try {
+    override fun delete(name: String): Boolean = delete(name) { true }
+
+    override fun delete(name: String, eligible: () -> Boolean): Boolean = try {
         withLifecycleLock {
             val file = target(name)
-            if (file in activeFiles || !file.isFile) false else RandomAccessFile(file, "rw").use { handle ->
+            if (!eligible() || file in activeFiles || !file.isFile) false else RandomAccessFile(file, "rw").use { handle ->
                 acquire(handle.channel)?.use { file.delete() } ?: false
             }
         }

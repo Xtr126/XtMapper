@@ -38,6 +38,8 @@ class CoordinatorSessionWriter(
             coordinator.readRecovery(name).frames.takeLast(maxLines).flatMap { it.payload.split('\n') }
 
         override fun delete(name: String): Boolean = coordinator.delete(name)
+
+        override fun delete(name: String, eligible: () -> Boolean): Boolean = coordinator.delete(name, eligible)
     }
 
     override fun currentlyOpenName(): String? = currentFileName
@@ -72,7 +74,7 @@ class CoordinatorSessionWriter(
         val day = sessionStartDay ?: return
         if (day in blockedDays) return
         try {
-            commit(day, listOf(startPayload()))
+            commit(day) { listOf(startPayload()) }
         } catch (e: CoordinationTimeoutException) {
             reportRetry(day)
         } catch (e: DayIntegrityBlockedException) {
@@ -84,7 +86,7 @@ class CoordinatorSessionWriter(
 
     override fun write(records: List<LogRecord>): BatchWriteOutcome {
         if (closed || sessionEnded || unavailable) return BatchWriteOutcome.UNAVAILABLE
-        val groups = LinkedHashMap<String, MutableList<String>>()
+        val groups = LinkedHashMap<String, MutableList<Pair<Instant, String>>>()
         for (record in records) {
             val payload = RecordFormatter.format(record, zone)
             if (payload.encodeToByteArray().size > FrameCodec.MAX_PAYLOAD_BYTES) {
@@ -96,15 +98,7 @@ class CoordinatorSessionWriter(
                 continue
             }
             val day = dayOf(record.time)
-            val anchorDay = currentDay ?: sessionStartDay
-            if (anchorDay != null && day < anchorDay && !dayFileExists(day)) {
-                groups.getOrPut(anchorDay) { ArrayList() }.apply {
-                    add(SessionMarkers.block(SessionMarkers.lateLine(sessionId, record.time, day, zone)))
-                    add(payload)
-                }
-            } else {
-                groups.getOrPut(day) { ArrayList() }.add(payload)
-            }
+            groups.getOrPut(day) { ArrayList() }.add(record.time to payload)
         }
         if (groups.isEmpty()) return BatchWriteOutcome.PROCESSED
         return commitGroups(groups)
@@ -131,7 +125,7 @@ class CoordinatorSessionWriter(
                     SessionMarkers.endLine(sessionId, endInstant, zone, durationNanos, status, droppedRecords, uncertainRecords),
                 ),
             )
-            commit(day, payloads)
+            commit(day) { payloads }
             sessionEnded = true
         } catch (e: CoordinationTimeoutException) {
             reportRetry(day)
@@ -149,20 +143,30 @@ class CoordinatorSessionWriter(
         closed = true
     }
 
-    private fun commitGroups(groups: LinkedHashMap<String, MutableList<String>>): BatchWriteOutcome {
+    private fun commitGroups(groups: LinkedHashMap<String, MutableList<Pair<Instant, String>>>): BatchWriteOutcome {
         var committed = false
-        for ((day, payloads) in groups) {
-            if (day in blockedDays) {
-                recordsDroppedByDayLimit.addAndGet(recordCount(payloads))
-                continue
-            }
+        for ((day, records) in groups) {
             try {
-                if (day == sessionStartDay && !startWritten) {
-                    payloads.add(0, startPayload())
-                } else {
-                    continuationFor(day)?.let { payloads.add(0, it) }
+                val anchorDay = currentDay ?: sessionStartDay
+                val fallbackDay = anchorDay?.takeIf { day < it }
+                commit(day, fallbackDay) { writtenDay ->
+                    if (writtenDay in blockedDays) {
+                        throw DayIntegrityBlockedException("day integrity already blocked", LogFileNames.dailyName(writtenDay, null))
+                    }
+                    val payloads = ArrayList<String>()
+                    if (writtenDay == sessionStartDay && !startWritten) {
+                        payloads.add(startPayload())
+                    } else {
+                        continuationFor(writtenDay)?.let { payloads.add(it) }
+                    }
+                    for ((time, payload) in records) {
+                        if (writtenDay != day) {
+                            payloads.add(SessionMarkers.block(SessionMarkers.lateLine(sessionId, time, day, zone)))
+                        }
+                        payloads.add(payload)
+                    }
+                    payloads
                 }
-                commit(day, payloads)
                 committed = true
             } catch (e: CoordinationTimeoutException) {
                 reportRetry(day)
@@ -170,7 +174,7 @@ class CoordinatorSessionWriter(
                 return if (committed) BatchWriteOutcome.UNCERTAIN else BatchWriteOutcome.UNAVAILABLE
             } catch (e: DayIntegrityBlockedException) {
                 blockDay(day, e)
-                recordsDroppedByDayLimit.addAndGet(recordCount(payloads))
+                recordsDroppedByDayLimit.addAndGet(records.size)
             } catch (e: Throwable) {
                 fail(e)
                 return BatchWriteOutcome.UNCERTAIN
@@ -191,44 +195,37 @@ class CoordinatorSessionWriter(
         )
     }
 
-    private fun commit(day: String, payloads: List<String>) {
-        val name = LogFileNames.dailyName(day, null)
-        var seq = seqByDay[day] ?: coordinator.readRecovery(name).frames
-            .filter { it.sid == sessionId && !FrameCodec.isDayHeader(it) }
-            .maxOfOrNull { it.seq } ?: 0L
-        val frames = payloads.map { payload -> FrameCodec.encode(++seq, sessionId, payload) }
-        val verdict = coordinator.append(
-            name,
-            frames,
-        )
+    private fun commit(day: String, fallbackDay: String? = null, payloadsFor: (String) -> List<String>) {
+        var seq = 0L
+        val (name, verdict) = coordinator.append(
+            LogFileNames.dailyName(day, null),
+            fallbackDay?.let { LogFileNames.dailyName(it, null) },
+        ) { selected, persisted ->
+            val writtenDay = LogFileNames.parse(selected)!!.date
+            seq = maxOf(seqByDay[writtenDay] ?: 0L, persisted.filter { it.sid == sessionId }.maxOfOrNull { it.seq } ?: 0L)
+            payloadsFor(writtenDay).map { payload -> FrameCodec.encode(++seq, sessionId, payload) }
+        }
+        val writtenDay = LogFileNames.parse(name)!!.date
         // NOT_ATTEMPTED leaves the cursor and marker state unchanged.
-        seqByDay[day] = seq
+        seqByDay[writtenDay] = seq
         for (bytes in verdict.frames) {
             val frame = FrameCodec.decode(bytes.decodeToString().removeSuffix("\n"))!!
             if (frame.sid != sessionId) continue
-            currentDay = day
+            currentDay = writtenDay
             currentFileName = name
             when (frame.payload.lineSequence().mapNotNull(SessionMarkers::markerTypeOf).firstOrNull()) {
                 SessionMarkers.START -> startWritten = true
-                SessionMarkers.CONTINUED -> continuedDays.add(day)
+                SessionMarkers.CONTINUED -> continuedDays.add(writtenDay)
             }
         }
         recordsDroppedByDayLimit.addAndGet(verdict.recordsDropped)
-        if (verdict.emergency && reportedDays.add(day)) {
-            report("XtLogger: daily byte budget exhausted for $day; ordinary records drop until the next day")
+        if (verdict.emergency && reportedDays.add(writtenDay)) {
+            report("XtLogger: daily byte budget exhausted for $writtenDay; ordinary records drop until the next day")
         }
         if (verdict.endUnpersisted) {
-            report("XtLogger: session END for $day could not be persisted (budget exhausted); reported unpersisted")
+            report("XtLogger: session END for $writtenDay could not be persisted (budget exhausted); reported unpersisted")
         }
     }
-
-    private fun recordCount(payloads: List<String>): Int =
-        payloads.count { DailyBudget.kindOf(Frame(0, sessionId, it)) == DailyBudget.Kind.RECORD }
-
-    private fun dayFileExists(day: String): Boolean =
-        store.listFiles().any {
-            LogFileNames.parse(it.name)?.let { e -> e.date == day } ?: false
-        }
 
     private fun fail(e: Throwable) {
         unavailable = true
@@ -239,8 +236,9 @@ class CoordinatorSessionWriter(
     }
 
     private fun blockDay(day: String, e: DayIntegrityBlockedException) {
-        if (blockedDays.add(day)) {
-            report("XtLogger: file writes blocked for $day (${e.javaClass.simpleName}: ${e.message}); other days remain available")
+        val blockedDay = e.fileName?.let { LogFileNames.parse(it)?.date } ?: day
+        if (blockedDays.add(blockedDay)) {
+            report("XtLogger: file writes blocked for $blockedDay (${e.javaClass.simpleName}: ${e.message}); other days remain available")
         }
     }
 

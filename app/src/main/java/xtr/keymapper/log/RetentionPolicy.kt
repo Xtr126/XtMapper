@@ -25,7 +25,7 @@ object Retention {
         )
         val protectKey = dateKeyOf(newestDate.minusDays(1))
         val deletable = entries
-            .filter { dateKey(it) < protectKey && it.baseName !in activeNames }
+            .filter { dateKey(it) < protectKey && dateKey(it) < dateKeyOf(today) && it.baseName !in activeNames }
             .sorted() // ascending: oldest first
         val deletions = LinkedHashSet<String>()
 
