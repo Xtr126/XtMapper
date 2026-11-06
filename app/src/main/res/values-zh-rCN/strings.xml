@@ -143,5 +143,6 @@
     <string name="enable_profile">Enable profile</string>
     <string name="disable_profile">Disable profile</string>
     <string name="profile_disabled_label">Disabled</string>
+    <string name="profile_disabled_title">Profile disabled</string>
     <string name="profile_disabled_activation">Profile “%1$s” is disabled. Enable it from the profile menu to start keymapping.</string>
 </resources>
