@@ -7,6 +7,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class AsyncLogWorkerTest {
@@ -31,16 +32,17 @@ class AsyncLogWorkerTest {
     private fun buildWorker(
         store: LogStore,
         capacity: Int = 16,
+        batchMaxRecords: Int = 256,
+        queue: LoggingQueue = LoggingQueue(capacity),
     ): Triple<SessionLogWriter, LoggingQueue, AsyncLogWorker> {
         val clock = MutableClock.at("2026-10-22T09:00:00Z")
-        val config = LoggingConfig(queueCapacity = capacity)
+        val config = LoggingConfig(queueCapacity = capacity, batchMaxRecords = batchMaxRecords)
         val writer = SessionLogWriter(
             store, role = null, config = config,
             clock = clock, zone = clock.zoneId, sessionId = "s-worker", onEvent = {},
         )
         writer.configure(SessionState.DISPOSITION_FIRST, SessionMetadata(), clock.instant())
         writer.writeSessionStartMarker()
-        val queue = LoggingQueue(capacity)
         val worker = AsyncLogWorker(queue, config, writer, "test")
         return Triple(writer, queue, worker)
     }
@@ -106,7 +108,7 @@ class AsyncLogWorkerTest {
     }
 
     @Test
-    fun `a failed write batch is dropped and counted, then flush completes`() {
+    fun `a failed write batch is uncertain then unavailable records are dropped`() {
         val failingHardStore = object : LogStore {
             override fun listFiles() = emptyList<LogFileInfo>()
             override fun openAppendWriter(name: String): LogFileWriter = object : LogFileWriter {
@@ -121,18 +123,19 @@ class AsyncLogWorkerTest {
             override fun delete(name: String) = false
         }
         val (_, queue, worker) = buildWorker(failingHardStore)
-        worker.start()
         repeat(3) { queue.offer(record("f$it")) }
+        worker.start()
         assertTrue("flush completes after failure accounting", worker.flush(2_000))
-        assertEquals(3, worker.droppedCount)
+        assertEquals(0, worker.droppedCount)
+        assertEquals(3, worker.uncertainCount)
         assertEquals(0, queue.pendingWrites.get())
         assertEquals(0, queue.size)
         assertTrue(worker.threadReference().isAlive)
 
-        // Further offers keep the same accounting; flush stays exact.
         queue.offer(record("f-after"))
         assertTrue(worker.flush(2_000))
-        assertEquals(4, worker.droppedCount)
+        assertEquals(1, worker.droppedCount)
+        assertEquals(3, worker.uncertainCount)
         worker.close(2_000)
         assertFalse(worker.threadReference().isAlive)
     }
@@ -149,17 +152,76 @@ class AsyncLogWorkerTest {
         worker.close(2_000)
     }
 
+    @Test
+    fun `batch construction failure settles the polled record as uncertain`() {
+        // drainUpTo(-1) throws before `batch` is assigned; the polled credit must not orphan.
+        val (_, queue, worker) = buildWorker(FileSystemLogStore(tmp.newFolder()), batchMaxRecords = 0)
+        queue.offer(record("crash-me"))
+        worker.start()
+        assertTrue("flush drains despite the dead worker", worker.flush(2_000))
+        assertEquals(0, queue.pendingWrites.get())
+        assertEquals(0, queue.size)
+        assertEquals(1, worker.uncertainCount)
+        assertEquals(0, worker.droppedCount)
+        assertTrue("worker closes successfully", worker.close(2_000))
+        worker.threadReference().join(2_000)
+        assertFalse(worker.threadReference().isAlive)
+    }
+
     private class SimulatedWriteError(message: String) : Error(message)
+
+    // Freezes the consumer between a null poll and its isClosed check: the window where
+    // offer-then-closeAdmission used to flip the break and drop the accepted record.
+    private class PausedAfterFirstNullQueue(capacity: Int) : LoggingQueue(capacity) {
+        val paused = CountDownLatch(1)
+        private val release = CountDownLatch(1)
+        private var pausedOnce = false
+
+        override fun poll(timeoutMillis: Long): LogRecord? {
+            val result = super.poll(timeoutMillis)
+            if (result == null && !pausedOnce) {
+                pausedOnce = true
+                paused.countDown()
+                release.await()
+            }
+            return result
+        }
+
+        fun resume() = release.countDown()
+    }
+
+    @Test
+    fun `clean close does not drop a record accepted before admission closes`() {
+        val pausedQueue = PausedAfterFirstNullQueue(16)
+        val (writer, queue, worker) =
+            buildWorker(FileSystemLogStore(tmp.newFolder()), queue = pausedQueue)
+        worker.start()
+        try {
+            assertTrue("worker must reach the poll-timeout window", pausedQueue.paused.await(5, TimeUnit.SECONDS))
+            assertTrue("offer must be accepted before closeAdmission", queue.offer(record("lost-before-close")))
+            queue.closeAdmission()
+        } finally {
+            pausedQueue.resume()
+        }
+        assertTrue("worker finishes the accepted record and closes", worker.close(2_000))
+        assertEquals("accepted record must not count as dropped", 0, worker.droppedCount)
+        val text = LogFiles.readAll(writer.store, "xtmapper-2026-10-22.log")
+        assertTrue("accepted record must persist", text.contains("message=\"lost-before-close\""))
+    }
 
     @Test
     fun `flush times out instead of hanging when the sink is stuck`() {
-        // A store whose writes block forever: flush must finish by its deadline.
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
         val stuckStore = object : LogStore {
             override fun listFiles() = emptyList<LogFileInfo>()
             override fun openAppendWriter(name: String): LogFileWriter = object : LogFileWriter {
                 override val writtenBytes = 0L
                 override fun write(chunk: ByteArray) {
-                    Thread.sleep(10_000)
+                    if (chunk.toString(Charsets.UTF_8).contains("message=\"slow\"")) {
+                        entered.countDown()
+                        release.await()
+                    }
                 }
                 override fun close() {}
             }
@@ -169,12 +231,18 @@ class AsyncLogWorkerTest {
         val (_, queue, worker) = buildWorker(stuckStore)
         worker.start()
         queue.offer(record("slow"))
-        val startedAt = System.nanoTime()
-        val drained = worker.flush(120)
-        val elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
-        assertFalse("bound respected", drained)
-        assertTrue("timeout ≈ bound", elapsedMs in 100..4_000)
-        worker.stopDraining(50)
-        worker.closeFile()
+        try {
+            assertTrue(entered.await(2, TimeUnit.SECONDS))
+            val startedAt = System.nanoTime()
+            assertFalse("bound respected", worker.flush(120))
+            val elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
+            assertTrue("timeout ≈ bound", elapsedMs in 100..4_000)
+            assertFalse(worker.stopDraining(50))
+            assertTrue(runCatching { worker.closeFile() }.exceptionOrNull() is IllegalStateException)
+        } finally {
+            release.countDown()
+            assertTrue(worker.close(2_000))
+            worker.threadReference().join(2_000)
+        }
     }
 }

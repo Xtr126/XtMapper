@@ -49,6 +49,7 @@ class LoggingQueueTest {
         val queue = LoggingQueue(4)
         repeat(3) { queue.offer(record(it)) }
         assertEquals(3, queue.pendingWrites.get())
+        queue.drainUpTo(3)
         queue.markProcessed(3)
         assertEquals(0, queue.pendingWrites.get())
     }
@@ -65,6 +66,7 @@ class LoggingQueueTest {
         repeat(2) { queue.offer(record(it)) }
         // Not yet processed → bounded timeout returns false.
         assertFalse(queue.awaitDrained(40))
+        queue.drainUpTo(2)
         queue.markProcessed(2)
         assertTrue(queue.awaitDrained(200))
     }
@@ -75,6 +77,7 @@ class LoggingQueueTest {
         repeat(3) { queue.offer(record(it)) }
         assertEquals(2, queue.droppedCount.get())
         assertEquals(1, queue.pendingWrites.get())
+        queue.poll(0)
         queue.markProcessed(1)
         assertTrue(queue.awaitDrained(100))
     }
@@ -92,13 +95,13 @@ class LoggingQueueTest {
         // Drained-but-failed records complete an awaitDrained (contract: never stall).
         assertTrue(queue.awaitDrained(200))
 
-        // Exactly once: further accounting cannot resurrect pending or over-drop.
-        queue.markFailed(1)
+        assertTrue(runCatching { queue.markFailed(1) }.exceptionOrNull() is IllegalStateException)
         assertEquals(0, queue.pendingWrites.get())
-        assertEquals(4, queue.droppedCount.get())
+        assertEquals(3, queue.droppedCount.get())
 
         // New offers drain normally afterwards — no permanent inflation.
         queue.offer(record(9))
+        queue.poll(0)
         queue.markProcessed(1)
         assertEquals(0, queue.pendingWrites.get())
     }

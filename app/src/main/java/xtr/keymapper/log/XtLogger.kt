@@ -29,8 +29,15 @@ object XtLogger {
     @Volatile
     private var initializationRole: Role? = null
 
+    // Bounded close can time out; until that owner actually retires, no replacement may start.
     @Volatile
-    private var monotonicallyStartedNanos = 0L
+    private var retiringOwner: LoggingPipeline? = null
+
+    // Startup request parked while the retiring owner above finishes its close on its own.
+    private class DeferredInit(val role: Role, val store: LogStore, val behind: LoggingPipeline)
+
+    @Volatile
+    private var deferredStart: DeferredInit? = null
 
     val isInitialized: Boolean get() = pipeline != null
 
@@ -54,17 +61,7 @@ object XtLogger {
         log(Level.ERROR, tag, message, throwable)
 
     private fun log(level: Level, tag: String, message: String, throwable: Throwable? = null) {
-        val active = pipeline
-        if (active == null) {
-            runCatching {
-                val early = LogRecord.now(
-                    systemClock.instant(), level, tag, message, throwable,
-                    pid = null, role = initializationRole?.tag ?: "preinit",
-                )
-                logcatSink(early)
-            }
-            return
-        }
+        val active = pipeline ?: return directLog(level, tag, message, throwable)
         try {
             active.log(level, tag, message, throwable)
         } catch (e: Exception) {
@@ -72,11 +69,30 @@ object XtLogger {
         }
     }
 
+    private fun directLog(level: Level, tag: String, message: String, throwable: Throwable?) {
+        runCatching {
+            val early = LogRecord.now(
+                systemClock.instant(), level, tag, message, throwable,
+                pid = null, role = initializationRole?.tag ?: "preinit",
+            )
+            logcatSink(early)
+        }
+    }
+
     fun fatal(tag: String, message: String, throwable: Throwable? = null) {
         fatalEventRecorded = true
-        log(Level.FATAL, tag, message, throwable)
+        val owner = pipeline
+        if (owner == null) {
+            directLog(Level.FATAL, tag, message, throwable)
+            return
+        }
         try {
-            pipeline?.flush(DEFAULT_FATAL_FLUSH_MILLIS)
+            owner.log(Level.FATAL, tag, message, throwable)
+        } catch (e: Exception) {
+            onPipelineFailure("logging call rejected: ${e.message}")
+        }
+        try {
+            owner.flush(DEFAULT_FATAL_FLUSH_MILLIS)
         } catch (e: Exception) {
             // flush never throws here by contract.
         }
@@ -85,18 +101,50 @@ object XtLogger {
     fun flush(timeoutMillis: Long = LoggingConfig.DEFAULT_FLUSH_TIMEOUT_MILLIS): Boolean =
         pipeline?.flush(timeoutMillis) ?: true
 
+    // Native JNI entry: Android log priority 2..6, source 0=Mouse/1=Keyboard; ACCEPTED means queue admission only.
+    @JvmStatic
+    fun logNative(priority: Int, source: Int, message: String?): Int {
+        val level = when (priority) {
+            NATIVE_PRIORITY_VERBOSE -> Level.VERBOSE
+            NATIVE_PRIORITY_DEBUG -> Level.DEBUG
+            NATIVE_PRIORITY_INFO -> Level.INFO
+            NATIVE_PRIORITY_WARN -> Level.WARN
+            NATIVE_PRIORITY_ERROR -> Level.ERROR
+            else -> null
+        }
+        val tag = when (source) {
+            NATIVE_SOURCE_MOUSE -> NATIVE_MOUSE_TAG
+            NATIVE_SOURCE_KEYBOARD -> NATIVE_KEYBOARD_TAG
+            else -> null
+        }
+        if (level == null || tag == null || message.isNullOrEmpty() ||
+            message.length > NATIVE_MAX_MESSAGE_BYTES ||
+            message.toByteArray(Charsets.UTF_8).size > NATIVE_MAX_MESSAGE_BYTES
+        ) {
+            return LogSubmission.INVALID.nativeCode
+        }
+        val active = pipeline ?: return LogSubmission.CLOSED.nativeCode
+        return try {
+            active.log(level, tag, message).nativeCode
+        } catch (e: Exception) {
+            onPipelineFailure("native diagnostic rejected: ${e.message}")
+            LogSubmission.UNAVAILABLE.nativeCode
+        }
+    }
+
     fun endSession(status: String = SessionStates.STATUS_CLEAN) {
-        val active = pipeline ?: return
         synchronized(initLock) {
-            val current = pipeline
-            if (current === active) {
-                pipeline = null
-                try {
-                    current.close(status) // bounded internally
-                } catch (e: Exception) {
-                    Log.e(TAG, "endSession failure ignored", e)
-                }
+            deferredStart = null
+            val current = pipeline ?: return
+            pipeline = null
+            initializationRole = null
+            val finished = try {
+                current.close(status) // bounded internally
+            } catch (e: Exception) {
+                Log.e(TAG, "endSession failure ignored", e)
+                false
             }
+            if (!finished) retiringOwner = current
         }
     }
 
@@ -119,7 +167,13 @@ object XtLogger {
         synchronized(initLock) {
             pipeline?.let { current ->
                 pipeline = null
-                runCatching { current.close("Suspended after log-storage change") }
+                val finished = try {
+                    current.close("Suspended after log-storage change")
+                } catch (e: Exception) {
+                    Log.w(TAG, "previous file owner close failed; replacement deferred", e)
+                    false
+                }
+                if (!finished) retiringOwner = current
             }
             internalsStart(Role.APP, store)
         }
@@ -158,8 +212,19 @@ object XtLogger {
     }
 
     private fun internalsStart(role: Role, store: LogStore) {
+        val retiring = retiringOwner
+        if (retiring != null) {
+            // Publish before the isClosed check so the owner's afterClose hook cannot read null.
+            deferredStart = DeferredInit(role, store, retiring)
+            if (!retiring.isClosed) {
+                Log.w(TAG, "previous file owner still closing; logger initialization deferred")
+                return
+            }
+            deferredStart = null
+            retiringOwner = null
+        }
         val sessionStartInstant = systemClock.instant()
-        monotonicallyStartedNanos = System.nanoTime()
+        val sessionStartNanos = System.nanoTime()
         val metadata = SessionMetadata(
             appVersion = BuildConfig.VERSION_NAME,
             buildType = BuildConfig.BUILD_TYPE,
@@ -176,7 +241,7 @@ object XtLogger {
             clock = systemClock,
             zone = ZoneId.systemDefault(),
             startTime = sessionStartInstant,
-            durationNanos = { System.nanoTime() - monotonicallyStartedNanos },
+            durationNanos = { System.nanoTime() - sessionStartNanos },
             pid = try {
                 Process.myPid()
             } catch (e: Throwable) {
@@ -186,6 +251,7 @@ object XtLogger {
             logcat = ::logcatSink,
             onFailure = ::onPipelineFailure,
             pruneRetention = role == Role.APP,
+            afterClose = ::retryDeferredInit,
         )
         try {
             newPipeline.start()
@@ -193,6 +259,22 @@ object XtLogger {
             initializationRole = role
         } catch (e: Throwable) {
             Log.e(TAG, "XtLogger failed to start: ${e.message}", e)
+        }
+    }
+
+    // Runs from the retiring owner's close; restart so file logging does not stay disabled until the next init call.
+    private fun retryDeferredInit() {
+        // A close() caller holds initLock while joining this worker; an idle hook entering the monitor stalls that join.
+        if (deferredStart == null) return
+        synchronized(initLock) {
+            val deferred = deferredStart ?: return
+            deferredStart = null
+            if (pipeline != null || retiringOwner !== deferred.behind || !deferred.behind.isClosed) {
+                deferredStart = deferred
+                return
+            }
+            retiringOwner = null
+            internalsStart(deferred.role, deferred.store)
         }
     }
 
@@ -229,4 +311,18 @@ object XtLogger {
     }
 
     private const val DEFAULT_FATAL_FLUSH_MILLIS = 2_000L
+
+    private const val NATIVE_PRIORITY_VERBOSE = 2 // Native FATAL has no mapping by contract
+    private const val NATIVE_PRIORITY_DEBUG = 3
+    private const val NATIVE_PRIORITY_INFO = 4
+    private const val NATIVE_PRIORITY_WARN = 5
+    private const val NATIVE_PRIORITY_ERROR = 6
+
+    private const val NATIVE_SOURCE_MOUSE = 0
+    private const val NATIVE_SOURCE_KEYBOARD = 1
+
+    private const val NATIVE_MOUSE_TAG = "Mouse"
+    private const val NATIVE_KEYBOARD_TAG = "Keyboard"
+
+    private const val NATIVE_MAX_MESSAGE_BYTES = 512
 }

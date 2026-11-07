@@ -7,15 +7,17 @@ import java.time.ZoneId
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 
+enum class BatchWriteOutcome { PROCESSED, UNAVAILABLE, UNCERTAIN }
+
 class SessionLogWriter(
-    val store: LogStore,
+    override val store: LogStore,
     val role: String?,
     private val config: LoggingConfig,
     private val clock: Clock,
     private val zone: ZoneId,
-    val sessionId: String,
+    override val sessionId: String,
     private val onEvent: (String) -> Unit = {},
-) : Closeable {
+) : SessionWriter {
 
     private var sessionStart: Instant? = null
     private var sessionStartDay: String? = null
@@ -24,29 +26,32 @@ class SessionLogWriter(
 
     private var currentDay: String? = null
     private var currentWriter: LogFileWriter? = null
-    private var currentFileName: String? = null
+    @Volatile private var currentFileName: String? = null
     private var exhaustedDay: String? = null
 
     @Volatile
-    var unavailable = false
+    override var unavailable = false
         private set
 
-    fun currentlyOpenName(): String? = currentFileName
+    override fun currentlyOpenName(): String? = currentFileName
 
-    val recordsDroppedByDayLimit = AtomicInteger(0)
+    override val recordsDroppedByDayLimit = AtomicInteger(0)
+
+    override fun previousDisposition(): String = SessionState.previousDisposition(store, role)
 
     private var sessionEnded = false
     private var dayLimitReported = false
+    private var closed = false
 
-    fun configure(previousDisposition: String, metadata: SessionMetadata, sessionStart: Instant) {
+    override fun configure(previousDisposition: String, metadata: SessionMetadata, sessionStart: Instant) {
         this.previousDisposition = previousDisposition
         this.headerMetadata = metadata
         this.sessionStart = sessionStart
         this.sessionStartDay = dayOf(sessionStart)
     }
 
-    fun writeSessionStartMarker() {
-        if (unavailable || sessionEnded || sessionStartDay == null) return
+    override fun writeSessionStartMarker() {
+        if (closed || unavailable || sessionEnded || sessionStartDay == null) return
         try {
             val day = sessionStartDay!!
             // START is a bounded session marker, so it may use the day's final part.
@@ -62,26 +67,30 @@ class SessionLogWriter(
         }
     }
 
-    fun write(records: List<LogRecord>) {
-        if (unavailable) return
+    override fun write(records: List<LogRecord>): BatchWriteOutcome {
+        if (closed || sessionEnded || unavailable) return BatchWriteOutcome.UNAVAILABLE
         for (record in records) {
             try {
                 writeOne(record)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 sinkDown(e)
-                return
+                return BatchWriteOutcome.UNCERTAIN
             }
         }
+        return BatchWriteOutcome.PROCESSED
     }
 
-    fun endSession(endInstant: Instant, durationNanos: Long, status: String, droppedRecords: Int) {
-        if (unavailable || sessionEnded) return
+    override fun endSession(
+        endInstant: Instant, durationNanos: Long, status: String, droppedRecords: Int,
+        uncertainRecords: Int,
+    ) {
+        if (closed || unavailable || sessionEnded) return
         try {
             writerFor(dayOf(endInstant), endInstant, allowFullPart = true)
             sessionEnded = true
             writeBlock(
                 SessionMarkers.block(
-                    SessionMarkers.endLine(sessionId, endInstant, zone, durationNanos, status, droppedRecords)
+                    SessionMarkers.endLine(sessionId, endInstant, zone, durationNanos, status, droppedRecords, uncertainRecords)
                 )
             )
         } catch (e: Exception) {
@@ -92,12 +101,33 @@ class SessionLogWriter(
     }
 
     override fun close() {
+        closed = true
         closeCurrent()
     }
 
     private fun writeOne(record: LogRecord) {
         val bytes = chunk(RecordFormatter.format(record, zone))
-        writerFor(dayOf(record.time), record.time, requiredBytes = bytes.size)
+        val day = dayOf(record.time)
+        // Delayed records route by their own date while its day file exists; a pruned or
+        // never-written older day never resurrects — the record lands in the anchor day
+        // behind an explicit late marker.
+        val anchorDay = currentDay ?: sessionStartDay
+        if (anchorDay != null && day < anchorDay) {
+            val ownFile = store.listFiles().any {
+                LogFileNames.parse(it.name)?.let { e -> e.date == day && e.role == role } ?: false
+            }
+            if (!ownFile) {
+                val lateBytes = chunk(
+                    SessionMarkers.block(SessionMarkers.lateLine(sessionId, record.time, day, zone)),
+                )
+                writerFor(anchorDay, record.time, requiredBytes = lateBytes.size + bytes.size)
+                val writer = currentWriter ?: run { recordsDroppedByDayLimit.incrementAndGet(); return }
+                writer.write(lateBytes)
+                writer.write(bytes)
+                return
+            }
+        }
+        writerFor(day, record.time, requiredBytes = bytes.size)
         val writer = currentWriter ?: run {
             recordsDroppedByDayLimit.incrementAndGet()
             return
@@ -117,7 +147,7 @@ class SessionLogWriter(
                 day != sessionStartDay && day !in continuedDays
             ) {
                 SessionMarkers.block(
-                    SessionMarkers.continuedLine(sessionId, requireNotNull(sessionStart), atInstant, zone)
+                    SessionMarkers.continuedLine(sessionId, requireNotNull(sessionStart), atInstant, zone, headerMetadata)
                 )
             } else {
                 null
@@ -139,7 +169,7 @@ class SessionLogWriter(
         currentWriter = writer
         if (writer != null && continuedBody != null) {
             continuedDays.add(day)
-            try { writer.write(chunk(continuedBody)) } catch (e: Exception) { sinkDown(e) }
+            writer.write(chunk(continuedBody))
         }
     }
 
@@ -196,14 +226,17 @@ class SessionLogWriter(
     private fun closeCurrent() {
         try { currentWriter?.close() } catch (e: Exception) { /* best effort */ }
         currentWriter = null
+        currentFileName = null
     }
 
-    private fun sinkDown(e: Exception) {
+    private fun sinkDown(e: Throwable) {
         unavailable = true
-        onEvent(
-            "XtLogger: file sink unavailable for session $sessionId " +
-                "(${e.javaClass.simpleName}${e.message?.let { ": $it" } ?: ""})"
-        )
+        runCatching {
+            onEvent(
+                "XtLogger: file sink unavailable for session $sessionId " +
+                    "(${e.javaClass.simpleName}${e.message?.let { ": $it" } ?: ""}); attempted batch is unconfirmed"
+            )
+        }
         closeCurrent()
     }
 

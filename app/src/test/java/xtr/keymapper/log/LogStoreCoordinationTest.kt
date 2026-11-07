@@ -1,12 +1,9 @@
 package xtr.keymapper.log
 
-import java.io.Closeable
 import java.io.File
 import java.io.IOException
 import java.nio.channels.FileChannel
 import java.nio.channels.OverlappingFileLockException
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -19,7 +16,7 @@ class LogStoreCoordinationTest {
     @Test fun `open-to-lock interval excludes cross-process deletion`() {
         val dir = tmp.newFolder()
         File(dir, name).writeText("old\n")
-        Child(dir).use { opener ->
+        LogProbeChild(dir).use { opener ->
             assertEquals("OK", opener.command("PAUSE"))
             // Paused INSIDE production open, after opening the target, before tryLock.
             assertEquals("TARGET_OPEN", opener.command("OPEN $name"))
@@ -37,7 +34,7 @@ class LogStoreCoordinationTest {
     @Test fun `delete-first excludes opens until unlink completes then allows new pathname`() {
         val dir = tmp.newFolder()
         File(dir, name).writeText("old\n")
-        Child(dir).use { deleter ->
+        LogProbeChild(dir).use { deleter ->
             assertEquals("OK", deleter.command("PAUSE"))
             assertEquals("TARGET_OPEN", deleter.command("DELETE $name"))
             assertThrows(IOException::class.java) { FileSystemLogStore(dir).openAppendWriter(name) }
@@ -52,8 +49,8 @@ class LogStoreCoordinationTest {
 
     @Test fun `first closes during second open and second acquires its own protection`() {
         val dir = tmp.newFolder()
-        Child(dir).use { first ->
-            Child(dir).use { second ->
+        LogProbeChild(dir).use { first ->
+            LogProbeChild(dir).use { second ->
                 assertEquals("OPENED", first.command("OPEN $name"))
                 assertEquals("WROTE", first.command("WRITE first"))
                 assertEquals("OK", second.command("PAUSE"))
@@ -77,7 +74,7 @@ class LogStoreCoordinationTest {
             channels += it
             it.tryLock().also { lock -> if (lock == null) sawNull = true }
         }
-        Child(dir).use { holder ->
+        LogProbeChild(dir).use { holder ->
             assertEquals("OPENED", holder.command("OPEN $name"))
             assertThrows(IOException::class.java) { store.openAppendWriter(name) }
             assertTrue(sawNull)
@@ -98,7 +95,7 @@ class LogStoreCoordinationTest {
             assertThrows(IOException::class.java) { other.openAppendWriter(name) }
             assertFalse(other.delete(name))
             assertEquals(listOf("first"), other.readTail(name, 10))
-            Child(dir).use { foreign ->
+            LogProbeChild(dir).use { foreign ->
                 assertEquals("DELETED false", foreign.command("DELETE $name"))
                 assertTrue(foreign.command("OPEN $name").startsWith("ERROR IOException"))
             }
@@ -114,7 +111,7 @@ class LogStoreCoordinationTest {
         val writers = Role.entries.map { role -> store.openAppendWriter(LogFileNames.dailyName("2026-10-01", role.fileNameTag)) }
         try {
             assertEquals(4, store.listFiles().size)
-            Child(dir).use { foreign ->
+            LogProbeChild(dir).use { foreign ->
                 assertEquals("OPENED", foreign.command("OPEN xtmapper-2026-10-02.log"))
             }
             writers.forEach { it.write("ok\n".toByteArray()) }
@@ -172,41 +169,14 @@ class LogStoreCoordinationTest {
         val pipeline = factory.start()
         try {
             assertFalse(pipeline.fileSinkAvailable)
-            assertTrue(pipeline.sessionWriter.unavailable)
             pipeline.info("Probe", "still on Logcat")
             assertTrue(factory.logcatRecords.any { it.message == "still on Logcat" })
             assertTrue(factory.logcatRecords.any { it.message.contains("fileSink=false") })
             assertEquals(1, factory.failureEvents.count { it.contains("file sink unavailable") })
             assertTrue(factory.failureEvents.any { it.contains("ambiguous locking IO failure") })
+            assertTrue(pipeline.flush(2_000))
+            assertEquals("unavailable sink records definite drops", 2, pipeline.droppedCount)
             assertTrue(channels.none { it.isOpen })
         } finally { pipeline.close() }
-    }
-
-    private class Child(dir: File) : Closeable {
-        private val classpath = listOf(LogStoreProcessProbe::class.java, FileSystemLogStore::class.java, Unit::class.java)
-            .map { File(requireNotNull(it.protectionDomain).codeSource.location.toURI()).path }.distinct().joinToString(File.pathSeparator)
-        private val process = ProcessBuilder(
-            File(System.getProperty("java.home"), "bin/java").path,
-            "-cp", classpath, LogStoreProcessProbe::class.java.name, dir.path,
-        ).redirectError(ProcessBuilder.Redirect.INHERIT).start()
-        private val input = process.inputStream.bufferedReader()
-        private val output = process.outputStream.bufferedWriter()
-        private val reader = Executors.newSingleThreadExecutor()
-
-        init { assertEquals("READY", response()) }
-        private fun response(): String = reader.submit<String> { input.readLine() ?: error("Child exited") }
-            .get(10, TimeUnit.SECONDS)
-        fun command(line: String): String {
-            output.write(line + "\n")
-            output.flush()
-            return response()
-        }
-        override fun close() {
-            process.destroyForcibly()
-            process.waitFor(10, TimeUnit.SECONDS)
-            reader.shutdownNow()
-            input.close()
-            output.close()
-        }
     }
 }

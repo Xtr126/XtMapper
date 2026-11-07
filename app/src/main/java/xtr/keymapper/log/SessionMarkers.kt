@@ -4,14 +4,14 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.security.SecureRandom
-import java.time.LocalDateTime
+import java.util.UUID
 
 object SessionMarkers {
 
     const val START = "SESSION START"
     const val CONTINUED = "SESSION CONTINUED"
     const val END = "SESSION END"
+    const val LATE = "SESSION LATE"
 
     private val timestampFormatter: DateTimeFormatter =
         DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.ROOT)
@@ -28,11 +28,22 @@ object SessionMarkers {
         return sb.toString()
     }
 
-    fun continuedLine(id: String, originalStart: Instant, continuationTime: Instant, zone: ZoneId): String {
-        return "$CONTINUED\n" +
+    fun continuedLine(id: String, originalStart: Instant, continuationTime: Instant, zone: ZoneId, meta: SessionMetadata = SessionMetadata()): String {
+        return buildString {
+            append("$CONTINUED\nSession ID: $id\n")
+            append("Continuation Time: ${timestampFormatter.format(continuationTime.atZone(zone))}\n")
+            append("Original Start Time: ${timestampFormatter.format(originalStart.atZone(zone))}\n")
+            meta.renderInto(this)
+        }.trimEnd()
+    }
+
+    // Delayed-record routing proof: a record whose day file was pruned is rerouted into the
+    // current day behind this marker, never silently dropped and never resurrecting a day.
+    fun lateLine(id: String, recordTime: Instant, intendedDay: String, zone: ZoneId): String {
+        return "$LATE\n" +
                 "Session ID: $id\n" +
-                "Continuation Time: ${timestampFormatter.format(continuationTime.atZone(zone))}\n" +
-                "Original Start Time: ${timestampFormatter.format(originalStart.atZone(zone))}"
+                "Record Time: ${timestampFormatter.format(recordTime.atZone(zone))}\n" +
+                "Intended Day: $intendedDay"
     }
 
     fun endLine(
@@ -42,6 +53,7 @@ object SessionMarkers {
         durationNanos: Long,
         status: String,
         droppedRecords: Int,
+        uncertainRecords: Int = 0,
     ): String {
         val sb = StringBuilder(160)
             .append(END).append('\n')
@@ -50,6 +62,7 @@ object SessionMarkers {
             .append("Duration: ").append(formatDurationNanos(durationNanos)).append('\n')
             .append("Status: ").append(status)
         if (droppedRecords > 0) sb.append("\nDropped: ").append(droppedRecords)
+        if (uncertainRecords > 0) sb.append("\nUncertain: ").append(uncertainRecords)
         return sb.toString()
     }
 
@@ -72,15 +85,19 @@ object SessionMarkers {
         else null
 }
 
-class SessionMetadata(
+data class SessionMetadata(
     val appVersion: String? = null,
     val buildType: String? = null,
     val androidVersion: String? = null,
     val sdkInt: Int? = null,
     val deviceModel: String? = null,
     val environment: String? = null,
+    val role: String? = null,
+    val pid: Int? = null,
 ) {
     internal fun renderInto(sb: StringBuilder) {
+        role?.let { sb.append("Role: ").append(it).append('\n') }
+        pid?.let { sb.append("PID: ").append(it).append('\n') }
         appVersion?.let { sb.append("App Version: ").append(it).append('\n') }
         buildType?.let { sb.append("Build Type: ").append(it).append('\n') }
         if (androidVersion != null) {
@@ -94,14 +111,6 @@ class SessionMetadata(
 }
 
 object SessionIds {
-    private val random = SecureRandom()
-
-    fun generate(clock: java.time.Clock): String {
-        val now = LocalDateTime.now(clock)
-        val suffix = "%04X".format(Locale.ROOT, random.nextInt(0x10000))
-        return "%04d%02d%02d-%02d%02d%02d-%s".format(
-            Locale.ROOT, now.year, now.monthValue, now.dayOfMonth,
-            now.hour, now.minute, now.second, suffix,
-        )
-    }
+    // Keep the clock parameter for callers; identity must not depend on clock or PID reuse.
+    fun generate(clock: java.time.Clock): String = UUID.randomUUID().toString()
 }

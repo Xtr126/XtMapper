@@ -1,6 +1,10 @@
 package xtr.keymapper.log
 
 import java.io.File
+import java.io.RandomAccessFile
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 object LogStoreProcessProbe {
     @JvmStatic
@@ -15,7 +19,43 @@ object LogStoreProcessProbe {
             }
             channel.tryLock()
         }
+        var armHook = false
+        var probeSeq = 0
+        var coordinator = when (args.getOrNull(1)) {
+            "coordinator-hook" -> CoordinatorStore(File(args[0]), onCoordinatorLock = {
+                if (armHook) {
+                    armHook = false
+                    println("HOOK_REACHED")
+                    while (true) {
+                        val pauseLine = input.readLine() ?: break
+                        when (pauseLine.substringBefore(' ')) {
+                            "CONTINUE" -> break
+                            "READCLOSE" -> {
+                                RandomAccessFile(File(args[0], pauseLine.substringAfter(' ')), "r").use { }
+                                println("READCLOSED")
+                            }
+                        }
+                    }
+                }
+            })
+            "coordinator-budget" -> CoordinatorStore(File(args[0]))
+            else -> null
+        }
         var writer: LogFileWriter? = null
+        val pipeline = if (args.getOrNull(1) == "coordinator-pipeline") {
+            val start = Instant.parse("2026-10-01T12:00:00Z")
+            LoggingPipeline(
+                role = Role.SHELL,
+                sessionId = "probe-${ProcessHandle.current().pid()}",
+                store = store,
+                config = LoggingConfig(),
+                clock = Clock.fixed(start, ZoneOffset.UTC),
+                zone = ZoneOffset.UTC,
+                startTime = start,
+                durationNanos = { 0L },
+                coordinator = CoordinatorStore(File(args[0])),
+            ).also { it.start() }
+        } else null
         println("READY")
         try {
             while (true) {
@@ -31,6 +71,49 @@ object LogStoreProcessProbe {
                         "WRITE" -> { checkNotNull(writer).write((value + "\n").toByteArray()); println("WROTE") }
                         "TAIL" -> println("TAIL " + store.readTail(value, 10).joinToString("|"))
                         "CLOSE" -> { writer?.close(); writer = null; println("CLOSED") }
+                        "PIPELINE_WRITE" -> {
+                            val active = checkNotNull(pipeline)
+                            check(active.info("Probe", value) == LogSubmission.ACCEPTED)
+                            check(active.flush(2_000))
+                            println("WROTE")
+                        }
+                        "PIPELINE_CLOSE" -> { check(checkNotNull(pipeline).close()); println("CLOSED") }
+                        "ARM" -> { armHook = true; println("ARMED") }
+                        "BUDGET" -> {
+                            val (cap, reserve) = value.split(' ').map { it.toLong() }
+                            coordinator = CoordinatorStore(File(args[0]), maxDailyBytes = cap, reserveBytes = reserve)
+                            println("SIZED")
+                        }
+                        "BAPPEND" -> {
+                            val (name, sid, payload) = value.split(' ')
+                            probeSeq++
+                            val verdict = checkNotNull(coordinator).append(name, listOf(FrameCodec.encode(probeSeq.toLong(), sid, payload)))
+                            println("WROTE drops=${verdict.recordsDropped}")
+                        }
+                        "BBAPPEND" -> {
+                            println("HELD")
+                            while (true) { if (input.readLine() == "RELEASE") break }
+                            val (name, sid, payload) = value.split(' ')
+                            probeSeq++
+                            val verdict = checkNotNull(coordinator).append(name, listOf(FrameCodec.encode(probeSeq.toLong(), sid, payload)))
+                            println("WROTE drops=${verdict.recordsDropped}")
+                        }
+                        "TRYAPPEND" -> {
+                            probeSeq++
+                            checkNotNull(coordinator).append(
+                                value, listOf(FrameCodec.encode(probeSeq.toLong(), "probe-${ProcessHandle.current().pid()}", "probe")),
+                            )
+                            println("WROTE")
+                        }
+                        "BARRIERAPPEND" -> {
+                            println("HELD")
+                            while (true) { if (input.readLine() == "RELEASE") break }
+                            probeSeq++
+                            checkNotNull(coordinator).append(
+                                value, listOf(FrameCodec.encode(probeSeq.toLong(), "probe-${ProcessHandle.current().pid()}", "probe")),
+                            )
+                            println("WROTE")
+                        }
                         "EXIT" -> break
                         else -> error("Unknown command $command")
                     }
@@ -39,6 +122,7 @@ object LogStoreProcessProbe {
                 }
             }
         } finally {
+            pipeline?.close()
             writer?.close()
         }
     }

@@ -5,6 +5,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 class ClientServiceSlotTest {
     private val slot = ClientServiceSlot<String, String>()
@@ -117,5 +120,87 @@ class ClientServiceSlotTest {
         assertFalse(slot.deferUntilAvailable { retried = true })
         assertFalse(retried)
         assertTrue(slot.install("session-a", "service-a"))
+    }
+
+    @Test
+    fun `runIfOwner runs only while the exact session still occupies the slot`() {
+        assertFalse(
+            "no owner installed yet",
+            slot.runIfOwner("session-a") { throw AssertionError("must not run") },
+        )
+
+        slot.install("session-a", "service-a")
+        var invocations = 0
+        assertTrue(slot.runIfOwner("session-a") { invocations++ })
+        assertEquals(1, invocations)
+
+        assertFalse("a different owner must not run another owner's block", slot.runIfOwner("session-b") { invocations++ })
+        assertEquals(1, invocations)
+
+        assertEquals("service-a" to false, slot.claimForShutdown("session-a"))
+        assertFalse("a committed shutdown revokes pending side effects", slot.runIfOwner("session-a") { invocations++ })
+        assertEquals(1, invocations)
+    }
+
+    @Test
+    fun `a claim completes only after the running ownership block returns`() {
+        slot.install("session-a", "service-a")
+        val blockRunning = CountDownLatch(1)
+        val releaseBlock = CountDownLatch(1)
+        val claimOutcome = AtomicReference<Pair<String?, Boolean>?>(null)
+        val ownerFailure = AtomicReference<Throwable?>(null)
+        val claimerFailure = AtomicReference<Throwable?>(null)
+        val claimStarted = CountDownLatch(1)
+
+        val owner = Thread {
+            try {
+                val decided = slot.runIfOwner("session-a") {
+                    blockRunning.countDown()
+                    assertTrue("block released in time", releaseBlock.await(2, TimeUnit.SECONDS))
+                }
+                assertTrue("ownership block ran", decided)
+            } catch (failure: Throwable) {
+                ownerFailure.set(failure)
+            }
+        }
+        owner.isDaemon = true
+        owner.start()
+        assertTrue("block must be entered", blockRunning.await(2, TimeUnit.SECONDS))
+
+        // Shutdown shares the slot monitor with the ownership block and must wait
+        // until that block returns before it can revoke the session.
+        val claimer = Thread {
+            try {
+                claimStarted.countDown()
+                claimOutcome.set(slot.claimForShutdown("session-a"))
+            } catch (failure: Throwable) {
+                claimerFailure.set(failure)
+            }
+        }
+        claimer.isDaemon = true
+        try {
+            claimer.start()
+            assertTrue("claimer started", claimStarted.await(2, TimeUnit.SECONDS))
+            val blockedDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+            while (claimer.state != Thread.State.BLOCKED && System.nanoTime() < blockedDeadline) {
+                Thread.sleep(5)
+            }
+            assertEquals(
+                "claim must be blocked on the slot monitor while the ownership block runs",
+                Thread.State.BLOCKED,
+                claimer.state,
+            )
+        } finally {
+            releaseBlock.countDown()
+        }
+
+        owner.join(2_000)
+        claimer.join(2_000)
+        assertFalse("owner run finished", owner.isAlive)
+        assertFalse("claimer finished", claimer.isAlive)
+        assertNull("ownership thread failed: ${ownerFailure.get()}", ownerFailure.get())
+        assertNull("claim thread failed: ${claimerFailure.get()}", claimerFailure.get())
+        assertEquals("shutdown revokes only after the block returned", "service-a" to false, claimOutcome.get())
+        assertNull(slot.get())
     }
 }

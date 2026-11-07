@@ -40,6 +40,8 @@ static const char *event_type_name(unsigned short type) {
     }
 }
 
+#include "xt_diagnostics.h"
+
 typedef struct input_service_context {
     JavaVM *javaVM;
     jclass inputServiceClz;
@@ -70,6 +72,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
         LOGE("JNI_OnLoad: GetEnv failed for JNI 1.6");
         return JNI_ERR; // JNI version not supported.
     }
+    XtDiag_Init(env); // a failed diagnostics bridge must not fail library load
 
     int result = pthread_mutex_init(&g_ctx.lock, NULL);
     if (result != 0) {
@@ -138,14 +141,22 @@ void* send_mouse_events(void* context) {
             (*env)->ExceptionDescribe(env);
             (*env)->ExceptionClear(env);
         }
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                      "mouse unable to resolve InputService.sendMouseEvent", -1);
         finish_mouse_reader(pctx, mouse_fd, attached_here);
         return context;
     }
 
+    XtDiagEventGroup callback_failures;
+    XtDiagEvent_Init(&callback_failures);
+
     int mouse_lock = 1;
     LOGI("mouse thread started: fd=%d, initial grab requested", mouse_fd);
     if (ioctl(mouse_fd, EVIOCGRAB, mouse_lock) == -1) {
-        LOGE("EVIOCGRAB(fd=%d, 1) failed: errno=%d (%s)", mouse_fd, errno, strerror(errno));
+        int saved_errno = errno;
+        LOGE("EVIOCGRAB(fd=%d, 1) failed: errno=%d (%s)", mouse_fd, saved_errno, strerror(saved_errno));
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                      "mouse EVIOCGRAB failed errno=", saved_errno);
     } else {
         LOGI("EVIOCGRAB(fd=%d, 1) succeeded", mouse_fd);
     }
@@ -163,8 +174,11 @@ void* send_mouse_events(void* context) {
         if (requested_lock != mouse_lock) {
             mouse_lock = requested_lock;
             if (ioctl(mouse_fd, EVIOCGRAB, mouse_lock) == -1) {
+                int saved_errno = errno;
                 LOGE("EVIOCGRAB(fd=%d, %d) failed: errno=%d (%s)", mouse_fd,
-                     mouse_lock, errno, strerror(errno));
+                     mouse_lock, saved_errno, strerror(saved_errno));
+                XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                              "mouse EVIOCGRAB failed errno=", saved_errno);
             } else {
                 LOGI("EVIOCGRAB(fd=%d, %d) succeeded", mouse_fd, mouse_lock);
             }
@@ -182,7 +196,10 @@ void* send_mouse_events(void* context) {
             if (errno == EINTR) {
                 continue;
             }
-            LOGE("poll(fd=%d) failed: errno=%d (%s)", mouse_fd, errno, strerror(errno));
+            int saved_errno = errno;
+            LOGE("poll(fd=%d) failed: errno=%d (%s)", mouse_fd, saved_errno, strerror(saved_errno));
+            XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                          "mouse poll failed errno=", saved_errno);
             break;
         }
         if (poll_fd.revents & (POLLERR | POLLHUP | POLLNVAL)) {
@@ -200,12 +217,17 @@ void* send_mouse_events(void* context) {
             if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
                 continue;
             }
-            LOGE("read(fd=%d) failed: errno=%d (%s)", mouse_fd, errno, strerror(errno));
+            int saved_errno = errno;
+            LOGE("read(fd=%d) failed: errno=%d (%s)", mouse_fd, saved_errno, strerror(saved_errno));
+            XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                          "mouse read failed errno=", saved_errno);
             break;
         }
         if (bytes != sizeof(struct input_event)) {
             if (bytes == 0) {
                 LOGI("read(fd=%d) reached EOF", mouse_fd);
+                XtDiag_Submit(env, XT_DIAG_WARN, XT_DIAG_SOURCE_MOUSE,
+                              "mouse input device reached EOF", -1);
             } else {
                 LOGE("read(fd=%d) returned partial event: %zd of %zu bytes", mouse_fd,
                      bytes, sizeof(struct input_event));
@@ -228,9 +250,10 @@ void* send_mouse_events(void* context) {
                 if (mouse_lock) {
                     (*env)->CallVoidMethod(env, pctx->inputServiceObj, mouseEvent, ie.code, ie.value);
                     if ((*env)->ExceptionCheck(env)) {
-                        LOGE("Java exception while dispatching mouse event code=%u value=%d", ie.code, ie.value);
-                        (*env)->ExceptionDescribe(env);
                         (*env)->ExceptionClear(env);
+                        XtDiag_SubmitEvent(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                                           &callback_failures,
+                                           "InputService.sendMouseEvent failed; suppressed=");
                     }
                 } else {
                     LOGD("not dispatching recognized mouse event while unlocked: code=%u value=%d",
@@ -242,6 +265,12 @@ void* send_mouse_events(void* context) {
                      event_type_name(ie.type), ie.type, ie.code, ie.value);
                 break;
         }
+    }
+
+    uint64_t residual = XtDiagEvent_TakeResidual(&callback_failures);
+    if (residual > 0) {
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                      "InputService.sendMouseEvent failures suppressed at worker exit count=", (long)residual);
     }
 
     finish_mouse_reader(pctx, mouse_fd, attached_here);
@@ -292,6 +321,8 @@ int startMouseThread(JNIEnv *env, jobject thiz) {
     }
 
     LOGE("starting mouse thread failed: result=%d (%s)", result, strerror(result));
+    XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                  "mouse reader thread start failed errno=", result);
     pthread_mutex_lock(&g_ctx.lock);
     jclass failedClass = g_ctx.inputServiceClz;
     jobject failedObject = g_ctx.inputServiceObj;
@@ -321,7 +352,10 @@ Java_xtr_keymapper_server_InputService_openDevice(JNIEnv *env, jobject thiz, jst
     LOGI("openDevice: opening %s", evdev);
     int mouse_fd = open(evdev, O_RDONLY);
     if (mouse_fd == -1) {
-        LOGE("open(%s, O_RDONLY) failed: errno=%d (%s)", evdev, errno, strerror(errno));
+        int open_errno = errno;
+        LOGE("open(%s, O_RDONLY) failed: errno=%d (%s)", evdev, open_errno, strerror(open_errno));
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                      "mouse device open failed errno=", open_errno);
         (*env)->ReleaseStringUTFChars(env, device, evdev);
         return -1;
     }
@@ -332,6 +366,8 @@ Java_xtr_keymapper_server_InputService_openDevice(JNIEnv *env, jobject thiz, jst
         pthread_mutex_unlock(&g_ctx.lock);
         close(mouse_fd);
         LOGE("openDevice: refusing a second mouse reader before the first stops");
+        XtDiag_Submit(env, XT_DIAG_WARN, XT_DIAG_SOURCE_MOUSE,
+                      "mouse open refused; a second mouse reader was requested", -1);
         (*env)->ReleaseStringUTFChars(env, device, evdev);
         return -1;
     }
