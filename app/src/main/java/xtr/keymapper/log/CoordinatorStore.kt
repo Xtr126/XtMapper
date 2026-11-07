@@ -12,15 +12,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.random.Random
 
-// design-single-file.md §2 transaction shape: bounded per-process mutex RELEASED between
-// OS attempts, one gate tryLock per attempt, the data file opened/closed INSIDE the gate,
-// corruption classified before any byte change (pure unterminated suffix is the only
-// repairable region), and Deadline-enforced bounded acquisition. The shared daily budget
-// (§2 step 5) is accounted under the same lock; outcomes/retention land with their batches.
 
-// §8 outcome classes: an acquisition timeout is a retryable NOT-ATTEMPTED failure (no bytes
-// touched, sink recovers on the next batch); a day-integrity refusal is a real sink-down
-// class for the offending day. Both are IOExceptions, so IOException catchers are unaffected.
 class CoordinationTimeoutException(message: String) : IOException(message)
 
 class DayIntegrityBlockedException(message: String, val fileName: String? = null) : IOException(message)
