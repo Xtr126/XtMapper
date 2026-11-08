@@ -128,6 +128,7 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
+    /** Starts the selected input monitor: stdin for Wayland, local evdev otherwise. */
     fun init() {
         if (isWaylandClient) {
             Thread({ readWaylandEvents() }, "xtmapper-wayland-stdin").start()
@@ -219,11 +220,13 @@ class RemoteService @JvmOverloads constructor(
         return windowManager
     }
 
+    /** Requests asynchronous shutdown of the local evdev monitor and clears its reference. */
     private fun stopInputReader() {
         evdevReader?.close()
         evdevReader = null
     }
 
+    /** Reads Cage event lines until EOF and leaves process-owned stdin open. */
     private fun readWaylandEvents() {
         try {
             val reader = BufferedReader(InputStreamReader(System.`in`))
@@ -236,6 +239,12 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Routes a device-prefixed event through discovery, mapping, and the editor listener.
+     * Keyboard grabbing suppresses mapping and editor delivery; stopped mapping still permits
+     * keyboard shortcuts. Wayland pointer events are also sent to the mouse handler.
+     * Handler/listener Exceptions are caught, and a RemoteException clears the editor listener.
+     */
     private fun handleInputLine(line: String) {
         val data = line.split(":".toRegex()).dropLastWhile { it.isEmpty() }
             .toTypedArray() // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
@@ -268,6 +277,7 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
+    /** Discovers local relative-input devices and queues keyboard grabs; Wayland bypasses discovery. */
     private fun addNewDevices(data: Array<String>): Boolean {
         if (data.size != 2) return false
         val evdev = data[0]
@@ -281,7 +291,7 @@ class RemoteService @JvmOverloads constructor(
         }
         if (input_event.getOrNull(1) == "EV_REL") {
             if (lastLoggedMouseDevice != evdev) {
-                Log.i(TAG, "getevent: queue mouse discovery device=$evdev serviceReady=${mInputService.get() != null} thread=${Thread.currentThread().name}")
+                Log.i(TAG, "evdev: queue mouse discovery device=$evdev serviceReady=${mInputService.get() != null} thread=${Thread.currentThread().name}")
                 lastLoggedMouseDevice = evdev
             }
             mouseDeviceCoalescer.request(evdev)

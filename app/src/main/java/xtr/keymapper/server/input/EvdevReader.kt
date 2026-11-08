@@ -55,14 +55,28 @@ internal class EvdevReader(
     @Volatile private var running = true
     private val worker = Thread({ run() }, "xtmapper-evdev")
 
+    /**
+     * Starts asynchronous device monitoring, delivering labeled lines to [onLine] on the worker.
+     *
+     * @throws IllegalThreadStateException if the worker has already been started.
+     */
     fun start() = worker.start()
 
+    /**
+     * Requests shutdown without waiting for the worker to finish or closing descriptors here.
+     * The worker closes its devices when it exits; repeated calls are allowed.
+     */
     override fun close() {
         running = false
         worker.interrupt()
         // Descriptor cleanup completes on the owner thread within the poll timeout.
     }
 
+    /**
+     * Monitors devices until shutdown, retrying inaccessible nodes on later scans.
+     * Open failures and transient read/poll interruptions are handled locally; other Exceptions
+     * reaching the outer handler stop monitoring. Owned devices are closed on exit.
+     */
     private fun run() {
         val devices = linkedMapOf<String, Device>()
         val failed = mutableSetOf<String>()
