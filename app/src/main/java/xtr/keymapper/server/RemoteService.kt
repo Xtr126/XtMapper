@@ -118,8 +118,7 @@ class RemoteService @JvmOverloads constructor(
         try {
             val ai = pm.getApplicationInfo(packageName, 0)
             nativeLibraryDir = ai.nativeLibraryDir
-            if (!isWaylandClient) Thread { start_getevent() }.start()
-            else mHandler.post { start_getevent() }
+            Thread({ start_getevent() }, "xtmapper-getevent-reader").start()
         } catch (e: PackageManager.NameNotFoundException) {
             XtLogger.error(TAG, "Unable to resolve app native library directory", e)
             throw RuntimeException(e)

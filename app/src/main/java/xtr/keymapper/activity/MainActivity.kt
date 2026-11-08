@@ -135,6 +135,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleActivationFlow(keymapConfig: KeymapConfig) {
+        if (RemoteServiceHelper.hasLiveShellService() ||
+            RemoteServiceHelper.isShellServiceAuthenticationPending()
+        ) return
+
         if (!RemoteServiceHelper.useShizuku) {
             Shell.getShell {
                 if (Shizuku.pingBinder() || packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api") != null) {
@@ -218,7 +222,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun startPointer(displayId: Int?, autoStart: Boolean = false) {
         val keymapConfig = KeymapConfig(this)
-        if (keymapConfig.isShizukuMode) {
+        if (keymapConfig.isShizukuMode &&
+            !RemoteServiceHelper.hasLiveShellService()
+        ) {
+            if (RemoteServiceHelper.isShellServiceAuthenticationPending()) return
             when {
                 !isShizukuInstalled() -> {
                     if (!autoStart) alertShizukuNotInstalled()

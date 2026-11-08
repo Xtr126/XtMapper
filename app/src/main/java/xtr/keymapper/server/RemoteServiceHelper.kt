@@ -22,6 +22,8 @@ import xtr.keymapper.IShellAuthenticationCallback
 import xtr.keymapper.TouchPointer
 import xtr.keymapper.keymap.KeymapConfig
 import java.security.SecureRandom
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 object RemoteServiceHelper {
 
@@ -35,6 +37,7 @@ object RemoteServiceHelper {
     private var backendGeneration = 0L
 
     private val backendLock = Any()
+    private val backendSessionId = UUID.randomUUID().toString()
 
     @Volatile
     private var shellServiceBinder: IBinder? = null
@@ -113,26 +116,44 @@ object RemoteServiceHelper {
         private val cb: RootRemoteServiceCallback,
         private val requestGeneration: Long,
         private val requestedShizuku: Boolean,
+        private val shizukuArgs: Shizuku.UserServiceArgs?,
     ) : ServiceConnection {
         @Volatile
         private var connectedBinder: IBinder? = null
+        private val staleBindingReleased = AtomicBoolean(false)
 
-        private fun releaseStaleRootBinding() {
-            if (requestedShizuku) return
-            runCatching { RootService.unbind(this) }
-                .onFailure { Log.w("xtmapper-startup", "Failed to unbind a stale root service connection", it) }
+        private fun releaseStaleBinding(staleBinder: IBinder? = connectedBinder) {
+            if (!staleBindingReleased.compareAndSet(false, true)) return
+
+            if (requestedShizuku) {
+                val args = shizukuArgs ?: return
+                // Each backend generation has a distinct Shizuku tag, so this cannot detach
+                // a newer generation that uses the same RemoteService component.
+                runCatching { Shizuku.unbindUserService(args, this, false) }
+                    .onFailure { Log.w("xtmapper-startup", "Failed to unbind a stale Shizuku service connection", it) }
+                if (staleBinder?.isBinderAlive == true) {
+                    // destroy() is called from the app UID, which RemoteService authenticates.
+                    // Shizuku's remove=true targets the whole tagged service record instead.
+                    runCatching { IRemoteService.Stub.asInterface(staleBinder)?.destroy() }
+                        .onFailure { Log.w("xtmapper-startup", "Failed to stop a stale Shizuku user service", it) }
+                }
+            } else {
+                runCatching { RootService.unbind(this) }
+                    .onFailure { Log.w("xtmapper-startup", "Failed to unbind a stale root service connection", it) }
+            }
         }
 
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             Log.i("xtmapper-startup", "onServiceConnected: component=$name alive=${service.isBinderAlive}")
+            connectedBinder = service
             if (requestGeneration != RemoteServiceHelper.backendGeneration ||
                 requestedShizuku != RemoteServiceHelper.useShizuku
             ) {
-                releaseStaleRootBinding()
+                releaseStaleBinding(service)
                 return
             }
 
-            connectedBinder = service
+
             val remote = IRemoteService.Stub.asInterface(service)
             RemoteServiceHelper.service = remote
             RemoteServiceHelper.forceSelectedBackend = false
@@ -150,7 +171,7 @@ object RemoteServiceHelper {
             if (requestGeneration != RemoteServiceHelper.backendGeneration ||
                 requestedShizuku != RemoteServiceHelper.useShizuku
             ) {
-                releaseStaleRootBinding()
+                releaseStaleBinding()
                 return
             }
             if (RemoteServiceHelper.service?.asBinder() == connectedBinder) {
@@ -264,12 +285,21 @@ object RemoteServiceHelper {
         Log.i("xtmapper-startup", "authenticated shell Binder cached: alive=${remoteBinder.isBinderAlive}")
     }
 
-    private fun bindShizukuService(context: Context, connection: RemoteServiceConnection) {
-        val userServiceArgs = Shizuku.UserServiceArgs(ComponentName(context, RemoteService::class.java.name))
+    private fun createShizukuUserServiceArgs(
+        context: Context,
+        requestGeneration: Long,
+    ): Shizuku.UserServiceArgs =
+        Shizuku.UserServiceArgs(ComponentName(context, RemoteService::class.java.name))
             .daemon(false)
             .processNameSuffix("service")
+            .tag("xtmapper-$backendSessionId-$requestGeneration")
             .debuggable(BuildConfig.DEBUG)
             .version(BuildConfig.VERSION_CODE)
+
+    private fun bindShizukuService(
+        userServiceArgs: Shizuku.UserServiceArgs,
+        connection: RemoteServiceConnection,
+    ) {
         Shizuku.bindUserService(userServiceArgs, connection)
     }
 
@@ -326,10 +356,22 @@ object RemoteServiceHelper {
         }
 
         Log.i("xtmapper-startup", "getInstance: falling back to ${if (useShizuku) "Shizuku" else "root"} binding")
-        val connection = RemoteServiceConnection(callback, backendGeneration, useShizuku)
-        if (useShizuku) {
+        val requestGeneration = backendGeneration
+        val requestedShizuku = useShizuku
+        val shizukuArgs = if (requestedShizuku) {
+            createShizukuUserServiceArgs(context, requestGeneration)
+        } else {
+            null
+        }
+        val connection = RemoteServiceConnection(
+            callback,
+            requestGeneration,
+            requestedShizuku,
+            shizukuArgs,
+        )
+        if (requestedShizuku) {
             if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-                bindShizukuService(context, connection)
+                bindShizukuService(shizukuArgs!!, connection)
             } else {
                 callback.onConnection(null)
             }

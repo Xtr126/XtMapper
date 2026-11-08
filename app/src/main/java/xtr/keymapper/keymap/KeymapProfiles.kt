@@ -61,7 +61,7 @@ class KeymapProfiles @JvmOverloads constructor(
                 return designated
             }
             return profiles.entries.firstOrNull { !it.value.disabled }?.key
-                ?: profiles.keys.firstOrNull()
+                ?: designated
         }
 
         val fallback = profiles.entries.firstOrNull { !it.value.disabled }?.key
