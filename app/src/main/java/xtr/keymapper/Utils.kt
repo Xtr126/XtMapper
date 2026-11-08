@@ -3,10 +3,6 @@ package xtr.keymapper
 import android.graphics.PixelFormat
 import android.os.Build
 import android.view.WindowManager
-import java.io.BufferedReader
-import java.io.DataOutputStream
-import java.io.IOException
-import java.io.InputStreamReader
 
 object Utils {
     @JvmStatic
@@ -26,15 +22,6 @@ object Utils {
     }
 
     @JvmStatic
-    @Throws(IOException::class)
-    fun geteventStream(nativeLibraryDir: String): Process {
-        val sh = Runtime.getRuntime().exec("sh")
-        val outputStream = DataOutputStream(sh.outputStream)
-        outputStream.writeBytes("exec env LD_PRELOAD=$nativeLibraryDir/libgetevent.so getevent -ql\n")
-        outputStream.flush()
-        return sh
-    }
-
     /**
      * Builds WindowManager.LayoutParams for full-screen pass-through pointer overlay windows,
      * applying flags and capping alpha to 0.8 on Android 12+ to satisfy untrusted touch limits.

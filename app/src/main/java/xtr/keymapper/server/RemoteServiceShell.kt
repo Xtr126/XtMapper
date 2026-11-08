@@ -94,7 +94,6 @@ object RemoteServiceShell {
 
             val mService = RemoteService(getContext(), initialIsWaylandClient = isWaylandClient)
             mService.startedFromShell = true
-            mService.isWaylandClient = isWaylandClient
 
             XtLogger.info(TAG, "server configuration ready wayland=${mService.isWaylandClient}")
 

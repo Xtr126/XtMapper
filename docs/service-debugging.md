@@ -13,7 +13,7 @@ After reinstalling or updating, regenerate the script before running it again.
 Start this capture in a separate host terminal **before** starting the server:
 
 ```bash
-adb logcat -v threadtime 'xtmapper-startup:V' 'xtmapper-server:V' 'xtmapper-mouse-lifecycle:V' 'XtMapperMouse:V' 'TouchPointer:V' 'startServer:V' 'AndroidRuntime:E' '*:S' | tee xtmapper-debug.log
+adb logcat -v threadtime 'xtmapper-startup:V' 'xtmapper-server:V' 'xtmapper-evdev:V' 'xtmapper-mouse-lifecycle:V' 'XtMapperMouse:V' 'TouchPointer:V' 'startServer:V' 'AndroidRuntime:E' '*:S' | tee xtmapper-debug.log
 ```
 
 Then start the shell server in another terminal:
@@ -36,7 +36,8 @@ and thread IDs: `threadtime` makes cross-process ordering visible. Quote
 | Tag | What it reveals |
 | --- | --- |
 | `xtmapper-startup` | MainActivity shell marker/Binder receipt, service selection, profile disabled state, and calls to `startServer()` |
-| `xtmapper-server` | Shell launch result, getevent discovery queued to the main handler, service construction, JNI return values, and shutdown |
+| `xtmapper-server` | Shell launch result, evdev discovery queued to the main handler, service construction, JNI return values, and shutdown |
+| `xtmapper-evdev` | Kotlin event monitor device opens, access/read failures, disconnects, and owner-thread shutdown |
 | `xtmapper-mouse-lifecycle` | Discovery, service connect/disconnect, deferred or skipped opens, retries, and success |
 | `XtMapperMouse` | Native device opening, file descriptors, `EVIOCGRAB`, input reads, and JNI callback diagnostics |
 | `TouchPointer`, `startServer` | App-side connection warnings and exceptions |
@@ -130,3 +131,7 @@ failure, and reconnection. Profile tests cover enabling `Default` without an app
 association and preserving profile contents/isolation. These checks do not
 validate device permissions, WindowManager behavior, grabbing, or JNI event
 delivery; reproduce on the affected Android device as well.
+
+See [Kotlin input monitor](kotlin-input-reader.md) for the draft replacement of
+the system `getevent` subprocess and its device validation checklist. The
+`adb shell getevent` commands above remain useful as independent diagnostics.
