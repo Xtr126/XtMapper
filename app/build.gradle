@@ -124,3 +124,31 @@ dependencies {
     compileOnly project(path: ':app:hidden-api')
     testImplementation 'junit:junit:4.13.2'
 }
+
+// Use the same NDK headers and bundled Python as ndk-build.
+def inputNdk = androidComponents.sdkComponents.ndkDirectory
+def inputToolchain = inputNdk.map { ndk ->
+    new File(ndk.asFile, 'toolchains/llvm/prebuilt').listFiles().find { it.isDirectory() }
+}
+def generatedInput = layout.buildDirectory.dir('generated/source/inputLabels')
+def generateInputLabels = tasks.register('generateInputLabels', Exec) {
+    inputs.file('src/main/cpp/generate-input.h-labels.py')
+    inputs.files(inputToolchain.map { new File(it, 'sysroot/usr/include/linux/input.h') },
+            inputToolchain.map { new File(it, 'sysroot/usr/include/linux/input-event-codes.h') })
+    outputs.dir(generatedInput)
+    doFirst {
+        def toolchain = inputToolchain.get()
+        def python = new File(toolchain, 'python3/bin/python3')
+        if (!python.exists()) python = new File(toolchain, 'python3/python.exe')
+        commandLine python, file('src/main/cpp/generate-input.h-labels.py'),
+                new File(toolchain, 'sysroot/usr/include/linux/input.h'),
+                new File(toolchain, 'sysroot/usr/include/linux/input-event-codes.h'),
+                '--kotlin', generatedInput.get().asFile
+    }
+}
+android.sourceSets.main.kotlin.srcDir(generatedInput.get().asFile)
+tasks.configureEach {
+    if (name == 'preBuild' || name.matches('compile.*(Kotlin|JavaWithJavac)')) {
+        dependsOn(generateInputLabels)
+    }
+}

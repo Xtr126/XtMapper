@@ -15,7 +15,7 @@
 #include <cassert>
 #include <cerrno>
 #include "evdev_common.h"
-#include "linux_key_table.h"
+#include "input.h-labels.h"
 
 using std::string;
 using std::vector;
@@ -143,7 +143,7 @@ static void run_keyboard_grab_loop() {
                         if (ie.type == EV_KEY) {
                             // ie.value: 0 = UP, 1 = DOWN, 2 = REPEAT
                             if (ie.value == 0 || ie.value == 1) {
-                                const char *keyName = get_linux_key_name(ie.code);
+                                const char *keyName = get_input_event_label(EV_KEY, ie.code);
                                 if (keyName != nullptr && g_ctx.inputServiceObj != nullptr && g_ctx.sendKeyboardEventMethod != nullptr) {
                                     jstring jKeyName = env->NewStringUTF(keyName);
                                     if (jKeyName != nullptr) {
