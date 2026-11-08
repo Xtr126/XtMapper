@@ -11,6 +11,7 @@ jobs:
     uses: ./.github/workflows/build-docs.yml
   
   build:
+    if: github.ref_type == 'tag'
     needs:
       - build-docs
       
@@ -55,18 +56,18 @@ jobs:
       run: ./gradlew app:assembleRelease
 
     - name: Rename release APK
+      env:
+        RELEASE_TAG: ${{ github.ref_name }}
       run: |
-        VERSION_NAME="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' app/build.gradle.kts)"
-        echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
-        mv app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/XtMapper-release-v${VERSION_NAME}.apk"
-        
+        mv app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/XtMapper-release-${RELEASE_TAG}.apk"
+
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: 'app/build/outputs/apk/release/XtMapper-release-v${{ env.VERSION_NAME }}.apk'
-        asset_name: XtMapper-release-v${{ env.VERSION_NAME }}.apk
-        tag: v2.6.0
+        file: 'app/build/outputs/apk/release/XtMapper-release-${{ github.ref_name }}.apk'
+        asset_name: XtMapper-release-${{ github.ref_name }}.apk
+        tag: ${{ github.ref_name }}
         overwrite: true
         file_glob: true          
-        draft: true
+        draft: false
