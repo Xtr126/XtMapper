@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- SVG glow uses feGaussianBlur, which VectorDrawable cannot render; density PNGs preserve it. -->
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:src="@mipmap/ic_launcher_foreground"
-    android:gravity="fill" />
