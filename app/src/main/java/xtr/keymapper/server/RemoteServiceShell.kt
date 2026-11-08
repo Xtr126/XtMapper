@@ -2,6 +2,7 @@ package xtr.keymapper.server
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager
+import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
@@ -149,6 +150,10 @@ object RemoteServiceShell {
             Bundle::class.java.name,
             Int::class.javaPrimitiveType!!.name
         )
+        // Android 14+ can share the launcher identity so MainActivity can verify this shell launch.
+        val options = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ActivityOptions.makeBasic().setShareIdentityEnabled(true).toBundle()
+        } else null
         val values = listOf(
             null,
             "com.android.shell",
@@ -158,7 +163,7 @@ object RemoteServiceShell {
             null,
             -1,
             0,
-            null,
+            options,
             currentUserId
         )
 

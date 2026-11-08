@@ -15,6 +15,7 @@ import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.Process
 import android.os.RemoteException
 import android.provider.Settings
 import android.widget.Toast
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity() {
 
     var pointerOverlay: TouchPointer? = null
     private var selectedProfileName: String? = null
+    private var autoStartProfile: String? = null
     private var composeServiceActive = false
     private var isServiceBound = false
     private var displaySelector: DisplaySelector? = null
@@ -106,15 +108,20 @@ class MainActivity : AppCompatActivity() {
 
         val keymapConfig = KeymapConfig(this)
         val profiles = KeymapProfiles(this)
-        selectedProfileName = profiles.getLastSelectedProfile()
-        Log.i("xtmapper-startup", "MainActivity: profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode}")
+        autoStartProfile = if (savedInstanceState == null) {
+            StartupLaunch.autoStartProfile(isAuthenticatedShellLaunch(), profiles.getAllProfiles().keys)
+        } else null
+        selectedProfileName = autoStartProfile ?: profiles.getLastSelectedProfile()
+        Log.i("xtmapper-startup", "MainActivity: profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode} autoStart=${autoStartProfile != null}")
         TouchPointer.currentSelectedProfile = selectedProfileName
 
         RemoteServiceHelper.useShizuku = keymapConfig.isShizukuMode
         Server.setupServer(this, mCallback)
 
-        if (supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) == null) {
-            handleActivationFlow(keymapConfig)
+        val dialogPending = supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) != null
+        if (!dialogPending) {
+            if (autoStartProfile == null) handleActivationFlow(keymapConfig)
+            else startPointer(null, autoStart = true)
         }
 
         displaySelector = DisplaySelector(this).register { displayId -> startPointer(displayId) }
@@ -197,36 +204,42 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun startPointer(displayId: Int?) {
+    /** True only when Android itself reports a shell launch; Intent extras are not evidence. */
+    private fun isAuthenticatedShellLaunch(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            launchedFromUid == Process.SHELL_UID
+
+    private fun startPointer(displayId: Int?, autoStart: Boolean = false) {
         val keymapConfig = KeymapConfig(this)
         if (keymapConfig.isShizukuMode) {
             when {
                 !isShizukuInstalled() -> {
-                    alertShizukuNotInstalled()
+                    if (!autoStart) alertShizukuNotInstalled()
                     return
                 }
                 !Shizuku.pingBinder() -> {
-                    alertShizukuNotRunning()
+                    if (!autoStart) alertShizukuNotRunning()
                     return
                 }
                 Shizuku.checkSelfPermission() != PERMISSION_GRANTED -> {
-                    alertShizukuNotAuthorized()
+                    if (!autoStart) alertShizukuNotAuthorized()
                     return
                 }
             }
         } else if (Shell.isAppGrantedRoot() == false) {
-            alertRootAccessAndExit()
+            if (!autoStart) alertRootAccessAndExit()
             return
         }
 
-        checkOverlayPermission(this)
+        if (!autoStart) checkOverlayPermission(this)
         val profiles = KeymapProfiles(this)
         if (selectedProfileName == null) {
             selectedProfileName = profiles.getLastSelectedProfile()
         }
         TouchPointer.currentSelectedProfile = selectedProfileName
         if (Settings.canDrawOverlays(this)) {
-            profiles.setLastSelectedProfile(selectedProfileName)
+            // A shell auto-start must not overwrite the profile the user chose in the app.
+            if (!autoStart) profiles.setLastSelectedProfile(selectedProfileName)
             val intent = Intent(this, TouchPointer::class.java).apply {
                 putExtra(EditorActivity.PROFILE_NAME, selectedProfileName)
                 if (displayId != null) putExtra(TouchPointer.DISPLAY_ID, displayId)
@@ -234,7 +247,7 @@ class MainActivity : AppCompatActivity() {
             isServiceBound = bindService(intent, connection, Context.BIND_AUTO_CREATE)
             ContextCompat.startForegroundService(this, intent)
             setButtonState(false)
-            requestNotificationPermission()
+            if (!autoStart) requestNotificationPermission()
         }
     }
 
