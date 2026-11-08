@@ -262,8 +262,8 @@ class EditorUI(
     }
 
     /**
-     * For key events received from getevent running in remote process
-     * @param event A line of output from getevent -ql
+     * For labeled key events received from the remote input monitor
+     * @param event A labeled evdev or Wayland event line
      */
     override fun onKeyEvent(event: String) {
         // e.g.: /dev/input/event3: EV_KEY KEY_X DOWN
