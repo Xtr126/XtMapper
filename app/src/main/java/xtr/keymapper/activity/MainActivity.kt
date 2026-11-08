@@ -93,8 +93,12 @@ class MainActivity : AppCompatActivity() {
             XtLogger.info("MainActivity", "launch signal applied: environment=${Environment.name}")
         }
         Log.i("xtmapper-startup", "MainActivity.onCreate: shellMarker=${intent.getStringExtra("data") == SHELL_INIT} binderPresent=${intent.extras?.getBinder(SHELL_SERVICE_BINDER) != null}")
-        intent.extras?.getBinder(SHELL_SERVICE_BINDER)?.let {
-            RemoteServiceHelper.setShellServiceBinder(it)
+        intent.extras?.getBinder(SHELL_SERVICE_BINDER)?.let { binder ->
+            if (isAuthenticatedShellLaunch()) {
+                RemoteServiceHelper.setAuthenticatedShellServiceBinder(binder)
+            } else {
+                RemoteServiceHelper.authenticateShellServiceBinder(binder)
+            }
         }
 
         val launchData = intent.getStringExtra("data")
@@ -141,7 +145,10 @@ class MainActivity : AppCompatActivity() {
                         keymapConfig.applySharedPrefs()
                         alertShizukuNotAuthorized()
                     }, R.string.ok)
-                } else if (Shell.isAppGrantedRoot() == false) {
+                } else if (Shell.isAppGrantedRoot() == false &&
+                    !RemoteServiceHelper.hasLiveShellService() &&
+                    !RemoteServiceHelper.isShellServiceAuthenticationPending()
+                ) {
                     alertRootAccessNotFound()
                 }
             }
@@ -226,8 +233,12 @@ class MainActivity : AppCompatActivity() {
                     return
                 }
             }
-        } else if (Shell.isAppGrantedRoot() == false) {
-            if (!autoStart) alertRootAccessAndExit()
+        } else if (Shell.isAppGrantedRoot() == false &&
+            !RemoteServiceHelper.hasLiveShellService()
+        ) {
+            if (!RemoteServiceHelper.isShellServiceAuthenticationPending() && !autoStart) {
+                alertRootAccessAndExit()
+            }
             return
         }
 
@@ -427,7 +438,10 @@ class MainActivity : AppCompatActivity() {
                     return
                 }
             }
-        } else if (Shell.isAppGrantedRoot() == false) {
+        } else if (Shell.isAppGrantedRoot() == false &&
+            !RemoteServiceHelper.hasLiveShellService() &&
+            !RemoteServiceHelper.isShellServiceAuthenticationPending()
+        ) {
             Toast.makeText(this, R.string.test_input_root_unavailable, Toast.LENGTH_LONG).show()
             return
         }

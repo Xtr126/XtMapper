@@ -48,6 +48,60 @@ class AsyncLogWorkerTest {
     }
 
     @Test
+    fun `start returns when session initialization exceeds the flush timeout`() {
+        val clock = MutableClock.at("2026-10-22T09:00:00Z")
+        val config = LoggingConfig(queueCapacity = 4, flushTimeoutMillis = 100)
+        val writer = SessionLogWriter(
+            FileSystemLogStore(tmp.newFolder()),
+            role = null,
+            config = config,
+            clock = clock,
+            zone = clock.zoneId,
+            sessionId = "s-slow-start",
+        )
+        val queue = LoggingQueue(4)
+        val startupEntered = CountDownLatch(1)
+        val releaseStartup = CountDownLatch(1)
+        val startReturned = CountDownLatch(1)
+        val worker = AsyncLogWorker(
+            queue,
+            config,
+            writer,
+            "slow-start",
+            onStart = {
+                startupEntered.countDown()
+                releaseStartup.await()
+                writer.configure(
+                    SessionState.DISPOSITION_FIRST,
+                    SessionMetadata(),
+                    clock.instant(),
+                )
+                writer.writeSessionStartMarker()
+            },
+        )
+
+        val starter = Thread {
+            worker.start()
+            startReturned.countDown()
+        }
+        starter.start()
+        try {
+            assertTrue("worker enters session initialization", startupEntered.await(2, TimeUnit.SECONDS))
+            assertTrue(
+                "start returns after its bounded wait",
+                startReturned.await(2, TimeUnit.SECONDS),
+            )
+            assertTrue("worker continues initializing in the background", worker.threadReference().isAlive)
+        } finally {
+            releaseStartup.countDown()
+            starter.join(2_000)
+        }
+
+        assertFalse("start caller must finish", starter.isAlive)
+        assertTrue("worker closes after initialization completes", worker.close(2_000))
+    }
+
+    @Test
     fun `flush drains all offered records within the bound`() {
         // Capacity above the offered count: drop-oldest must not lose anything.
         val (writer, queue, worker) = buildWorker(FileSystemLogStore(tmp.newFolder()), capacity = 64)

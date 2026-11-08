@@ -148,6 +148,7 @@ class LoggingQueueTest {
         consumer.isDaemon = true
         consumer.start()
         repeat(500) { queue.offer(record(it)) }
+        assertTrue("consumer drains accepted records before stopping", queue.awaitDrained(3_000))
         stop.set(true)
         assertTrue(done.await(3, TimeUnit.SECONDS))
         assertTrue(processedCount.get() > 0)

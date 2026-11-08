@@ -17,12 +17,19 @@ Auto-start also stays silent: it never opens permission dialogs, never opens the
 overlay settings screen, and never exits the app. If root, Shizuku, or overlay
 access is missing, the launch simply falls back to the normal manual flow.
 
-On Android 13 and older, or whenever the launch identity is unavailable,
-XtMapper keeps the manual behavior: `data=shell` never triggers automatic mapper
-startup, never selects the `Default` profile, and never resets the saved
-Shizuku-to-Root mode. Launch XtMapper normally and start the mapper from its UI;
-startup restores the profile last selected in the app. The marker's only
-remaining effect is to suppress replay of a crash payload on the shell request.
+On Android 13 and older, Android does not expose the launching UID for this
+activity launch. MainActivity therefore checks a challenge callback from the
+supplied service Binder and accepts it only when Binder reports that the callback
+came from UID 2000 (the shell process). An arbitrary Binder or the caller-controlled
+`data=shell` extra is not accepted as proof of identity.
+
+A verified Binder lets the user start mapping through the shell service without
+granting root access to the app. These older versions still use manual startup:
+they do not auto-start the `Default` profile because Android does not expose the
+launcher identity. The saved Shizuku-to-Root mode and last-selected profile remain
+unchanged. The `data=shell` marker only suppresses replay of a crash payload on
+the shell request. The same Binder challenge is used on newer Android versions
+when the launching identity is unavailable.
 
 Whether starting a profile also opens its associated app depends on the
 **Disable auto profiling** setting. When that setting is enabled, starting an

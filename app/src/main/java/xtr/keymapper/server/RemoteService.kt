@@ -21,6 +21,7 @@ import xtr.keymapper.ActivityObserver
 import xtr.keymapper.BuildConfig
 import xtr.keymapper.IRemoteService
 import xtr.keymapper.IRemoteServiceCallback
+import xtr.keymapper.IShellAuthenticationCallback
 import xtr.keymapper.OnKeyEventListener
 import xtr.keymapper.R
 import xtr.keymapper.Utils
@@ -75,6 +76,14 @@ class RemoteService @JvmOverloads constructor(
     private fun enforceCaller() {
         if (getCallingUid() != appUid && getCallingPid() != android.os.Process.myPid())
             throw SecurityException("XtMapper service access denied")
+    }
+
+    override fun authenticateShellClient(callback: IShellAuthenticationCallback, challenge: Long) {
+        enforceCaller()
+        if (Process.myUid() != Process.SHELL_UID) {
+            throw SecurityException("Only the shell process can authenticate this service Binder")
+        }
+        callback.onShellServiceAuthenticated(challenge)
     }
 
     init {

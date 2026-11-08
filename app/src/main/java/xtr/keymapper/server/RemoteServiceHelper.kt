@@ -6,7 +6,11 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Binder
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.Process
 import android.os.RemoteException
 import android.util.Log
 import com.topjohnwu.superuser.Shell
@@ -14,8 +18,10 @@ import com.topjohnwu.superuser.ipc.RootService
 import rikka.shizuku.Shizuku
 import xtr.keymapper.BuildConfig
 import xtr.keymapper.IRemoteService
+import xtr.keymapper.IShellAuthenticationCallback
 import xtr.keymapper.TouchPointer
 import xtr.keymapper.keymap.KeymapConfig
+import java.security.SecureRandom
 
 object RemoteServiceHelper {
 
@@ -27,6 +33,18 @@ object RemoteServiceHelper {
 
     @Volatile
     private var backendGeneration = 0L
+
+    private val backendLock = Any()
+
+    @Volatile
+    private var shellServiceBinder: IBinder? = null
+
+    @Volatile
+    private var shellServiceAuthenticationPending = false
+
+    private var shellAuthenticationRequestId = 0L
+
+    private const val SHELL_AUTHENTICATION_TIMEOUT_MILLIS = 2_000L
 
     @JvmStatic
     @Volatile
@@ -81,9 +99,14 @@ object RemoteServiceHelper {
 
     @JvmStatic
     fun prepareForBackendSwitch() {
-        backendGeneration++
-        service = null
-        forceSelectedBackend = true
+        synchronized(backendLock) {
+            backendGeneration++
+            shellAuthenticationRequestId++
+            shellServiceAuthenticationPending = false
+            shellServiceBinder = null
+            service = null
+            forceSelectedBackend = true
+        }
     }
 
     class RemoteServiceConnection(
@@ -94,11 +117,18 @@ object RemoteServiceHelper {
         @Volatile
         private var connectedBinder: IBinder? = null
 
+        private fun releaseStaleRootBinding() {
+            if (requestedShizuku) return
+            runCatching { RootService.unbind(this) }
+                .onFailure { Log.w("xtmapper-startup", "Failed to unbind a stale root service connection", it) }
+        }
+
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             Log.i("xtmapper-startup", "onServiceConnected: component=$name alive=${service.isBinderAlive}")
             if (requestGeneration != RemoteServiceHelper.backendGeneration ||
                 requestedShizuku != RemoteServiceHelper.useShizuku
             ) {
+                releaseStaleRootBinding()
                 return
             }
 
@@ -117,7 +147,12 @@ object RemoteServiceHelper {
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
-            if (requestGeneration != RemoteServiceHelper.backendGeneration) return
+            if (requestGeneration != RemoteServiceHelper.backendGeneration ||
+                requestedShizuku != RemoteServiceHelper.useShizuku
+            ) {
+                releaseStaleRootBinding()
+                return
+            }
             if (RemoteServiceHelper.service?.asBinder() == connectedBinder) {
                 RemoteServiceHelper.service = null
                 cb.onConnection(null)
@@ -126,17 +161,107 @@ object RemoteServiceHelper {
     }
 
     @JvmStatic
-    fun setShellServiceBinder(binder: IBinder?) {
-        val remote = binder?.let { IRemoteService.Stub.asInterface(it) }
+    fun hasLiveShellService(): Boolean {
+        if (forceSelectedBackend) return false
+        val shellBinder = shellServiceBinder ?: return false
+        return shellBinder.isBinderAlive && service?.asBinder() == shellBinder
+    }
+
+    @JvmStatic
+    fun isShellServiceAuthenticationPending(): Boolean = shellServiceAuthenticationPending
+
+    /** Cache a shell Binder only after Android has verified the launching UID. */
+    @JvmStatic
+    fun setAuthenticatedShellServiceBinder(binder: IBinder?) {
+        synchronized(backendLock) {
+            shellAuthenticationRequestId++
+            shellServiceAuthenticationPending = false
+            cacheShellServiceBinderLocked(binder)
+        }
+    }
+
+    /**
+     * Authenticate a shell Binder on Android versions that do not expose the activity's
+     * launching UID. The callback's Binder caller UID is supplied by the kernel.
+     */
+    @JvmStatic
+    fun authenticateShellServiceBinder(binder: IBinder?) {
+        if (binder == null || !binder.isBinderAlive) return
+
+        val (requestId, expectedBackendGeneration) = synchronized(backendLock) {
+            if (forceSelectedBackend) return
+            shellAuthenticationRequestId++
+            shellServiceAuthenticationPending = true
+            shellAuthenticationRequestId to backendGeneration
+        }
+
+        val challenge = SecureRandom().nextLong()
+        val authenticator = ShellServiceAuthenticator(challenge, Process.SHELL_UID) {
+            synchronized(backendLock) {
+                if (shellAuthenticationRequestId != requestId ||
+                    backendGeneration != expectedBackendGeneration ||
+                    forceSelectedBackend ||
+                    !shellServiceAuthenticationPending ||
+                    !binder.isBinderAlive
+                ) return@synchronized
+
+                cacheShellServiceBinderLocked(binder)
+                shellServiceAuthenticationPending = false
+            }
+        }
+        val callback = object : IShellAuthenticationCallback.Stub() {
+            override fun onShellServiceAuthenticated(challengeResponse: Long) {
+                authenticator.authenticate(Binder.getCallingUid(), challengeResponse)
+            }
+        }
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            synchronized(backendLock) {
+                if (shellAuthenticationRequestId == requestId) {
+                    shellServiceAuthenticationPending = false
+                }
+            }
+        }, SHELL_AUTHENTICATION_TIMEOUT_MILLIS)
+
+        Thread({
+            try {
+                IRemoteService.Stub.asInterface(binder)
+                    ?.authenticateShellClient(callback, challenge)
+            } catch (e: Exception) {
+                Log.w("xtmapper-startup", "Shell service Binder authentication failed", e)
+            } finally {
+                if (!authenticator.isAuthenticated) {
+                    synchronized(backendLock) {
+                        if (shellAuthenticationRequestId == requestId) {
+                            shellServiceAuthenticationPending = false
+                        }
+                    }
+                }
+            }
+        }, "xtmapper-shell-binder-auth").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    private fun cacheShellServiceBinderLocked(binder: IBinder?) {
+        if (binder == null || !binder.isBinderAlive) return
+        val remote = IRemoteService.Stub.asInterface(binder) ?: return
+        val remoteBinder = remote.asBinder()
+        shellServiceBinder = remoteBinder
         service = remote
-        Log.i("xtmapper-startup", "setShellServiceBinder: present=${binder != null} alive=${binder?.isBinderAlive}")
         try {
-            val remoteBinder = remote?.asBinder()
-            remoteBinder?.linkToDeath({
-                if (service?.asBinder() == remoteBinder) service = null
+            remoteBinder.linkToDeath({
+                synchronized(backendLock) {
+                    if (shellServiceBinder == remoteBinder) shellServiceBinder = null
+                    if (service?.asBinder() == remoteBinder) service = null
+                }
             }, 0)
         } catch (_: RemoteException) {
+            if (shellServiceBinder == remoteBinder) shellServiceBinder = null
+            if (service?.asBinder() == remoteBinder) service = null
         }
+        Log.i("xtmapper-startup", "authenticated shell Binder cached: alive=${remoteBinder.isBinderAlive}")
     }
 
     private fun bindShizukuService(context: Context, connection: RemoteServiceConnection) {

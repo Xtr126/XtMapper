@@ -46,7 +46,7 @@ class AsyncLogWorker(
             }
         }
         try {
-            initialized.await()
+            initialized.await(config.flushTimeoutMillis, TimeUnit.MILLISECONDS)
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
         }

@@ -1,8 +1,8 @@
 # Upstream `dev` Merge — Phase 1 Baseline
 
-Status: **upstream merge and source-level review fixes recorded; build, tests and device validation have not been run.**
+Status at the recorded checkpoint: **source-level review fixes were recorded; build, tests and device validation had not yet been run.**
 
-Recorded: 2026-10-28. This checkpoint records immutable refs and verified source-level constraints before trial-merging upstream into the integration branch.
+Recorded: 2026-10-28. This is an archival snapshot of the initial integration checkpoint. Its refs, verification status, and follow-up steps describe that date and are not current status or instructions for PR #238. For current shell-startup behavior, see [Waydroid shell startup](../waydroid-shell-startup.md).
 
 ## Refs and rollback point
 
@@ -30,9 +30,9 @@ GitHub compare results show 19 commits on the integration side and 20 commits on
 - `Environment.CLI_ARG` is `--cage-xtmapper-launch-signal`; `Environment.INTENT_EXTRA` is the boolean `cage_xtmapper_launch_signal`.
 - The CLI signal is applied before standalone shell logging; the boolean Intent extra is applied by `MainActivity` only when that extra is present.
 - `MainActivity` is exported. Its legacy `data` extra still uses `data=shell` as a shell-initialization hint and other non-null values as crash text, but neither value authenticates the caller.
-- Current code has no trusted shell-initialization path: a caller-controlled extra alone cannot select a shell startup profile, auto-start the pointer, or reset the saved Shizuku mode. The `data=shell` marker only suppresses crash-payload replay.
+- At this 2026-10-28 checkpoint, no trusted shell-initialization path had been implemented. This statement is historical; the later implementation authenticates Android 14+ launches with the shell UID and verifies older-version service Binders through a challenge callback.
 - The crash payload is removed from the activity Intent after capture and displayed in a stable `DialogFragment` titled as unverified diagnostic text, with a 16 KiB display cap; activation prompts wait until the dialog is dismissed.
-- The legacy marker always fails closed: Android never exposes the caller UID for this launch path (`getLaunchedFromUid()` stays `INVALID_UID` without identity sharing), so `data=shell` never triggers trusted auto-start or a persistent input-mode change. This is documented in `docs/waydroid-shell-startup.md` and still needs runtime validation.
+- At this checkpoint, the legacy marker failed closed because launch identity sharing had not been added. The current implementation uses `getLaunchedFromUid()` on Android 14+ and an authenticated shell-service Binder callback on older versions. The marker itself remains untrusted on every version.
 
 ### Build constraints
 
@@ -86,7 +86,7 @@ The merged tree contains upstream changes for 58 changed paths (51 non-overlappi
 
 Source-level structural checks were run on all seven overlapping files: no conflict markers or duplicate imports were found, and each file's opening/closing brace count balanced. Additional targeted checks confirmed that desugaring and its dependency remain, JUnit is declared once, the app Application hook remains, the launch signal is separate from `data=shell`, and logger initialization/session close paths remain present. These checks do **not** replace Kotlin compilation or tests.
 
-## Verification status
+## Verification status at the 2026-10-28 checkpoint
 
 - `app:assembleDebug`: **not run**
 - `app:assembleRelease`: **not run**
@@ -97,7 +97,7 @@ Source-level structural checks were run on all seven overlapping files: no confl
 
 The trial is therefore a source-reconciliation checkpoint, **not a verified build or release candidate**. No XtCrash tag, release, or publishing action was performed.
 
-## Next required step
+## Next step recorded at the 2026-10-28 checkpoint
 
 Run the debug assembly and JVM unit tests on a full local checkout of the trial branch, then inspect and resolve compiler/test failures before treating the merge as validated. Run release assembly and device/native behavior checks afterward. Keep the proof-of-concept host-reporting/security tests separate from this merge. Do not tag or publish XtCrash as part of this task.
 
@@ -126,10 +126,10 @@ In addition to the earlier checkpoint fixes above, the latest follow-up commits 
 - Routed important diagnostics from `Input.kt`, `RemoteService.kt`, `RemoteServiceShell.kt`, `ActivityObserverService.kt`, and `MouseEventHandler.kt` through XtLogger. Pointer overflow now returns instead of proceeding with an invalid pointer index. Session END statuses distinguish crash relay, startup failure and unexpected exit.
 - Restored missing Spanish/French/Portuguese/Russian import-error strings, localized ShiftKey transition labels, and corrected the README log-path claim and merge checkpoint status.
 
-## Current verification boundary
+## Verification boundary recorded at the 2026-10-28 checkpoint
 
 - Regression tests were updated/added for profile designation cleanup and exclusive touch-jitter bounds, but none have been executed.
 - No Gradle compile, debug/release assembly, JVM unit test, Android device/Waydroid run, native/JNI check or cold-start Wayland test has been performed.
 - No GitHub Actions workflow runs or status checks are currently reported for the latest head. A new CodeRabbit review was requested after the source corrections; its findings still need to be assessed when returned.
 
-Keep PR #5 as a draft. Do not claim the integration is build-verified or merge it until compilation, tests and required runtime checks pass.
+At the time of this checkpoint, PR #5 was still a draft. This instruction is historical and does not describe the state of PR #238.
