@@ -9,9 +9,44 @@ transparent overlay above the Waydroid window to grab input. XtMapper's
 `app_process` owns the client and can hide or show the overlay on demand.
 Hiding releases capture and allows ordinary input into Waydroid.
 
+The client and its runtime dependencies ship with the APK; launching the
+installed shell server through `waydroid shell` must not require a separate
+host client binary, build, or helper installation.
+
 The overlay is a host Wayland surface created from inside Android, separate
 from XtMapper's Android cursor/editor overlays. A mapped transparent overlay
 still accepts input; hiding means unmapping it, not changing its alpha.
+
+## Waydroid mode and Cage compatibility
+
+Per the [maintainer's direction](https://github.com/Xtr126/XtMapper/pull/237#issuecomment-6717469962),
+Xtr126 will discontinue maintaining cage-xtmapper. Preserve XtMapper's existing
+Cage integration as an optional legacy backend for community-maintained forks.
+Add a documentation link when a maintained fork is identified; do not imply
+that one is already available or that upstream Cage maintenance continues.
+
+Detect Waydroid independently of the input backend, using Android
+`SystemProperties` rather than a Cage signal. Treat nonempty Waydroid-specific
+properties such as `waydroid.tools_version`, `waydroid.xdg_runtime_dir` or
+`waydroid.wayland_display` as detection evidence. OTA properties may contain
+the literal value `None`; generic properties such as `ro.hardware.egl=mesa`
+are not sufficient evidence. Read properties inside Android, without requiring
+access to the host's `/var/lib/waydroid/waydroid.prop` file.
+
+Add a persistent **Waydroid mode** UI setting with Auto (default), On and Off.
+Auto uses property detection; On enables Waydroid-specific behavior when
+detection fails, and Off permits correcting a false positive. Show the detected
+and effective mode so an override is understandable. Resolve the setting and
+properties before service initialization, including shell startup, and apply
+changes through orderly backend teardown/reinitialization. Keep the setting
+separate from profile mappings and from native/Cage/evdev backend selection.
+
+Waydroid mode identifies the environment for Linux-specific behavior; it does
+not prove a usable Wayland endpoint, socket permissions or compositor support.
+Manual On must still validate the endpoint and run the same capability checks;
+if properties are missing or invalid, report the configuration problem without
+guessing a display path or claiming capture. Detection must work without Cage,
+including when no capture backend is connected.
 
 ## Context and evidence
 
@@ -131,13 +166,38 @@ host wayland-scanner + pinned protocol XMLs -> generated client bindings --^
    API availability with NDK tools. Verify page-size compatibility and APK
    extraction/loading via the installed native-library path in app_process.
 
-For mapped keys, use Wayland's evdev key codes and XtMapper's Linux key-name
-table (`app/src/main/cpp/linux_key_table.h`) rather than converting keysyms
-through host layouts. That removes
-libxkbcommon and an XKB data-tree deployment from the initial client. Validate
-the mapping against `KeyEventHandler` and `InputEventCodes`; add xkbcommon only
-if layout/text semantics become a requirement. Keep modifiers, simultaneous
-keys, release tracking and repeat policy explicit.
+For new physical-key profiles, use Wayland's evdev key codes and XtMapper's
+Linux key-name table (`app/src/main/cpp/linux_key_table.h`). This avoids
+libxkbcommon and an XKB data-tree deployment for the initial client, but is
+not a drop-in interpretation of existing Cage profiles. Cage derives names
+from XKB symbols (including modifier-sensitive names and special aliases),
+whereas `KeyEventHandler` compares event names directly with saved codes.
+On AZERTY, the physical evdev `KEY_Q` position can produce Cage's `KEY_A`;
+reinterpreting a saved `KEY_A` as evdev would move its action to another key.
+
+Before native-backend activation, introduce versioned profile key semantics
+and provenance: legacy Cage symbol names versus physical evdev names. Preserve
+unversioned profiles unchanged; their origin cannot be inferred from strings
+such as `KEY_A`. Require the user to identify their semantics when switching
+backends. Physical profiles can use evdev directly. For legacy Cage or unknown
+profiles, block activation on the native backend until an explicit migration
+is completed, while leaving the original usable with the retained Cage path.
+
+Provide a migration UI that copies the profile, asks the user to press each
+intended physical key, and records its evdev name in the versioned copy. Cover
+ordinary keys, D-pads, swipe/shift keys, macro and camera triggers, and relevant
+global shortcuts; preserve all other mappings and metadata. Show changes for
+confirmation, support cancellation without modifying the original, and flag
+unresolved bindings rather than guessing a US-layout substitution. Translate
+the selected semantics before `KeyEventHandler` and its shortcut handlers;
+never feed legacy names directly into the physical-key path. Retaining
+automatic symbol compatibility instead would require a separately designed
+XKB/keymap adapter and revisiting the dependency decision.
+
+Validate names against `KeyEventHandler` and numeric mouse codes against
+`InputEventCodes`. Keep modifiers, simultaneous keys, release tracking and
+repeat policy explicit; remember the translated identity on key-down so a
+modifier/layout change before key-up cannot leave a mapped action pressed.
 
 Use memfd + ftruncate + wl_shm for transparent buffers, checking kernel/API
 availability, sizes and errors. Specify an Android-compatible shared-memory FD
@@ -221,14 +281,17 @@ Gate: an NDK probe launched under the real shell-server identity must connect,
 show a transparent capture surface, receive input, hide, return input to
 Waydroid, and show again. Include focus restoration and correct Android game
 touch injection while the host focuses the overlay. If this needs compositor
-rules, document them; if a compositor cannot support it, keep Cage available
-there until a supported backend exists.
+rules, document them; if a compositor cannot support it, offer the retained
+legacy Cage path when a user supplies a compatible community fork, or report
+the unsupported configuration. Do not promise a maintained upstream fallback.
 
 ## XtMapper integration and event correctness
 
 Fix initialization first: `RemoteService` calls `init()` in its constructor,
 but `RemoteServiceShell` assigns `isWaylandClient` afterward. Backend selection
-must be immutable constructor configuration before discovery starts. Keep
+must be immutable constructor configuration before discovery starts. Resolve
+Waydroid detection and its persisted override independently before selecting
+that configuration; Cage input must not be required to identify Waydroid. Keep
 legacy stdin mode separate during migration; both must avoid unintended evdev
 discovery. Native events/control replace a host pipe for the new backend.
 
@@ -259,24 +322,48 @@ the selected pointer mode actually needs them. Preserve shell startup's
 
 ## Implementation sequence and validation
 
-1. **Prerequisite probe:** capture live endpoint permissions, globals and
-   compositor behavior; cross-build/load a minimal JNI client for the target
+1. **Mode detection and prerequisite probe:** define the property detector,
+   persistent UI override and backend-independent environment state; capture
+   live endpoint permissions, globals and compositor behavior; cross-build/load a minimal JNI client for the target
    ABI. Save reproducible commands and results with the actual UID/domain.
 2. **Overlay lifecycle:** implement transparent map/unmap, command wakeups,
    focus/constraint status and teardown independently of mapper event injection.
    Demonstrate repeated show/hide and the hidden-state Binder resume path.
 3. **Input/backend integration:** immutable backend startup, event translation,
-   capture controls and service/profile/editor lifecycle. Retain evdev and Cage
-   as migration fallbacks; label legacy stdin and native backend distinctly.
+   capture controls and service/profile/editor lifecycle. Retain evdev and the
+   optional community-fork Cage integration; label legacy stdin and native
+   backend distinctly without promising continued upstream Cage maintenance.
 4. **Packaging and support:** pin dependencies, integrate ndk-build/APK loading,
    add build instructions and a compositor/ABI support matrix. Supply a simple
-   launch path using Waydroid's existing socket and installed APK libraries.
+   launch path through `waydroid shell` using Waydroid's existing socket and
+   installed APK libraries, with no separately installed host client or helper.
+   Document upstream Cage discontinuation and link a community fork if available.
 
+Add focused JVM tests for property detection with present, missing, empty and
+partial Waydroid properties, rejection of generic Mesa-only evidence, and
+Auto/On/Off persistence and precedence before app and shell initialization.
+Verify that manual On with an invalid endpoint reports failure without capture,
+and that mode changes preserve profiles and release the previous backend.
 Add focused JVM tests for backend selection before init, state/generation
 transitions, event normalization and cleanup. Add native tests for delta
 accumulation, buffer dimension checks and resource teardown where practical.
+Require profile migration tests for legacy, physical and unknown provenance,
+cancel/retry, unresolved bindings and preservation of original profile data.
+Use a non-US AZERTY fixture where Cage emits `KEY_A` for evdev `KEY_Q`:
+verify activation is blocked before migration, rebinding preserves the intended
+physical action afterward, and a US-layout fixture retains its expected action.
+Cover every binding category and shortcut, plus modifier/layout changes between
+press and release with no stuck input. Repeat the AZERTY scenario on a device
+with an existing Cage profile and the native backend before claiming compatibility.
 Run Kotlin compilation, native-inclusive `assembleDebug`, and relevant JVM
 tests per [BUILDING.md](../BUILDING.md). Kotlin compilation alone is insufficient.
+
+Device acceptance must verify detection without Cage, manual enablement when
+detection fails, explicit disablement and override persistence after restart.
+Install the APK and launch through `waydroid shell` on a host without Cage or
+wayland-getevent installed; verify packaged library loading and capture.
+Exercise the retained legacy Cage path separately with a compatible fork when
+available, recording its revision rather than assuming upstream support.
 
 Device acceptance must cover mouse buttons/wheel/aim, simultaneous keyboard
 keys, pointer/keyboard leave, seat removal, compositor/socket restart, missing
