@@ -127,3 +127,38 @@ dependencies {
     compileOnly(project(path = ":app:hidden-api"))
     testImplementation(libs.junit)
 }
+
+val inputNdk = androidComponents.sdkComponents.ndkDirectory
+val inputToolchain = inputNdk.map { ndk ->
+    File(ndk.asFile, "toolchains/llvm/prebuilt").listFiles()!!.first { it.isDirectory }
+}
+val generatedInput = layout.buildDirectory.dir("generated/source/inputLabels")
+val generateInputLabels = tasks.register<Exec>("generateInputLabels") {
+    inputs.file("src/main/cpp/generate-input.h-labels.py")
+    inputs.files(inputToolchain.map { toolchain ->
+        listOf(
+            File(toolchain, "sysroot/usr/include/linux/input.h"),
+            File(toolchain, "sysroot/usr/include/linux/input-event-codes.h"),
+        )
+    })
+    outputs.dir(generatedInput)
+    doFirst {
+        val toolchain = inputToolchain.get()
+        val python = File(toolchain, "python3/bin/python3").takeIf { it.exists() }
+            ?: File(toolchain, "python3/python.exe")
+        commandLine(
+            python,
+            file("src/main/cpp/generate-input.h-labels.py"),
+            File(toolchain, "sysroot/usr/include/linux/input.h"),
+            File(toolchain, "sysroot/usr/include/linux/input-event-codes.h"),
+            "--kotlin",
+            generatedInput.get().asFile,
+        )
+    }
+}
+android.sourceSets.getByName("main").java.srcDir(generatedInput)
+tasks.configureEach {
+    if (name == "preBuild" || name.matches(Regex("compile.*(Kotlin|JavaWithJavac)"))) {
+        dependsOn(generateInputLabels)
+    }
+}
