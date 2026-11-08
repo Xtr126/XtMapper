@@ -53,13 +53,19 @@ jobs:
 
     - name: Build with Gradle
       run: ./gradlew app:assembleRelease
+
+    - name: Rename release APK
+      run: |
+        VERSION_NAME="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' app/build.gradle.kts)"
+        echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+        mv app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/XtMapper-release-v${VERSION_NAME}.apk"
         
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: 'app/build/outputs/apk/release/*.apk'
-        asset_name: app-release.zip
+        file: 'app/build/outputs/apk/release/XtMapper-release-v${{ env.VERSION_NAME }}.apk'
+        asset_name: XtMapper-release-v${{ env.VERSION_NAME }}.apk
         tag: v2.6.0
         overwrite: true
         file_glob: true          
