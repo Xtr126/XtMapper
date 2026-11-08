@@ -59,9 +59,8 @@ object RemoteServiceShell {
             // Do everything after logcat
             RemoteService.loadLibraries()
 
-            val mService = RemoteService(getContext())
+            val mService = RemoteService(getContext(), isWaylandClient)
             mService.startedFromShell = true
-            mService.isWaylandClient = isWaylandClient
 
             ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start()
             val settingsArgs = "settings put system alert_window_bypass_low_ram 1".split(Regex("\\s+"))

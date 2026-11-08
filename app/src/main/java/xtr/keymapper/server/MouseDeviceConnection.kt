@@ -2,7 +2,7 @@ package xtr.keymapper.server
 
 import android.util.Log
 
-/** Main-thread state linking getevent discovery to the lifetime of an input service. */
+/** Main-thread state linking evdev discovery to the lifetime of an input service. */
 internal class MouseDeviceConnection {
     private var discoveredDevice: String? = null
     private var openedDevice: String? = null
