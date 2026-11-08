@@ -11,6 +11,14 @@ internal class InputEventDecoder(is64Bit: Boolean, private val order: ByteOrder 
     private val record = ByteArray(timeSize + 8)
     private var filled = 0
 
+    /**
+     * Consumes the first [count] bytes, retaining any incomplete record for the next call.
+     * Calls [emit] synchronously for each complete record with unsigned type/code and a signed value;
+     * timestamps are discarded. A zero count emits nothing.
+     * Exceptions from [emit] propagate to the caller and stop processing the remaining bytes.
+     *
+     * @throws IllegalArgumentException if [count] is negative or exceeds the size of [bytes].
+     */
     fun accept(bytes: ByteArray, count: Int, emit: (Int, Int, Int) -> Unit) {
         require(count in 0..bytes.size)
         var offset = 0
@@ -32,6 +40,11 @@ internal class InputEventDecoder(is64Bit: Boolean, private val order: ByteOrder 
 
 /** Preserve the existing Binder/editor protocol, with labels supplied by our NDK. */
 internal object InputEventFormatter {
+    /**
+     * Returns `device: type code value` using known evdev labels and UP/DOWN/REPEAT for
+     * EV_KEY values 0/1/2. Unknown labels and other values use eight lowercase hexadecimal
+     * digits, with negative values represented as unsigned 32-bit integers.
+     */
     fun line(device: String, type: Int, code: Int, value: Int): String {
         val typeName = InputEventLabels.evLabels[type] ?: hex(type)
         val codeName = InputEventLabels.label(type, code) ?: hex(code)

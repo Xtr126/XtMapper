@@ -74,6 +74,13 @@ class RemoteService(context: Context, internal val isWaylandClient: Boolean = fa
         }
     }
 
+    /**
+     * Resolves the app's native library directory, starts the selected input monitor, and
+     * installs the main thread's crash handler. Wayland mode reads stdin instead of local devices.
+     * Each call starts a new monitor.
+     *
+     * @throws RuntimeException wrapping NameNotFoundException if the app package cannot be found.
+     */
     fun init() {
         val pm = context.packageManager
         val packageName = context.packageName
@@ -162,12 +169,16 @@ class RemoteService(context: Context, internal val isWaylandClient: Boolean = fa
         return windowManager
     }
 
+    /** Requests asynchronous shutdown of the local evdev monitor and clears its reference. */
     private fun stopInputReader() {
         evdevReader?.close()
         evdevReader = null
     }
 
-    /** Cage's optional stdin protocol is independent of local evdev monitoring. */
+    /**
+     * Reads Cage event lines from stdin until EOF. Exceptions from reading or dispatching
+     * end the loop and are caught here; stdin is left open.
+     */
     private fun readWaylandEvents() {
         try {
             val reader = BufferedReader(InputStreamReader(System.`in`))
@@ -180,6 +191,12 @@ class RemoteService(context: Context, internal val isWaylandClient: Boolean = fa
         }
     }
 
+    /**
+     * Routes a device-prefixed event through discovery, mapping, and the editor listener.
+     * Keyboard grabbing suppresses mapping and editor delivery; stopped mapping still permits
+     * keyboard shortcuts. Wayland pointer events are also sent to the mouse handler.
+     * Handler/listener Exceptions are caught, and a RemoteException clears the editor listener.
+     */
     private fun handleInputLine(line: String) {
         val data = line.split(":".toRegex()).dropLastWhile { it.isEmpty() }
             .toTypedArray() // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
@@ -213,8 +230,11 @@ class RemoteService(context: Context, internal val isWaylandClient: Boolean = fa
     }
 
     /**
-     * @param data split input event line
-     * @return true if output is valid for processing
+     * Discovers local relative-input devices and requests keyboard grabs when enabled.
+     * Wayland lines bypass local discovery.
+     *
+     * @param data event line split on colons, with the device name before the event payload.
+     * @return true exactly when there are two parts; the payload is not otherwise validated.
      */
     private fun addNewDevices(data: Array<String>): Boolean {
         if (data.size != 2) return false
