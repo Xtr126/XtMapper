@@ -1,40 +1,28 @@
-#include <cstdlib>
+#include "touchpad_jni.h"
+
+#include <cstring>
+#include <fcntl.h>
 #include <linux/input-event-codes.h>
 #include <linux/input.h>
 #include <linux/uinput.h>
-
-#include <sys/poll.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <dirent.h>
 
-#include <cstring>
-#include <cstdio>
-#include <iostream>
 #include <vector>
-#include <thread>
+
 #include "evdev_common.h"
-#include <jni.h>
 
-using std::string;
-
-std::vector<pollfd> poll_fds;
-std::vector<int> uinput_fds;
-
-std::atomic<bool> running = false;
-
-std::thread looper;
+namespace {
 
 int SetupUinputDevice() {
 	struct uinput_setup uinputSetup {};
 	int uinput_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
 
-	if (uinput_fd <= 0) exit(EXIT_FAILURE);
+	if (uinput_fd < 0) return -1;
 
 	/* enable mouse buttons and relative events */
 	ioctl(uinput_fd, UI_SET_EVBIT, EV_KEY);
 	ioctl(uinput_fd, UI_SET_EVBIT, EV_REL);
-	
+
 	ioctl(uinput_fd, UI_SET_KEYBIT, BTN_MOUSE);
 	ioctl(uinput_fd, UI_SET_KEYBIT, BTN_RIGHT);
 	ioctl(uinput_fd, UI_SET_KEYBIT, BTN_MIDDLE);
@@ -54,92 +42,101 @@ int SetupUinputDevice() {
 
 	if(ioctl(uinput_fd, UI_DEV_CREATE)) {
 		close(uinput_fd);
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 	return uinput_fd;
 }
 
-void start() {
-	signed int last_absX, last_absY;
-	bool touch_down = false;
-	struct input_event event {}, ie {};
-	while(true) {
-		poll(poll_fds.data(), poll_fds.size(), -1);
+struct RelativeBaseline {
+	int lastX = 0;
+	int lastY = 0;
+	bool touchDown = false;
+	bool hasX = false;
+	bool hasY = false;
+};
 
-		for (size_t i = 0; i < poll_fds.size(); i++)
-			if (poll_fds[i].revents & POLLIN)
-				if (read(poll_fds[i].fd, &event, sizeof(event)) == sizeof(struct input_event)){
-                    switch (event.code) {
-						case ABS_X:
-							if (!touch_down || event.value <= 1) break;
-							ie.type = EV_REL;
-							ie.code = REL_X;
-							ie.value = event.value - last_absX;
-							write(uinput_fds[i], &ie, sizeof(ie));
-							last_absX = event.value;
-						break;
+thread_local std::vector<RelativeBaseline> baselines;
 
-						case ABS_Y:
-							if (!touch_down || event.value <= 1) break;
-							ie.type = EV_REL;
-							ie.code = REL_Y;
-							ie.value = event.value - last_absY;
-							write(uinput_fds[i], &ie, sizeof(ie));
-							last_absY = event.value;
-						break;
+std::vector<input_event> relativeTransform(int evdevIndex, const input_event& event) {
+	std::vector<input_event> out;
+	if (evdevIndex >= 0 && static_cast<size_t>(evdevIndex) >= baselines.size())
+		baselines.resize(static_cast<size_t>(evdevIndex) + 1);
+	RelativeBaseline& state = baselines[evdevIndex];
 
-						case BTN_MOUSE:
-						case BTN_RIGHT:
-						case BTN_MIDDLE:
-							write(uinput_fds[i], &event, sizeof(event));
-						break;
+	if (event.type == EV_ABS) {
+		int* last = nullptr;
+		bool* has = nullptr;
+		if (event.code == ABS_X) { last = &state.lastX; has = &state.hasX; }
+		else if (event.code == ABS_Y) { last = &state.lastY; has = &state.hasY; }
 
-						case BTN_TOUCH:
-							touch_down = event.value == 1;
-							if (touch_down) printf("x %d\n", event.value);
-						break;
-					}
-					ie = input_event{0, 0, EV_SYN, SYN_REPORT, 0};
-					write(uinput_fds[i], &ie, sizeof(ie));
-				}
+		if (last != nullptr && state.touchDown && event.value > 1) {
+			input_event ie {};
+			ie.type = EV_REL;
+			ie.code = (last == &state.lastX) ? REL_X : REL_Y;
+			if (!*has) {
+				// Seed the baseline; emit nothing for the first sample.
+				*last = event.value;
+				*has = true;
+			} else {
+				ie.value = event.value - *last;
+				*last = event.value;
+				out.push_back(ie);
+			}
+		}
+	} else if (event.type == EV_KEY) {
+		switch (event.code) {
+			case BTN_MOUSE:
+			case BTN_RIGHT:
+			case BTN_MIDDLE:
+				out.push_back(event);
+			break;
+
+			case BTN_TOUCH:
+				state.touchDown = event.value == 1;
+				state.hasX = false;
+				state.hasY = false;
+			break;
+		}
 	}
+
+	input_event syn {};
+	syn.type = EV_SYN;
+	syn.code = SYN_REPORT;
+	out.push_back(syn);
+	return out;
 }
 
+touchpad::TouchpadLifecycle& lifecycle() {
+	static touchpad::TouchpadLifecycle instance({
+		/*same=*/touchpad::sameOwner,
+		/*release=*/touchpad::releaseOwner,
+	});
+	return instance;
+}
+
+} // namespace
+
 extern "C"
-JNIEXPORT void JNICALL
+JNIEXPORT jint JNICALL
 Java_xtr_keymapper_server_InputService_startTouchpadRelative(JNIEnv *env, jobject thiz) {
-	running = true;
-
-	poll_fds.clear();
-	uinput_fds.clear();
-
-	std::vector<int> touchpadDeviceFds = scanTouchpadDevices();
-
-	for (auto & evdev : touchpadDeviceFds) {
-		poll_fds.push_back(pollfd{evdev, POLLIN, 0});
-		uinput_fds.push_back(SetupUinputDevice());
+	try {
+		touchpad::LifecycleOps ops = touchpad::withCommonOps({});
+		// One virtual mouse for all devices; the evdev fd is unused by the fixed setup.
+		ops.createVirtual = [](int /*device_fd*/) { return SetupUinputDevice(); };
+		ops.transform = [](int index, const input_event& in) { return relativeTransform(index, in); };
+		return touchpad::startTouchpad(env, thiz, lifecycle(), std::move(ops));
+	} catch (...) {
+		return static_cast<jint>(touchpad::StartOutcome::INTERNAL_ERROR);
 	}
-
-	if (poll_fds.empty()) {
-		printf("I: No touchpad devices found\n");
-		return;
-	}
-	looper = std::thread(start);
 }
 
 extern "C"
-JNIEXPORT void JNICALL
+JNIEXPORT jint JNICALL
 Java_xtr_keymapper_server_InputService_stopTouchpadRelative(JNIEnv *env, jobject thiz) {
-	running = false;
-
-	for (auto & poll_fd : poll_fds) {
-		struct input_event ie{0, 0, EV_SYN, SYN_REPORT, 0};
-		write(poll_fd.fd, &ie, sizeof(struct input_event));
+	try {
+		return touchpad::stopTouchpad(env, thiz, lifecycle());
+	} catch (...) {
+		// The probe never ran: report the retained-resource outcome.
+		return static_cast<jint>(touchpad::StopOutcome::INCOMPLETE);
 	}
-	for (size_t i = 0; i < poll_fds.size(); i++) {
-		ioctl(uinput_fds[i], UI_DEV_DESTROY);
-		close(uinput_fds[i]);
-		close(poll_fds[i].fd);
-	}
-	looper.join();
 }

@@ -22,9 +22,7 @@ class RightClick(
     ).also {
         it.frameView.setBackgroundResource(R.drawable.ic_baseline_mouse_36)
         it.setText(R.string.right_click)
-        it.frameView.animate().x(x).y(y)
-            .setDuration(500)
-            .start()
+        it.animateToPosition(x, y, 500L)
     }
 
     constructor(mCallback: EditorUiComponentCallback, context: Context, rightClick: Key?) :

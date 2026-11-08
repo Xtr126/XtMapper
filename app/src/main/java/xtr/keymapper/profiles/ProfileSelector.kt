@@ -3,17 +3,15 @@ package xtr.keymapper.profiles
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
-import android.os.Build
-import android.provider.Settings
 import android.view.LayoutInflater
-import android.view.WindowManager
 import androidx.annotation.UiContext
-import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import xtr.keymapper.R
 import xtr.keymapper.databinding.AppViewBinding
 import xtr.keymapper.databinding.TextFieldBinding
 import xtr.keymapper.keymap.KeymapProfiles
+import xtr.keymapper.ui.DialogWindowMode
+import xtr.keymapper.ui.showDialog
 
 class ProfileSelector {
 
@@ -31,7 +29,12 @@ class ProfileSelector {
 
     companion object {
 
-        fun select(context: Context, listener: OnProfileSelectedListener, packageName: String) {
+        fun select(
+            context: Context,
+            listener: OnProfileSelectedListener,
+            packageName: String,
+            windowMode: DialogWindowMode
+        ) {
             context.setTheme(R.style.Theme_XtMapper)
             val allProfiles = ArrayList(
                 KeymapProfiles(context).getAllProfilesForApp(packageName).keys
@@ -41,7 +44,7 @@ class ProfileSelector {
                 listener.onProfileSelected(allProfiles[0])
                 return
             } else if (allProfiles.isEmpty()) {
-                createNewProfileForApp(context, packageName, true, listener)
+                createNewProfileForApp(context, packageName, true, windowMode, listener)
                 return
             }
             val items = allProfiles.toTypedArray()
@@ -55,7 +58,6 @@ class ProfileSelector {
                 appIcon = pm.getApplicationIcon(packageName)
             } catch (ignored: PackageManager.NameNotFoundException) {
             }
-            // Show dialog to select profile
             val builder = MaterialAlertDialogBuilder(context)
             builder.setTitle(context.getString(R.string.dialog_alert_select_profile) + appName)
                 .setItems(items) { _, which ->
@@ -63,19 +65,26 @@ class ProfileSelector {
                     listener.onProfileSelected(selectedProfile)
                 }
                 .setIcon(appIcon)
-            showDialog(builder)
+            showDialog(builder, windowMode)
         }
 
         fun createNewProfile(@UiContext context: Context, listener: OnProfileSelectedListener) {
             showAppSelectionDialog(context) { packageName ->
-                createNewProfileForApp(context, packageName, true, listener)
+                createNewProfileForApp(
+                    context,
+                    packageName,
+                    true,
+                    DialogWindowMode.ACTIVITY,
+                    listener
+                )
             }
         }
 
         fun showEnableProfileDialog(
             @UiContext context: Context,
             packageName: String,
-            listener: OnProfileEnabledListener
+            listener: OnProfileEnabledListener,
+            windowMode: DialogWindowMode
         ) {
             context.setTheme(R.style.Theme_XtMapper)
             val builder = MaterialAlertDialogBuilder(context)
@@ -91,13 +100,14 @@ class ProfileSelector {
                 .setPositiveButton(R.string.yes) { _, _ -> listener.onEnabled(true) }
                 .setNegativeButton(R.string.no) { _, _ -> listener.onEnabled(false) }
                 .setView(binding.root)
-            showDialog(builder)
+            showDialog(builder, windowMode)
         }
 
         fun createNewProfileForApp(
             @UiContext context: Context,
             packageName: String,
             enabled: Boolean,
+            windowMode: DialogWindowMode,
             listener: OnProfileSelectedListener
         ) {
             val builder = MaterialAlertDialogBuilder(context)
@@ -109,20 +119,27 @@ class ProfileSelector {
                 .setPositiveButton(R.string.ok) { _, _ ->
                     val selectedProfile = binding.editText.text.toString()
                     val keymapProfiles = KeymapProfiles(context)
-                    keymapProfiles.saveProfile(selectedProfile, arrayListOf(), packageName, enabled, 0, 0)
-                    listener.onProfileSelected(selectedProfile)
+                    if (keymapProfiles.saveProfile(selectedProfile, arrayListOf(), packageName, enabled, 0, 0)) {
+                        listener.onProfileSelected(selectedProfile)
+                    }
                 }
                 .setView(binding.root)
-            showDialog(builder)
+            showDialog(builder, windowMode)
         }
 
-        // Show a dialog with a list of apps and callback when an app is selected
         fun showAppSelectionDialog(context: Context, listener: OnAppSelectedListener) {
             val builder = MaterialAlertDialogBuilder(context)
-            ProfilesApps.asyncLoadAppsAndThen(context, builder) { p, adapter, loadingDialog ->
+            ProfilesApps.asyncLoadAppsAndThen(
+                context,
+                builder,
+                DialogWindowMode.ACTIVITY
+            ) { p, adapter, loadingDialog ->
                 p.binding.appsGrid.adapter = adapter
                 loadingDialog.dismiss()
-                val dialog = builder.setView(p.appsView).show()
+                val dialog = showDialog(
+                    builder.setView(p.appsView),
+                    DialogWindowMode.ACTIVITY
+                ) ?: return@asyncLoadAppsAndThen
 
                 p.setListener {
                     listener.onAppSelected(it)
@@ -132,17 +149,5 @@ class ProfileSelector {
             }
         }
 
-        fun showDialog(builder: MaterialAlertDialogBuilder): AlertDialog {
-            val dialog = builder.create()
-            if (Settings.canDrawOverlays(dialog.context))
-                dialog.window?.setType(
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                    else
-                        WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-                )
-            dialog.show()
-            return dialog
-        }
     }
 }

@@ -1,5 +1,6 @@
 package xtr.keymapper.server
 
+import android.util.Log
 import android.app.ApplicationErrorReport
 import android.content.ComponentName
 import android.content.Context
@@ -10,8 +11,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.Process
 import android.os.RemoteException
-import android.util.Log
 import android.view.Display
 import android.view.LayoutInflater
 import android.view.View
@@ -20,6 +21,7 @@ import xtr.keymapper.ActivityObserver
 import xtr.keymapper.BuildConfig
 import xtr.keymapper.IRemoteService
 import xtr.keymapper.IRemoteServiceCallback
+import xtr.keymapper.IShellAuthenticationCallback
 import xtr.keymapper.OnKeyEventListener
 import xtr.keymapper.R
 import xtr.keymapper.Utils
@@ -27,27 +29,53 @@ import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.databinding.CursorBinding
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
+import org.lsposed.hiddenapibypass.HiddenApiBypass
+import xtr.keymapper.log.DeviceTelemetry
+import xtr.keymapper.log.Role
+import xtr.keymapper.log.SessionStates
+import xtr.keymapper.log.XtLogger
 import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.reflect.Method
+import java.util.concurrent.atomic.AtomicLong
 
-class RemoteService(context: Context) : IRemoteService.Stub() {
+class RemoteService @JvmOverloads constructor(
+    context: Context,
+    initialIsWaylandClient: Boolean = false
+) : IRemoteService.Stub() {
+    init {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                HiddenApiBypass.addHiddenApiExemptions("")
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to add hidden API exemptions", t)
+            }
+        }
+    }
     private val mouseDevice = MouseDeviceConnection()
-    @Volatile
-    internal var inputService: InputService? = null
+    internal val mInputService = ClientServiceSlot<ClientSession, InputService>()
+    private val touchpadSessions = TouchpadSessionRegistry(RealTouchpadNativeOps)
     private var mOnKeyEventListener: OnKeyEventListener? = null
-    internal var isWaylandClient = false
+    internal var isWaylandClient = initialIsWaylandClient
     private var activityObserverService: ActivityObserverService? = null
     internal var nativeLibraryDir: String = System.getProperty("java.library.path").orEmpty()
     private var cursorView: View? = null
     private var TYPE_SECURE_SYSTEM_OVERLAY = 0
     private val mHandler = Handler(Looper.getMainLooper())
+    private val mouseDeviceCoalescer = MouseDeviceCoalescer(
+        schedule = { task ->
+            if (!mHandler.post { task() }) {
+                Log.e(TAG, "getevent: main handler rejected mouse discovery drain")
+            }
+        },
+        process = { device -> mouseDevice.discover(device) },
+    )
     private var mWindowManager: WindowManager? = null
     internal var context: Context = context
     internal var startedFromShell = false
 
-    private var geteventProcess: Process? = null
+    private var geteventProcess: java.lang.Process? = null
     private var lastLoggedMouseDevice: String? = null
 
     // shortcut: single-user check; multi-user/work-profile installs have a different uid per user
@@ -60,8 +88,36 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
             throw SecurityException("XtMapper service access denied")
     }
 
+    override fun authenticateShellClient(callback: IShellAuthenticationCallback, challenge: Long) {
+        enforceCaller()
+        if (Process.myUid() != Process.SHELL_UID) {
+            throw SecurityException("Only the shell process can authenticate this service Binder")
+        }
+        callback.onShellServiceAuthenticated(challenge)
+    }
+
+    /**
+     * Returns the build version code of this remote service instance.
+     * Used by client processes to verify daemon protocol compatibility.
+     */
+    override fun getVersion(): Int {
+        return BuildConfig.VERSION_CODE
+    }
+
     init {
-        loadLibraries()
+        if (!XtLogger.isInitialized) {
+            when (Process.myUid()) {
+                2000 -> XtLogger.initStandalone(Role.SHIZUKU)
+                0 -> XtLogger.initStandalone(Role.ROOT)
+                else -> Unit
+            }
+        }
+        try {
+            loadLibraries()
+        } catch (t: Throwable) {
+            XtLogger.fatal(TAG, "native library load failed", t)
+            throw t
+        }
         init()
     }
 
@@ -69,7 +125,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         return try {
             prepareCursorOverlayWindow(displayId)
         } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
+            XtLogger.error(TAG, "Failed to prepare cursor overlay window; falling back to default WindowManager", e)
             context.getSystemService(WindowManager::class.java)
         }
     }
@@ -80,14 +136,18 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         try {
             val ai = pm.getApplicationInfo(packageName, 0)
             nativeLibraryDir = ai.nativeLibraryDir
-            if (!isWaylandClient) Thread { start_getevent() }.start()
-            else mHandler.post { start_getevent() }
+            Thread({ start_getevent() }, "xtmapper-getevent-reader").start()
         } catch (e: PackageManager.NameNotFoundException) {
-            Log.e(TAG, e.message, e)
+            XtLogger.error(TAG, "Unable to resolve app native library directory", e)
             throw RuntimeException(e)
         }
 
         Looper.getMainLooper().thread.setUncaughtExceptionHandler { t, e ->
+            // Record the terminal failure first (bounded flush) before attempting the UI relay.
+            try {
+                XtLogger.fatal(TAG, "uncaught exception on thread ${t.name}", e)
+            } catch (ignored: Exception) {
+            }
             try {
                 val crashInfo = ApplicationErrorReport.CrashInfo(e)
 
@@ -104,12 +164,16 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                             crashInfo.throwMethodName
                 ).start()
             } catch (ex: Exception) {
-                Log.e(TAG, ex.message, ex)
+                XtLogger.error(TAG, "Failed to relay the server crash to MainActivity", ex)
             }
             System.exit(1)
         }
     }
 
+    /**
+     * Prepares and adds the cursor overlay view to the WindowManager
+     * with an empty touchable region.
+     */
     private fun addCursorView() {
         val view = cursorView ?: return
 
@@ -118,12 +182,19 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         } else {
             val params = Utils.getPointerLayoutParams(TYPE_SECURE_SYSTEM_OVERLAY)
             try {
+                Utils.applyEmptyTouchableRegion(view)
                 mWindowManager!!.addView(view, params)
             } catch (e: IllegalStateException) { // A14 QPR3 issue https://gist.github.com/RikkaW/be3fe4178903702c54ec73b2fc1187fe
                 cursorView = null
-                Log.e(TAG, e.message, e)
+                XtLogger.error(TAG, "Failed to attach cursor overlay view", e)
             }
         }
+    }
+
+    private fun hideOverlayCursor() {
+        // Keep View mutations on the main thread. The caller claims the session first,
+        // so this hide is queued before any replacement session can install its cursor.
+        mHandler.post { cursorView?.visibility = View.GONE }
     }
 
     @Throws(
@@ -142,10 +213,6 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             this.context = this.context.createWindowContext(display, TYPE_SECURE_SYSTEM_OVERLAY, null)
         }
-        /*
-        * We obtained an instance of WindowManager configured to show windows on the given display.
-        * Now call getSystemService(Class) on the returned window context.
-        */
         val windowManager: WindowManager = this.context.getSystemService(WindowManager::class.java)
 
         val layoutInflater: LayoutInflater = this.context.getSystemService(LayoutInflater::class.java)
@@ -166,9 +233,6 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         } catch (_: Exception) {}
     }
 
-    /**
-     * Executes getevent command and processes the output or reads from stdin if wayland client
-     */
     private fun start_getevent() {
         try {
             val getevent: BufferedReader
@@ -184,7 +248,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                 val data = line!!.split(":".toRegex()).dropLastWhile { it.isEmpty() }
                     .toTypedArray() // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
                 if (addNewDevices(data)) {
-                    val service = inputService
+                    val service = mInputService.get()
                     if (service != null) try {
                         if (isWaylandClient && data[0].contains("wl_pointer"))
                             service.onWaylandMouseEvent(data[1])
@@ -198,7 +262,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error handling input event", e)
+                        XtLogger.error(TAG, "Error handling input event", e)
                     }
                     if (service == null || !service.isKeyboardGrabbed) {
                         try {
@@ -206,61 +270,112 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
                         } catch (e: RemoteException) {
                             mOnKeyEventListener = null
                         } catch (e: Exception) {
-                            Log.e(TAG, "Error notifying key listener", e)
+                            XtLogger.error(TAG, "Error notifying key listener", e)
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
+            XtLogger.error(TAG, "Input event reader failed", e)
         }
     }
 
-    /**
-     * @param data split output of getevent command
-     * @return true if output is valid for processing
-     */
     private fun addNewDevices(data: Array<String>): Boolean {
         if (data.size != 2) return false
         val evdev = data[0]
 
         val input_event = data[1].split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         if (isWaylandClient) return true
-        if (inputService?.isKeyboardGrabbed == true) {
+        if (mInputService.get()?.isKeyboardGrabbed == true) {
             if (input_event.size > 1 && input_event[1] == "EV_KEY") {
-                inputService?.grabKeyboardDevice(evdev)
+                mInputService.get()?.grabKeyboardDevice(evdev)
             }
         }
         if (input_event.getOrNull(1) == "EV_REL") {
-            // Discovery runs on the getevent thread; service lifecycle runs on the main thread.
             if (lastLoggedMouseDevice != evdev) {
-                Log.i(TAG, "getevent: queue mouse discovery device=$evdev serviceReady=${inputService != null} thread=${Thread.currentThread().name}")
+                Log.i(TAG, "getevent: queue mouse discovery device=$evdev serviceReady=${mInputService.get() != null} thread=${Thread.currentThread().name}")
                 lastLoggedMouseDevice = evdev
             }
-            if (!mHandler.post { mouseDevice.discover(evdev) }) {
-                Log.e(TAG, "getevent: main handler rejected mouse discovery device=$evdev")
-            }
+            mouseDeviceCoalescer.request(evdev)
         }
         return true
     }
 
-    private val mStartServerDeathRecipient = IBinder.DeathRecipient {
+    private val mClientDeathRegistrations = ClientDeathRegistry<IBinder>()
+    private val mStartRequestLock = Any()
+    private val mStartRequestSequence = AtomicLong()
+    @Volatile
+    private var destroyRequested = false
+
+    private fun isCurrentStartRequest(
+        clientBinder: IBinder,
+        deathRecipient: IBinder.DeathRecipient,
+        requestId: Long
+    ): Boolean {
+        return !destroyRequested &&
+            requestId == mStartRequestSequence.get() &&
+            clientBinder.isBinderAlive &&
+            mClientDeathRegistrations.isCurrent(clientBinder, deathRecipient)
+    }
+
+    private fun notifyClientDeath(clientBinder: IBinder, deathRecipient: IBinder.DeathRecipient) {
         Log.w(TAG, "startServer callback binder died; queuing mouse disconnect")
-        mHandler.post {
-            mouseDevice.disconnect()
-            inputService = null
-            stopServer(true)
+        if (!mClientDeathRegistrations.onDeath(clientBinder, deathRecipient)) {
+            XtLogger.info(TAG, "ignored death notification from a superseded client registration")
+            return
+        }
+        val session = ClientSession(clientBinder, deathRecipient)
+        if (isWaylandClient) {
+            val installedSession = mInputService.owner()
+            if (installedSession != null && installedSession.binder != clientBinder) {
+                XtLogger.info(TAG, "ignored death notification of a replaced client Binder")
+                return
+            }
+            // A repeated start from the same callback Binder installs a new death recipient
+            // before its queued replacement runs. Keep the old service covered by this death.
+            val sessionToStop = installedSession ?: session
+            val (service, superseded) = mInputService.claimForShutdown(sessionToStop)
+            if (superseded) {
+                XtLogger.info(TAG, "ignored death notification of a replaced client session")
+                return
+            }
+            hideOverlayCursor()
+            try {
+                try {
+                    service?.stop()
+                } catch (e: Exception) {
+                    XtLogger.error(TAG, "Failed to stop input service after client binder death", e)
+                }
+                // The slot is already empty, avoiding callbacks into the dead Binder.
+                stopServer(true)
+            } finally {
+                // Retry waiters are notified only after every terminal commitment completes.
+                mInputService.releaseTerminal()
+            }
+        } else {
+            mHandler.post {
+                val owner = mInputService.owner()
+                if (owner != null && owner.binder != clientBinder) {
+                    XtLogger.info(TAG, "ignored death notification of a replaced client Binder")
+                    return@post
+                }
+                stopServer(true, clientAlive = false)
+            }
         }
     }
 
+    private var lastActivationReason: Int = IRemoteService.ACTIVATION_MANUAL
+
     /**
-     * Called by client to start the remote server.
+     * Initializes the input service, cursor overlay, and input listeners for the specified profile.
      *
-     * @param profile  The keymap profile
-     * @param keymapConfig Some configurations
-     * @param cb  The instance used to callback to remote service
-     * @param screenHeight Screen resolution (vertical)
-     * @param screenWidth  Screen resolution (horizontal)
+     * @param profile The keymap profile to load.
+     * @param keymapConfig Configuration settings for keymapping.
+     * @param cb Callback for remote service events.
+     * @param screenWidth Screen resolution (horizontal).
+     * @param screenHeight Screen resolution (vertical).
+     * @param displayId Target display ID.
+     * @param activationReason Reason for activating or updating the server (e.g. manual vs display change).
      */
     @Throws(RemoteException::class)
     override fun startServer(
@@ -269,114 +384,333 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         cb: IRemoteServiceCallback,
         screenWidth: Int,
         screenHeight: Int,
-        displayId: Int
+        displayId: Int,
+        activationReason: Int
     ) {
         enforceCaller()
-        Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
-        cb.asBinder().linkToDeath(mStartServerDeathRecipient, 0)
-        mHandler.post {
-            Log.i(TAG, "startServer: main handler running existingService=${inputService != null}")
-            val service = inputService
-            if (service != null) {
-                if (isWaylandClient) {
-                    service.hideCursor()
-                    service.stop()
-                }
-                stopServer(false)
+        lastActivationReason = activationReason
+        Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId reason=$activationReason pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
+        XtLogger.info(TAG, "startServer requested wayland=$isWaylandClient display=$displayId reason=$activationReason pointerMode=${keymapConfig.pointerMode}")
+        val clientBinder = cb.asBinder()
+        val deathRecipient = object : IBinder.DeathRecipient {
+            override fun binderDied() {
+                notifyClientDeath(clientBinder, this)
             }
-            mWindowManager = getWindowManager(displayId)
-
-            if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
-                addCursorView()
+        }
+        val request = synchronized(mStartRequestLock) {
+            if (destroyRequested) {
+                null
             } else {
-                cursorView = null
+                val previous = mClientDeathRegistrations.registerAndLink(
+                    clientBinder,
+                    deathRecipient
+                ) {
+                    clientBinder.linkToDeath(deathRecipient, 0)
+                }
+                // A failed link must not supersede a still-valid pending request.
+                mStartRequestSequence.incrementAndGet() to previous
             }
-            try {
-                Log.i(TAG, "startServer: constructing InputService")
-                val newService = InputService(
-                    profile, keymapConfig, cb, screenWidth, screenHeight,
-                    cursorView, isWaylandClient, displayId
+        } ?: run {
+            XtLogger.info(TAG, "ignored start request after service destruction")
+            return
+        }
+        val (requestId, superseded) = request
+        superseded?.let { clientBinder.unlinkToDeath(it, 0) }
+
+        mHandler.post {
+            startServerOnHandler(
+                profile,
+                keymapConfig,
+                cb,
+                screenWidth,
+                screenHeight,
+                displayId,
+                activationReason,
+                clientBinder,
+                deathRecipient,
+                requestId
+            )
+        }
+    }
+
+    private fun startServerOnHandler(
+        profile: KeymapProfile,
+        keymapConfig: KeymapConfig,
+        cb: IRemoteServiceCallback,
+        screenWidth: Int,
+        screenHeight: Int,
+        displayId: Int,
+        activationReason: Int,
+        clientBinder: IBinder,
+        deathRecipient: IBinder.DeathRecipient,
+        requestId: Long
+    ) {
+        Log.i(TAG, "startServer: main handler running existingService=${mInputService.get() != null}")
+        if (!isCurrentStartRequest(clientBinder, deathRecipient, requestId)) {
+            XtLogger.info(TAG, "ignored stale start request displayId=$displayId")
+            return
+        }
+
+        val retryStart: () -> Unit = {
+            mHandler.post {
+                startServerOnHandler(
+                    profile,
+                    keymapConfig,
+                    cb,
+                    screenWidth,
+                    screenHeight,
+                    displayId,
+                    activationReason,
+                    clientBinder,
+                    deathRecipient,
+                    requestId
                 )
-                newService.keyListener = { line ->
-                    try {
-                        mOnKeyEventListener?.onKeyEvent(line)
-                    } catch (e: RemoteException) {
-                        mOnKeyEventListener = null
-                    }
-                }
-                Log.i(TAG, "startServer: InputService constructed id=${System.identityHashCode(newService)}")
-                inputService = newService
-                if (!isWaylandClient) {
-                    Log.i(TAG, "startServer: setting mouse lock before connecting discovered device")
-                    newService.setMouseLock(true)
-                    mouseDevice.connect { device ->
-                        Log.i(TAG, "mouse openDevice: calling JNI device=$device service=${System.identityHashCode(newService)}")
-                        val fd = newService.openDevice(device)
-                        Log.i(TAG, "mouse openDevice: JNI returned fd=$fd device=$device service=${System.identityHashCode(newService)}")
-                        fd >= 0
-                    }
-                    Log.i(TAG, "startServer: mouse connection initialized isOpen=${mouseDevice.isOpen}")
-                } else {
-                    Log.i(TAG, "startServer: Wayland mode; skipping evdev mouse connection")
-                }
-            } catch (e: RemoteException) {
-                throw RuntimeException(e)
             }
-            // Launch app/game
-            if (profile.packageName != BuildConfig.APPLICATION_ID && keymapConfig.disableAutoProfiling) {
-                val launchIntent =
-                    context.packageManager.getLaunchIntentForPackage(profile.packageName)
-                if (launchIntent != null && launchIntent.component != null) try {
-                    ProcessBuilder(
-                        "am", "start", "-a", "android.intent.action.MAIN", "-n",
-                        launchIntent.component!!.flattenToString()
-                    ).start()
-                } catch (e: Exception) {
-                    throw RuntimeException(e)
+        }
+        if (mInputService.deferUntilAvailable(retryStart)) {
+            XtLogger.info(TAG, "deferred start request displayId=$displayId until shutdown completes")
+            return
+        }
+
+        if (!isCurrentStartRequest(clientBinder, deathRecipient, requestId)) {
+            XtLogger.info(TAG, "ignored stale start request before service creation displayId=$displayId")
+            return
+        }
+
+        val service = mInputService.get()
+        if (service != null) {
+            if (isWaylandClient) {
+                service.hideCursor()
+                service.stop()
+            }
+            stopServer(false)
+        }
+
+        if (!isCurrentStartRequest(clientBinder, deathRecipient, requestId)) {
+            cursorView?.visibility = View.GONE
+            XtLogger.info(TAG, "ignored start request superseded during previous-session shutdown")
+            return
+        }
+
+        mWindowManager = getWindowManager(displayId)
+        if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
+            addCursorView()
+        } else {
+            cursorView = null
+        }
+
+        if (!isCurrentStartRequest(clientBinder, deathRecipient, requestId)) {
+            cursorView?.visibility = View.GONE
+            XtLogger.info(TAG, "ignored stale start request before InputService construction")
+            return
+        }
+
+        Log.i(TAG, "startServer: constructing InputService")
+        val newService = try {
+            InputService(
+                profile, keymapConfig, cb, screenWidth, screenHeight,
+                cursorView, isWaylandClient, displayId, touchpadSessions
+            )
+        } catch (e: RemoteException) {
+            throw RuntimeException(e)
+        }
+        Log.i(TAG, "startServer: InputService constructed id=${System.identityHashCode(newService)}")
+        newService.keyListener = { line ->
+            try {
+                mOnKeyEventListener?.onKeyEvent(line)
+            } catch (e: RemoteException) {
+                mOnKeyEventListener = null
+            }
+        }
+
+        val session = ClientSession(clientBinder, deathRecipient)
+
+        startTouchpadFor(newService)
+
+        val admitted = synchronized(mStartRequestLock) {
+            !destroyRequested && mClientDeathRegistrations.runIfCurrent(
+                clientBinder,
+                deathRecipient,
+                isAlive = {
+                    !destroyRequested &&
+                        requestId == mStartRequestSequence.get() &&
+                        clientBinder.isBinderAlive
                 }
+            ) {
+                mInputService.install(session, newService)
+            }
+        }
+        if (!admitted) {
+            discardUninstalledService(newService)
+            if (isCurrentStartRequest(clientBinder, deathRecipient, requestId)) {
+                if (!mInputService.deferUntilAvailable(retryStart)) {
+                    retryStart()
+                }
+            }
+            XtLogger.warn(TAG, "startServer admission rejected; stale requests are discarded and blocked requests are deferred")
+            return
+        }
+
+        if (!mInputService.runIfOwner(session) {
+            // Telemetry must not outlive the exact session that admitted it.
+            DeviceTelemetry.start(context)
+        }) {
+            XtLogger.warn(TAG, "session committed for shutdown or replaced after admission; telemetry startup withheld")
+            return
+        }
+
+        if (!isWaylandClient) {
+            Log.i(TAG, "startServer: setting mouse lock before connecting discovered device")
+            newService.setMouseLock(true)
+            mouseDevice.connect { device ->
+                Log.i(TAG, "mouse openDevice: calling JNI device=$device service=${System.identityHashCode(newService)}")
+                val fd = newService.openMouseDevice(device)
+                Log.i(TAG, "mouse openDevice: JNI returned fd=$fd device=$device service=${System.identityHashCode(newService)}")
+                fd >= 0
+            }
+            Log.i(TAG, "startServer: mouse connection initialized isOpen=${mouseDevice.isOpen}")
+        } else {
+            Log.i(TAG, "startServer: Wayland mode; skipping evdev mouse connection")
+        }
+
+        // Launch app/game only after this request has actually installed its service.
+        if (activationReason != IRemoteService.ACTIVATION_DISPLAY_CHANGE && profile.packageName != BuildConfig.APPLICATION_ID && keymapConfig.disableAutoProfiling) {
+            val launchIntent =
+                context.packageManager.getLaunchIntentForPackage(profile.packageName)
+            if (launchIntent != null && launchIntent.component != null) try {
+                ProcessBuilder(
+                    "am", "start", "-a", "android.intent.action.MAIN", "-n",
+                    launchIntent.component!!.flattenToString()
+                ).start()
+            } catch (e: Exception) {
+                throw RuntimeException(e)
             }
         }
     }
 
-    override fun destroy() {
-        enforceCaller()
-        stopServer(true)
+    private fun startTouchpadFor(service: InputService) {
+        try {
+            service.startTouchpad()
+        } catch (t: Throwable) {
+            try {
+                service.stopTouchpad()
+            } catch (e: Exception) {
+                XtLogger.error(TAG, "Touchpad rollback after failed start threw", e)
+            }
+            throw t
+        }
     }
 
+    private fun discardUninstalledService(service: InputService) {
+        cursorView?.visibility = View.GONE
+        OrderedCleanup.run(
+            "stop rejected input service" to { service.stop() },
+            "stop mouse reader for rejected service" to { service.stopMouseIfStarted() },
+            "stop touchpad for rejected service" to { service.stopTouchpad() },
+            "destroy uinput for rejected service" to { service.destroyUinputDev() },
+        )
+    }
+
+    /**
+     * Destroys the remote service instance and stops all active servers.
+     */
+    override fun destroy() {
+        enforceCaller()
+        synchronized(mStartRequestLock) {
+            destroyRequested = true
+            mStartRequestSequence.incrementAndGet()
+        }
+        if (isWaylandClient) {
+            val session = mInputService.owner()
+            if (session == null) {
+                hideOverlayCursor()
+                stopServer(true)
+                return
+            }
+
+            val (service, superseded) = mInputService.claimForShutdown(session)
+            if (superseded) {
+                XtLogger.info(TAG, "ignored destroy request for a replaced client session")
+                return
+            }
+            hideOverlayCursor()
+            try {
+                if (service != null) {
+                    try {
+                        service.callback.disablePointer()
+                    } catch (e: RemoteException) {
+                        XtLogger.warn(TAG, "Client Binder unavailable during Wayland destroy; continuing cleanup", e)
+                    }
+                    try {
+                        service.stop()
+                    } catch (e: Exception) {
+                        XtLogger.error(TAG, "Failed to stop input service during Wayland destroy", e)
+                    }
+                }
+                stopServer(true, clientAlive = false)
+            } finally {
+                mInputService.releaseTerminal()
+            }
+        } else {
+            mHandler.post { stopServer(true) }
+        }
+    }
+
+    /**
+     * Stops the remote server asynchronously on the main handler.
+     */
     override fun stopServer() {
         enforceCaller()
         mHandler.post { stopServer(true) }
     }
 
-    private fun stopServer(exitProcess: Boolean) {
-        val service = inputService
-        Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient")
-        if (service != null) try {
-            service.callback.disablePointer()
-        } catch (e: RemoteException) {
-            throw RuntimeException(e)
+    /**
+     * Internal implementation to shut down input devices and cleanly terminate server operations.
+     *
+     * @param exitProcess Whether to exit the hosting process upon stopping.
+     * @param clientAlive Whether the client callback Binder is still alive to receive disablePointer.
+     */
+    private fun stopServer(exitProcess: Boolean, clientAlive: Boolean = true) {
+        DeviceTelemetry.stop()
+        val service = mInputService.get()
+        Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient clientAlive=$clientAlive")
+        if (service != null && clientAlive) {
+            try {
+                service.callback.disablePointer()
+            } catch (e: RemoteException) {
+                XtLogger.warn(TAG, "Client Binder unavailable during pointer shutdown; continuing cleanup", e)
+            }
         }
 
         if (!startedFromShell && exitProcess) {
+            XtLogger.info(TAG, "server stopped; exiting process")
+            // END marker before the existing System.exit; endSession is bounded.
+            XtLogger.endSession(SessionStates.STATUS_SERVICE_STOP)
             stop_getevent()
             System.exit(0)
         } else if (service != null && !isWaylandClient) {
             service.stopEvents = true
-            service.hideCursor()
-            service.stop()
-            if (mouseDevice.isOpen) {
-                Log.i(TAG, "stopServer: stopping native mouse thread")
-                service.stopMouse()
-                Log.i(TAG, "stopServer: native mouse thread stopped")
-            } else {
-                Log.i(TAG, "stopServer: skipping mouse stop because no device opened successfully")
-            }
-            mouseDevice.disconnect()
-            service.stopTouchpad()
-            service.destroyUinputDev()
-            service.callback.asBinder().unlinkToDeath(mStartServerDeathRecipient, 0)
-            inputService = null
+            CursorShutdown.hideThenCleanup(
+                hideCursor = { service.hideCursor() },
+                cleanup = {
+                    OrderedCleanup.run(
+                        "stop input service" to { service.stop() },
+                        "stop mouse reader" to {
+                            Log.i(TAG, "stopServer: stopping native mouse reader if started")
+                            service.stopMouseIfStarted()
+                            Log.i(TAG, "stopServer: native mouse cleanup returned")
+                        },
+                        "stop touchpad" to { service.stopTouchpad() },
+                        "destroy uinput" to { service.destroyUinputDev() },
+                        "mouse device connection" to { mouseDevice.disconnect() },
+                        "clear input service slot" to { mInputService.clear() },
+                    )
+                }
+            )
         }
+        // A shell-started process survives stopServer: admission reopens only after the
+        // non-exit cleanup completes, never where the destroy request was recorded.
+        synchronized(mStartRequestLock) { destroyRequested = false }
     }
 
     private val mKeyEventListenerDeathRecipient = IBinder.DeathRecipient {
@@ -408,40 +742,49 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         activityObserverService = null
     }
 
-    /**
-     * Used to temporary stop the keymapping.
-     */
     override fun pauseMouse() {
         enforceCaller()
-        val service = inputService
-        if (service != null)
-            if (!service.stopEvents) service.pauseResumeKeymap()
-    }
-
-    override fun resumeMouse() {
-        enforceCaller()
-        val service = inputService
-        if (service != null)
-            if (service.stopEvents)
+        mHandler.post {
+            val service = mInputService.get()
+            if (service != null && !service.stopEvents) {
                 service.pauseResumeKeymap()
+            }
+        }
     }
 
     /**
-     * Used to refresh by requesting new keymap from the user app
+     * Resumes the keymapping event processing.
      */
-    override fun reloadKeymap() {
+    override fun resumeMouse() {
         enforceCaller()
-        inputService?.reloadKeymap()
+        // Keep pause/resume state changes ordered with startServer() on the same handler.
+        mHandler.post {
+            val service = mInputService.get()
+            if (service != null && service.stopEvents) {
+                service.pauseResumeKeymap()
+            }
+        }
     }
 
+    override fun reloadKeymap() {
+        enforceCaller()
+        mInputService.get()?.reloadKeymap()
+    }
+
+    /**
+     * Checks whether the input service is currently active and processing events.
+     */
     override fun isActive(): Boolean {
         enforceCaller()
-        return inputService != null
+        return mInputService.get() != null
     }
 
     companion object {
         const val TAG = "xtmapper-server"
 
+        /**
+         * Loads native C++ shared libraries for mouse, touchpad, and keyboard handling.
+         */
         fun loadLibraries() {
             System.loadLibrary("mouse_read")
             System.loadLibrary("mouse_cursor")

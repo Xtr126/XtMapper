@@ -11,9 +11,6 @@ class Macro : Parcelable {
     @JvmField
     var triggerKey: String? = null
 
-    /**
-     * @param data format: x1 y1 0; x2 y2 elapsedTimeSinceLastEventMillis;
-     */
     constructor(data: String) {
         val eventsData = data.split(";").dropLastWhile { it.isEmpty() }.toTypedArray()
         events = arrayOfNulls(eventsData.size)
@@ -49,16 +46,10 @@ class Macro : Parcelable {
         return 0
     }
 
-    /**
-     * Blocking operation
-     * Run in thread
-     */
     fun runMacro(mInput: IInputInterface, pointerId: Int) {
         val events = this.events!!
-        // Initial input event
         mInput.injectEvent(events[0]!!.x, events[0]!!.y, InputService.DOWN, pointerId)
 
-        // Inject one by one with delay
         for (i in 1 until events.size - 1) {
             try {
                 Thread.sleep(events[i]!!.elapsedTimeSinceLastEventMillis.toLong())
@@ -66,7 +57,6 @@ class Macro : Parcelable {
             } catch (ignored: InterruptedException) {
             }
         }
-        // End input event sequence
         val last = events[events.size - 1]!!
         mInput.injectEvent(last.x, last.y, InputService.UP, pointerId)
     }

@@ -39,22 +39,17 @@ class MacroDialog(
     private var keyInFocus: TextView? = null
 
     fun show(l: View.OnClickListener) {
-        // Inflate the custom layout using View Binding
-        // View Binding for custom_dialog_layout
         val dialogBinding = MacroDialogLayoutBinding.inflate(LayoutInflater.from(context))
 
-        // Set up RecyclerView
         val recyclerView = dialogBinding.recyclerView
         recyclerView.layoutManager = LinearLayoutManager(context)
         refreshRecyclerView(recyclerView)
         val listener =
             SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> refreshRecyclerView(recyclerView) }
         macroSharedPreferences.registerOnSharedPreferenceChangeListener(listener)
-        // Set up FloatingActionButton
         val fab: FloatingActionButton = dialogBinding.fab
         fab.setOnClickListener(l)
 
-        // Create the dialog
         val builder = MaterialAlertDialogBuilder(context)
             .setView(dialogBinding.root)
             .setTitle(R.string.macro)
@@ -69,7 +64,6 @@ class MacroDialog(
     }
 
     private fun setOverlayFlagAndShowDialog(dialog: AlertDialog) {
-        // Set window flags if required
         if (useOverlayFlag) {
             dialog.window!!.setType(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -102,12 +96,10 @@ class MacroDialog(
         }
     }
 
-    // RecyclerView Adapter with View Binding
     // Kotlin forbids nested classes inside inner classes, so ViewHolder is a sibling
     private inner class RecyclerViewAdapter(private val dataList: List<String>) :
         RecyclerView.Adapter<ViewHolder>() {
 
-        // Inflate the custom layout using View Binding
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val itemBinding = MacroListItemBinding.inflate(
                 LayoutInflater.from(parent.context), parent, false
@@ -116,7 +108,6 @@ class MacroDialog(
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            // Bind data to the TextView
             val macroId = dataList[position]
             holder.binding.macroId.text = macroId
             holder.binding.editButton.setOnClickListener {
@@ -136,7 +127,6 @@ class MacroDialog(
             holder.binding.deleteButton.setOnClickListener { macroSharedPreferences.removeMacro(macroId) }
 
             holder.binding.toggle.setOnCheckedChangeListener { _, checked ->
-                // Enable text field if checked
                 if (checked) {
                     holder.binding.key.visibility = View.VISIBLE
                     macroIdMap[macroId] = Macro()

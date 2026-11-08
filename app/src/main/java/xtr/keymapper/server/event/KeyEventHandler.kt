@@ -64,6 +64,7 @@ class KeyEventHandler(private val mInput: IInputInterface) {
     }
 
     fun stop() {
+        shiftKeyHandlers?.forEach { it.stop(mInput, pidProvider) }
         dpadHandlers = null
         swipeKeyHandlers = null
         shiftKeyHandlers = null

@@ -11,9 +11,6 @@ import androidx.annotation.UiContext
 import xtr.keymapper.databinding.MacroStatusLayoutBinding
 import kotlin.math.max
 
-/**
- * For displaying elapsed time
- */
 class MacroStatus(@UiContext context: Context, container: ViewGroup) {
 
     private val binding: MacroStatusLayoutBinding =
@@ -45,7 +42,6 @@ class MacroStatus(@UiContext context: Context, container: ViewGroup) {
 
         val totalTimeMinutes = totalTimeSeconds / 60
 
-        // For stopwatch
         val millis = totalTimeSeconds * 1000L
         val seconds = totalTimeSeconds - (totalTimeMinutes * 60)
 
@@ -61,7 +57,6 @@ class MacroStatus(@UiContext context: Context, container: ViewGroup) {
             updateTime()
 
             if (isRunning) {
-                // The stopwatch is still running so execute this runnable again after a delay.
                 val talkBackOn = mAccessibilityManager.isTouchExplorationEnabled
 
                 // Grant longer time between redraws when talk-back is on to let it catch up.

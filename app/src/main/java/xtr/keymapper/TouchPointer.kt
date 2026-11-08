@@ -25,9 +25,11 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.annotation.UiThread
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import xtr.keymapper.databinding.CursorBinding
 import xtr.keymapper.editor.EditorActivity
 import xtr.keymapper.editor.EditorService
@@ -38,6 +40,8 @@ import xtr.keymapper.keymap.KeymapProfiles
 import xtr.keymapper.profiles.ProfileSelector
 import xtr.keymapper.server.RemoteServiceHelper
 import xtr.keymapper.service.KeymapperTileService
+import xtr.keymapper.ui.DialogWindowMode
+import xtr.keymapper.ui.showDialog
 
 class TouchPointer : Service() {
     private val binder: IBinder = TouchPointerBinder()
@@ -50,6 +54,11 @@ class TouchPointer : Service() {
     private var displayId = 0
     private var displayListener: DisplayListener? = null
     private var lastForegroundPackage: String? = null
+    private var lastDisplayWidth = 0
+    private var lastDisplayHeight = 0
+    private var lastDisplayRotation = -1
+    private var connectionGeneration = 0
+    private var disabledProfileDialog: AlertDialog? = null
 
 
     interface MainActivityCallback {
@@ -60,21 +69,24 @@ class TouchPointer : Service() {
 
     inner class TouchPointerBinder : Binder() {
         val service: TouchPointer
-            get() =// Return this instance of TouchPointer so clients can call public methods
-                this@TouchPointer
+            get() = this@TouchPointer
     }
 
     override fun onBind(intent: Intent?): IBinder {
         return binder
     }
 
+    /**
+     * Handles service start commands, ensuring null intents and stop actions
+     * are terminated immediately to prevent zombie instances.
+     */
     override fun onStartCommand(i: Intent?, flags: Int, startId: Int): Int {
         if (i == null || ACTION_STOP == i.action) {
             stopKeymapper()
+            stopSelf(startId)
             return START_NOT_STICKY
         }
 
-        // Launch default profile
         this.selectedProfile = i.getStringExtra(EditorActivity.PROFILE_NAME)
         if (this.selectedProfile == null) {
             this.selectedProfile = KeymapProfiles(this).getLastSelectedProfile()
@@ -114,22 +126,28 @@ class TouchPointer : Service() {
             }
 
             override fun onDisplayChanged(displayId: Int) {
-                if (displayId == this@TouchPointer.displayId) {
-                    Point().also {
-                        getSystemService(DisplayManager::class.java).getDisplay(
-                            displayId
-                        ).getRealSize(it)
-                    }.let {
-                        /* We must notify remote service
-                           when device orientation changes
-                           keymap will be scaled in remote service */
+                if (!isRunning || displayId != this@TouchPointer.displayId) return
+                val displayManager = getSystemService(DisplayManager::class.java) ?: return
+                val display = displayManager.getDisplay(displayId) ?: return
+                // Only react to active displays; ignore sleep / lid-close / screen-off states
+                if (display.state != Display.STATE_ON) return
 
-                        // Get new instance of remote service to avoid DeadObjectException
-                        connectRemoteService(
-                            KeymapProfiles(this@TouchPointer).getProfile(selectedProfile, true)
-                        )
-                    }
+                val size = Point()
+                display.getRealSize(size)
+                val rotation = display.rotation
+
+                // Only notify remote service when device orientation or size actually changes
+                if (size.x == lastDisplayWidth && size.y == lastDisplayHeight && rotation == lastDisplayRotation) {
+                    return
                 }
+
+                /* We must notify remote service
+                   when device orientation changes
+                   keymap will be scaled in remote service */
+                connectRemoteService(
+                    KeymapProfiles(this@TouchPointer).getProfile(selectedProfile, true),
+                    activationReason = IRemoteService.ACTIVATION_DISPLAY_CHANGE
+                )
             }
 
             override fun onDisplayRemoved(displayId: Int) {
@@ -140,9 +158,12 @@ class TouchPointer : Service() {
         )
 
 
-        return super.onStartCommand(i, flags, startId)
+        return START_NOT_STICKY
     }
 
+    /**
+     * Builds the persistent foreground notification for the Keymapper service.
+     */
     private fun buildNotification(): android.app.Notification {
         val keymapConfig = KeymapConfig(this)
         val pendingIntent: PendingIntent?
@@ -177,6 +198,9 @@ class TouchPointer : Service() {
             .build()
     }
 
+    /**
+     * Updates the persistent foreground notification with the latest profile information.
+     */
     private fun updateNotification() {
         val notificationManager = NotificationManagerCompat.from(this)
         try {
@@ -185,6 +209,11 @@ class TouchPointer : Service() {
         }
     }
 
+    /**
+     * Switches the active keymap profile and connects to the remote service.
+     *
+     * @param profileName The name of the profile to activate.
+     */
     fun launchProfile(profileName: String?) {
         this.selectedProfile = profileName
         currentSelectedProfile = profileName
@@ -195,18 +224,34 @@ class TouchPointer : Service() {
         connectRemoteService(keymapProfile)
     }
 
-    private fun connectRemoteService(profile: KeymapProfile) {
-        Log.i("xtmapper-startup", "connectRemoteService: profile=$selectedProfile disabled=${profile.disabled}")
+    /**
+     * Connects to the remote input service and initializes the server with the given profile.
+     *
+     * @param profile The keymap profile to start.
+     * @param activationReason Reason for connecting (e.g. manual activation vs display change).
+     * @param onConnected Optional callback invoked after successfully initiating the server.
+     */
+    private fun connectRemoteService(
+        profile: KeymapProfile,
+        activationReason: Int = IRemoteService.ACTIVATION_MANUAL,
+        onConnected: (() -> Unit)? = null
+    ) {
+        Log.i("xtmapper-startup", "connectRemoteService: profile=$selectedProfile disabled=${profile.disabled} reason=$activationReason")
         if (!profile.disabled) activityCallback?.updateCmdView1("connecting to server..")
         val config = KeymapConfig(this)
         RemoteServiceHelper.useShizuku = config.isShizukuMode
+        val generation = connectionGeneration
         RemoteServiceHelper.getInstance(
             this
         ) { service: IRemoteService? ->
             Log.i("xtmapper-startup", "connectRemoteService: callback servicePresent=${service != null} alive=${service?.asBinder()?.isBinderAlive}")
+            if (generation != connectionGeneration || !isRunning || activeInstance !== this) {
+                return@getInstance
+            }
             if (service == null) {
                 Log.w("TouchPointer", "Remote service is null, cannot start server")
                 activityCallback?.updateCmdView1("Failed to connect to server (root/shizuku not available)")
+                stopKeymapper()
                 return@getInstance
             }
             mService = service
@@ -216,7 +261,7 @@ class TouchPointer : Service() {
             val size = Point()
             display?.getRealSize(size)
             mWindowManager =
-                this.displayContext?.getSystemService(WindowManager::class.java)
+                this.displayContext.getSystemService(WindowManager::class.java)
             try {
                 if (!activityRemoteCallback && !keymapConfig.disableAutoProfiling) {
                     Log.i("xtmapper-startup", "connectRemoteService: registering activity observer")
@@ -224,30 +269,50 @@ class TouchPointer : Service() {
                     activityRemoteCallback = true
                 }
                 if (!profile.disabled) {
-                    Log.i("xtmapper-startup", "connectRemoteService: calling startServer display=$displayId")
+                    Log.i("xtmapper-startup", "connectRemoteService: calling startServer display=$displayId reason=$activationReason")
                     service.startServer(
                         profile,
                         keymapConfig,
                         mCallback,
                         size.x,
                         size.y,
-                        displayId
+                        displayId,
+                        activationReason
                     )
                 }
                 if (profile.disabled) {
                     Log.w("xtmapper-startup", "connectRemoteService: profile disabled; startServer skipped")
                     val profileName = selectedProfile.orEmpty()
                     mHandler.post {
-                        Toast.makeText(
-                            this,
-                            getString(R.string.profile_disabled_activation, profileName),
-                            Toast.LENGTH_LONG
-                        ).show()
+                        if (generation != connectionGeneration || !isRunning || activeInstance !== this) {
+                            return@post
+                        }
+                        val activationMessage = getString(R.string.profile_disabled_activation, profileName)
+                        val dialogContext = ContextThemeWrapper(displayContext, R.style.Theme_XtMapper)
+                        val builder = MaterialAlertDialogBuilder(dialogContext)
+                            .setTitle(R.string.profile_disabled_title)
+                            .setMessage(activationMessage)
+                            .setPositiveButton(R.string.ok, null)
+                        disabledProfileDialog?.dismiss()
+                        try {
+                            disabledProfileDialog = showDialog(builder, DialogWindowMode.OVERLAY)
+                        } catch (_: WindowManager.InvalidDisplayException) {
+                            disabledProfileDialog = null
+                            Toast.makeText(this, activationMessage, Toast.LENGTH_LONG).show()
+                            return@post
+                        }
+                        if (disabledProfileDialog == null) {
+                            Toast.makeText(this, activationMessage, Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
                 if (keymapConfig.showControls) {
                     ShowKeymapService.start(this, selectedProfile)
                 }
+                lastDisplayWidth = size.x
+                lastDisplayHeight = size.y
+                lastDisplayRotation = display?.rotation ?: 0
+                onConnected?.invoke()
             } catch (e: Exception) {
                 if (activityCallback != null) {
                     activityCallback!!.updateCmdView1(e.toString())
@@ -261,10 +326,42 @@ class TouchPointer : Service() {
         }
     }
 
+    private var cursorView: View? = null
+
+    /**
+     * Safely detaches the cursor overlay view from the WindowManager,
+     * accounting for both attached and pre-attach pending states.
+     */
+    private fun removeCursorView() {
+        val view = cursorView ?: return
+        cursorView = null
+        val wm = mWindowManager ?: displayContext.getSystemService(WindowManager::class.java)
+        try {
+            if (view.isAttachedToWindow) {
+                wm?.removeView(view)
+            } else if (view.parent != null) {
+                wm?.removeViewImmediate(view)
+            }
+        } catch (e: Exception) {
+            Log.w("TouchPointer", "Error removing cursorView", e)
+        }
+    }
+
+    /**
+     * Stops the keymapper service, releasing listeners, cursor overlays,
+     * and tearing down active remote server connections.
+     */
     fun stopKeymapper() {
         if (!isRunning && activeInstance == null) return
+        connectionGeneration++
         isRunning = false
         activeInstance = null
+
+        mHandler.post { removeCursorView() }
+
+        lastDisplayWidth = 0
+        lastDisplayHeight = 0
+        lastDisplayRotation = -1
 
         displayListener?.let {
             getSystemService(DisplayManager::class.java).unregisterDisplayListener(it)
@@ -289,6 +386,9 @@ class TouchPointer : Service() {
     }
 
     override fun onDestroy() {
+        disabledProfileDialog?.dismiss()
+        disabledProfileDialog = null
+        removeCursorView()
         stopKeymapper()
         activityCallback = null
         super.onDestroy()
@@ -300,13 +400,7 @@ class TouchPointer : Service() {
         mService!!.stopServer()
     }
 
-    /**
-     * This implementation is used to receive callbacks from the remote
-     * service.
-     */
     val mCallback: IRemoteServiceCallback = object : IRemoteServiceCallback.Stub() {
-        private var cursorView: View? = null
-
         override fun launchEditor() {
             val intent = Intent(this@TouchPointer, EditorService::class.java)
             intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfile)
@@ -314,7 +408,6 @@ class TouchPointer : Service() {
         }
 
         override fun alertMouseAimActivated() {
-            // Notifying user that shooting mode was activated
             mHandler.post {
                 Toast.makeText(
                     this@TouchPointer, R.string.mouse_aim_activated, Toast.LENGTH_SHORT
@@ -349,14 +442,18 @@ class TouchPointer : Service() {
                     this@TouchPointer,
                     { profile: String? ->
                         this@TouchPointer.selectedProfile = profile
-                        // Reloading profile
                         connectRemoteService(keymapProfiles.getProfile(profile, true))
                     },
-                    application
+                    application,
+                    DialogWindowMode.OVERLAY
                 )
             }
         }
 
+        /**
+         * Inflates and attaches the pointer cursor overlay window
+         * with an empty touchable region if the service is currently running.
+         */
         override fun enablePointer() {
             val keymapConfig = requestKeymapConfig()
 
@@ -373,39 +470,40 @@ class TouchPointer : Service() {
             }
 
             mHandler.post {
-                if (cursorView == null) {
-                    cursorView = CursorBinding.inflate(
+                if (cursorView == null && isRunning) {
+                    val binding = CursorBinding.inflate(
                         LayoutInflater.from(
                             ContextThemeWrapper(displayContext, R.style.Theme_XtMapper)
                         )
-                    ).getRoot()
+                    )
+                    val view = binding.root
+                    cursorView = view
 
                     val mParams =
                         Utils.getPointerLayoutParams(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT)
 
-                    mWindowManager!!.addView(cursorView, mParams)
+                    Utils.applyEmptyTouchableRegion(view)
+                    val wm = mWindowManager ?: displayContext.getSystemService(WindowManager::class.java)
+                    wm?.addView(view, mParams)
                 }
             }
         }
 
         override fun disablePointer() {
             mHandler.post {
-                if (cursorView != null) {
-                    mWindowManager!!.removeView(cursorView)
-                    cursorView = null
-                }
+                removeCursorView()
             }
         }
 
         override fun setCursorX(x: Int) {
             mHandler.post {
-                if (cursorView != null) cursorView!!.x = x.toFloat()
+                cursorView?.x = x.toFloat()
             }
         }
 
         override fun setCursorY(y: Int) {
             mHandler.post {
-                if (cursorView != null) cursorView!!.y = y.toFloat()
+                cursorView?.y = y.toFloat()
             }
         }
 
@@ -420,21 +518,29 @@ class TouchPointer : Service() {
         }
     }
 
-    private val displayContext: Context?
+    private val displayContext: Context
         get() {
-            val displayManager =
-                getSystemService(DisplayManager::class.java)
-            val display = displayManager.getDisplay(displayId)
-            val context: Context? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                createDisplayContext(display).createWindowContext(
-                    display,
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                    null
-                )
-            } else {
-                createDisplayContext(display)
+            return try {
+                val displayManager = getSystemService(DisplayManager::class.java)
+                val display = displayManager?.getDisplay(displayId)
+                    ?: displayManager?.getDisplay(Display.DEFAULT_DISPLAY)
+                if (display != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        createDisplayContext(display).createWindowContext(
+                            display,
+                            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                            null
+                        )
+                    } else {
+                        createDisplayContext(display)
+                    }
+                } else {
+                    this
+                }
+            } catch (e: Exception) {
+                Log.w("TouchPointer", "Failed to create displayContext, using service context", e)
+                this
             }
-            return context
         }
 
     private fun isLauncherOrSystem(packageName: String): Boolean {
@@ -458,10 +564,6 @@ class TouchPointer : Service() {
         }
     }
 
-    /**
-     * This implementation is used to receive callbacks from the remote
-     * service.
-     */
     private val mActivityObserverCallback: ActivityObserver = object : ActivityObserver.Stub() {
         private var lastPackageName: String? = null
 
@@ -477,36 +579,44 @@ class TouchPointer : Service() {
             val designated = keymapProfiles.getDesignatedProfileForApp(packageName)
 
             if (designated != null) {
-                if (designated != selectedProfile) {
+                val designatedProfileDisabled = keymapProfiles.getProfile(designated, false).disabled
+                if (designated != selectedProfile || designatedProfileDisabled) {
                     mHandler.post {
-                        launchProfile(designated)
-                        Toast.makeText(this@TouchPointer, "Switched to profile: $designated", Toast.LENGTH_SHORT).show()
+                        if (designated != selectedProfile) {
+                            launchProfile(designated)
+                            Toast.makeText(this@TouchPointer, "Switched to profile: $designated", Toast.LENGTH_SHORT).show()
+                        }
+                        if (keymapProfiles.getProfile(designated, false).disabled) {
+                            try {
+                                mService?.pauseMouse()
+                            } catch (_: RemoteException) {
+                            }
+                        }
                     }
                 }
                 return
             }
 
             if (!keymapProfiles.profileExistsWithPackageName(packageName)) {
-                // No profile found, prompt user to create a new profile
                 mHandler.post {
                     ProfileSelector.showEnableProfileDialog(
                         context,
-                        packageName
+                        packageName,
+                        DialogWindowMode.OVERLAY
                     ) { enabled: Boolean ->
                         ProfileSelector.createNewProfileForApp(
                             context,
                             packageName,
-                            enabled
+                            enabled,
+                            DialogWindowMode.OVERLAY
                         ) { profile: String? ->
                             launchProfile(profile)
                         }
                     }
                 }
             } else {
-                // App specific profiles selection dialog
                 mHandler.post {
                     ProfileSelector.select(context, { profile: String? ->
-                        // Reloading profile
                         this@TouchPointer.selectedProfile = profile
                         val keymapProfile = keymapProfiles.getProfile(profile, true)
                         if (!keymapProfile.disabled) {
@@ -527,7 +637,7 @@ class TouchPointer : Service() {
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
-                    }, packageName)
+                    }, packageName, DialogWindowMode.OVERLAY)
                 }
             }
         }

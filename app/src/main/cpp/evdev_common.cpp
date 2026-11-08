@@ -1,120 +1,215 @@
+#include "evdev_common.h"
+
 #include "mouse_cursor.h"
-#include <thread>
-#include <jni.h>
-#include <vector>
-#include <iostream>
+
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
-#include <unistd.h>
 #include <fcntl.h>
-#include <sys/poll.h>
-#include <linux/uinput.h>
-#include <linux/input.h>
 #include <linux/input-event-codes.h>
-#include <cstdlib>
-#include "evdev_common.h"
+#include <linux/input.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+#include <array>
 
 using std::string;
 
-std::vector<string> ListInputDevices() {
-    const string input_directory = "/dev/input";
-    std::vector<string> filenames;
-    DIR * directory = opendir(input_directory.c_str());
-    if (!directory) return filenames;
+namespace {
+constexpr size_t kKeyBits = KEY_MAX / 8 + 1;
+constexpr size_t kPropBits = INPUT_PROP_MAX / 8 + 1;
 
-    struct dirent *entry;
-    while ((entry = readdir(directory))) {
-        if (entry->d_name[0] == 'e') // is eventX
-          filenames.push_back(input_directory + "/" + entry->d_name);
-    }
-    closedir(directory);
-    return filenames;
+template <size_t N, typename Ioctl>
+bool hasBit(Ioctl&& ioctl, int fd, unsigned long request, unsigned int bit, bool* queried = nullptr) {
+	std::array<unsigned char, N> bits {};
+	if (queried) *queried = true;
+	if (bit / 8 >= N) return false;
+	if (ioctl(fd, request, bits.data()) < 0) {
+		if (queried) *queried = false;
+		return false;
+	}
+	return (bits[bit / 8] & (1u << (bit % 8))) != 0;
 }
 
-std::vector<int> scanTouchpadDevices() {
-    std::vector<string> evdevNames = ListInputDevices();
-    std::vector<int> touchpadDeviceFds;
+int defaultOpen(const string& path) {
+	return ::open(path.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC);
+}
 
-    printf("I: Searching for touchpad devices...\n");
-    for (auto & evdev : evdevNames) {
-        int device_fd = open(evdev.c_str(), O_RDWR);
-        if (device_fd < 0) {
-            perror("opening device");
-        }
+int defaultIoctl(int fd, unsigned long request, void* arg) {
+	return ::ioctl(fd, request, arg);
+}
 
-        // Get device name
-        char dev_name[24];
-        if(!ioctl(device_fd, EVIOCGNAME(sizeof(dev_name) - 1), &dev_name)) {
-            perror("get device name");
-            close(device_fd);
-            continue;
-        }
+int defaultClose(int fd) { return ::close(fd); }
 
-        if(!HasSpecificAbs(device_fd, ABS_X) || !HasSpecificAbs(device_fd, ABS_Y)) {
-            printf("%s: no ABS_X or ABS_Y events found\n", dev_name);
-            printf("Not a touch device\n");
-            close(device_fd);
-            continue;
-        }
+struct FdGuard {
+	int fd = -1;
+	EvdevOps* ops = nullptr;
+	~FdGuard() {
+		if (fd >= 0 && ops) {
+			try {
+				ops->close(fd);
+			} catch (...) {
+			}
+		}
+	}
+	void release() { fd = -1; }
+};
+} // namespace
 
-        if (!HasInputProp(device_fd, INPUT_PROP_POINTER)) {
-            printf("%s: INPUT_PROP_POINTER not set\n", dev_name);
-            if (!HasSpecificKey(device_fd, BTN_MOUSE)) {
-                printf("BTN_MOUSE not found\n");
-                printf("Not a touchpad device\n");
-                close(device_fd);
-                continue;
-            }
-        }
+DeviceList EnumerateInputDevices() {
+	const string input_directory = "/dev/input";
+	DeviceList out;
+	DIR * directory = opendir(input_directory.c_str());
+	if (!directory) {
+		out.ok = false;
+		return out;
+	}
 
+	bool failed = false;
+	try {
+		struct dirent *entry;
+		for (;;) {
+			errno = 0; // per-call reset: loop-body allocators may clobber errno
+			entry = readdir(directory);
+			if (entry == nullptr) break;
+			if (entry->d_name[0] == 'e') // is eventX
+			  out.paths.push_back(input_directory + "/" + entry->d_name);
+		}
+		if (errno != 0) failed = true; // readdir error ≠ end-of-directory
+	} catch (...) {
+		// Allocation failure mid-enumeration: no exception escapes this seam.
+		failed = true;
+	}
+	closedir(directory);
+	if (failed) {
+		out.ok = false;
+		out.paths.clear();
+	}
+	return out;
+}
 
-        // Check for virtual devices
-        if (strcmp(x_virtual_tablet, dev_name) == 0 || strcmp(x_virtual_mouse, dev_name) == 0) {
-            printf("skipping %s\n", dev_name);
-            close(device_fd);
-            continue;
-        }
-        else if (x_virtual_touch == dev_name) {
-            touchpadDeviceFds.clear();
-            return touchpadDeviceFds;
-        }
+std::vector<string> ListInputDevices() { return EnumerateInputDevices().paths; }
 
-        printf("I: Add touchpad device: %s %s\n", dev_name, evdev.c_str());
-        ioctl(device_fd, EVIOCGRAB, (void *)1);
+TouchpadScanResult scanTouchpadDevices(EvdevOps ops) {
+	if (!ops.list) ops.list = EnumerateInputDevices;
+	if (!ops.open) ops.open = defaultOpen;
+	if (!ops.ioctl) ops.ioctl = defaultIoctl;
+	if (!ops.close) ops.close = defaultClose;
 
-        touchpadDeviceFds.push_back(device_fd);
-    }
-    return touchpadDeviceFds;
+	TouchpadScanResult result;
+	const DeviceList listing = ops.list();
+	if (!listing.ok) {
+		result.status = TouchpadScanStatus::SCAN_ERROR;
+		return result;
+	}
+	const std::vector<string>& evdevNames = listing.paths;
+	if (evdevNames.empty()) return result; // confirmed absence: NO_DEVICE
+
+	printf("I: Searching for touchpad devices...\n");
+	bool openFailed = false;
+	bool queryFailed = false;
+	bool grabFailed = false;
+	try {
+		for (auto & evdev : evdevNames) {
+			int device_fd = ops.open(evdev);
+			if (device_fd < 0) {
+				// fd 0 is a valid descriptor; only a negative return is a failure.
+				perror("opening device");
+				openFailed = true;
+				continue;
+			}
+			FdGuard guard {device_fd, &ops}; // closes on every rejection path
+
+			char dev_name[24] {};
+			if (ops.ioctl(device_fd, EVIOCGNAME(sizeof(dev_name) - 1), dev_name) < 0) {
+				perror("get device name");
+				queryFailed = true; // the device exists but cannot be identified
+				continue;
+			}
+
+			bool absXQueried = true;
+			bool absYQueried = true;
+			if (!hasBit<kKeyBits>(ops.ioctl, device_fd, EVIOCGBIT(EV_ABS, kKeyBits), ABS_X, &absXQueried) ||
+			    !hasBit<kKeyBits>(ops.ioctl, device_fd, EVIOCGBIT(EV_ABS, kKeyBits), ABS_Y, &absYQueried)) {
+				queryFailed = queryFailed || !absXQueried || !absYQueried;
+				printf("%s: no ABS_X or ABS_Y events found\n", dev_name);
+				printf("Not a touch device\n");
+				continue;
+			}
+
+			bool propQueried = true;
+			if (!hasBit<kPropBits>(ops.ioctl, device_fd, EVIOCGPROP(kPropBits), INPUT_PROP_POINTER, &propQueried)) {
+				queryFailed = queryFailed || !propQueried;
+				printf("%s: INPUT_PROP_POINTER not set\n", dev_name);
+				bool btnQueried = true;
+				if (!hasBit<kKeyBits>(ops.ioctl, device_fd, EVIOCGBIT(EV_KEY, kKeyBits), BTN_MOUSE, &btnQueried)) {
+					queryFailed = queryFailed || !btnQueried;
+					printf("BTN_MOUSE not found\n");
+					printf("Not a touchpad device\n");
+					continue;
+				}
+			}
+
+			// Skip this process's own virtual devices so they are never re-grabbed.
+			if (strcmp(x_virtual_tablet, dev_name) == 0 ||
+			    strcmp(x_virtual_mouse, dev_name) == 0 ||
+			    strcmp(x_virtual_touch, dev_name) == 0) {
+				printf("skipping %s\n", dev_name);
+				continue;
+			}
+
+			if (ops.ioctl(device_fd, EVIOCGRAB, reinterpret_cast<void*>(1)) < 0) {
+				printf("%s: EVIOCGRAB failed\n", dev_name);
+				grabFailed = true;
+				continue;
+			}
+
+			printf("I: Add touchpad device: %s %s\n", dev_name, evdev.c_str());
+			result.fds.push_back(device_fd); // guard reclaims current fd if this throws
+			guard.release();
+		}
+	} catch (...) {
+		for (int fd : result.fds) {
+			try {
+				ops.close(fd);
+			} catch (...) {
+			}
+		}
+		result.fds.clear();
+		result.status = TouchpadScanStatus::SCAN_ERROR;
+		return result;
+	}
+
+	if (!result.fds.empty()) {
+		result.status = TouchpadScanStatus::OK;
+	} else if (queryFailed) {
+		// Candidates existed but could not be inspected: unknown, not absent.
+		result.status = TouchpadScanStatus::SCAN_ERROR;
+	} else if (grabFailed || openFailed) {
+		result.status = TouchpadScanStatus::ACCESS_ERROR;
+	} else {
+		// Every candidate opened, was identified and cleanly rejected.
+		result.status = TouchpadScanStatus::NO_DEVICE;
+	}
+	return result;
 }
 
 bool HasSpecificAbs(int device_fd, unsigned int abs) {
-  unsigned long nchar = KEY_MAX / 8 + 1;
-  unsigned char bits[nchar];
-  // Get the bit fields of available abs events.
-  ioctl(device_fd, EVIOCGBIT(EV_ABS, sizeof(bits)), &bits);
-  return bits[abs/8] & (1 << (abs % 8));
+	return hasBit<kKeyBits>(defaultIoctl, device_fd, EVIOCGBIT(EV_ABS, kKeyBits), abs);
 }
 
 bool HasSpecificKey(int device_fd, unsigned int key) {
-  unsigned long nchar = KEY_MAX / 8 + 1;
-  unsigned char bits[nchar];
-  // Get the bit fields of available keys.
-  ioctl(device_fd, EVIOCGBIT(EV_KEY, sizeof(bits)), &bits);
-  return bits[key/8] & (1 << (key % 8));
+	return hasBit<kKeyBits>(defaultIoctl, device_fd, EVIOCGBIT(EV_KEY, kKeyBits), key);
 }
 
 bool HasInputProp(int device_fd, unsigned int input_prop) {
-  unsigned long nchar = INPUT_PROP_MAX / 8 + 1;
-  unsigned char bits[nchar];
-  // Get the bit fields of available keys.
-  ioctl(device_fd, EVIOCGPROP(sizeof(bits)), &bits);
-  return bits[input_prop/8] & (1 << (input_prop % 8));
+	return hasBit<kPropBits>(defaultIoctl, device_fd, EVIOCGPROP(kPropBits), input_prop);
 }
 
 bool HasEventType(int device_fd, unsigned int type) {
-  unsigned long evbit = 0;
-  // Get the bit field of available event types.
-  ioctl(device_fd, EVIOCGBIT(0, sizeof(evbit)), &evbit);
-  return evbit & (1 << type);
+	unsigned long evbit = 0;
+	// Get the bit field of available event types.
+	if (::ioctl(device_fd, EVIOCGBIT(0, sizeof(evbit)), &evbit) < 0) return false;
+	return (evbit & (1ul << type)) != 0;
 }

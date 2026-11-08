@@ -41,11 +41,7 @@ class Key(
         }, callback.keysContainerView)
 
         floatingKey.setText(key.code!!.substring(4))
-        floatingKey.frameView.animate()
-            .x(key.x)
-            .y(key.y)
-            .setDuration(1000)
-            .start()
+        floatingKey.animateToPosition(key.x, key.y, 1000L)
         floatingKey.setOnClickListener(this::onFloatingKeyClick)
 
         floatingKey.frameView.scaleX = keymapConfig.floatingKeysSize

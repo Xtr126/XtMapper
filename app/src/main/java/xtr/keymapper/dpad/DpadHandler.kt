@@ -87,15 +87,15 @@ class DpadHandler(
         if (key == KEY_UP_CODE) {
             KEY_UP = true
             if (!KEY_DOWN && !KEY_LEFT && !KEY_RIGHT) {
-                sendDpadEvent(tapDown) // Send pointer down event only if no other keys are pressed
+                sendDpadEvent(tapDown)
             }
             // For moving Dpad in 8 directions with 4 keys
             if (KEY_LEFT)
-                sendDpadEvent(moveUpLeft) // If left key is already pressed then move dpad to north-west
+                sendDpadEvent(moveUpLeft)
             else if (KEY_RIGHT)
-                sendDpadEvent(moveUpRight) // If right key is already pressed then move dpad to north-east
+                sendDpadEvent(moveUpRight)
             else
-                sendDpadEvent(moveUp) // If left or right keys are not pressed then move dpad straight up
+                sendDpadEvent(moveUp)
         } else if (key == KEY_DOWN_CODE) {
             KEY_DOWN = true
             if (!KEY_LEFT && !KEY_RIGHT && !KEY_UP)

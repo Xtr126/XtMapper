@@ -1,0 +1,110 @@
+name: PR Verification
+
+on:
+  push:
+    branches:
+      - merge/upstream-dev-updates
+      - fix/**
+  pull_request:
+    branches:
+      - dev
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-verification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: JVM unit tests and debug APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      # Host-side C++ lifecycle/scanner tests compile the production sources directly.
+      # Runs before the JDK/SDK setup so a native regression fails fast.
+      - name: Run host C++ tests
+        run: |
+          cmake -S app/src/hostTest/cpp -B build/hostTest -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build/hostTest --parallel
+          ctest --test-dir build/hostTest --output-on-failure
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # ubuntu-24.04 runners already include the exact SDK platform, build-tools,
+      # platform-tools, and NDK versions used by this project. Avoid downloading
+      # the separate Android CLI binary during CI startup.
+      - name: Verify preinstalled Android SDK and NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          ndk_version="30.0.16248370"
+          required_paths=(
+            "platforms/android-37.0/android.jar"
+            "build-tools/37.0.0"
+            "platform-tools/adb"
+            "ndk/${ndk_version}/source.properties"
+          )
+
+          for relative_path in "${required_paths[@]}"; do
+            if [[ ! -e "${sdk_root}/${relative_path}" ]]; then
+              echo "::error::Required Android SDK component is missing: ${sdk_root}/${relative_path}"
+              exit 1
+            fi
+          done
+
+          ndk_root="${sdk_root}/ndk/${ndk_version}"
+          {
+            echo "ANDROID_HOME=${sdk_root}"
+            echo "ANDROID_SDK_ROOT=${sdk_root}"
+            echo "ANDROID_NDK=${ndk_root}"
+            echo "ANDROID_NDK_HOME=${ndk_root}"
+            echo "ANDROID_NDK_ROOT=${ndk_root}"
+          } >> "$GITHUB_ENV"
+
+          echo "${sdk_root}/platform-tools" >> "$GITHUB_PATH"
+          echo "Verified Android SDK platform 37.0, Build Tools 37.0.0, and NDK ${ndk_version}."
+
+      - name: Run host Native diagnostics tests
+        run: |
+          cmake -S app/src/hostTest/nativeDiagnostics -B build/hostNativeDiagnostics -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build/hostNativeDiagnostics --parallel
+          ctest --test-dir build/hostNativeDiagnostics --output-on-failure --timeout 10
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Run JVM unit tests and assemble debug APK
+        run: ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug
+
+      - name: Upload JVM test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xtmapper-jvm-tests-${{ github.event.pull_request.head.sha || github.sha }}
+          path: app/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xtmapper-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7

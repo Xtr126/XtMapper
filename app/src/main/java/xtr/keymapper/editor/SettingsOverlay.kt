@@ -28,8 +28,6 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
 
     private val keymapConfig = KeymapConfig(context)
 
-    // Java nulled this in onDestroyView; lateinit cannot, and callers drop the
-    // instance immediately anyway — ceiling: binding stays readable after destroy
     internal lateinit var binding: KeymapEditorLayoutBinding
 
     private lateinit var pointerModeMap: Map<String, Int>
@@ -39,7 +37,6 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
     private var keyInFocus: View? = null
 
     fun createView(inflater: LayoutInflater): ViewGroup {
-        // Inflate the layout for this fragment
         binding = KeymapEditorLayoutBinding.inflate(inflater)
         init()
         return binding.root
@@ -182,6 +179,14 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
             keymapConfig.editorOverlay = settingsBinding.editorOverlay.isChecked
             keymapConfig.touchJitter = settingsBinding.touchJitterSwitch.isChecked
             keymapConfig.touchJitterSpread = settingsBinding.touchJitterSpread.value
+            // Keep the editor slider in sync so onDestroyView does not overwrite dialog changes.
+            binding.sliderTouchJitter.value =
+                if (keymapConfig.touchJitter) keymapConfig.touchJitterSpread else 0f
+            binding.touchJitterText.text = if (keymapConfig.touchJitter) {
+                context.getString(R.string.touch_jitter_spread_px, keymapConfig.touchJitterSpread.toInt())
+            } else {
+                context.getString(R.string.touch_jitter_spread)
+            }
             keymapConfig.showControls = settingsBinding.showControls.isChecked
             keymapConfig.showControlsOpacity = settingsBinding.showControlsOpacity.value
             keymapConfig.applySharedPrefs()
@@ -304,7 +309,7 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         val menu: Menu = popupMenu.menu
 
         if (startMode == EditorUI.START_EDITOR) for (n in 1..3) { // n = { 1,2,3 } For dividing between three columns
-            for (i in menu.size() * (n - 1) / 3 until menu.size() * n / 3) { // i = { 0,1,2.. }
+            for (i in menu.size() * (n - 1) / 3 until menu.size() * n / 3) {
                 val menuItem = menu.getItem(i)
 
                 val parentView: LinearLayout = when (n) {
@@ -351,6 +356,7 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         binding.pauseResume.setOnKeyListener(this::focusKey)
         binding.switchProfile.setOnKeyListener(this::focusKey)
         binding.mouseAimKey.setOnKeyListener(this::focusKey)
+        binding.blockKeyboard.setOnKeyListener(this::focusKey)
     }
 
     fun onUnRegisterKeyEventListener() {
@@ -359,6 +365,7 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         binding.pauseResume.setOnKeyListener(::onKeyboardKeyPress)
         binding.switchProfile.setOnKeyListener(::onKeyboardKeyPress)
         binding.mouseAimKey.setOnKeyListener(::onKeyboardKeyPress)
+        binding.blockKeyboard.setOnKeyListener(::onKeyboardKeyPress)
     }
 
     fun onKey(key: String?) {
@@ -371,11 +378,6 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
     }
 
     fun interface OnCardItemSelectedListener {
-        /**
-         * Called when a CardView has been clicked.
-         *
-         * @param menuItemId the relevant id of the menu item for the card.
-         */
         fun onActionSelected(menuItemId: Int)
     }
 }

@@ -21,8 +21,10 @@ class MouseWalk private constructor(
     private var rootView: MovableFrameLayout? = null
     private var mouseWalk: xtr.keymapper.keymap.element.MouseWalk? = null
     private var binding: MouseWalkBinding? = null
+    private var positioned = false
+    private var pendingCenterX = defaultX
+    private var pendingCenterY = defaultY
 
-    // Inflate exactly once per constructor, as in the Java original
     init {
         if (saved != null) addMouseWalk(saved) else addMouseWalk(defaultX, defaultY)
     }
@@ -42,8 +44,22 @@ class MouseWalk private constructor(
     }
 
     override fun toConfigLine(): String {
-        // Create new instance for updating properties
-        this.mouseWalk = xtr.keymapper.keymap.element.MouseWalk(rootView!!)
+        val view = rootView!!
+        if (!positioned) {
+            mouseWalk?.let { saved ->
+                return xtr.keymapper.keymap.element.MouseWalk.TAG + " " +
+                    saved.x + " " + saved.y + " " + saved.radius
+            }
+
+            val params = view.layoutParams
+            val width = view.width.takeIf { it > 0 } ?: params.width
+            val height = view.height.takeIf { it > 0 } ?: params.height
+            val radius = if (width > 0 && height > 0) (width + height) / 4f else 0f
+            return xtr.keymapper.keymap.element.MouseWalk.TAG + " " +
+                pendingCenterX + " " + pendingCenterY + " " + radius
+        }
+        view.finishPendingPositionAnimation()
+        this.mouseWalk = xtr.keymapper.keymap.element.MouseWalk(view)
         return xtr.keymapper.keymap.element.MouseWalk.TAG + " " +
                 mouseWalk!!.x + " " +
                 mouseWalk!!.y + " " +
@@ -57,18 +73,19 @@ class MouseWalk private constructor(
         binding!!.closeButton.setOnClickListener(this::onClose)
         binding!!.resizeHandle.setOnTouchListener(ResizeableDpadView(rootView!!))
 
+        pendingCenterX = x
+        pendingCenterY = y
         rootView!!.post {
             if (this.mouseWalk == null) {
                 this.mouseWalk = xtr.keymapper.keymap.element.MouseWalk(rootView!!)
             }
             moveResizeDpad(x, y)
+            positioned = true
         }
     }
 
     private fun moveResizeDpad(x: Float, y: Float) {
-        rootView!!.animate().x(x - mouseWalk!!.radius).y(y - mouseWalk!!.radius)
-            .setDuration(500)
-            .start()
+        rootView!!.animateToPosition(x - mouseWalk!!.radius, y - mouseWalk!!.radius, 500L)
 
         // resize dpad from saved profile configuration
         val x1 = (mouseWalk!!.radius * 2) - rootView!!.layoutParams.width
@@ -94,6 +111,7 @@ class MouseWalk private constructor(
         @SuppressLint("ClickableViewAccessibility")
         override fun onTouch(v: View, event: MotionEvent): Boolean {
             if (event.action == MotionEvent.ACTION_MOVE) {
+                (rootView as? MovableFrameLayout)?.finishPendingPositionAnimation()
                 // Resize View in fixed ratio
                 val newSize = (event.x.toInt() + event.y.toInt()) / 2
                 EditorUI.resizeView(rootView, newSize, newSize)

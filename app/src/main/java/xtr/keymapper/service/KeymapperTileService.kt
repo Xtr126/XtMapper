@@ -20,21 +20,37 @@ import xtr.keymapper.keymap.KeymapProfiles
 
 class KeymapperTileService : TileService() {
 
+    /**
+     * Updates the Quick Settings tile state when the tile becomes visible/listening.
+     */
     override fun onStartListening() {
         super.onStartListening()
         updateTileState()
     }
 
+    /**
+     * Toggles the XtMapper foreground service on and off when the Quick Settings tile is clicked.
+     */
     override fun onClick() {
         super.onClick()
         val running = TouchPointer.isRunning
 
         if (running) {
-            TouchPointer.activeInstance?.stopKeymapper()
-            val stopIntent = Intent(this, TouchPointer::class.java).apply {
-                action = TouchPointer.ACTION_STOP
+            val instance = TouchPointer.activeInstance
+            if (instance != null) {
+                instance.stopKeymapper()
+            } else {
+                val stopIntent = Intent(this, TouchPointer::class.java).apply {
+                    action = TouchPointer.ACTION_STOP
+                }
+                try {
+                    startService(stopIntent)
+                } catch (e: Exception) {
+                    Log.w("KeymapperTileService", "Error stopping service via intent", e)
+                    Toast.makeText(this, "Failed to stop XtMapper", Toast.LENGTH_SHORT).show()
+                    return
+                }
             }
-            startService(stopIntent)
             TouchPointer.isRunning = false
             updateTileState(false)
             Toast.makeText(this, "XtMapper stopped", Toast.LENGTH_SHORT).show()
@@ -60,6 +76,9 @@ class KeymapperTileService : TileService() {
         }
     }
 
+    /**
+     * Launches an intent and collapses the notification shade, compatible with Android 14+.
+     */
     private fun launchIntent(intent: Intent) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val pendingIntent = PendingIntent.getActivity(
@@ -72,6 +91,9 @@ class KeymapperTileService : TileService() {
         }
     }
 
+    /**
+     * Updates the Quick Settings tile icon, state (Active/Inactive), and subtitle.
+     */
     private fun updateTileState(
         isActive: Boolean = TouchPointer.isRunning,
         profileName: String? = TouchPointer.currentSelectedProfile ?: KeymapProfiles(this).getLastSelectedProfile()
@@ -91,6 +113,11 @@ class KeymapperTileService : TileService() {
     }
 
     companion object {
+        /**
+         * Requests the system to refresh the Quick Settings tile state.
+         *
+         * @param context Application context used to trigger the update.
+         */
         fun updateTile(context: Context) {
             try {
                 requestListeningState(context, ComponentName(context, KeymapperTileService::class.java))

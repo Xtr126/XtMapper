@@ -3,7 +3,6 @@ package xtr.keymapper.server
 import android.os.Handler
 import android.os.Looper
 import android.os.RemoteException
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import xtr.keymapper.InputEventCodes.BTN_MIDDLE
@@ -15,6 +14,7 @@ import xtr.keymapper.InputEventCodes.REL_Y
 import xtr.keymapper.IRemoteServiceCallback
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
+import xtr.keymapper.log.XtLogger
 import xtr.keymapper.server.event.KeyEventHandler
 import xtr.keymapper.server.event.MouseEventHandler
 
@@ -26,7 +26,8 @@ class InputService @Throws(RemoteException::class) constructor(
     screenHeight: Int,
     private val cursorView: View?,
     private val isWaylandClient: Boolean,
-    displayId: Int
+    displayId: Int,
+    private val touchpadSessions: TouchpadSessionRegistry<InputService>
 ) : IInputInterface {
 
     override var keymapConfig: KeymapConfig = keymapConfig
@@ -60,13 +61,8 @@ class InputService @Throws(RemoteException::class) constructor(
         }
         if (currentPointerMode != KeymapConfig.POINTER_SYSTEM) showCursor()
 
-        // Disable touchpad features for wayland client
         this.touchpadInputMode = if (isWaylandClient) KeymapConfig.TOUCHPAD_DISABLED else keymapConfig.touchpadInputMode
 
-        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DIRECT)
-            startTouchpadDirect()
-        else if (touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
-            startTouchpadRelative()
 
         mouseEventHandler = MouseEventHandler(this)
         mouseEventHandler.init(screenWidth, screenHeight)
@@ -81,7 +77,7 @@ class InputService @Throws(RemoteException::class) constructor(
                 isKeyboardGrabbed = startKeyboardGrab()
                 isKeyboardBlocked = isKeyboardGrabbed
             } catch (e: Exception) {
-                Log.e(RemoteService.TAG, "Failed to start keyboard grab", e)
+                XtLogger.error(RemoteService.TAG, "Failed to start keyboard grab", e)
             }
         }
     }
@@ -128,12 +124,13 @@ class InputService @Throws(RemoteException::class) constructor(
             try {
                 isKeyboardGrabbed = startKeyboardGrab()
                 if (!isKeyboardGrabbed) {
-                    Log.w(RemoteService.TAG, "startKeyboardGrab returned false, no keyboard device grabbed")
+                    XtLogger.warn(RemoteService.TAG, "startKeyboardGrab returned false, no keyboard device grabbed")
                     return
                 }
                 isKeyboardBlocked = true
+                setKeyboardGrabLock(!stopEvents)
             } catch (e: Exception) {
-                Log.e(RemoteService.TAG, "Failed to start keyboard grab", e)
+                XtLogger.error(RemoteService.TAG, "Failed to start keyboard grab", e)
                 return
             }
         } else {
@@ -143,7 +140,7 @@ class InputService @Throws(RemoteException::class) constructor(
         try {
             mCallback.alertKeyboardBlocked(isKeyboardBlocked && !stopEvents)
         } catch (e: RemoteException) {
-            Log.e(RemoteService.TAG, "Failed to send alertKeyboardBlocked", e)
+            XtLogger.error(RemoteService.TAG, "Failed to send alertKeyboardBlocked", e)
         }
     }
 
@@ -210,18 +207,21 @@ class InputService @Throws(RemoteException::class) constructor(
             this.keymapProfile = mCallback.requestKeymapProfile()
             this.keymapConfig = mCallback.requestKeymapConfig()
             this.stop()
+            touchJitter.updateConfig(this.keymapConfig.touchJitter, this.keymapConfig.touchJitterSpread)
+            touchJitter.clear()
             keyEventHandler.init()
             mouseEventHandler.init()
             if (keymapConfig.isRootMode && keymapConfig.blockKeyboardInput && !isWaylandClient) {
                 try {
                     isKeyboardGrabbed = startKeyboardGrab()
                     isKeyboardBlocked = isKeyboardGrabbed
+                    if (isKeyboardGrabbed) setKeyboardGrabLock(!stopEvents)
                 } catch (e: Exception) {
-                    Log.e(RemoteService.TAG, "Failed to start keyboard grab", e)
+                    XtLogger.error(RemoteService.TAG, "Failed to start keyboard grab", e)
                 }
             }
         } catch (e: Exception) {
-            Log.e(RemoteService.TAG, e.message, e)
+            XtLogger.error(RemoteService.TAG, "Keyboard/input operation failed", e)
         }
     }
 
@@ -230,7 +230,7 @@ class InputService @Throws(RemoteException::class) constructor(
             try {
                 stopKeyboardGrab()
             } catch (e: Exception) {
-                Log.e(RemoteService.TAG, "Failed to stop keyboard grab", e)
+                XtLogger.error(RemoteService.TAG, "Failed to stop keyboard grab", e)
             }
             isKeyboardGrabbed = false
             isKeyboardBlocked = false
@@ -239,15 +239,60 @@ class InputService @Throws(RemoteException::class) constructor(
         mouseEventHandler.stop()
     }
 
-    fun stopTouchpad() {
-        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DIRECT)
-            stopTouchpadDirect()
-        else if (touchpadInputMode == KeymapConfig.TOUCHPAD_RELATIVE)
-            stopTouchpadRelative()
+    fun startTouchpad() {
+        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DISABLED) return
+        when (val outcome = touchpadSessions.start(this, touchpadInputMode)) {
+            TouchpadStartOutcome.Started -> Unit
+            TouchpadStartOutcome.NoDevice ->
+                XtLogger.info(RemoteService.TAG, "No touchpad devices found; continuing without touchpad")
+            TouchpadStartOutcome.StartIncomplete ->
+                XtLogger.error(RemoteService.TAG, "Touchpad start incomplete; native cleanup retained for retry")
+            TouchpadStartOutcome.Blocked ->
+                XtLogger.error(RemoteService.TAG, "Touchpad start blocked: another session owns the worker or cleanup is pending")
+            is TouchpadStartOutcome.Failed ->
+                XtLogger.error(
+                    RemoteService.TAG,
+                    "Touchpad start failed (mode=$touchpadInputMode code=${outcome.code}); continuing without touchpad"
+                )
+        }
     }
 
-    external fun openDevice(device: String): Int
-    external fun stopMouse()
+    fun stopTouchpad() {
+        if (touchpadInputMode == KeymapConfig.TOUCHPAD_DISABLED) return
+        when (touchpadSessions.stop(this)) {
+            TouchpadStopOutcome.STOPPED -> Unit
+            TouchpadStopOutcome.INCOMPLETE ->
+                XtLogger.error(RemoteService.TAG, "Touchpad stop incomplete; native cleanup retained for retry")
+        }
+    }
+
+    @Volatile
+    private var mouseReaderOpened = false
+
+    @Synchronized
+    fun openMouseDevice(device: String): Int {
+        if (mouseReaderOpened) {
+            stopMouse()
+            mouseReaderOpened = false
+        }
+
+        val fd = openDevice(device)
+        mouseReaderOpened = fd >= 0
+        return fd
+    }
+
+    @Synchronized
+    fun stopMouseIfStarted() {
+        if (!mouseReaderOpened) return
+        try {
+            stopMouse()
+        } finally {
+            mouseReaderOpened = false
+        }
+    }
+
+    private external fun openDevice(device: String): Int
+    private external fun stopMouse()
 
     // mouse cursor created with uinput in mouse_cursor.cpp
     external fun cursorSetX(x: Int)
@@ -263,12 +308,23 @@ class InputService @Throws(RemoteException::class) constructor(
     external fun setKeyboardGrabLock(lock: Boolean)
     external fun grabKeyboardDevice(device: String): Boolean
 
-    // touchpad_direct.cpp
-    private external fun startTouchpadDirect()
-    external fun stopTouchpadDirect()
+    private external fun startTouchpadDirect(): Int
+    private external fun stopTouchpadDirect(): Int
 
-    private external fun startTouchpadRelative()
-    external fun stopTouchpadRelative()
+    private external fun startTouchpadRelative(): Int
+    private external fun stopTouchpadRelative(): Int
+
+    internal fun startNativeTouchpad(mode: Int): Int = when (mode) {
+        KeymapConfig.TOUCHPAD_DIRECT -> startTouchpadDirect()
+        KeymapConfig.TOUCHPAD_RELATIVE -> startTouchpadRelative()
+        else -> error("unsupported touchpad mode $mode")
+    }
+
+    internal fun stopNativeTouchpad(): Int = when (touchpadInputMode) {
+        KeymapConfig.TOUCHPAD_DIRECT -> stopTouchpadDirect()
+        KeymapConfig.TOUCHPAD_RELATIVE -> stopTouchpadRelative()
+        else -> TouchpadStopCodes.ALREADY_STOPPED
+    }
 
     /*
      * Called from native code to send mouse event to client
@@ -290,12 +346,12 @@ class InputService @Throws(RemoteException::class) constructor(
                 keyEventHandler.handleKeyboardShortcutEvent(line)
             }
         } catch (e: Exception) {
-            Log.e(RemoteService.TAG, "Error handling keyboard event", e)
+            XtLogger.error(RemoteService.TAG, "Error handling keyboard event", e)
         }
         try {
             keyListener?.invoke(line)
         } catch (e: Exception) {
-            Log.e(RemoteService.TAG, "Error invoking keyListener", e)
+            XtLogger.error(RemoteService.TAG, "Error invoking keyListener", e)
         }
     }
 

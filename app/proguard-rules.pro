@@ -13,3 +13,8 @@
 
 -keep class xtr.keymapper.**  { *; }
 -keep class xtr.keymapper.**$* { *; }
+
+# JNI entry point resolved by name from the native diagnostics bridge.
+-keepclasseswithmembers class xtr.keymapper.log.XtLogger {
+    public static int logNative(int, int, java.lang.String);
+}

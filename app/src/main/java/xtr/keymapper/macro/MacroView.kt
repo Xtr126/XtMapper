@@ -11,9 +11,6 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 
-/**
- * Custom View for visualization
- */
 class MacroView(context: Context, private val onFinishListener: OnFinishListener) : View(context) {
 
     private val paintOuter: Paint
@@ -23,7 +20,6 @@ class MacroView(context: Context, private val onFinishListener: OnFinishListener
     private var lastEventTime = -1L
 
     init {
-        // Set up paint
         paintOuter = Paint()
         paintOuter.isAntiAlias = true
         paintOuter.color = Color.GREEN
@@ -40,8 +36,8 @@ class MacroView(context: Context, private val onFinishListener: OnFinishListener
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        canvas.drawPath(path, paintOuter) // Draw the path
-        canvas.drawPath(path, paintInner) // Draw the path
+        canvas.drawPath(path, paintOuter)
+        canvas.drawPath(path, paintInner)
     }
 
     fun onKey(event: KeyEvent): Boolean {
@@ -65,19 +61,19 @@ class MacroView(context: Context, private val onFinishListener: OnFinishListener
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                path.moveTo(x, y) // Start new path
+                path.moveTo(x, y)
                 path.lineTo(x, y) // Java switch fell through to MOVE
             }
-            MotionEvent.ACTION_MOVE -> path.lineTo(x, y) // Draw line to current touch point
+            MotionEvent.ACTION_MOVE -> path.lineTo(x, y)
             MotionEvent.ACTION_UP -> {
-                path.moveTo(x, y) // Start new path
+                path.moveTo(x, y)
                 return false // Java switch fell through to default
             }
             else -> return false
         }
         logEvent(x, y, elapsedTimeSinceLastEventMillis)
 
-        invalidate() // Request redraw
+        invalidate()
         return true
     }
 
@@ -90,7 +86,7 @@ class MacroView(context: Context, private val onFinishListener: OnFinishListener
 
     fun clearCanvasAndFinish() {
         path.reset()
-        invalidate() // Request redraw
+        invalidate()
 
         MacroSharedPreferences(context)
             .addMacroWithNextAvailableId(stringBuilder.toString())
@@ -99,9 +95,6 @@ class MacroView(context: Context, private val onFinishListener: OnFinishListener
     }
 
     fun interface OnFinishListener {
-        /**
-         * @param macroView View with the macro visuals
-         */
         fun onFinishMacro(macroView: MacroView?)
     }
 }

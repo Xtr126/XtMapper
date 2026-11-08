@@ -1,6 +1,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
+#include <poll.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
+#include <time.h>
 
 #include <linux/input.h>
 #include <fcntl.h>
@@ -10,8 +15,6 @@
 #include <assert.h>
 #include <arpa/inet.h>
 #include <paths.h>
-#include <errno.h>
-#include <stdio.h>
 #include <sys/ioctl.h>
 #include <android/log.h>
 
@@ -37,12 +40,15 @@ static const char *event_type_name(unsigned short type) {
     }
 }
 
+#include "xt_diagnostics.h"
+
 typedef struct input_service_context {
     JavaVM *javaVM;
     jclass inputServiceClz;
     jobject inputServiceObj;
     pthread_mutex_t lock;
-    int done;
+    int done; /* stop request; cleared only after the reader has fully exited */
+    int reader_started; /* true while the detached reader owns the mouse fd */
     int mouse_lock;
     int mouse_fd;
 } serviceContext;
@@ -66,86 +72,171 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
         LOGE("JNI_OnLoad: GetEnv failed for JNI 1.6");
         return JNI_ERR; // JNI version not supported.
     }
+    XtDiag_Init(env); // a failed diagnostics bridge must not fail library load
 
+    int result = pthread_mutex_init(&g_ctx.lock, NULL);
+    if (result != 0) {
+        LOGE("JNI_OnLoad: mutex initialization failed: result=%d (%s)", result, strerror(result));
+        return JNI_ERR;
+    }
     g_ctx.done = 0;
+    g_ctx.reader_started = 0;
+    g_ctx.mouse_fd = -1;
     g_ctx.inputServiceObj = NULL;
+    g_ctx.inputServiceClz = NULL;
     return  JNI_VERSION_1_6;
 }
 
-/*
- * Main working thread function. From a pthread,
- *     calling back to InputService::updateTimer() to send mouse events
- */
+static void finish_mouse_reader(serviceContext *pctx, int mouse_fd, bool attached_here) {
+    if (mouse_fd >= 0) {
+        LOGI("mouse thread closing fd=%d", mouse_fd);
+        close(mouse_fd);
+    }
+    if (attached_here) {
+        (*pctx->javaVM)->DetachCurrentThread(pctx->javaVM);
+    }
+
+    pthread_mutex_lock(&pctx->lock);
+    if (pctx->mouse_fd == mouse_fd) {
+        pctx->mouse_fd = -1;
+    }
+    pctx->done = 0;
+    pctx->reader_started = 0;
+    pthread_mutex_unlock(&pctx->lock);
+}
+
+/* Bounded polling lets stopMouse() terminate an idle or disconnected reader. */
 void* send_mouse_events(void* context) {
     serviceContext *pctx = (serviceContext *) context;
     JavaVM *javaVM = pctx->javaVM;
-    JNIEnv *env;
+    JNIEnv *env = NULL;
+    bool attached_here = false;
+
+    pthread_mutex_lock(&pctx->lock);
+    int mouse_fd = pctx->mouse_fd;
+    pthread_mutex_unlock(&pctx->lock);
+    if (mouse_fd < 0) {
+        finish_mouse_reader(pctx, mouse_fd, false);
+        return context;
+    }
+
     jint res = (*javaVM)->GetEnv(javaVM, (void **)&env, JNI_VERSION_1_6);
     if (res != JNI_OK) {
         LOGD("mouse thread: attaching native thread to JVM (GetEnv result=%d)", res);
         res = (*javaVM)->AttachCurrentThread(javaVM, &env, NULL);
         if (JNI_OK != res) {
             LOGE("mouse thread: AttachCurrentThread failed (result=%d)", res);
-            return NULL;
+            finish_mouse_reader(pctx, mouse_fd, false);
+            return context;
         }
-    }
-    // get inputService sendMouseEvent function
-    jmethodID mouseEvent = (*env)->GetMethodID(env, pctx->inputServiceClz, "sendMouseEvent", "(II)V");
-    if (mouseEvent == NULL) {
-        LOGE("mouse thread: could not resolve InputService.sendMouseEvent(II)V");
-        if ((*env)->ExceptionCheck(env)) (*env)->ExceptionDescribe(env);
-        return NULL;
+        attached_here = true;
     }
 
-    int mouse_fd = pctx->mouse_fd;
+    jmethodID mouseEvent = (*env)->GetMethodID(
+        env, pctx->inputServiceClz, "sendMouseEvent", "(II)V"
+    );
+    if (mouseEvent == NULL) {
+        LOGE("mouse thread: could not resolve InputService.sendMouseEvent(II)V");
+        if ((*env)->ExceptionCheck(env)) {
+            (*env)->ExceptionDescribe(env);
+            (*env)->ExceptionClear(env);
+        }
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                      "mouse unable to resolve InputService.sendMouseEvent", -1);
+        finish_mouse_reader(pctx, mouse_fd, attached_here);
+        return context;
+    }
+
+    XtDiagEventGroup callback_failures;
+    XtDiagEvent_Init(&callback_failures);
+
     int mouse_lock = 1;
     LOGI("mouse thread started: fd=%d, initial grab requested", mouse_fd);
     if (ioctl(mouse_fd, EVIOCGRAB, mouse_lock) == -1) {
-        LOGE("EVIOCGRAB(fd=%d, 1) failed: errno=%d (%s)", mouse_fd, errno, strerror(errno));
+        int saved_errno = errno;
+        LOGE("EVIOCGRAB(fd=%d, 1) failed: errno=%d (%s)", mouse_fd, saved_errno, strerror(saved_errno));
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                      "mouse EVIOCGRAB failed errno=", saved_errno);
     } else {
         LOGI("EVIOCGRAB(fd=%d, 1) succeeded", mouse_fd);
     }
 
     struct input_event ie;
     for (;;) {
-        ssize_t bytes_read = read(mouse_fd, &ie, sizeof(struct input_event));
-        if (bytes_read == -1) {
-            if (errno == EINTR) continue;
-            LOGE("read(fd=%d) failed: errno=%d (%s)", mouse_fd, errno, strerror(errno));
-            break;
-        }
-        if (bytes_read == 0) {
-            LOGI("read(fd=%d) reached EOF", mouse_fd);
-            break;
-        }
-        if (bytes_read != sizeof(struct input_event)) {
-            LOGE("read(fd=%d) returned partial event: %zd of %zu bytes", mouse_fd,
-                 bytes_read, sizeof(struct input_event));
-            continue;
-        }
-
-        LOGD("event: type=%s(%u) code=%u value=%d", event_type_name(ie.type), ie.type,
-             ie.code, ie.value);
-
         pthread_mutex_lock(&pctx->lock);
-        int done = pctx->done;
-        if (pctx->done) {
-            pctx->done = 0;
+        int stop_requested = pctx->done;
+        int requested_lock = pctx->mouse_lock;
+        pthread_mutex_unlock(&pctx->lock);
+        if (stop_requested) {
+            break;
         }
 
-        if (pctx->mouse_lock != mouse_lock) {
-            mouse_lock = pctx->mouse_lock;
+        if (requested_lock != mouse_lock) {
+            mouse_lock = requested_lock;
             if (ioctl(mouse_fd, EVIOCGRAB, mouse_lock) == -1) {
+                int saved_errno = errno;
                 LOGE("EVIOCGRAB(fd=%d, %d) failed: errno=%d (%s)", mouse_fd,
-                     mouse_lock, errno, strerror(errno));
+                     mouse_lock, saved_errno, strerror(saved_errno));
+                XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                              "mouse EVIOCGRAB failed errno=", saved_errno);
             } else {
                 LOGI("EVIOCGRAB(fd=%d, %d) succeeded", mouse_fd, mouse_lock);
             }
         }
-        pthread_mutex_unlock(&pctx->lock);
-        if (done) {
+
+        struct pollfd poll_fd;
+        poll_fd.fd = mouse_fd;
+        poll_fd.events = POLLIN | POLLPRI;
+        poll_fd.revents = 0;
+        int poll_result = poll(&poll_fd, 1, 100);
+        if (poll_result == 0) {
+            continue;
+        }
+        if (poll_result < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            int saved_errno = errno;
+            LOGE("poll(fd=%d) failed: errno=%d (%s)", mouse_fd, saved_errno, strerror(saved_errno));
+            XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                          "mouse poll failed errno=", saved_errno);
             break;
         }
+        if (poll_fd.revents & (POLLERR | POLLHUP | POLLNVAL)) {
+            if (!(poll_fd.revents & (POLLIN | POLLPRI))) {
+                LOGI("poll(fd=%d) ended reader: revents=%d", mouse_fd, poll_fd.revents);
+                break;
+            }
+        }
+        if (!(poll_fd.revents & (POLLIN | POLLPRI))) {
+            continue;
+        }
+
+        ssize_t bytes = read(mouse_fd, &ie, sizeof(struct input_event));
+        if (bytes < 0) {
+            if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
+                continue;
+            }
+            int saved_errno = errno;
+            LOGE("read(fd=%d) failed: errno=%d (%s)", mouse_fd, saved_errno, strerror(saved_errno));
+            XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                          "mouse read failed errno=", saved_errno);
+            break;
+        }
+        if (bytes != sizeof(struct input_event)) {
+            if (bytes == 0) {
+                LOGI("read(fd=%d) reached EOF", mouse_fd);
+                XtDiag_Submit(env, XT_DIAG_WARN, XT_DIAG_SOURCE_MOUSE,
+                              "mouse input device reached EOF", -1);
+            } else {
+                LOGE("read(fd=%d) returned partial event: %zd of %zu bytes", mouse_fd,
+                     bytes, sizeof(struct input_event));
+            }
+            break;
+        }
+
+        LOGD("event: type=%s(%u) code=%u value=%d", event_type_name(ie.type), ie.type,
+             ie.code, ie.value);
 
         switch (ie.code) {
             case REL_X :
@@ -159,9 +250,10 @@ void* send_mouse_events(void* context) {
                 if (mouse_lock) {
                     (*env)->CallVoidMethod(env, pctx->inputServiceObj, mouseEvent, ie.code, ie.value);
                     if ((*env)->ExceptionCheck(env)) {
-                        LOGE("Java exception while dispatching mouse event code=%u value=%d", ie.code, ie.value);
-                        (*env)->ExceptionDescribe(env);
                         (*env)->ExceptionClear(env);
+                        XtDiag_SubmitEvent(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                                           &callback_failures,
+                                           "InputService.sendMouseEvent failed; suppressed=");
                     }
                 } else {
                     LOGD("not dispatching recognized mouse event while unlocked: code=%u value=%d",
@@ -174,53 +266,130 @@ void* send_mouse_events(void* context) {
                 break;
         }
     }
-    LOGI("mouse thread closing fd=%d", mouse_fd);
-    close(mouse_fd);
-    pthread_mutex_lock(&pctx->lock);
-    pctx->done = 0;
-    pthread_mutex_unlock(&pctx->lock);
+
+    uint64_t residual = XtDiagEvent_TakeResidual(&callback_failures);
+    if (residual > 0) {
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                      "InputService.sendMouseEvent failures suppressed at worker exit count=", (long)residual);
+    }
+
+    finish_mouse_reader(pctx, mouse_fd, attached_here);
     return context;
 }
 
+int startMouseThread(JNIEnv *env, jobject thiz) {
+    jclass localClass = (*env)->GetObjectClass(env, thiz);
+    if (localClass == NULL) {
+        LOGE("startMouseThread: GetObjectClass failed");
+        if ((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
+        return 0;
+    }
+    jclass globalClass = (*env)->NewGlobalRef(env, localClass);
+    jobject globalObject = (*env)->NewGlobalRef(env, thiz);
+    (*env)->DeleteLocalRef(env, localClass);
+    if (globalClass == NULL || globalObject == NULL) {
+        LOGE("startMouseThread: creating service global refs failed");
+        if (globalClass != NULL) (*env)->DeleteGlobalRef(env, globalClass);
+        if (globalObject != NULL) (*env)->DeleteGlobalRef(env, globalObject);
+        if ((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
+        return 0;
+    }
 
-void startMouseThread(JNIEnv *env, jobject thiz) {
-
-    pthread_t threadInfo_;
-    pthread_attr_t threadAttr_;
-
-    pthread_attr_init(&threadAttr_);
-    pthread_attr_setdetachstate(&threadAttr_, PTHREAD_CREATE_DETACHED);
-
-    jclass clz = (*env)->GetObjectClass(env, thiz);
-    g_ctx.inputServiceClz = (*env)->NewGlobalRef(env, clz);
-    g_ctx.inputServiceObj = (*env)->NewGlobalRef(env, thiz);
+    pthread_mutex_lock(&g_ctx.lock);
+    g_ctx.inputServiceClz = globalClass;
+    g_ctx.inputServiceObj = globalObject;
+    g_ctx.done = 0;
+    pthread_mutex_unlock(&g_ctx.lock);
     LOGI("starting mouse thread; service class/object global refs created");
 
-    int result = pthread_create(&threadInfo_, &threadAttr_, send_mouse_events, &g_ctx);
-    if (result != 0) {
-        LOGE("pthread_create for mouse thread failed: result=%d (%s)", result, strerror(result));
+    pthread_attr_t threadAttr;
+    bool attr_initialized = false;
+    int result = pthread_attr_init(&threadAttr);
+    if (result == 0) {
+        attr_initialized = true;
+        result = pthread_attr_setdetachstate(&threadAttr, PTHREAD_CREATE_DETACHED);
     }
-    assert(result == 0);
-    pthread_attr_destroy(&threadAttr_);
-    (void) result;
+    if (result == 0) {
+        pthread_t threadInfo;
+        result = pthread_create(&threadInfo, &threadAttr, send_mouse_events, &g_ctx);
+    }
+    if (attr_initialized) {
+        pthread_attr_destroy(&threadAttr);
+    }
+    if (result == 0) {
+        return 1;
+    }
+
+    LOGE("starting mouse thread failed: result=%d (%s)", result, strerror(result));
+    XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                  "mouse reader thread start failed errno=", result);
+    pthread_mutex_lock(&g_ctx.lock);
+    jclass failedClass = g_ctx.inputServiceClz;
+    jobject failedObject = g_ctx.inputServiceObj;
+    g_ctx.inputServiceClz = NULL;
+    g_ctx.inputServiceObj = NULL;
+    g_ctx.reader_started = 0;
+    g_ctx.done = 0;
+    pthread_mutex_unlock(&g_ctx.lock);
+    if (failedClass != NULL) (*env)->DeleteGlobalRef(env, failedClass);
+    if (failedObject != NULL) (*env)->DeleteGlobalRef(env, failedObject);
+    return 0;
 }
 
 JNIEXPORT jint JNICALL
 Java_xtr_keymapper_server_InputService_openDevice(JNIEnv *env, jobject thiz, jstring device) {
+    if (device == NULL) {
+        LOGE("openDevice: device is null");
+        return -1;
+    }
+
     const char *evdev = (*env)->GetStringUTFChars(env, device, NULL);
     if (evdev == NULL) {
         LOGE("openDevice: GetStringUTFChars failed");
         return -1;
     }
+
     LOGI("openDevice: opening %s", evdev);
-    if ((g_ctx.mouse_fd = open(evdev, O_RDONLY)) == -1) {
-        LOGE("open(%s, O_RDONLY) failed: errno=%d (%s)", evdev, errno, strerror(errno));
-    } else {
-        LOGI("open(%s) succeeded: fd=%d", evdev, g_ctx.mouse_fd);
-        startMouseThread(env, thiz);
+    int mouse_fd = open(evdev, O_RDONLY);
+    if (mouse_fd == -1) {
+        int open_errno = errno;
+        LOGE("open(%s, O_RDONLY) failed: errno=%d (%s)", evdev, open_errno, strerror(open_errno));
+        XtDiag_Submit(env, XT_DIAG_ERROR, XT_DIAG_SOURCE_MOUSE,
+                      "mouse device open failed errno=", open_errno);
+        (*env)->ReleaseStringUTFChars(env, device, evdev);
+        return -1;
     }
+    LOGI("open(%s) succeeded: fd=%d", evdev, mouse_fd);
+
+    pthread_mutex_lock(&g_ctx.lock);
+    if (g_ctx.reader_started || g_ctx.mouse_fd >= 0) {
+        pthread_mutex_unlock(&g_ctx.lock);
+        close(mouse_fd);
+        LOGE("openDevice: refusing a second mouse reader before the first stops");
+        XtDiag_Submit(env, XT_DIAG_WARN, XT_DIAG_SOURCE_MOUSE,
+                      "mouse open refused; a second mouse reader was requested", -1);
+        (*env)->ReleaseStringUTFChars(env, device, evdev);
+        return -1;
+    }
+    g_ctx.mouse_fd = mouse_fd;
+    g_ctx.reader_started = 1; /* includes the interval while pthread_create is in progress */
+    g_ctx.done = 0;
+    pthread_mutex_unlock(&g_ctx.lock);
+
+    if (!startMouseThread(env, thiz)) {
+        pthread_mutex_lock(&g_ctx.lock);
+        if (g_ctx.mouse_fd == mouse_fd) {
+            g_ctx.mouse_fd = -1;
+        }
+        g_ctx.reader_started = 0;
+        g_ctx.done = 0;
+        pthread_mutex_unlock(&g_ctx.lock);
+        close(mouse_fd);
+        mouse_fd = -1;
+    }
+
     (*env)->ReleaseStringUTFChars(env, device, evdev);
-    return g_ctx.mouse_fd;
+    return mouse_fd;
 }
 
 /*
@@ -229,25 +398,49 @@ Java_xtr_keymapper_server_InputService_openDevice(JNIEnv *env, jobject thiz, jst
 JNIEXPORT void JNICALL
 Java_xtr_keymapper_server_InputService_stopMouse(JNIEnv *env, jobject thiz) {
     LOGI("stopMouse requested; waiting for mouse read thread to exit");
+    int should_wait = 0;
+    int fd_to_close = -1;
+
     pthread_mutex_lock(&g_ctx.lock);
-    g_ctx.done = 1;
+    should_wait = g_ctx.reader_started;
+    if (should_wait) {
+        g_ctx.done = 1;
+    } else {
+        fd_to_close = g_ctx.mouse_fd;
+        g_ctx.mouse_fd = -1;
+        g_ctx.done = 0;
+    }
     pthread_mutex_unlock(&g_ctx.lock);
 
-    // waiting for mouse read thread to flip the done flag
-    struct timespec sleepTime;
-    memset(&sleepTime, 0, sizeof(sleepTime));
-    sleepTime.tv_nsec = 100000000;
-    while (g_ctx.done) {
-        nanosleep(&sleepTime, NULL);
+    if (fd_to_close >= 0) {
+        close(fd_to_close);
+    }
+
+    if (should_wait) {
+        struct timespec sleepTime;
+        memset(&sleepTime, 0, sizeof(sleepTime));
+        sleepTime.tv_nsec = 100000000;
+        for (;;) {
+            pthread_mutex_lock(&g_ctx.lock);
+            int reader_running = g_ctx.reader_started;
+            pthread_mutex_unlock(&g_ctx.lock);
+            if (!reader_running) break;
+            nanosleep(&sleepTime, NULL);
+        }
     }
     LOGI("mouse read thread stop handshake completed");
 
-    // release object we allocated
-    (*env)->DeleteGlobalRef(env, g_ctx.inputServiceClz);
-    (*env)->DeleteGlobalRef(env, g_ctx.inputServiceObj);
-    g_ctx.inputServiceObj = NULL;
+    /* The reader must exit before its global references are released. */
+    pthread_mutex_lock(&g_ctx.lock);
+    jclass serviceClass = g_ctx.inputServiceClz;
+    jobject serviceObject = g_ctx.inputServiceObj;
     g_ctx.inputServiceClz = NULL;
-    }
+    g_ctx.inputServiceObj = NULL;
+    pthread_mutex_unlock(&g_ctx.lock);
+
+    if (serviceClass != NULL) (*env)->DeleteGlobalRef(env, serviceClass);
+    if (serviceObject != NULL) (*env)->DeleteGlobalRef(env, serviceObject);
+}
 
 JNIEXPORT void JNICALL
 Java_xtr_keymapper_server_InputService_setMouseLock(JNIEnv *env, jobject thiz, jboolean lock) {

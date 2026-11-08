@@ -35,6 +35,8 @@ class MovableFloatingActionKey(context: Context, parent: ViewGroup?) : View.OnTo
 
     private var callback: OnKeyRemoved? = null
     private var isSwipeKey = false
+    private var pendingPositionX: Float? = null
+    private var pendingPositionY: Float? = null
 
     fun interface OnKeyRemoved {
         fun onKeyRemoved(key: MovableFloatingActionKey)
@@ -68,7 +70,31 @@ class MovableFloatingActionKey(context: Context, parent: ViewGroup?) : View.OnTo
     }
 
     fun getData(): String {
+        finishPendingPositionAnimation()
         return "KEY_" + getText() + " " + frameView.x + " " + frameView.y + " " + frameView.pivotX
+    }
+
+    fun animateToPosition(x: Float, y: Float, durationMillis: Long, onEnd: (() -> Unit)? = null) {
+        pendingPositionX = x
+        pendingPositionY = y
+        frameView.animate().x(x).y(y).setDuration(durationMillis).withEndAction {
+            if (pendingPositionX == x && pendingPositionY == y) {
+                pendingPositionX = null
+                pendingPositionY = null
+            }
+            onEnd?.invoke()
+        }.start()
+    }
+
+    fun finishPendingPositionAnimation() {
+        val targetX = pendingPositionX ?: return
+        val targetY = pendingPositionY ?: return
+        pendingPositionX = null
+        pendingPositionY = null
+        frameView.animate().cancel()
+        frameView.x = targetX
+        frameView.y = targetY
+        xyChangeListener?.onNewXY(targetX, targetY)
     }
 
     fun setText(s: CharSequence) {
@@ -87,6 +113,7 @@ class MovableFloatingActionKey(context: Context, parent: ViewGroup?) : View.OnTo
         val layoutParams = view.layoutParams as ViewGroup.MarginLayoutParams
         when (motionEvent.action) {
             MotionEvent.ACTION_DOWN -> {
+                finishPendingPositionAnimation()
                 dX = view.x - motionEvent.rawX
                 dY = view.y - motionEvent.rawY
                 return true // Consumed
@@ -136,10 +163,12 @@ class MovableFloatingActionKey(context: Context, parent: ViewGroup?) : View.OnTo
     }
 
     fun getX(): Float {
+        finishPendingPositionAnimation()
         return frameView.x
     }
 
     fun getY(): Float {
+        finishPendingPositionAnimation()
         return frameView.y
     }
 
