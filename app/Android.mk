@@ -46,19 +46,19 @@ include $(CLEAR_VARS)
 LOCAL_MODULE    := keyboard_grab
 
 # Per-ABI output avoids concurrent native builds writing the same header.
-linux_key_header := $(NDK_OUT)/local/$(TARGET_ARCH_ABI)/generated/keyboard_grab/linux_key_table.h
-linux_key_generator := $(JNI_SRC_PATH)/generate_linux_key_table.py
-linux_key_input := $(TOOLCHAIN_ROOT)/sysroot/usr/include/linux/input-event-codes.h
+input_header := $(NDK_OUT)/local/$(TARGET_ARCH_ABI)/generated/keyboard_grab/input.h-labels.h
+input_generator := $(JNI_SRC_PATH)/generate-input.h-labels.py
+input_input := $(TOOLCHAIN_ROOT)/sysroot/usr/include/linux/input-event-codes.h
 
-$(linux_key_header): PRIVATE_GENERATOR := $(linux_key_generator)
-$(linux_key_header): PRIVATE_INPUT := $(linux_key_input)
-$(linux_key_header): $(linux_key_generator) $(linux_key_input)
-	$(hide)$(HOST_PYTHON) "$(PRIVATE_GENERATOR)" "$(PRIVATE_INPUT)" "$@"
+$(input_header): PRIVATE_GENERATOR := $(input_generator)
+$(input_header): PRIVATE_INPUT := $(input_input)
+$(input_header): $(input_generator) $(input_input) $(dir $(input_input))input.h
+	$(hide)$(HOST_PYTHON) "$(PRIVATE_GENERATOR)" "$(PRIVATE_INPUT)" "$(dir $(PRIVATE_INPUT))input.h" --native "$@"
 
-LOCAL_C_INCLUDES := $(dir $(linux_key_header))
+LOCAL_C_INCLUDES := $(dir $(input_header))
 LOCAL_SRC_FILES := $(JNI_SRC_PATH)/keyboard_grab.cpp
 LOCAL_SHARED_LIBRARIES := evdev_common
 include $(BUILD_SHARED_LIBRARY)
 
 # ndk-build must generate the header before the first compilation too.
-$(JNI_SRC_PATH)/keyboard_grab.cpp: | $(linux_key_header)
+$(JNI_SRC_PATH)/keyboard_grab.cpp: | $(input_header)
