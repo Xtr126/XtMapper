@@ -105,7 +105,7 @@ dependencies {
     implementation "com.github.topjohnwu.libsu:service:5.3.0"
     implementation "dev.rikka.shizuku:api:13.1.5"
     implementation "dev.rikka.shizuku:provider:13.1.5"
-    implementation "org.lsposed.hiddenapibypass:hiddenapibypass:4.3"
+    implementation "org.lsposed.hiddenapibypass:hiddenapibypass:6.2"
 
     def composeBom = platform('androidx.compose:compose-bom:2026.09.00')
     implementation composeBom
