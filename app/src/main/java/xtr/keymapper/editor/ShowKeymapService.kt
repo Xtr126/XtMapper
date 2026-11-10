@@ -11,11 +11,17 @@ import xtr.keymapper.keymap.KeymapConfig
 class ShowKeymapService : Service() {
     private var editorUi: EditorUI? = null
 
+    /**
+     * Cleans up the floating keymap overlay UI upon service destruction.
+     */
     override fun onDestroy() {
         editorUi?.closeEditor()
         super.onDestroy()
     }
 
+    /**
+     * Initializes and displays the read-only keymap controls overlay for the requested profile.
+     */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         editorUi?.closeEditor()
 
@@ -33,11 +39,20 @@ class ShowKeymapService : Service() {
         editorUi = null
     }
 
+    /**
+     * Returns null because this service is not bound.
+     */
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
 
     companion object {
+        /**
+         * Starts the ShowKeymapService to display keymap overlays for the selected profile.
+         *
+         * @param context Application context used to launch the service.
+         * @param selectedProfile Profile name whose keys are displayed.
+         */
         fun start(context: Context, selectedProfile: String?) {
             val intent = Intent(context, ShowKeymapService::class.java)
             intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfile)

@@ -144,15 +144,18 @@ class TouchPointer : Service() {
                 if (size.x == lastDisplayWidth && size.y == lastDisplayHeight && rotation == lastDisplayRotation) {
                     return
                 }
-                lastDisplayWidth = size.x
-                lastDisplayHeight = size.y
-                lastDisplayRotation = rotation
 
                 /* We must notify remote service
                    when device orientation changes
                    keymap will be scaled in remote service */
                 connectRemoteService(
-                    KeymapProfiles(this@TouchPointer).getProfile(selectedProfile, true)
+                    KeymapProfiles(this@TouchPointer).getProfile(selectedProfile, true),
+                    activationReason = IRemoteService.ACTIVATION_DISPLAY_CHANGE,
+                    onConnected = {
+                        lastDisplayWidth = size.x
+                        lastDisplayHeight = size.y
+                        lastDisplayRotation = rotation
+                    }
                 )
             }
 
@@ -167,6 +170,9 @@ class TouchPointer : Service() {
         return START_NOT_STICKY
     }
 
+    /**
+     * Builds the persistent foreground notification for the Keymapper service.
+     */
     private fun buildNotification(): android.app.Notification {
         val keymapConfig = KeymapConfig(this)
         val pendingIntent: PendingIntent?
@@ -201,6 +207,9 @@ class TouchPointer : Service() {
             .build()
     }
 
+    /**
+     * Updates the persistent foreground notification with the latest profile information.
+     */
     private fun updateNotification() {
         val notificationManager = NotificationManagerCompat.from(this)
         try {
@@ -209,6 +218,11 @@ class TouchPointer : Service() {
         }
     }
 
+    /**
+     * Switches the active keymap profile and connects to the remote service.
+     *
+     * @param profileName The name of the profile to activate.
+     */
     fun launchProfile(profileName: String?) {
         this.selectedProfile = profileName
         currentSelectedProfile = profileName
@@ -219,8 +233,19 @@ class TouchPointer : Service() {
         connectRemoteService(keymapProfile)
     }
 
-    private fun connectRemoteService(profile: KeymapProfile) {
-        Log.i("xtmapper-startup", "connectRemoteService: profile=$selectedProfile disabled=${profile.disabled}")
+    /**
+     * Connects to the remote input service and initializes the server with the given profile.
+     *
+     * @param profile The keymap profile to start.
+     * @param activationReason Reason for connecting (e.g. manual activation vs display change).
+     * @param onConnected Optional callback invoked after successfully initiating the server.
+     */
+    private fun connectRemoteService(
+        profile: KeymapProfile,
+        activationReason: Int = IRemoteService.ACTIVATION_MANUAL,
+        onConnected: (() -> Unit)? = null
+    ) {
+        Log.i("xtmapper-startup", "connectRemoteService: profile=$selectedProfile disabled=${profile.disabled} reason=$activationReason")
         if (!profile.disabled) activityCallback?.updateCmdView1("connecting to server..")
         val config = KeymapConfig(this)
         RemoteServiceHelper.useShizuku = config.isShizukuMode
@@ -248,14 +273,15 @@ class TouchPointer : Service() {
                     activityRemoteCallback = true
                 }
                 if (!profile.disabled) {
-                    Log.i("xtmapper-startup", "connectRemoteService: calling startServer display=$displayId")
+                    Log.i("xtmapper-startup", "connectRemoteService: calling startServer display=$displayId reason=$activationReason")
                     service.startServer(
                         profile,
                         keymapConfig,
                         mCallback,
                         size.x,
                         size.y,
-                        displayId
+                        displayId,
+                        activationReason
                     )
                 }
                 if (profile.disabled) {
@@ -272,6 +298,7 @@ class TouchPointer : Service() {
                 if (keymapConfig.showControls) {
                     ShowKeymapService.start(this, selectedProfile)
                 }
+                onConnected?.invoke()
             } catch (e: Exception) {
                 if (activityCallback != null) {
                     activityCallback!!.updateCmdView1(e.toString())

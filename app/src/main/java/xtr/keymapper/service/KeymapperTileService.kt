@@ -20,6 +20,9 @@ import xtr.keymapper.keymap.KeymapProfiles
 
 class KeymapperTileService : TileService() {
 
+    /**
+     * Updates the Quick Settings tile state when the tile becomes visible/listening.
+     */
     override fun onStartListening() {
         super.onStartListening()
         updateTileState()
@@ -73,6 +76,9 @@ class KeymapperTileService : TileService() {
         }
     }
 
+    /**
+     * Launches an intent and collapses the notification shade, compatible with Android 14+.
+     */
     private fun launchIntent(intent: Intent) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val pendingIntent = PendingIntent.getActivity(
@@ -107,6 +113,11 @@ class KeymapperTileService : TileService() {
     }
 
     companion object {
+        /**
+         * Requests the system to refresh the Quick Settings tile state.
+         *
+         * @param context Application context used to trigger the update.
+         */
         fun updateTile(context: Context) {
             try {
                 requestListeningState(context, ComponentName(context, KeymapperTileService::class.java))

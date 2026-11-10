@@ -269,17 +269,18 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         }
     }
 
-    /**
-     * Called by client to start the remote server.
-     *
-     * @param profile  The keymap profile
-     * @param keymapConfig Some configurations
-     * @param cb  The instance used to callback to remote service
-     * @param screenHeight Screen resolution (vertical)
-     * @param screenWidth  Screen resolution (horizontal)
-     */
+    private var lastActivationReason: Int = IRemoteService.ACTIVATION_MANUAL
+
     /**
      * Initializes the input service, cursor overlay, and input listeners for the specified profile.
+     *
+     * @param profile The keymap profile to load.
+     * @param keymapConfig Configuration settings for keymapping.
+     * @param cb Callback for remote service events.
+     * @param screenWidth Screen resolution (horizontal).
+     * @param screenHeight Screen resolution (vertical).
+     * @param displayId Target display ID.
+     * @param activationReason Reason for activating or updating the server (e.g. manual vs display change).
      */
     @Throws(RemoteException::class)
     override fun startServer(
@@ -288,15 +289,16 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         cb: IRemoteServiceCallback,
         screenWidth: Int,
         screenHeight: Int,
-        displayId: Int
+        displayId: Int,
+        activationReason: Int
     ) {
         enforceCaller()
-        Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
+        lastActivationReason = activationReason
+        Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId reason=$activationReason pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
         cb.asBinder().linkToDeath(mStartServerDeathRecipient, 0)
         mHandler.post {
             Log.i(TAG, "startServer: main handler running existingService=${inputService != null}")
             val service = inputService
-            val isReconnecting = (service != null)
             if (service != null) {
                 if (isWaylandClient) {
                     service.hideCursor()
@@ -342,8 +344,8 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
             } catch (e: RemoteException) {
                 throw RuntimeException(e)
             }
-            // Launch app/game on fresh start only, not on orientation change or reconnection
-            if (!isReconnecting && profile.packageName != BuildConfig.APPLICATION_ID && keymapConfig.disableAutoProfiling) {
+            // Launch app/game on explicit activation only, not on orientation change or display refresh
+            if (activationReason != IRemoteService.ACTIVATION_DISPLAY_CHANGE && profile.packageName != BuildConfig.APPLICATION_ID && keymapConfig.disableAutoProfiling) {
                 val launchIntent =
                     context.packageManager.getLaunchIntentForPackage(profile.packageName)
                 if (launchIntent != null && launchIntent.component != null) try {
@@ -358,16 +360,27 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         }
     }
 
+    /**
+     * Destroys the remote service instance and stops all active servers.
+     */
     override fun destroy() {
         enforceCaller()
         stopServer(true)
     }
 
+    /**
+     * Stops the remote server asynchronously on the main handler.
+     */
     override fun stopServer() {
         enforceCaller()
         mHandler.post { stopServer(true) }
     }
 
+    /**
+     * Internal implementation to shut down input devices and cleanly terminate server operations.
+     *
+     * @param exitProcess Whether to exit the hosting process upon stopping.
+     */
     private fun stopServer(exitProcess: Boolean) {
         val service = inputService
         Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient")
@@ -438,6 +451,9 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
             if (!service.stopEvents) service.pauseResumeKeymap()
     }
 
+    /**
+     * Resumes the keymapping event processing.
+     */
     override fun resumeMouse() {
         enforceCaller()
         val service = inputService
@@ -454,6 +470,9 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         inputService?.reloadKeymap()
     }
 
+    /**
+     * Checks whether the input service is currently active and processing events.
+     */
     override fun isActive(): Boolean {
         enforceCaller()
         return inputService != null
@@ -462,6 +481,9 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
     companion object {
         const val TAG = "xtmapper-server"
 
+        /**
+         * Loads native C++ shared libraries for mouse, touchpad, and keyboard handling.
+         */
         fun loadLibraries() {
             System.loadLibrary("mouse_read")
             System.loadLibrary("mouse_cursor")
