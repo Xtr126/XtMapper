@@ -12,7 +12,7 @@ class ShowKeymapService : Service() {
     private var editorUi: EditorUI? = null
 
     override fun onDestroy() {
-        editorUi!!.closeEditor()
+        editorUi?.closeEditor()
         super.onDestroy()
     }
 

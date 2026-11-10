@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.RemoteException
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.Display
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -400,9 +401,29 @@ class EditorUI(
     }
 
     private fun removeView(view: ViewGroup) {
-        if (overlayOpen && view.isAttachedToWindow) context.getSystemService(
-            WindowManager::class.java
-        ).removeView(view)
+        if (overlayOpen) {
+            overlayOpen = false
+            val wm = context.getSystemService(WindowManager::class.java)
+            try {
+                if (view.isAttachedToWindow) {
+                    wm?.removeView(view)
+                } else if (view.parent != null) {
+                    wm?.removeViewImmediate(view)
+                } else {
+                    view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                        override fun onViewAttachedToWindow(v: View) {
+                            v.removeOnAttachStateChangeListener(this)
+                            try {
+                                wm?.removeView(v)
+                            } catch (_: Exception) {}
+                        }
+                        override fun onViewDetachedFromWindow(v: View) {}
+                    })
+                }
+            } catch (e: Exception) {
+                Log.w("EditorUI", "Error removing overlay view", e)
+            }
+        }
         view.removeAllViews()
         view.invalidate()
     }

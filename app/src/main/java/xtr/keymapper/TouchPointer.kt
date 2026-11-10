@@ -71,6 +71,7 @@ class TouchPointer : Service() {
     override fun onStartCommand(i: Intent?, flags: Int, startId: Int): Int {
         if (i == null || ACTION_STOP == i.action) {
             stopKeymapper()
+            stopSelf()
             return START_NOT_STICKY
         }
 
@@ -140,7 +141,7 @@ class TouchPointer : Service() {
         )
 
 
-        return super.onStartCommand(i, flags, startId)
+        return START_NOT_STICKY
     }
 
     private fun buildNotification(): android.app.Notification {
@@ -216,7 +217,7 @@ class TouchPointer : Service() {
             val size = Point()
             display?.getRealSize(size)
             mWindowManager =
-                this.displayContext?.getSystemService(WindowManager::class.java)
+                this.displayContext.getSystemService(WindowManager::class.java)
             try {
                 if (!activityRemoteCallback && !keymapConfig.disableAutoProfiling) {
                     Log.i("xtmapper-startup", "connectRemoteService: registering activity observer")
@@ -261,10 +262,29 @@ class TouchPointer : Service() {
         }
     }
 
+    private var cursorView: View? = null
+
+    private fun removeCursorView() {
+        val view = cursorView ?: return
+        cursorView = null
+        val wm = mWindowManager ?: displayContext.getSystemService(WindowManager::class.java)
+        try {
+            if (view.isAttachedToWindow) {
+                wm?.removeView(view)
+            } else if (view.parent != null) {
+                wm?.removeViewImmediate(view)
+            }
+        } catch (e: Exception) {
+            Log.w("TouchPointer", "Error removing cursorView", e)
+        }
+    }
+
     fun stopKeymapper() {
         if (!isRunning && activeInstance == null) return
         isRunning = false
         activeInstance = null
+
+        mHandler.post { removeCursorView() }
 
         displayListener?.let {
             getSystemService(DisplayManager::class.java).unregisterDisplayListener(it)
@@ -289,6 +309,7 @@ class TouchPointer : Service() {
     }
 
     override fun onDestroy() {
+        removeCursorView()
         stopKeymapper()
         activityCallback = null
         super.onDestroy()
@@ -305,8 +326,6 @@ class TouchPointer : Service() {
      * service.
      */
     val mCallback: IRemoteServiceCallback = object : IRemoteServiceCallback.Stub() {
-        private var cursorView: View? = null
-
         override fun launchEditor() {
             val intent = Intent(this@TouchPointer, EditorService::class.java)
             intent.putExtra(EditorActivity.PROFILE_NAME, selectedProfile)
@@ -374,38 +393,39 @@ class TouchPointer : Service() {
 
             mHandler.post {
                 if (cursorView == null) {
-                    cursorView = CursorBinding.inflate(
+                    val binding = CursorBinding.inflate(
                         LayoutInflater.from(
                             ContextThemeWrapper(displayContext, R.style.Theme_XtMapper)
                         )
-                    ).getRoot()
+                    )
+                    val view = binding.root
+                    cursorView = view
 
                     val mParams =
                         Utils.getPointerLayoutParams(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT)
 
-                    mWindowManager!!.addView(cursorView, mParams)
+                    Utils.applyEmptyTouchableRegion(view)
+                    val wm = mWindowManager ?: displayContext.getSystemService(WindowManager::class.java)
+                    wm?.addView(view, mParams)
                 }
             }
         }
 
         override fun disablePointer() {
             mHandler.post {
-                if (cursorView != null) {
-                    mWindowManager!!.removeView(cursorView)
-                    cursorView = null
-                }
+                removeCursorView()
             }
         }
 
         override fun setCursorX(x: Int) {
             mHandler.post {
-                if (cursorView != null) cursorView!!.x = x.toFloat()
+                cursorView?.x = x.toFloat()
             }
         }
 
         override fun setCursorY(y: Int) {
             mHandler.post {
-                if (cursorView != null) cursorView!!.y = y.toFloat()
+                cursorView?.y = y.toFloat()
             }
         }
 
@@ -420,21 +440,29 @@ class TouchPointer : Service() {
         }
     }
 
-    private val displayContext: Context?
+    private val displayContext: Context
         get() {
-            val displayManager =
-                getSystemService(DisplayManager::class.java)
-            val display = displayManager.getDisplay(displayId)
-            val context: Context? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                createDisplayContext(display).createWindowContext(
-                    display,
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                    null
-                )
-            } else {
-                createDisplayContext(display)
+            return try {
+                val displayManager = getSystemService(DisplayManager::class.java)
+                val display = displayManager?.getDisplay(displayId)
+                    ?: displayManager?.getDisplay(Display.DEFAULT_DISPLAY)
+                if (display != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        createDisplayContext(display).createWindowContext(
+                            display,
+                            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                            null
+                        )
+                    } else {
+                        createDisplayContext(display)
+                    }
+                } else {
+                    this
+                }
+            } catch (e: Exception) {
+                Log.w("TouchPointer", "Failed to create displayContext, using service context", e)
+                this
             }
-            return context
         }
 
     private fun isLauncherOrSystem(packageName: String): Boolean {

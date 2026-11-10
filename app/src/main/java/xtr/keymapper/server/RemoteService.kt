@@ -27,12 +27,23 @@ import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.databinding.CursorBinding
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
+import org.lsposed.hiddenapibypass.HiddenApiBypass
 import xtr.keymapper.server.event.KeyEventHandler
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.reflect.Method
 
 class RemoteService(context: Context) : IRemoteService.Stub() {
+    init {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                HiddenApiBypass.addHiddenApiExemptions("")
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to add hidden API exemptions", t)
+            }
+        }
+    }
+
     private val mouseDevice = MouseDeviceConnection()
     @Volatile
     internal var inputService: InputService? = null
@@ -118,6 +129,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         } else {
             val params = Utils.getPointerLayoutParams(TYPE_SECURE_SYSTEM_OVERLAY)
             try {
+                Utils.applyEmptyTouchableRegion(view)
                 mWindowManager!!.addView(view, params)
             } catch (e: IllegalStateException) { // A14 QPR3 issue https://gist.github.com/RikkaW/be3fe4178903702c54ec73b2fc1187fe
                 cursorView = null
