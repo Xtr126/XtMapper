@@ -400,6 +400,10 @@ class EditorUI(
         closeImportExportDialog()
     }
 
+    /**
+     * Safely removes the editor overlay view from the WindowManager,
+     * ensuring views are detached cleanly even if removal occurs prior to window attachment.
+     */
     private fun removeView(view: ViewGroup) {
         if (overlayOpen) {
             overlayOpen = false

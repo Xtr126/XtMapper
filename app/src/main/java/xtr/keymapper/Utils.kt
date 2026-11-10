@@ -59,6 +59,12 @@ object Utils {
         return mParams
     }
 
+    /**
+     * Configures the provided overlay view with an empty touchable region,
+     * preventing Android 12+ InputDispatcher from dropping untrusted touches.
+     *
+     * @param view The overlay View to configure.
+     */
     @JvmStatic
     fun applyEmptyTouchableRegion(view: android.view.View?) {
         if (view == null) return
@@ -103,6 +109,10 @@ object Utils {
         }
     }
 
+    /**
+     * Reflectively registers an OnComputeInternalInsetsListener on the view's ViewTreeObserver
+     * to empty the touchableRegion and set TOUCHABLE_INSETS_REGION.
+     */
     private fun registerEmptyTouchableRegion(view: android.view.View) {
         val observer = view.viewTreeObserver
         if (observer == null || !observer.isAlive) return

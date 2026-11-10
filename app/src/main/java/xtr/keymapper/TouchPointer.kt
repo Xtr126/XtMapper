@@ -50,6 +50,9 @@ class TouchPointer : Service() {
     private var displayId = 0
     private var displayListener: DisplayListener? = null
     private var lastForegroundPackage: String? = null
+    private var lastDisplayWidth = 0
+    private var lastDisplayHeight = 0
+    private var lastDisplayRotation = -1
 
 
     interface MainActivityCallback {
@@ -68,6 +71,10 @@ class TouchPointer : Service() {
         return binder
     }
 
+    /**
+     * Handles service start commands, ensuring null intents and stop actions
+     * are terminated immediately to prevent zombie instances.
+     */
     override fun onStartCommand(i: Intent?, flags: Int, startId: Int): Int {
         if (i == null || ACTION_STOP == i.action) {
             stopKeymapper()
@@ -99,6 +106,14 @@ class TouchPointer : Service() {
         }
 
         this.displayId = i.getIntExtra(DISPLAY_ID, Display.DEFAULT_DISPLAY)
+        val initialDisplay = getSystemService(DisplayManager::class.java)?.getDisplay(displayId)
+        if (initialDisplay != null) {
+            val initSize = Point()
+            initialDisplay.getRealSize(initSize)
+            lastDisplayWidth = initSize.x
+            lastDisplayHeight = initSize.y
+            lastDisplayRotation = initialDisplay.rotation
+        }
 
         isRunning = true
         currentSelectedProfile = this.selectedProfile
@@ -115,22 +130,30 @@ class TouchPointer : Service() {
             }
 
             override fun onDisplayChanged(displayId: Int) {
-                if (displayId == this@TouchPointer.displayId) {
-                    Point().also {
-                        getSystemService(DisplayManager::class.java).getDisplay(
-                            displayId
-                        ).getRealSize(it)
-                    }.let {
-                        /* We must notify remote service
-                           when device orientation changes
-                           keymap will be scaled in remote service */
+                if (!isRunning || displayId != this@TouchPointer.displayId) return
+                val displayManager = getSystemService(DisplayManager::class.java) ?: return
+                val display = displayManager.getDisplay(displayId) ?: return
+                // Only react to active displays; ignore sleep / lid-close / screen-off states
+                if (display.state != Display.STATE_ON) return
 
-                        // Get new instance of remote service to avoid DeadObjectException
-                        connectRemoteService(
-                            KeymapProfiles(this@TouchPointer).getProfile(selectedProfile, true)
-                        )
-                    }
+                val size = Point()
+                display.getRealSize(size)
+                val rotation = display.rotation
+
+                // Only notify remote service when device orientation or size actually changes
+                if (size.x == lastDisplayWidth && size.y == lastDisplayHeight && rotation == lastDisplayRotation) {
+                    return
                 }
+                lastDisplayWidth = size.x
+                lastDisplayHeight = size.y
+                lastDisplayRotation = rotation
+
+                /* We must notify remote service
+                   when device orientation changes
+                   keymap will be scaled in remote service */
+                connectRemoteService(
+                    KeymapProfiles(this@TouchPointer).getProfile(selectedProfile, true)
+                )
             }
 
             override fun onDisplayRemoved(displayId: Int) {
@@ -264,6 +287,10 @@ class TouchPointer : Service() {
 
     private var cursorView: View? = null
 
+    /**
+     * Safely detaches the cursor overlay view from the WindowManager,
+     * accounting for both attached and pre-attach pending states.
+     */
     private fun removeCursorView() {
         val view = cursorView ?: return
         cursorView = null
@@ -279,6 +306,10 @@ class TouchPointer : Service() {
         }
     }
 
+    /**
+     * Stops the keymapper service, releasing listeners, cursor overlays,
+     * and tearing down active remote server connections.
+     */
     fun stopKeymapper() {
         if (!isRunning && activeInstance == null) return
         isRunning = false
@@ -376,6 +407,10 @@ class TouchPointer : Service() {
             }
         }
 
+        /**
+         * Inflates and attaches the pointer cursor overlay window
+         * with an empty touchable region if the service is currently running.
+         */
         override fun enablePointer() {
             val keymapConfig = requestKeymapConfig()
 
@@ -392,7 +427,7 @@ class TouchPointer : Service() {
             }
 
             mHandler.post {
-                if (cursorView == null) {
+                if (cursorView == null && isRunning) {
                     val binding = CursorBinding.inflate(
                         LayoutInflater.from(
                             ContextThemeWrapper(displayContext, R.style.Theme_XtMapper)

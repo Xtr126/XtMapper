@@ -121,6 +121,10 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         }
     }
 
+    /**
+     * Prepares and adds the cursor overlay view to the WindowManager
+     * with an empty touchable region.
+     */
     private fun addCursorView() {
         val view = cursorView ?: return
 
@@ -274,6 +278,9 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
      * @param screenHeight Screen resolution (vertical)
      * @param screenWidth  Screen resolution (horizontal)
      */
+    /**
+     * Initializes the input service, cursor overlay, and input listeners for the specified profile.
+     */
     @Throws(RemoteException::class)
     override fun startServer(
         profile: KeymapProfile,
@@ -289,6 +296,7 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
         mHandler.post {
             Log.i(TAG, "startServer: main handler running existingService=${inputService != null}")
             val service = inputService
+            val isReconnecting = (service != null)
             if (service != null) {
                 if (isWaylandClient) {
                     service.hideCursor()
@@ -334,8 +342,8 @@ class RemoteService(context: Context) : IRemoteService.Stub() {
             } catch (e: RemoteException) {
                 throw RuntimeException(e)
             }
-            // Launch app/game
-            if (profile.packageName != BuildConfig.APPLICATION_ID && keymapConfig.disableAutoProfiling) {
+            // Launch app/game on fresh start only, not on orientation change or reconnection
+            if (!isReconnecting && profile.packageName != BuildConfig.APPLICATION_ID && keymapConfig.disableAutoProfiling) {
                 val launchIntent =
                     context.packageManager.getLaunchIntentForPackage(profile.packageName)
                 if (launchIntent != null && launchIntent.component != null) try {

@@ -25,6 +25,9 @@ class KeymapperTileService : TileService() {
         updateTileState()
     }
 
+    /**
+     * Toggles the XtMapper foreground service on and off when the Quick Settings tile is clicked.
+     */
     override fun onClick() {
         super.onClick()
         val running = TouchPointer.isRunning
@@ -41,6 +44,8 @@ class KeymapperTileService : TileService() {
                     startService(stopIntent)
                 } catch (e: Exception) {
                     Log.w("KeymapperTileService", "Error stopping service via intent", e)
+                    Toast.makeText(this, "Failed to stop XtMapper", Toast.LENGTH_SHORT).show()
+                    return
                 }
             }
             TouchPointer.isRunning = false
@@ -80,6 +85,9 @@ class KeymapperTileService : TileService() {
         }
     }
 
+    /**
+     * Updates the Quick Settings tile icon, state (Active/Inactive), and subtitle.
+     */
     private fun updateTileState(
         isActive: Boolean = TouchPointer.isRunning,
         profileName: String? = TouchPointer.currentSelectedProfile ?: KeymapProfiles(this).getLastSelectedProfile()
