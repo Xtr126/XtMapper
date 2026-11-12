@@ -166,8 +166,10 @@ object XtLogger {
     @JvmStatic
     fun enableFileLogging() {
         if (!hasAllFilesAccess()) return
-        if (isFileSinkAvailable) return
-        rebuildAppPipeline(FileSystemLogStore(CANONICAL_LOGS_DIR))
+        synchronized(initLock) {
+            if (isFileSinkAvailable) return
+            rebuildAppPipeline(FileSystemLogStore(CANONICAL_LOGS_DIR))
+        }
     }
 
     /**
@@ -198,7 +200,6 @@ object XtLogger {
 
     private fun rebuildAppPipeline(store: LogStore) {
         synchronized(initLock) {
-            if (isFileSinkAvailable) return
             pipeline?.let { current ->
                 pipeline = null
                 val finished = try {
