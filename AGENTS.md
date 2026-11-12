@@ -61,6 +61,91 @@ Do not vendor their skill files, reference documents, or licenses into this
 repository. Resolve and prepare them in the environment of the agent that is
 actually doing the work.
 
+### Supported coding-agent environments
+
+The project may be worked on through different agent hosts and IDE integrations.
+The runtime host determines which instruction files and skill directories are
+actually discovered. Do not assume that every tool reads `AGENTS.md`, uses the
+same home directory, or supports the same skill-installation mechanism.
+
+Use this compatibility map as a starting point, then verify it against the
+installed tool version and its official documentation before installing or
+updating anything.
+
+| Agent or host | Project instructions | Project skill locations | User-level skill locations |
+|---|---|---|---|
+| **OpenAI Codex (CLI and IDE integrations)** | `AGENTS.md` | `.agents/skills/` | `~/.agents/skills/` or the active `$CODEX_HOME/skills/` |
+| **Cursor (Agent and CLI)** | Root `AGENTS.md`; also `.cursor/rules/*.mdc` for scoped rules | `.agents/skills/`, `.cursor/skills/`; compatible `.claude/skills/` and `.codex/skills/` | `~/.agents/skills/`, `~/.cursor/skills/` (and compatible Claude/Codex locations) |
+| **Google Antigravity (App and CLI)** | `AGENTS.md`, `GEMINI.md`, or `.agents/rules/*.md` | `.agents/skills/` | `~/.gemini/config/skills/`; Antigravity CLI may also use `~/.gemini/antigravity-cli/skills/` |
+| **Claude Code** | `CLAUDE.md`, `.claude/CLAUDE.md`, and `.claude/rules/*.md`; do not assume root `AGENTS.md` is loaded automatically | `.claude/skills/` | `~/.claude/skills/` |
+| **OpenCode** | `AGENTS.md` | `.opencode/skills/`, `.agents/skills/`, `.claude/skills/` | `~/.config/opencode/skills/`, `~/.agents/skills/`, `~/.claude/skills/` |
+| **Gemini CLI** | `GEMINI.md` by default; `AGENTS.md` can be added through `context.fileName` in Gemini settings | `.gemini/skills/`, `.agents/skills/` | `~/.gemini/skills/`, `~/.agents/skills/` |
+| **GitHub Copilot (VS Code, CLI, app, and cloud agent)** | `AGENTS.md` on supported surfaces; `.github/copilot-instructions.md` for repository-wide Copilot instructions | `.github/skills/`, `.agents/skills/`, `.claude/skills/` | `~/.copilot/skills/`, `~/.agents/skills/` |
+| **Cline** | `AGENTS.md`, `.clinerules/`, or `.cline/rules/` | Use the skill locations exposed by the installed Cline version; check its Skills UI/CLI and whether it discovers `.agents/skills/` | Cline documents `~/.cline/skills/`; verify the active platform's current path |
+| **Roo Code** | `AGENTS.md`, `.roo/rules/`, or `.roorules` | `.roo/skills/`, `.agents/skills/` | `~/.roo/skills/`, `~/.agents/skills/` |
+| **Windsurf / Cascade** | `.windsurf/rules/*.md`; `.windsurfrules` is a legacy format. Check the current Windsurf/Devin surface for its `AGENTS.md` support | Verify the active version's Agent Skills support and discovery path; do not guess it from another IDE | Check the current host's user skill directory and sync behavior |
+| **JetBrains Junie (IDE and CLI)** | Root `AGENTS.md` or `.junie/AGENTS.md`; note that `.junie/AGENTS.md` takes precedence and may be used exclusively | `.junie/skills/`, `.agents/skills/` | `~/.junie/skills/`, `~/.agents/skills/` |
+| **Aider** | Does not rely on automatic `AGENTS.md` discovery; load it with `--read AGENTS.md` or configure it in `.aider.conf.yml` | No assumed native Agent Skills discovery; explicitly load only the relevant `SKILL.md` or use a supported integration | Load personal conventions/skills explicitly using Aider's documented read mechanism |
+
+**Claude Code vs. Google Cloud Code:** Claude Code is an AI coding agent and uses
+the Claude Code paths above. Google Cloud Code is a separate IDE extension for
+Kubernetes and Cloud Run development; when it is used with Gemini Code Assist,
+follow the instruction and skill capabilities of the actual Gemini Code Assist
+host rather than treating Cloud Code as a separate Agent Skills runtime.
+
+#### Cross-agent instruction policy
+
+- Keep this root `AGENTS.md` as XtMapper's canonical project guidance.
+- Prefer native `AGENTS.md` support where the active host provides it.
+- When a host requires another instruction filename (for example
+  `CLAUDE.md` or `GEMINI.md`), use a small bridge/import to this file when
+  that host supports imports. Do not copy the entire ruleset into multiple
+  files where the copies can drift.
+- For GitHub Copilot, use its repository instructions file only when the active
+  Copilot surface or version does not consume the root `AGENTS.md`.
+- For Windsurf, Aider, or any other host whose behavior differs by version or
+  surface, inspect its current official documentation and runtime settings.
+  Never claim compatibility merely because it can read Markdown.
+- Distinguish an IDE extension from its underlying agent. Examples include
+  Google Cloud Code with Gemini Code Assist and VS Code with a selected agent
+  harness. Install skills for the agent that executes the work, not just for
+  the editor shell.
+- If the agent delegates work to subagents or runs tasks in remote/cloud
+  workers, check skill availability in each execution environment. A skill
+  installed only on the developer's workstation is not automatically present
+  in a cloud container, remote SSH host, or another agent's sandbox.
+- Do not install the same skill into every possible directory. Use the
+  currently active host's supported project or user scope, avoid duplicate
+  skill IDs with conflicting versions, and verify which copy wins precedence.
+
+#### Official compatibility references
+
+Check these vendor references for current behavior and paths:
+
+- Codex: https://developers.openai.com/codex/guides/agents-md and
+  https://developers.openai.com/codex/skills
+- Cursor: https://docs.cursor.com/context/rules-for-ai and
+  https://docs.cursor.com/skills
+- Antigravity: https://antigravity.google/docs/rules and
+  https://antigravity.google/docs/skills
+- Claude Code: https://code.claude.com/docs/en/memory and
+  https://code.claude.com/docs/en/skills
+- OpenCode: https://opencode.ai/docs/instructions and
+  https://opencode.ai/docs/skills
+- Gemini CLI: https://geminicli.com/docs/cli/gemini-md and
+  https://geminicli.com/docs/cli/using-agent-skills
+- GitHub Copilot: https://docs.github.com/en/copilot/reference/customization-cheat-sheet and
+  https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/add-skills
+- Cline: https://docs.cline.bot/customization/cline-rules and
+  https://docs.cline.bot/customization/skills
+- Roo Code: https://docs.roocode.com/features/custom-instructions and
+  https://docs.roocode.com/features/skills
+- Windsurf: https://docs.windsurf.com/
+- Junie: https://junie.jetbrains.com/docs/guidelines-and-memory.html and
+  https://junie.jetbrains.com/docs/agent-skills.html
+- Aider: https://aider.chat/docs/usage/conventions.html
+- Google Cloud Code: https://docs.cloud.google.com/code/docs
+
 ### Skill availability and freshness — required before coding
 
 At the start of every source-code task:
