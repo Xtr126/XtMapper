@@ -297,7 +297,15 @@ class RemoteService @JvmOverloads constructor(
         }
         val session = ClientSession(clientBinder, deathRecipient)
         if (isWaylandClient) {
-            val (service, superseded) = mInputService.claimForShutdown(session)
+            val installedSession = mInputService.owner()
+            if (installedSession != null && installedSession.binder != clientBinder) {
+                XtLogger.info(TAG, "ignored death notification of a replaced client Binder")
+                return
+            }
+            // A repeated start from the same callback Binder installs a new death recipient
+            // before its queued replacement runs. Keep the old service covered by this death.
+            val sessionToStop = installedSession ?: session
+            val (service, superseded) = mInputService.claimForShutdown(sessionToStop)
             if (superseded) {
                 XtLogger.info(TAG, "ignored death notification of a replaced client session")
                 return
@@ -317,8 +325,8 @@ class RemoteService @JvmOverloads constructor(
         } else {
             mHandler.post {
                 val owner = mInputService.owner()
-                if (owner != null && owner != session) {
-                    XtLogger.info(TAG, "ignored death notification of a replaced client session")
+                if (owner != null && owner.binder != clientBinder) {
+                    XtLogger.info(TAG, "ignored death notification of a replaced client Binder")
                     return@post
                 }
                 stopServer(true, clientAlive = false)

@@ -112,10 +112,10 @@ class MainActivity : AppCompatActivity() {
 
         val keymapConfig = KeymapConfig(this)
         val profiles = KeymapProfiles(this)
-        autoStartProfile = if (savedInstanceState == null) {
-            StartupLaunch.autoStartProfile(isAuthenticatedShellLaunch(), profiles.getAllProfiles().keys)
-        } else null
-        selectedProfileName = autoStartProfile ?: profiles.getLastSelectedProfile()
+        val availableProfiles = profiles.getAllProfiles().keys
+        val shellProfile = StartupLaunch.shellProfile(isAuthenticatedShellLaunch(), availableProfiles)
+        autoStartProfile = if (savedInstanceState == null) shellProfile else null
+        selectedProfileName = shellProfile ?: profiles.getLastSelectedProfile()
         Log.i("xtmapper-startup", "MainActivity: profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode} autoStart=${autoStartProfile != null}")
         TouchPointer.currentSelectedProfile = selectedProfileName
 

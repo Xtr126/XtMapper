@@ -250,7 +250,7 @@ object XtLogger {
             metadata = metadata,
             logcat = ::logcatSink,
             onFailure = ::onPipelineFailure,
-            pruneRetention = role == Role.APP,
+            pruneRetention = store !== NoStore,
             afterClose = ::retryDeferredInit,
         )
         try {

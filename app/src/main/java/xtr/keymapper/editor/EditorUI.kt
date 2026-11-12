@@ -63,6 +63,8 @@ class EditorUI(
     /* The active keymap config and a backup copy */
     private var profile: KeymapProfile? = null
     private var profileBackup: Set<String>? = null
+    private var loadedCoordinateWidth = 0
+    private var loadedCoordinateHeight = 0
 
     private var overlayOpen = false
 
@@ -408,7 +410,9 @@ class EditorUI(
         MacroIdUtils.getLines(linesToParse, profile!!)
         linesToParse.add("APPLICATION ${profile!!.packageName}")
         if (!profile!!.disabled) linesToParse.add("ENABLED")
-        linesToParse.add("SCREENSIZE $width $height")
+        val coordinateWidth = loadedCoordinateWidth.takeIf { it > 0 } ?: width
+        val coordinateHeight = loadedCoordinateHeight.takeIf { it > 0 } ?: height
+        linesToParse.add("SCREENSIZE $coordinateWidth $coordinateHeight")
         return KeymapProfiles.parse(linesToParse.filterNotNull().filter { it.isNotBlank() }.toSet())
     }
 
@@ -429,6 +433,8 @@ class EditorUI(
             targetWidth,
             targetHeight
         )
+        loadedCoordinateWidth = profile!!.xRes.takeIf { it > 0 } ?: targetWidth.toInt()
+        loadedCoordinateHeight = profile!!.yRes.takeIf { it > 0 } ?: targetHeight.toInt()
 
         val editorUiComponentFactory = editorUiComponents.newFactory(mCallback, context)
 
