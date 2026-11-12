@@ -5,8 +5,8 @@
 
 version: 2
 updates:
-  - package-ecosystem: "gradle" # See documentation for possible values
-    directory: "/app" # Location of package manifests
+  - package-ecosystem: "gradle"
+    directory: "/" # The version catalog is in the repository root.
     schedule:
       interval: "weekly"
     registries:

@@ -1,0 +1,18 @@
+plugins {
+    alias(libs.plugins.android.library)
+}
+
+android {
+    namespace = "android"
+    compileSdk = 37
+
+    defaultConfig {
+        consumerProguardFiles("consumer-rules.pro")
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+}
+
