@@ -10,6 +10,9 @@ import java.io.IOException
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.atomic.AtomicBoolean
 
 object XtLogger {
 
@@ -22,6 +25,10 @@ object XtLogger {
     private val systemClock: Clock = Clock.systemDefaultZone()
 
     private val initLock = Any()
+    private val fileLoggingExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "xtlogger-file-logging").apply { isDaemon = true }
+    }
+    private val fileLoggingRequestPending = AtomicBoolean(false)
 
     @Volatile
     private var pipeline: LoggingPipeline? = null
@@ -163,8 +170,35 @@ object XtLogger {
         rebuildAppPipeline(FileSystemLogStore(CANONICAL_LOGS_DIR))
     }
 
+    /**
+     * Requests file-logging initialization without blocking the caller.
+     * Requests from repeated Activity resumes are coalesced and serialized.
+     */
+    @JvmStatic
+    fun enableFileLoggingAsync() {
+        if (!hasAllFilesAccess() || isFileSinkAvailable ||
+            !fileLoggingRequestPending.compareAndSet(false, true)
+        ) return
+
+        try {
+            fileLoggingExecutor.execute {
+                try {
+                    enableFileLogging()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to enable file logging in background", e)
+                } finally {
+                    fileLoggingRequestPending.set(false)
+                }
+            }
+        } catch (e: RejectedExecutionException) {
+            fileLoggingRequestPending.set(false)
+            Log.e(TAG, "File logging executor rejected initialization", e)
+        }
+    }
+
     private fun rebuildAppPipeline(store: LogStore) {
         synchronized(initLock) {
+            if (isFileSinkAvailable) return
             pipeline?.let { current ->
                 pipeline = null
                 val finished = try {

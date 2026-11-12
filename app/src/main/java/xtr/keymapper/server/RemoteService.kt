@@ -168,6 +168,12 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
+    private fun hideOverlayCursor() {
+        // Keep View mutations on the main thread. The caller claims the session first,
+        // so this hide is queued before any replacement session can install its cursor.
+        mHandler.post { cursorView?.visibility = View.GONE }
+    }
+
     @Throws(
         NoSuchMethodException::class,
         NoSuchFieldException::class,
@@ -310,6 +316,7 @@ class RemoteService @JvmOverloads constructor(
                 XtLogger.info(TAG, "ignored death notification of a replaced client session")
                 return
             }
+            hideOverlayCursor()
             try {
                 try {
                     service?.stop()
@@ -572,6 +579,7 @@ class RemoteService @JvmOverloads constructor(
         if (isWaylandClient) {
             val session = mInputService.owner()
             if (session == null) {
+                hideOverlayCursor()
                 stopServer(true)
                 return
             }
@@ -581,6 +589,7 @@ class RemoteService @JvmOverloads constructor(
                 XtLogger.info(TAG, "ignored destroy request for a replaced client session")
                 return
             }
+            hideOverlayCursor()
             try {
                 if (service != null) {
                     try {

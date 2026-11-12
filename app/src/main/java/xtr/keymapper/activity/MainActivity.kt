@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
         private const val SERVER_CRASH_DIALOG_TAG = "server_crash_dialog"
         private const val SERVER_CRASH_DISMISSED_REQUEST = "server_crash_dismissed"
         private const val MAX_DIAGNOSTIC_MESSAGE_CHARS = 16 * 1024
+        private const val SELECTED_PROFILE_NAME_STATE = "selected_profile_name"
 
         init {
             // Set settings before the main shell can be created
@@ -115,7 +116,11 @@ class MainActivity : AppCompatActivity() {
         val availableProfiles = profiles.getAllProfiles().keys
         val shellProfile = StartupLaunch.shellProfile(isAuthenticatedShellLaunch(), availableProfiles)
         autoStartProfile = if (savedInstanceState == null) shellProfile else null
-        selectedProfileName = shellProfile ?: profiles.getLastSelectedProfile()
+        selectedProfileName = savedInstanceState
+            ?.getString(SELECTED_PROFILE_NAME_STATE)
+            ?.takeIf(availableProfiles::contains)
+            ?: shellProfile
+            ?: profiles.getLastSelectedProfile()
         Log.i("xtmapper-startup", "MainActivity: profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode} autoStart=${autoStartProfile != null}")
         TouchPointer.currentSelectedProfile = selectedProfileName
 
@@ -132,6 +137,11 @@ class MainActivity : AppCompatActivity() {
         RemoteServiceHelper.runIfActive(this) {
             runOnUiThread { composeServiceActive = true }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        selectedProfileName?.let { outState.putString(SELECTED_PROFILE_NAME_STATE, it) }
+        super.onSaveInstanceState(outState)
     }
 
     private fun handleActivationFlow(keymapConfig: KeymapConfig) {
@@ -278,7 +288,7 @@ class MainActivity : AppCompatActivity() {
         composeServiceActive = TouchPointer.isRunning
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
             android.os.Environment.isExternalStorageManager()
-        ) XtLogger.enableFileLogging()
+        ) XtLogger.enableFileLoggingAsync()
     }
 
     fun stopPointer() {
