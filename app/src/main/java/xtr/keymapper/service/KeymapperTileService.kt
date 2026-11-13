@@ -30,11 +30,15 @@ class KeymapperTileService : TileService() {
         val running = TouchPointer.isRunning
 
         if (running) {
-            TouchPointer.activeInstance?.stopKeymapper()
-            val stopIntent = Intent(this, TouchPointer::class.java).apply {
-                action = TouchPointer.ACTION_STOP
+            val instance = TouchPointer.activeInstance
+            if (instance != null) {
+                instance.stopKeymapper()
+            } else {
+                val stopIntent = Intent(this, TouchPointer::class.java).apply {
+                    action = TouchPointer.ACTION_STOP
+                }
+                startService(stopIntent)
             }
-            startService(stopIntent)
             TouchPointer.isRunning = false
             updateTileState(false)
             Toast.makeText(this, "XtMapper stopped", Toast.LENGTH_SHORT).show()

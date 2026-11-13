@@ -37,7 +37,6 @@ class EditorService : ComposeLifecycleService() {
                 R.style.Theme_XtMapper
             )
 
-            // Create the ComposeView using the themed context.
             composeView = createComposeView(context)
 
             editor = EditorUI(
@@ -49,6 +48,10 @@ class EditorService : ComposeLifecycleService() {
             )
 
             RemoteServiceHelper.getInstance(this) { remoteService ->
+                if (remoteService == null) {
+                    Log.w("EditorService", "Remote input service unavailable; skipping key listener registration")
+                    return@getInstance
+                }
                 try {
                     editor?.registerOnKeyEventListener(remoteService)
                 } catch (e: RemoteException) {

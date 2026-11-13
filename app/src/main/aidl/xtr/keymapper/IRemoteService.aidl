@@ -3,6 +3,7 @@ package xtr.keymapper;
 import xtr.keymapper.IRemoteServiceCallback;
 import xtr.keymapper.OnKeyEventListener;
 import xtr.keymapper.ActivityObserver;
+import xtr.keymapper.IShellAuthenticationCallback;
 
 import xtr.keymapper.keymap.KeymapConfig;
 import xtr.keymapper.keymap.KeymapProfile;
@@ -25,4 +26,5 @@ interface IRemoteService {
     void reloadKeymap() = 10;
     boolean isActive() = 11;
 
+    void authenticateShellClient(IShellAuthenticationCallback callback, long challenge) = 12;
 }

@@ -113,6 +113,7 @@ private fun KeymapperApp(
     onImportProfiles: () -> Unit = {},
     onToggleOverlay: () -> Unit = {},
     onSettings: () -> Unit = {},
+    onLogs: () -> Unit = {},
 ) {
     val currentState = state.value
 
@@ -131,7 +132,6 @@ private fun KeymapperApp(
         ) {
             Column(modifier = Modifier.widthIn(max = 500.dp).fillMaxHeight()) {
 
-                // Full-width top bar
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = KeymapperTheme.Background,
@@ -140,10 +140,10 @@ private fun KeymapperApp(
                     AppTopBarRow(
                         onSettings = onSettings,
                         onHelp = onHelp,
+                        onLogs = onLogs,
                     )
                 }
 
-                // Constrained main content
                 Box(
                     modifier = Modifier.fillMaxWidth()
                         .widthIn(max = 100.dp)
@@ -166,6 +166,10 @@ private fun KeymapperApp(
                                     onToggleInputMode = onToggleInputMode,
                                     onFixPermission = onFixPermission
                                 )
+                            }
+
+                            TextButton(onClick = onLogs, modifier = Modifier.fillMaxWidth()) {
+                                Text(stringResource(R.string.logs))
                             }
 
                             Spacer(modifier = Modifier.height(20.dp))
@@ -377,7 +381,8 @@ private fun GameKeyMapperActivityContent(activity: MainActivity) {
         },
         onSettings = {
             activity.openSettingsFromCompose()
-        }
+        },
+        onLogs = { activity.openLogsFromCompose() },
     )
 }
 
@@ -453,7 +458,6 @@ private fun GlobalStatusToggle(
                 modifier = Modifier.padding(vertical = 12.dp)
             )
 
-            // Mode toggle: Root vs Shizuku (ADB)
             Row(
                 modifier = Modifier
                     .padding(vertical = 4.dp)
@@ -1059,7 +1063,8 @@ private fun ProfileMenuItem(
 private fun AppTopBarRow(
     modifier: Modifier = Modifier,
     onSettings: () -> Unit,
-    onHelp: () -> Unit
+    onHelp: () -> Unit,
+    onLogs: () -> Unit,
 ) {
     Row(
         modifier = modifier
@@ -1089,6 +1094,10 @@ private fun AppTopBarRow(
                 onClick = onSettings,
                 tint = KeymapperTheme.Accent
             )
+
+            TextButton(onClick = onLogs, modifier = Modifier.height(36.dp)) {
+                Text(stringResource(R.string.logs), fontSize = 12.sp)
+            }
         }
     }
 }

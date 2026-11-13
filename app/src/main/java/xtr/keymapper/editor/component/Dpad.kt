@@ -45,7 +45,7 @@ class Dpad(
     }
 
     override fun toConfigLine(): String {
-        // Create new dpad instance for updating properties
+        dpadView!!.finishPendingPositionAnimation()
         this.dpad = if (dpad!!.keycodes.equals(DpadKeyCodes.ARROW_KEYS))
             xtr.keymapper.keymap.element.Dpad(
                 dpadView!!,
@@ -141,9 +141,7 @@ class Dpad(
     }
 
     private fun moveResizeDpad(x: Float, y: Float) {
-        dpadView!!.animate().x(x).y(y)
-            .setDuration(500)
-            .start()
+        dpadView!!.animateToPosition(x, y, 500L)
 
         // resize dpad from saved profile configuration
         val x1 = dpad!!.getWidth() - dpadView!!.layoutParams.width
@@ -169,6 +167,7 @@ class Dpad(
         @SuppressLint("ClickableViewAccessibility")
         override fun onTouch(v: View, event: MotionEvent): Boolean {
             if (event.action == MotionEvent.ACTION_MOVE) {
+                (rootView as? MovableFrameLayout)?.finishPendingPositionAnimation()
                 // Resize View in fixed ratio
                 val newSize = (event.x.toInt() + event.y.toInt()) / 2
                 EditorUI.resizeView(rootView, newSize, newSize)
