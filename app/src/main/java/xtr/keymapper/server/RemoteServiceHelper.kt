@@ -265,9 +265,27 @@ object RemoteServiceHelper {
         }
     }
 
+    /**
+     * Caches the shell service Binder after verifying that the daemon's protocol version
+     * matches the current application build. Mismatched or outdated daemons are rejected.
+     */
     private fun cacheShellServiceBinderLocked(binder: IBinder?) {
         if (binder == null || !binder.isBinderAlive) return
         val remote = IRemoteService.Stub.asInterface(binder) ?: return
+        val daemonVersion = try {
+            remote.version
+        } catch (e: Exception) {
+            Log.w("xtmapper-startup", "Failed to query shell daemon version; daemon is likely from an older incompatible build", e)
+            -1
+        }
+        if (daemonVersion != BuildConfig.VERSION_CODE) {
+            Log.w(
+                "xtmapper-startup",
+                "Rejected shell daemon due to version mismatch: daemon=$daemonVersion, app=${BuildConfig.VERSION_CODE}"
+            )
+            runCatching { remote.destroy() }
+            return
+        }
         val remoteBinder = remote.asBinder()
         shellServiceBinder = remoteBinder
         service = remote
@@ -282,7 +300,7 @@ object RemoteServiceHelper {
             if (shellServiceBinder == remoteBinder) shellServiceBinder = null
             if (service?.asBinder() == remoteBinder) service = null
         }
-        Log.i("xtmapper-startup", "authenticated shell Binder cached: alive=${remoteBinder.isBinderAlive}")
+        Log.i("xtmapper-startup", "authenticated shell Binder cached: alive=${remoteBinder.isBinderAlive} version=$daemonVersion")
     }
 
     private fun createShizukuUserServiceArgs(

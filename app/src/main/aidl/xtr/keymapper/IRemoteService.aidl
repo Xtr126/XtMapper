@@ -30,4 +30,5 @@ interface IRemoteService {
     boolean isActive() = 11;
 
     void authenticateShellClient(IShellAuthenticationCallback callback, long challenge) = 12;
+    int getVersion() = 13;
 }

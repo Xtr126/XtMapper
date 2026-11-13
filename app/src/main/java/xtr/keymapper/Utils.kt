@@ -35,6 +35,13 @@ object Utils {
         return sh
     }
 
+    /**
+     * Builds WindowManager.LayoutParams for full-screen pass-through pointer overlay windows,
+     * applying flags and capping alpha to 0.8 on Android 12+ to satisfy untrusted touch limits.
+     *
+     * @param type The window type (e.g. TYPE_APPLICATION_OVERLAY or TYPE_SECURE_SYSTEM_OVERLAY).
+     * @return The configured LayoutParams.
+     */
     @JvmStatic
     fun getPointerLayoutParams(type: Int): WindowManager.LayoutParams {
         val mParams = WindowManager.LayoutParams(
@@ -49,6 +56,11 @@ object Utils {
             PixelFormat.TRANSLUCENT)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             mParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+ drops untrusted touches passing through non-touchable overlay
+            // windows whose opacity exceeds 0.8. Cap alpha to 0.8 to comply with the platform limit.
+            mParams.alpha = 0.8f
         }
         return mParams
     }

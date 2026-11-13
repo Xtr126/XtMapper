@@ -96,6 +96,14 @@ class RemoteService @JvmOverloads constructor(
         callback.onShellServiceAuthenticated(challenge)
     }
 
+    /**
+     * Returns the build version code of this remote service instance.
+     * Used by client processes to verify daemon protocol compatibility.
+     */
+    override fun getVersion(): Int {
+        return BuildConfig.VERSION_CODE
+    }
+
     init {
         if (!XtLogger.isInitialized) {
             when (Process.myUid()) {
