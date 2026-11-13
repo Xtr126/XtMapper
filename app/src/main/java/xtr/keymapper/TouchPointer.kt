@@ -28,6 +28,7 @@ import androidx.annotation.UiThread
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import xtr.keymapper.databinding.CursorBinding
 import xtr.keymapper.editor.EditorActivity
 import xtr.keymapper.editor.EditorService
@@ -238,11 +239,11 @@ class TouchPointer : Service() {
                     Log.w("xtmapper-startup", "connectRemoteService: profile disabled; startServer skipped")
                     val profileName = selectedProfile.orEmpty()
                     mHandler.post {
-                        Toast.makeText(
-                            this,
-                            getString(R.string.profile_disabled_activation, profileName),
-                            Toast.LENGTH_LONG
-                        ).show()
+                        val dialog = MaterialAlertDialogBuilder(this)
+                            .setTitle(R.string.profile_disabled_title)
+                            .setMessage(getString(R.string.profile_disabled_activation, profileName))
+                            .setPositiveButton(R.string.ok, null)
+                        ProfileSelector.showDialog(dialog)
                     }
                 }
                 if (keymapConfig.showControls) {
