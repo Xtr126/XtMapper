@@ -106,14 +106,6 @@ class TouchPointer : Service() {
         }
 
         this.displayId = i.getIntExtra(DISPLAY_ID, Display.DEFAULT_DISPLAY)
-        val initialDisplay = getSystemService(DisplayManager::class.java)?.getDisplay(displayId)
-        if (initialDisplay != null) {
-            val initSize = Point()
-            initialDisplay.getRealSize(initSize)
-            lastDisplayWidth = initSize.x
-            lastDisplayHeight = initSize.y
-            lastDisplayRotation = initialDisplay.rotation
-        }
 
         isRunning = true
         currentSelectedProfile = this.selectedProfile
@@ -150,12 +142,7 @@ class TouchPointer : Service() {
                    keymap will be scaled in remote service */
                 connectRemoteService(
                     KeymapProfiles(this@TouchPointer).getProfile(selectedProfile, true),
-                    activationReason = IRemoteService.ACTIVATION_DISPLAY_CHANGE,
-                    onConnected = {
-                        lastDisplayWidth = size.x
-                        lastDisplayHeight = size.y
-                        lastDisplayRotation = rotation
-                    }
+                    activationReason = IRemoteService.ACTIVATION_DISPLAY_CHANGE
                 )
             }
 
@@ -298,6 +285,9 @@ class TouchPointer : Service() {
                 if (keymapConfig.showControls) {
                     ShowKeymapService.start(this, selectedProfile)
                 }
+                lastDisplayWidth = size.x
+                lastDisplayHeight = size.y
+                lastDisplayRotation = display?.rotation ?: 0
                 onConnected?.invoke()
             } catch (e: Exception) {
                 if (activityCallback != null) {
@@ -343,6 +333,10 @@ class TouchPointer : Service() {
         activeInstance = null
 
         mHandler.post { removeCursorView() }
+
+        lastDisplayWidth = 0
+        lastDisplayHeight = 0
+        lastDisplayRotation = -1
 
         displayListener?.let {
             getSystemService(DisplayManager::class.java).unregisterDisplayListener(it)
