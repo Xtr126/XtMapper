@@ -17,11 +17,9 @@ class PointersState {
     fun getPointerIndex(id: Long): Int {
         val index = indexOf(id)
         if (index != -1) {
-            // already exists, return it
             return index
         }
         if (pointers.size >= MAX_POINTERS) {
-            // it's full
             return -1
         }
         // id 0 is reserved for mouse events
@@ -30,15 +28,9 @@ class PointersState {
             throw AssertionError("pointers.size() < maxFingers implies that a local id is available")
         }
         pointers.add(Pointer(id, localId))
-        // return the index of the pointer
         return pointers.size - 1
     }
 
-    /**
-     * Initialize the motion event parameters.
-     *
-     * @return The number of items initialized (the number of pointers).
-     */
     fun update(
         props: Array<MotionEvent.PointerProperties?>,
         coords: Array<MotionEvent.PointerCoords?>
@@ -59,9 +51,6 @@ class PointersState {
         return count
     }
 
-    /**
-     * Remove all pointers which are UP.
-     */
     private fun cleanUp() {
         pointers.removeAll { it.isUp }
     }

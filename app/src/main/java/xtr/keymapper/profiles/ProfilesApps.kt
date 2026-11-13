@@ -27,13 +27,6 @@ class ProfilesApps private constructor(context: Context) {
         fun onAppsLoaded(profilesApps: ProfilesApps, adapter: AppsGridAdapter, dialog: AlertDialog)
     }
 
-    /**
-     * Loading apps is a time consuming process on slow devices with a large number of apps.
-     * We show a visual loading indicator while loading the apps in a separate thread
-     * @param context UI context
-     * @param builder builder for creating a dialog with visual loading indicator and showing
-     * @param onAppsLoadedListener Called when finished loading apps
-     */
     @UiThread
     private fun asyncLoadApps(onAppsLoadedListener: OnAppsLoadedListener, dialog: AlertDialog) {
         val context = appsView.context
@@ -50,14 +43,11 @@ class ProfilesApps private constructor(context: Context) {
     }
 
     private fun createView(inflater: LayoutInflater): View {
-        // Inflate the layout for this fragment
         binding = FragmentProfilesAppsBinding.inflate(inflater)
         return binding.root
     }
 
     fun onDestroyView() {
-        // Java nulled binding here; lateinit can't. The instance is dropped
-        // immediately after by both callers, so the view refs die with it.
     }
 
     inner class AppsGridAdapter(context: Context) : RecyclerView.Adapter<RecyclerViewHolder>() {
@@ -81,7 +71,6 @@ class ProfilesApps private constructor(context: Context) {
                 )
         }
 
-        // Inflate Layout
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerViewHolder {
             val itemBinding =
                 AppViewBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -91,30 +80,22 @@ class ProfilesApps private constructor(context: Context) {
         }
 
         override fun onBindViewHolder(holder: RecyclerViewHolder, position: Int) {
-            // Set the data to textview and imageview.
             val recyclerData = appsDataArrayList[position]
             holder.binding.appName.text = recyclerData.title
             holder.binding.appIcon.setImageDrawable(recyclerData.icon)
         }
 
         override fun getItemCount(): Int {
-            // this method returns the size of recyclerview
             return appsDataArrayList.size
         }
     }
 
-    // Kotlin forbids nested classes inside inner classes, so this lives at
-    // the outer class level (still file-private to ProfilesApps users).
     private class RecyclerData(
         val packageName: String,
         val title: CharSequence,
         val icon: Drawable
     )
 
-    // View Holder Class to handle Recycler View.
-    // Java had a non-static inner holder reaching into the adapter and the
-    // outer listener; Kotlin forbids inner types in their own class header,
-    // so it is a sibling class and the click target is passed as a lambda.
     class RecyclerViewHolder(
         val binding: AppViewBinding,
         private val onItemClicked: (Int) -> Unit

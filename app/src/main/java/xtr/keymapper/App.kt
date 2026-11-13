@@ -5,9 +5,10 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import org.lsposed.hiddenapibypass.HiddenApiBypass
+import xtr.keymapper.log.XtLogger
 
 /**
- * Main application class responsible for initializing global runtime exemptions.
+ * Main application class responsible for initializing global runtime exemptions and logging.
  */
 class App : Application() {
     /**
@@ -22,5 +23,14 @@ class App : Application() {
                 Log.w("App", "Failed to add hidden API exemptions", t)
             }
         }
+    }
+
+    /**
+     * Initializes logging upon application creation.
+     */
+    override fun onCreate() {
+        super.onCreate()
+        XtLogger.init(this)
+        XtLogger.info("App", "application process started (version ${BuildConfig.VERSION_NAME})")
     }
 }

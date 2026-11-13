@@ -42,19 +42,20 @@ import xtr.keymapper.editor.component.RightClick
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.keymap.KeymapProfiles
+import xtr.keymapper.log.XtLogger
 import xtr.keymapper.macro.MacroIdUtils
 import xtr.keymapper.macro.MacroStatus
 import xtr.keymapper.macro.MacroView
 import xtr.keymapper.server.RemoteServiceHelper
 
 class EditorUI(
-    private val context: Context, // Callback when the editor UI is hidden/closed
-    private val editorCallback: EditorCallback?, /* Name of the currently loaded keymap profile */
-    private val profileName: String?, private val startMode: Int,// Compose Dialog Management
+    private val context: Context,
+    private val editorCallback: EditorCallback?,
+    private val profileName: String?,
+    private val startMode: Int,
     private val importExportComposeView: ComposeView?
 ) : OnKeyEventListener.Stub() {
 
-    // When a keyboard key is pressed,
     // Receives keyboard input while editing a key binding
     private var keyInFocus: KeyInFocusListener? = null
 
@@ -62,7 +63,9 @@ class EditorUI(
 
     /* The active keymap config and a backup copy */
     private var profile: KeymapProfile? = null
-    private var profileBackup: KeymapProfile? = null
+    private var profileBackup: Set<String>? = null
+    private var loadedCoordinateWidth = 0
+    private var loadedCoordinateHeight = 0
 
     private var overlayOpen = false
 
@@ -245,10 +248,6 @@ class EditorUI(
         }
     }
 
-    /**
-     * For events received by view
-     * @return true if we consume the event
-     */
     fun onKey(keyCode: Int, event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN) return false
         val key = KeyUtils.resolveKeyName(keyCode, event) ?: return false
@@ -257,15 +256,12 @@ class EditorUI(
             return true
         } else if (keyInFocus != null) {
             keyInFocus!!.setText(key)
+            keyInFocus = null
             return true
         }
         return false
     }
 
-    /**
-     * For key events received from getevent running in remote process
-     * @param event A line of output from getevent -ql
-     */
     override fun onKeyEvent(event: String) {
         // e.g.: /dev/input/event3: EV_KEY KEY_X DOWN
         val inputEvent =
@@ -275,7 +271,6 @@ class EditorUI(
         val code = inputEvent[evIndex + 1]
         val action = inputEvent[evIndex + 2]
 
-        // Ignore non-key events and releases (UP)
         if (!code.contains("KEY_")) return
         if (action != "DOWN" && action != "00000001") return
 
@@ -284,19 +279,16 @@ class EditorUI(
         // Incoming calls are not guaranteed to be executed on the main thread
         mHandler.post {
             if (macroDialog != null) macroDialog!!.onKey(key)
-            else if (keyInFocus != null) keyInFocus!!.setText(key)
+            else if (keyInFocus != null) {
+                keyInFocus!!.setText(key)
+                keyInFocus = null
+            }
             settingsOverlay!!.onKey(key)
         }
     }
 
 
-    /**
-     * Called when a button in catalog has been clicked.
-     * 
-     * @param id the relevant id of the menu item for the card.
-     */
     fun onActionSelected(id: Int) {
-        // X y coordinates of center of container/screen
         val (realWidth, realHeight) = getRealScreenDimensions()
         val defaultX = if (keysContainerView.width > 0) keysContainerView.width / 2f else realWidth / 2f
         val defaultY = if (keysContainerView.height > 0) keysContainerView.height / 2f else realHeight / 2f
@@ -309,11 +301,9 @@ class EditorUI(
                 showMacroDialog()
             }
             R.id.reset -> {
-                profile = profileBackup
-                reloadKeymap()
+                reloadKeymap(KeymapProfiles.parse(profileBackup))
             }
             R.id.import_export -> {
-                // Show Compose-based UI from ImportExportDialog.kt
                 val configString = generateConfigString()
                 showImportExportDialog(configString)
             }
@@ -340,25 +330,19 @@ class EditorUI(
         }
     }
 
-    /**
-     * MacroStatus for displaying elapsed time
-     * Stop when receiving any keyboard input from User or stopwatch is clicked and show macro dialog finally
-     * MacroView for visualization
-     */
     private fun addMacro() {
+        // Stop a previous floating-key capture before macro recording consumes key events.
+        keyInFocus = null
         if (mService != null) {
             mainView!!.setFocusable(true)
         }
         val macroStatus = MacroStatus(context, settingsOverlay!!.binding.catalog)
         val macroView = MacroView(context) { macroView_: MacroView? ->
-            // Stop counting time in stopwatch
             macroStatus.stop()
 
-            // Remove the macro view
             keysContainerView.removeView(macroView_)
             macroView_!!.invalidate()
 
-            // Redirect keyboard input
             mainView!!.setOnKeyListener { _, keyCode, event ->
                 this@EditorUI.onKey(keyCode, event!!)
             }
@@ -371,13 +355,11 @@ class EditorUI(
         macroStatus.start()
 
         keysContainerView.addView(macroView)
-        // Redirect keyboard input
         mainView!!.setOnKeyListener { _, _, event -> macroView.onKey(event!!) }
 
         settingsOverlay.binding.catalog.setOnClickListener { macroView.clearCanvasAndFinish() }
     }
 
-    /** saves, unregisters listeners, removes views, and triggers Activity or service cleanup. */
     fun closeEditor() {
         if (startMode == START_EDITOR) saveKeymap()
         if (startMode != SHOW_KEYMAP_ONLY) {
@@ -395,8 +377,7 @@ class EditorUI(
                 if (keymapConfig.showControls) ShowKeymapService.start(context, profileName)
             }
         } else removeView(keysContainerView)
-        
-        // Cleanup Compose Dialog if it's open
+
         closeImportExportDialog()
     }
 
@@ -432,14 +413,8 @@ class EditorUI(
         view.invalidate()
     }
 
-    /**
-     * Loads the profile after attaching the editor view and saves/reloads it when the container
-     * changes size. See docs/editor-lifecycle.md for the launch flow and possible interaction with
-     * component position animations.
-     * note: the view is NOT already attached on every call path.
-     */
     fun loadKeymapAndObserveSizeChanges() {
-        profileBackup = KeymapProfiles(context).getProfile(profileName, false)
+        profileBackup = KeymapProfiles(context).sharedPref.getStringSet(profileName, null)?.toSet()
         keysContainerView.addOnLayoutChangeListener { _, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
             val oldWidth = oldRight - oldLeft
             val oldHeight = oldBottom - oldTop
@@ -448,30 +423,43 @@ class EditorUI(
             // Only reload if screen orientation genuinely flipped between portrait and landscape
             val orientationChanged = oldWidth > 0 && oldHeight > 0 && (oldWidth > oldHeight) != (newWidth > newHeight)
             if (orientationChanged && profile != null) {
-                reloadKeymap()
+                reloadKeymap(snapshotCurrentKeymap(oldWidth, oldHeight))
             }
         }
         keysContainerView.post { loadKeymap() }
     }
 
-    private fun reloadKeymap() {
-        keysContainerView.removeAllViews()
-        editorUiComponents.clear()
-        loadKeymap()
+    private fun snapshotCurrentKeymap(width: Int, height: Int): KeymapProfile {
+        val linesToParse = ArrayList<String?>()
+        editorUiComponents.forEach { linesToParse.add(it.toConfigLine()) }
+        MacroIdUtils.getLines(linesToParse, profile!!)
+        linesToParse.add("APPLICATION ${profile!!.packageName}")
+        if (!profile!!.disabled) linesToParse.add("ENABLED")
+        val coordinateWidth = loadedCoordinateWidth.takeIf { it > 0 } ?: width
+        val coordinateHeight = loadedCoordinateHeight.takeIf { it > 0 } ?: height
+        linesToParse.add("SCREENSIZE $coordinateWidth $coordinateHeight")
+        return KeymapProfiles.parse(linesToParse.filterNotNull().filter { it.isNotBlank() }.toSet())
     }
 
-    private fun loadKeymap() {
-        profile = KeymapProfiles(context).getProfile(profileName, false)
+    private fun reloadKeymap(profileToLoad: KeymapProfile? = null) {
+        keysContainerView.removeAllViews()
+        editorUiComponents.clear()
+        loadKeymap(profileToLoad)
+    }
+
+    private fun loadKeymap(profileToLoad: KeymapProfile? = null) {
+        profile = profileToLoad ?: KeymapProfiles(context).getProfile(profileName, false)
 
         val (realWidth, realHeight) = getRealScreenDimensions()
         val targetWidth = if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth.toFloat() else if (keysContainerView.width > 0) keysContainerView.width.toFloat() else realWidth.toFloat()
         val targetHeight = if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight.toFloat() else if (keysContainerView.height > 0) keysContainerView.height.toFloat() else realHeight.toFloat()
 
-        // Scale to current display size
         profile!!.scale(
             targetWidth,
             targetHeight
         )
+        loadedCoordinateWidth = profile!!.xRes.takeIf { it > 0 } ?: targetWidth.toInt()
+        loadedCoordinateHeight = profile!!.yRes.takeIf { it > 0 } ?: targetHeight.toInt()
 
         val editorUiComponentFactory = editorUiComponents.newFactory(mCallback, context)
 
@@ -502,11 +490,7 @@ class EditorUI(
     }
 
 
-    /**
-     * Persists positions read from the live editor component views. See
-     * docs/editor-lifecycle.md for the save call sites and the resize/animation timing risk.
-     */
-    private fun saveKeymap() {
+    private fun saveKeymap(widthOverride: Int? = null, heightOverride: Int? = null) {
         if (startMode == SHOW_KEYMAP_ONLY) return
 
         val linesToWrite = ArrayList<String?>()
@@ -515,13 +499,13 @@ class EditorUI(
 
         // Enabled macro ids
         MacroIdUtils.getLines(linesToWrite, profile!!)
+        linesToWrite.removeAll { it.isNullOrBlank() }
 
-        // Save Config
         val profiles = KeymapProfiles(context)
         val (realWidth, realHeight) = getRealScreenDimensions()
 
-        val saveWidth = if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth else if (keysContainerView.width > 0) keysContainerView.width else realWidth
-        val saveHeight = if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight else if (keysContainerView.height > 0) keysContainerView.height else realHeight
+        val saveWidth = widthOverride ?: if (keysContainerView.width > 0 && Math.abs(keysContainerView.width - realWidth) <= 200) realWidth else if (keysContainerView.width > 0) keysContainerView.width else realWidth
+        val saveHeight = heightOverride ?: if (keysContainerView.height > 0 && Math.abs(keysContainerView.height - realHeight) <= 200) realHeight else if (keysContainerView.height > 0) keysContainerView.height else realHeight
 
         profiles.saveProfile(
             profileName, linesToWrite, profile!!.packageName, !profile!!.disabled,
@@ -529,16 +513,12 @@ class EditorUI(
         )
     }
 
-    /**
-     * Generates a configuration string exactly matching the save format, 
-     * used for passing to the Compose Import/Export dialog.
-     */
     private fun generateConfigString(): String {
         val linesToWrite = ArrayList<String?>()
         editorUiComponents.forEach { linesToWrite.add(it.toConfigLine()) }
 
         MacroIdUtils.getLines(linesToWrite, profile!!)
-        return linesToWrite.joinToString("\n")
+        return linesToWrite.filterNotNull().filter { it.isNotBlank() }.joinToString("\n")
     }
 
     private fun handleImportAction() {
@@ -548,8 +528,33 @@ class EditorUI(
             val text = clipData.getItemAt(0).text?.toString()
             if (!text.isNullOrBlank()) {
                 val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                profile = KeymapProfiles.parse(lines)
-                reloadKeymap()
+                val importedProfile = try {
+                    KeymapProfiles.parse(lines)
+                } catch (e: RuntimeException) {
+                    XtLogger.warn("EditorUI", "Rejected malformed keymap clipboard data", e)
+                    android.widget.Toast.makeText(
+                        context,
+                        R.string.error_import_failed,
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
+                val currentProfile = profile ?: KeymapProfiles(context).getProfile(profileName, false)
+
+                val hasImportedApplication = lines.any {
+                    it.startsWith("APPLICATION ") && it.substringAfter("APPLICATION ").isNotBlank()
+                }
+                if (!hasImportedApplication) {
+                    importedProfile.packageName = currentProfile.packageName
+                }
+                if ("ENABLED" !in lines) {
+                    importedProfile.disabled = currentProfile.disabled
+                }
+                if (importedProfile.xRes <= 0) importedProfile.xRes = currentProfile.xRes
+                if (importedProfile.yRes <= 0) importedProfile.yRes = currentProfile.yRes
+
+                reloadKeymap(importedProfile)
+                saveKeymap()
                 android.widget.Toast.makeText(context, "Keymap imported from clipboard", android.widget.Toast.LENGTH_SHORT).show()
                 closeImportExportDialog()
                 return
@@ -601,8 +606,6 @@ class EditorUI(
                 ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             )
         } else {
-            // The Activity and Service editor both own a full-screen overlay root. Add the dialog
-            // to that same root instead of opening a second application-overlay window.
             val parent = mainView ?: error("Overlay editor has no root view")
             parent.addView(
                 composeView,
@@ -646,7 +649,6 @@ class EditorUI(
     }
 
     companion object {
-        /* Start modes */
         const val START_SETTINGS: Int = 0 // Shows full editor with catalog/menu
         const val START_EDITOR: Int = 1 // Shows editor without catalog (save/reset available)
         const val SHOW_KEYMAP_ONLY: Int = 2 // Used to show an overlay with active keymapping

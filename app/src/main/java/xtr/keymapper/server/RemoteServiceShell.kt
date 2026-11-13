@@ -2,6 +2,7 @@ package xtr.keymapper.server
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager
+import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
@@ -16,15 +17,29 @@ import android.os.SystemProperties
 import android.util.Log
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import xtr.keymapper.BuildConfig
+import xtr.keymapper.Environment
 import xtr.keymapper.activity.MainActivity
+import xtr.keymapper.log.DeviceTelemetry
+import xtr.keymapper.log.Role
+import xtr.keymapper.log.SessionStates
+import xtr.keymapper.log.XtLogger
 import java.lang.reflect.Method
 import kotlin.system.exitProcess
 
 object RemoteServiceShell {
+
+    private const val TAG = "xtmapper-server"
+
     @JvmStatic
     fun main(args: Array<String>) {
+        Environment.launchSignal = args.contains(Environment.CLI_ARG)
+        // Logging next so even startup failures below can be recorded (uid/role based storage).
+        XtLogger.initStandalone(Role.SHELL)
+        XtLogger.debug(TAG, "app_process server starting (args=${args.joinToString(",")})")
+
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             println("Unsupported Android version")
+            XtLogger.endSession("Unsupported Android version")
             return
         }
 
@@ -42,9 +57,19 @@ object RemoteServiceShell {
                     }
                     "--no-auto-launch" -> autoLaunchClientActivity = false
                     "--no-logcat" -> noLogcat = true
+                    // Already applied above.
+                    Environment.CLI_ARG -> {}
                     else -> println("Invalid argument: $arg")
                 }
             }
+            Runtime.getRuntime().addShutdownHook(
+                Thread {
+                    DeviceTelemetry.stop()
+                    if (!XtLogger.hasFatalEvent) {
+                        XtLogger.endSession(SessionStates.STATUS_UNEXPECTED_EXIT)
+                    }
+                }
+            )
             val fakeTouch = SystemProperties.get("persist.waydroid.fake_touch", null)
             if (fakeTouch != null && !fakeTouch.isBlank()) {
                 val ANSI_RED = "\u001B[31m"
@@ -57,11 +82,21 @@ object RemoteServiceShell {
             }
 
             // Do everything after logcat
-            RemoteService.loadLibraries()
+            try {
+                RemoteService.loadLibraries()
+            } catch (t: Throwable) {
+                // Native load failure kills the process in existing behavior;
+                // rethrowing preserves that while the failure is now logged.
+                XtLogger.fatal(TAG, "native library load failed", t)
+                throw t
+            }
+            XtLogger.info(TAG, "native libraries loaded")
 
-            val mService = RemoteService(getContext())
+            val mService = RemoteService(getContext(), initialIsWaylandClient = isWaylandClient)
             mService.startedFromShell = true
             mService.isWaylandClient = isWaylandClient
+
+            XtLogger.info(TAG, "server configuration ready wayland=${mService.isWaylandClient}")
 
             ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start()
             val settingsArgs = "settings put system alert_window_bypass_low_ram 1".split(Regex("\\s+"))
@@ -73,6 +108,7 @@ object RemoteServiceShell {
                     component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     putExtra("data", MainActivity.SHELL_INIT)
+                    putExtra(Environment.INTENT_EXTRA, Environment.launchSignal)
                     putExtras(Bundle().apply {
                         putBinder(MainActivity.SHELL_SERVICE_BINDER, mService.asBinder())
                     })
@@ -83,7 +119,8 @@ object RemoteServiceShell {
             }
 
         } catch (e: Exception) {
-            Log.e(RemoteService.TAG, e.message, e)
+            XtLogger.fatal(TAG, "server startup failed", e)
+            XtLogger.flush(2_000)
             exitProcess(1)
         }
         Looper.loop()
@@ -113,6 +150,10 @@ object RemoteServiceShell {
             Bundle::class.java.name,
             Int::class.javaPrimitiveType!!.name
         )
+        // Android 14+ can share the launcher identity so MainActivity can verify this shell launch.
+        val options = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ActivityOptions.makeBasic().setShareIdentityEnabled(true).toBundle()
+        } else null
         val values = listOf(
             null,
             "com.android.shell",
@@ -122,7 +163,7 @@ object RemoteServiceShell {
             null,
             -1,
             0,
-            null,
+            options,
             currentUserId
         )
 
@@ -178,7 +219,7 @@ object RemoteServiceShell {
         try {
             context = systemContext.createPackageContext(BuildConfig.APPLICATION_ID, flags)
         } catch (e: PackageManager.NameNotFoundException) {
-            Log.e(RemoteService.TAG, e.message, e)
+            XtLogger.error(RemoteService.TAG, "Failed to create package context for the shell process", e)
         }
         return getContextImpl(context!!)
     }

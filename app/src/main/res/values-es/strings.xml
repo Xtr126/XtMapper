@@ -47,9 +47,12 @@
     <string name="yes">@android:string/yes</string>
     <string name="no">@android:string/no</string>
     <string name="swipe_delay_ms">Retraso de deslizamiento %d milisegundos</string>
-    <string name="shift_transition_ms">Transición de cambio: %d ms</string>
-    <string name="shift_transition_title">Velocidad de transición</string>
+    <string name="shift_transition_ms">Transición de la tecla Mayús: %d ms</string>
+    <string name="shift_transition_title">Velocidad de transición de la tecla Mayús</string>
     <string name="use_global_default">Predeterminado global (%d ms)</string>
+    <string name="shift_transition_instant">Instantáneo (0 ms)</string>
+    <string name="shift_transition_ms_value">%d ms</string>
+    <string name="shift_transition_changed">Transición de la tecla Mayús: %1$s</string>
     <string name="profile_name">Nombre del perfil</string>
     <string name="root_not_found_title">Acceso raíz no encontrado</string>
     <string name="root_not_found_message">Se requiere acceso raíz para que el remapeador de teclas funcione. \n Otorgue permisos de superusuario a XtMapper desde la aplicación del administrador de KernelSU</string>
@@ -70,7 +73,7 @@
     <string name="crosshair">Retícula</string>
     <string name="left_click">Clic izquierdo</string>
     <string name="swipe_key">Tecla de deslizamiento</string>
-    <string name="shift_key">Tecla de cambio</string>
+    <string name="shift_key">Tecla Mayús</string>
     <string name="add_key">Agregar tecla</string>
     <string name="save">Guardar</string>
 
@@ -117,7 +120,7 @@
     <string name="press_any_key_to_stop_recording">Presione cualquier tecla para detener la grabación…</string>
     <string name="advanced">Avanzado</string>
     <string name="shizuku_not_running_title">Shizuku no se está ejecutando</string>
-    <string name="shizuku_not_running_message"/>
+    <string name="shizuku_not_running_message">Inicie el servicio Shizuku y vuelva a XtMapper.</string>
     <string name="edit">Editar</string>
     <string name="show_controls_on_screen">Mostrar controles en pantalla</string>
     <string name="select_a_display">Seleccionar una pantalla</string>
@@ -134,6 +137,8 @@
     <string name="action_retry">Reintentar</string>
     <string name="msg_backup_saved">Copia de seguridad guardada con éxito</string>
     <string name="error_save_failed">Error al guardar</string>
+    <string name="error_import_failed">Error al importar</string>
+    <string name="unverified_diagnostic_title">Texto de diagnóstico no verificado</string>
     <string name="msg_profiles_imported">Perfiles importados con éxito</string>
     <string name="msg_all_profiles_exist" tools:ignore="MissingTranslation">Todos los perfiles ya existen, no se importó nada</string>
     <string name="share">Compartir</string>
@@ -144,4 +149,16 @@
     <string name="input_mode">Modo de entrada</string>
     <string name="input_mode_root">Root</string>
     <string name="input_mode_shizuku">Shizuku (ADB)</string>
+    <string name="shizuku_not_installed_title">Shizuku no está instalado</string>
+    <string name="shizuku_not_installed_message">Instale la aplicación Shizuku antes de seleccionar el modo de entrada Shizuku.</string>
+    <string name="test_input_service_inactive">Inicie el servicio de asignación de teclas antes de probar la entrada.</string>
+    <string name="test_input_root_unavailable">El acceso root no está disponible. Conceda acceso root a XtMapper antes de probar la entrada.</string>
+    <string name="test_input_ready">El modo %1$s está activo. Conecte un teclado o ratón para probarlo.</string>
+    <string name="shizuku_install_required">Instale Shizuku para usar este modo de entrada</string>
+    <string name="shizuku_start_required">Inicie Shizuku para usar este modo de entrada</string>
+    <string name="input_mode_changed">Modo de entrada: %1$s</string>
+    <string name="block_keyboard_input">Bloquear la entrada directa del teclado</string>
+    <string name="block_keyboard">Bloquear teclado</string>
+    <string name="keyboard_blocked">Entrada del teclado bloqueada</string>
+    <string name="keyboard_unblocked">Entrada del teclado desbloqueada</string>
 </resources>

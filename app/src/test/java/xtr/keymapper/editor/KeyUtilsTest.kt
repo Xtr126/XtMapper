@@ -3,6 +3,7 @@ package xtr.keymapper.editor
 import android.view.KeyEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class KeyUtilsTest {
@@ -52,6 +53,15 @@ class KeyUtilsTest {
         assertEquals("MINUS", KeyUtils.resolveKeyName(KeyEvent.KEYCODE_MINUS))
         assertEquals("EQUAL", KeyUtils.resolveKeyName(KeyEvent.KEYCODE_EQUALS))
         assertEquals("SLASH", KeyUtils.resolveKeyName(KeyEvent.KEYCODE_SLASH))
+    }
+
+    @Test
+    fun unsupportedAndSystemKeysAreNotCapturedAsMappingLabels() {
+        assertNull(KeyUtils.resolveKeyName(KeyEvent.KEYCODE_BACK))
+        assertNull(KeyUtils.resolveKeyName(KeyEvent.KEYCODE_VOLUME_UP))
+        assertNull(KeyUtils.resolveKeyName(KeyEvent.KEYCODE_META_LEFT))
+        assertNull(KeyUtils.resolveKeyName(KeyEvent.KEYCODE_NUM_LOCK))
+        assertNull(KeyUtils.resolveKeyName(KeyEvent.KEYCODE_SCROLL_LOCK))
     }
 
     @Test

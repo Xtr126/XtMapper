@@ -1,0 +1,279 @@
+package xtr.keymapper.log
+
+import java.io.Closeable
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
+
+enum class BatchWriteOutcome { PROCESSED, UNAVAILABLE, UNCERTAIN }
+
+class SessionLogWriter(
+    override val store: LogStore,
+    val role: String?,
+    private val config: LoggingConfig,
+    private val clock: Clock,
+    private val zone: ZoneId,
+    override val sessionId: String,
+    private val onEvent: (String) -> Unit = {},
+) : SessionWriter {
+
+    private var sessionStart: Instant? = null
+    private var sessionStartDay: String? = null
+    private var previousDisposition = SessionState.DISPOSITION_FIRST
+    private var headerMetadata = SessionMetadata()
+
+    private var currentDay: String? = null
+    private var currentWriter: LogFileWriter? = null
+    @Volatile private var currentFileName: String? = null
+    private var exhaustedDay: String? = null
+
+    @Volatile
+    override var unavailable = false
+        private set
+
+    override fun currentlyOpenName(): String? = currentFileName
+
+    override val recordsDroppedByDayLimit = AtomicInteger(0)
+
+    override fun previousDisposition(): String = SessionState.previousDisposition(store, role)
+
+    private var sessionEnded = false
+    private var dayLimitReported = false
+    private var closed = false
+
+    override fun configure(previousDisposition: String, metadata: SessionMetadata, sessionStart: Instant) {
+        this.previousDisposition = previousDisposition
+        this.headerMetadata = metadata
+        this.sessionStart = sessionStart
+        this.sessionStartDay = dayOf(sessionStart)
+    }
+
+    override fun writeSessionStartMarker() {
+        if (closed || unavailable || sessionEnded || sessionStartDay == null) return
+        try {
+            val day = sessionStartDay!!
+            // START is a bounded session marker, so it may use the day's final part.
+            writerFor(day, requireNotNull(sessionStart), allowFullPart = true)
+            writeBlock(
+                SessionMarkers.block(
+                    SessionMarkers.startLine(sessionId, sessionStart!!, zone, headerMetadata, previousDisposition)
+                )
+            )
+            if (exhaustedDay == day) closeCurrent()
+        } catch (e: Exception) {
+            sinkDown(e)
+        }
+    }
+
+    override fun write(records: List<LogRecord>): BatchWriteOutcome {
+        if (closed || sessionEnded || unavailable) return BatchWriteOutcome.UNAVAILABLE
+        for (record in records) {
+            try {
+                writeOne(record)
+            } catch (e: Throwable) {
+                sinkDown(e)
+                return BatchWriteOutcome.UNCERTAIN
+            }
+        }
+        return BatchWriteOutcome.PROCESSED
+    }
+
+    override fun endSession(
+        endInstant: Instant, durationNanos: Long, status: String, droppedRecords: Int,
+        uncertainRecords: Int,
+    ) {
+        if (closed || unavailable || sessionEnded) return
+        try {
+            writerFor(dayOf(endInstant), endInstant, allowFullPart = true)
+            sessionEnded = true
+            writeBlock(
+                SessionMarkers.block(
+                    SessionMarkers.endLine(sessionId, endInstant, zone, durationNanos, status, droppedRecords, uncertainRecords)
+                )
+            )
+        } catch (e: Exception) {
+            sinkDown(e)
+        } finally {
+            closeCurrent()
+        }
+    }
+
+    override fun close() {
+        closed = true
+        closeCurrent()
+    }
+
+    private fun writeOne(record: LogRecord) {
+        val bytes = chunk(RecordFormatter.format(record, zone))
+        val day = dayOf(record.time)
+        // Delayed records route by their own date while its day file exists; a pruned or
+        // never-written older day never resurrects — the record lands in the anchor day
+        // behind an explicit late marker.
+        val anchorDay = currentDay ?: sessionStartDay
+        if (anchorDay != null && day < anchorDay) {
+            val ownFile = store.listFiles().any {
+                LogFileNames.parse(it.name)?.let { e -> e.date == day && e.role == role } ?: false
+            }
+            if (!ownFile) {
+                val lateBytes = chunk(
+                    SessionMarkers.block(SessionMarkers.lateLine(sessionId, record.time, day, zone)),
+                )
+                writerFor(anchorDay, record.time, requiredBytes = lateBytes.size + bytes.size)
+                val writer = currentWriter ?: run { recordsDroppedByDayLimit.incrementAndGet(); return }
+                writer.write(lateBytes)
+                writer.write(bytes)
+                return
+            }
+        }
+        writerFor(day, record.time, requiredBytes = bytes.size)
+        val writer = currentWriter ?: run {
+            recordsDroppedByDayLimit.incrementAndGet()
+            return
+        }
+        writer.write(bytes)
+    }
+
+    private fun writerFor(
+        day: String,
+        atInstant: Instant,
+        allowFullPart: Boolean = false,
+        requiredBytes: Int = 0,
+    ) {
+        val isDayChange = currentDay != day
+        val continuedBody: String? =
+            if (isDayChange && sessionStartDay != null && !sessionEnded &&
+                day != sessionStartDay && day !in continuedDays
+            ) {
+                SessionMarkers.block(
+                    SessionMarkers.continuedLine(sessionId, requireNotNull(sessionStart), atInstant, zone, headerMetadata)
+                )
+            } else {
+                null
+            }
+        val continuationBytes = continuedBody?.let { chunk(it).size } ?: 0
+        val writer: LogFileWriter?
+        if (!isDayChange) {
+            if (exhaustedDay == day && !allowFullPart) return
+            val active = currentWriter
+            if (active != null && active.writtenBytes + requiredBytes <= config.maxFileBytes) return
+            closeCurrent()
+            writer = activeWriterFor(day, allowFullPart, requiredBytes)
+        } else {
+            closeCurrent()
+            currentDay = day
+            exhaustedDay = null
+            writer = activeWriterFor(day, allowFullPart, requiredBytes + continuationBytes)
+        }
+        currentWriter = writer
+        if (writer != null && continuedBody != null) {
+            continuedDays.add(day)
+            writer.write(chunk(continuedBody))
+        }
+    }
+
+    private val continuedDays = HashSet<String>()
+
+    private fun activeWriterFor(
+        day: String,
+        allowFullPart: Boolean = false,
+        requiredBytes: Int = 0,
+    ): LogFileWriter? {
+        val maxExistingPart = store.listFiles()
+            .mapNotNull { LogFileNames.parse(it.name) }
+            .filter { it.date == day && it.role == role }
+            .maxOfOrNull { it.part }
+        if (maxExistingPart == null) {
+            val name = LogFileNames.dailyName(day, role)
+            currentFileName = name
+            return store.openAppendWriter(name)
+        }
+        // partName(part == 1) resolves to the base daily name.
+        val highestName = LogFileNames.partName(day, role, maxExistingPart)
+        val highest = store.openAppendWriter(highestName)
+        if (highest.writtenBytes + requiredBytes <= config.maxFileBytes) {
+            currentFileName = highestName
+            return highest
+        }
+        highest.close()
+        val nextPart = maxExistingPart + 1
+        if (nextPart > config.maxPartsPerDay) {
+            if (!dayLimitReported) {
+                dayLimitReported = true
+                onEvent(
+                    "XtLogger: daily part limit reached for $day (${config.maxPartsPerDay} x " +
+                        "${config.maxFileBytes / (1 shl 20)}MiB); further records dropped today"
+                )
+            }
+            exhaustedDay = day
+            if (!allowFullPart) return null
+            currentFileName = highestName
+            return store.openAppendWriter(highestName)
+        }
+        val nextName = LogFileNames.partName(day, role, nextPart)
+        currentFileName = nextName
+        return store.openAppendWriter(nextName)
+    }
+
+    private fun writeBlock(body: String) {
+        val writer = currentWriter ?: throw IllegalStateException("no active writer")
+        writer.write(chunk(body))
+    }
+
+    private fun chunk(text: String): ByteArray = (text + "\n").toByteArray(Charsets.UTF_8)
+
+    private fun closeCurrent() {
+        try { currentWriter?.close() } catch (e: Exception) { /* best effort */ }
+        currentWriter = null
+        currentFileName = null
+    }
+
+    private fun sinkDown(e: Throwable) {
+        unavailable = true
+        runCatching {
+            onEvent(
+                "XtLogger: file sink unavailable for session $sessionId " +
+                    "(${e.javaClass.simpleName}${e.message?.let { ": $it" } ?: ""}); attempted batch is unconfirmed"
+            )
+        }
+        closeCurrent()
+    }
+
+    private fun dayOf(instant: Instant): String {
+        val date = instant.atZone(zone).toLocalDate()
+        return "%04d-%02d-%02d".format(Locale.ROOT, date.year, date.monthValue, date.dayOfMonth)
+    }
+}
+
+object SessionState {
+
+    const val DISPOSITION_FIRST = "First session"
+    const val DISPOSITION_CLOSED = "Closed cleanly"
+    const val DISPOSITION_UNCLEAN = "Did not close cleanly"
+    const val DISPOSITION_UNKNOWN = "Unknown (log files could not be inspected)"
+
+    const val TAIL_LINES = Int.MAX_VALUE
+
+    fun previousDisposition(store: LogStore, role: String?): String {
+        val files = store.listFiles()
+            .mapNotNull { LogFileNames.parse(it.name) }
+            .filter { it.role == role }
+            .sortedDescending()
+        var sawFile = false
+        for (file in files) {
+            sawFile = true
+            val tail = try {
+                store.readTail(file.baseName, TAIL_LINES)
+            } catch (e: Exception) {
+                continue
+            }
+            val marker = tail.lastOrNull { SessionMarkers.markerTypeOf(it) != null } ?: continue
+            return when (SessionMarkers.markerTypeOf(marker)) {
+                SessionMarkers.END -> DISPOSITION_CLOSED
+                else -> DISPOSITION_UNCLEAN
+            }
+        }
+        return if (sawFile) DISPOSITION_UNKNOWN else DISPOSITION_FIRST
+    }
+}
