@@ -42,6 +42,7 @@ import xtr.keymapper.keymap.KeymapProfiles
 import xtr.keymapper.log.XtLogger
 import xtr.keymapper.profiles.ProfileSelector
 import xtr.keymapper.profiles.ProfilesApps
+import xtr.keymapper.ui.DialogWindowMode
 import xtr.keymapper.server.RemoteServiceHelper
 
 class MainActivity : AppCompatActivity() {
@@ -509,7 +510,11 @@ class MainActivity : AppCompatActivity() {
     fun changeProfileAppFromCompose(profileName: String, onComplete: Runnable?) {
         val context: Context = this
         val builder = MaterialAlertDialogBuilder(context)
-        ProfilesApps.asyncLoadAppsAndThen(context, builder) { p, adapter, loadingDialog ->
+        ProfilesApps.asyncLoadAppsAndThen(
+            context,
+            builder,
+            DialogWindowMode.ACTIVITY
+        ) { p, adapter, loadingDialog ->
             p.binding.appsGrid.adapter = adapter
             loadingDialog.dismiss()
 

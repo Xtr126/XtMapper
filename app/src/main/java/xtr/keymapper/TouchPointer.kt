@@ -1,6 +1,5 @@
 package xtr.keymapper
 
-import android.app.Dialog
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -18,7 +17,6 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.RemoteException
-import android.provider.Settings
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.Display
@@ -27,6 +25,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.annotation.UiThread
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -41,6 +40,8 @@ import xtr.keymapper.keymap.KeymapProfiles
 import xtr.keymapper.profiles.ProfileSelector
 import xtr.keymapper.server.RemoteServiceHelper
 import xtr.keymapper.service.KeymapperTileService
+import xtr.keymapper.ui.DialogWindowMode
+import xtr.keymapper.ui.showDialog
 
 class TouchPointer : Service() {
     private val binder: IBinder = TouchPointerBinder()
@@ -57,7 +58,7 @@ class TouchPointer : Service() {
     private var lastDisplayHeight = 0
     private var lastDisplayRotation = -1
     private var connectionGeneration = 0
-    private var disabledProfileDialog: Dialog? = null
+    private var disabledProfileDialog: AlertDialog? = null
 
 
     interface MainActivityCallback {
@@ -284,16 +285,14 @@ class TouchPointer : Service() {
                     val profileName = selectedProfile.orEmpty()
                     mHandler.post {
                         val activationMessage = getString(R.string.profile_disabled_activation, profileName)
-                        if (Settings.canDrawOverlays(this)) {
-                            // Material dialogs need an AppCompat theme on the selected display's context.
-                            val dialogContext = ContextThemeWrapper(displayContext, R.style.Theme_XtMapper)
-                            val builder = MaterialAlertDialogBuilder(dialogContext)
-                                .setTitle(R.string.profile_disabled_title)
-                                .setMessage(activationMessage)
-                                .setPositiveButton(R.string.ok, null)
-                            disabledProfileDialog?.dismiss()
-                            disabledProfileDialog = ProfileSelector.showDialog(builder)
-                        } else {
+                        val dialogContext = ContextThemeWrapper(displayContext, R.style.Theme_XtMapper)
+                        val builder = MaterialAlertDialogBuilder(dialogContext)
+                            .setTitle(R.string.profile_disabled_title)
+                            .setMessage(activationMessage)
+                            .setPositiveButton(R.string.ok, null)
+                        disabledProfileDialog?.dismiss()
+                        disabledProfileDialog = showDialog(builder, DialogWindowMode.OVERLAY)
+                        if (disabledProfileDialog == null) {
                             Toast.makeText(this, activationMessage, Toast.LENGTH_LONG).show()
                         }
                     }
@@ -436,7 +435,8 @@ class TouchPointer : Service() {
                         this@TouchPointer.selectedProfile = profile
                         connectRemoteService(keymapProfiles.getProfile(profile, true))
                     },
-                    application
+                    application,
+                    DialogWindowMode.OVERLAY
                 )
             }
         }
@@ -592,12 +592,14 @@ class TouchPointer : Service() {
                 mHandler.post {
                     ProfileSelector.showEnableProfileDialog(
                         context,
-                        packageName
+                        packageName,
+                        DialogWindowMode.OVERLAY
                     ) { enabled: Boolean ->
                         ProfileSelector.createNewProfileForApp(
                             context,
                             packageName,
-                            enabled
+                            enabled,
+                            DialogWindowMode.OVERLAY
                         ) { profile: String? ->
                             launchProfile(profile)
                         }
@@ -626,7 +628,7 @@ class TouchPointer : Service() {
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
-                    }, packageName)
+                    }, packageName, DialogWindowMode.OVERLAY)
                 }
             }
         }
