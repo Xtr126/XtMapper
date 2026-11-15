@@ -284,6 +284,9 @@ class TouchPointer : Service() {
                     Log.w("xtmapper-startup", "connectRemoteService: profile disabled; startServer skipped")
                     val profileName = selectedProfile.orEmpty()
                     mHandler.post {
+                        if (generation != connectionGeneration || !isRunning || activeInstance !== this) {
+                            return@post
+                        }
                         val activationMessage = getString(R.string.profile_disabled_activation, profileName)
                         val dialogContext = ContextThemeWrapper(displayContext, R.style.Theme_XtMapper)
                         val builder = MaterialAlertDialogBuilder(dialogContext)
@@ -291,7 +294,13 @@ class TouchPointer : Service() {
                             .setMessage(activationMessage)
                             .setPositiveButton(R.string.ok, null)
                         disabledProfileDialog?.dismiss()
-                        disabledProfileDialog = showDialog(builder, DialogWindowMode.OVERLAY)
+                        try {
+                            disabledProfileDialog = showDialog(builder, DialogWindowMode.OVERLAY)
+                        } catch (_: WindowManager.InvalidDisplayException) {
+                            disabledProfileDialog = null
+                            Toast.makeText(this, activationMessage, Toast.LENGTH_LONG).show()
+                            return@post
+                        }
                         if (disabledProfileDialog == null) {
                             Toast.makeText(this, activationMessage, Toast.LENGTH_LONG).show()
                         }
