@@ -1,5 +1,6 @@
 package xtr.keymapper
 
+import android.app.Dialog
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -17,6 +18,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.RemoteException
+import android.provider.Settings
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.Display
@@ -55,6 +57,7 @@ class TouchPointer : Service() {
     private var lastDisplayHeight = 0
     private var lastDisplayRotation = -1
     private var connectionGeneration = 0
+    private var disabledProfileDialog: Dialog? = null
 
 
     interface MainActivityCallback {
@@ -280,11 +283,19 @@ class TouchPointer : Service() {
                     Log.w("xtmapper-startup", "connectRemoteService: profile disabled; startServer skipped")
                     val profileName = selectedProfile.orEmpty()
                     mHandler.post {
-                        val dialog = MaterialAlertDialogBuilder(this)
-                            .setTitle(R.string.profile_disabled_title)
-                            .setMessage(getString(R.string.profile_disabled_activation, profileName))
-                            .setPositiveButton(R.string.ok, null)
-                        ProfileSelector.showDialog(dialog)
+                        val activationMessage = getString(R.string.profile_disabled_activation, profileName)
+                        if (Settings.canDrawOverlays(this)) {
+                            // Material dialogs need an AppCompat theme on the selected display's context.
+                            val dialogContext = ContextThemeWrapper(displayContext, R.style.Theme_XtMapper)
+                            val builder = MaterialAlertDialogBuilder(dialogContext)
+                                .setTitle(R.string.profile_disabled_title)
+                                .setMessage(activationMessage)
+                                .setPositiveButton(R.string.ok, null)
+                            disabledProfileDialog?.dismiss()
+                            disabledProfileDialog = ProfileSelector.showDialog(builder)
+                        } else {
+                            Toast.makeText(this, activationMessage, Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
                 if (keymapConfig.showControls) {
@@ -367,6 +378,8 @@ class TouchPointer : Service() {
     }
 
     override fun onDestroy() {
+        disabledProfileDialog?.dismiss()
+        disabledProfileDialog = null
         removeCursorView()
         stopKeymapper()
         activityCallback = null
