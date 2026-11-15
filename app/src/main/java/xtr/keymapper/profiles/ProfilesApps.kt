@@ -16,6 +16,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import xtr.keymapper.R
 import xtr.keymapper.databinding.AppViewBinding
 import xtr.keymapper.databinding.FragmentProfilesAppsBinding
+import xtr.keymapper.ui.DialogWindowMode
+import xtr.keymapper.ui.showDialog
 
 class ProfilesApps private constructor(context: Context) {
     lateinit var binding: FragmentProfilesAppsBinding
@@ -115,10 +117,11 @@ class ProfilesApps private constructor(context: Context) {
         fun asyncLoadAppsAndThen(
             context: Context,
             builder: MaterialAlertDialogBuilder,
+            windowMode: DialogWindowMode,
             onAppsLoadedListener: OnAppsLoadedListener
         ) {
             builder.setView(R.layout.loading)
-            val dialog = ProfileSelector.showDialog(builder)
+            val dialog = showDialog(builder, windowMode) ?: return
             val mProfilesApps = ProfilesApps(context)
             mProfilesApps.asyncLoadApps(onAppsLoadedListener, dialog)
         }
