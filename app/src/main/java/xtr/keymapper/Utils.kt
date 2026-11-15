@@ -35,6 +35,13 @@ object Utils {
         return sh
     }
 
+    /**
+     * Builds WindowManager.LayoutParams for full-screen pass-through pointer overlay windows,
+     * applying flags and capping alpha to 0.8 on Android 12+ to satisfy untrusted touch limits.
+     *
+     * @param type The window type (e.g. TYPE_APPLICATION_OVERLAY or TYPE_SECURE_SYSTEM_OVERLAY).
+     * @return The configured LayoutParams.
+     */
     @JvmStatic
     fun getPointerLayoutParams(type: Int): WindowManager.LayoutParams {
         val mParams = WindowManager.LayoutParams(
@@ -50,12 +57,26 @@ object Utils {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             mParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+ drops untrusted touches passing through non-touchable overlay
+            // windows whose opacity exceeds 0.8. Cap alpha to 0.8 to comply with the platform limit.
+            mParams.alpha = 0.8f
+        }
         return mParams
     }
 
+    /**
+     * Configures the provided overlay view with an empty touchable region,
+     * preventing Android 12+ InputDispatcher from dropping untrusted touches.
+     *
+     * @param view The overlay View to configure.
+     */
     @JvmStatic
     fun applyEmptyTouchableRegion(view: android.view.View?) {
         if (view == null) return
+        if (view.getTag(R.id.tag_empty_touchable_region) == true) return
+        view.setTag(R.id.tag_empty_touchable_region, true)
+
         val listener = object : android.view.View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: android.view.View) {
                 registerEmptyTouchableRegion(v)
@@ -68,30 +89,64 @@ object Utils {
         }
     }
 
-    private fun registerEmptyTouchableRegion(view: android.view.View) {
-        try {
-            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-            val infoClass = Class.forName("android.view.ViewTreeObserver\$InternalInsetsInfo")
-            val touchableRegionField = infoClass.getField("touchableRegion")
-            val setTouchableInsetsMethod = infoClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType)
-            val touchableInsetsRegionField = infoClass.getField("TOUCHABLE_INSETS_REGION")
-            val touchableInsetsRegion = touchableInsetsRegionField.getInt(null)
-
-            val listener = java.lang.reflect.Proxy.newProxyInstance(
-                listenerClass.classLoader,
-                arrayOf(listenerClass)
-            ) { _, method, args ->
-                if ("onComputeInternalInsets" == method.name && args != null && args.isNotEmpty()) {
-                    val info = args[0]
-                    val region = touchableRegionField.get(info) as? android.graphics.Region
-                    region?.setEmpty()
-                    setTouchableInsetsMethod.invoke(info, touchableInsetsRegion)
+    private class InsetsHelper private constructor(
+        val listenerClass: Class<*>,
+        val touchableRegionField: java.lang.reflect.Field,
+        val setTouchableInsetsMethod: java.lang.reflect.Method,
+        val touchableInsetsRegion: Int,
+        val addListenerMethod: java.lang.reflect.Method
+    ) {
+        companion object {
+            val instance: InsetsHelper? by lazy {
+                try {
+                    val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+                    val infoClass = Class.forName("android.view.ViewTreeObserver\$InternalInsetsInfo")
+                    val touchableRegionField = infoClass.getField("touchableRegion")
+                    val setTouchableInsetsMethod = infoClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType)
+                    val touchableInsetsRegionField = infoClass.getField("TOUCHABLE_INSETS_REGION")
+                    val touchableInsetsRegion = touchableInsetsRegionField.getInt(null)
+                    val addListenerMethod = android.view.ViewTreeObserver::class.java.getMethod("addOnComputeInternalInsetsListener", listenerClass)
+                    InsetsHelper(listenerClass, touchableRegionField, setTouchableInsetsMethod, touchableInsetsRegion, addListenerMethod)
+                } catch (t: Throwable) {
+                    android.util.Log.w("Utils", "Failed to initialize InsetsHelper", t)
+                    null
                 }
-                null
+            }
+        }
+    }
+
+    /**
+     * Reflectively registers an OnComputeInternalInsetsListener on the view's ViewTreeObserver
+     * to empty the touchableRegion and set TOUCHABLE_INSETS_REGION.
+     */
+    private fun registerEmptyTouchableRegion(view: android.view.View) {
+        val observer = view.viewTreeObserver
+        if (observer == null || !observer.isAlive) return
+        val helper = InsetsHelper.instance ?: return
+        try {
+            val listener = java.lang.reflect.Proxy.newProxyInstance(
+                helper.listenerClass.classLoader,
+                arrayOf(helper.listenerClass)
+            ) { proxy, method, args ->
+                when (method.name) {
+                    "onComputeInternalInsets" -> {
+                        val info = args?.getOrNull(0)
+                        if (info != null) {
+                            val region = helper.touchableRegionField.get(info) as? android.graphics.Region
+                            region?.setEmpty()
+                            helper.setTouchableInsetsMethod.invoke(info, helper.touchableInsetsRegion)
+                        }
+                        null
+                    }
+                    "equals" -> proxy === args?.getOrNull(0)
+                    "hashCode" -> System.identityHashCode(proxy)
+                    "toString" -> "EmptyTouchableRegionListener"
+                    else -> null
+                }
             }
 
-            val addListenerMethod = android.view.ViewTreeObserver::class.java.getMethod("addOnComputeInternalInsetsListener", listenerClass)
-            addListenerMethod.invoke(view.viewTreeObserver, listener)
+            helper.addListenerMethod.invoke(observer, listener)
+            view.post { view.requestLayout() }
         } catch (t: Throwable) {
             android.util.Log.w("Utils", "Failed to register empty touchable region", t)
         }

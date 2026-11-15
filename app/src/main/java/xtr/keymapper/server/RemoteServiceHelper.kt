@@ -194,11 +194,12 @@ object RemoteServiceHelper {
     /** Cache a shell Binder only after Android has verified the launching UID. */
     @JvmStatic
     fun setAuthenticatedShellServiceBinder(binder: IBinder?) {
-        synchronized(backendLock) {
+        val (requestId, expectedBackendGeneration) = synchronized(backendLock) {
             shellAuthenticationRequestId++
             shellServiceAuthenticationPending = false
-            cacheShellServiceBinderLocked(binder)
+            shellAuthenticationRequestId to backendGeneration
         }
+        validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, requirePending = false)
     }
 
     /**
@@ -218,17 +219,7 @@ object RemoteServiceHelper {
 
         val challenge = SecureRandom().nextLong()
         val authenticator = ShellServiceAuthenticator(challenge, Process.SHELL_UID) {
-            synchronized(backendLock) {
-                if (shellAuthenticationRequestId != requestId ||
-                    backendGeneration != expectedBackendGeneration ||
-                    forceSelectedBackend ||
-                    !shellServiceAuthenticationPending ||
-                    !binder.isBinderAlive
-                ) return@synchronized
-
-                cacheShellServiceBinderLocked(binder)
-                shellServiceAuthenticationPending = false
-            }
+            validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, requirePending = true)
         }
         val callback = object : IShellAuthenticationCallback.Stub() {
             override fun onShellServiceAuthenticated(challengeResponse: Long) {
@@ -265,9 +256,53 @@ object RemoteServiceHelper {
         }
     }
 
-    private fun cacheShellServiceBinderLocked(binder: IBinder?) {
+   /**
+    * Caches the shell service Binder after verifying that the daemon's protocol version
+    * matches the current application build. Mismatched or outdated daemons are rejected.
+    */
+    private fun validateShellServiceBinderAsync(
+        binder: IBinder?,
+        requestId: Long,
+        expectedBackendGeneration: Long,
+        requirePending: Boolean,
+    ) {
         if (binder == null || !binder.isBinderAlive) return
-        val remote = IRemoteService.Stub.asInterface(binder) ?: return
+        Thread({
+            val remote = IRemoteService.Stub.asInterface(binder) ?: return@Thread
+            val daemonVersion = try {
+                remote.version
+            } catch (e: Exception) {
+                Log.w("xtmapper-startup", "Failed to query shell daemon version; daemon is likely from an older incompatible build", e)
+                -1
+            }
+            var rejectDaemon = false
+            synchronized(backendLock) {
+                if (shellAuthenticationRequestId != requestId ||
+                    backendGeneration != expectedBackendGeneration ||
+                    forceSelectedBackend ||
+                    (requirePending && !shellServiceAuthenticationPending) ||
+                    !binder.isBinderAlive
+                ) return@synchronized
+
+                if (daemonVersion == BuildConfig.VERSION_CODE) {
+                    cacheShellServiceBinderLocked(remote, daemonVersion)
+                } else {
+                    Log.w(
+                        "xtmapper-startup",
+                        "Rejected shell daemon due to version mismatch: daemon=$daemonVersion, app=${BuildConfig.VERSION_CODE}"
+                    )
+                    rejectDaemon = true
+                }
+                if (requirePending) shellServiceAuthenticationPending = false
+            }
+            if (rejectDaemon) runCatching { remote.destroy() }
+        }, "xtmapper-shell-version-check").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    private fun cacheShellServiceBinderLocked(remote: IRemoteService, daemonVersion: Int) {
         val remoteBinder = remote.asBinder()
         shellServiceBinder = remoteBinder
         service = remote
@@ -282,7 +317,7 @@ object RemoteServiceHelper {
             if (shellServiceBinder == remoteBinder) shellServiceBinder = null
             if (service?.asBinder() == remoteBinder) service = null
         }
-        Log.i("xtmapper-startup", "authenticated shell Binder cached: alive=${remoteBinder.isBinderAlive}")
+        Log.i("xtmapper-startup", "authenticated shell Binder cached: alive=${remoteBinder.isBinderAlive} version=$daemonVersion")
     }
 
     private fun createShizukuUserServiceArgs(

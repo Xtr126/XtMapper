@@ -29,6 +29,7 @@ import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.databinding.CursorBinding
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
+import org.lsposed.hiddenapibypass.HiddenApiBypass
 import xtr.keymapper.log.DeviceTelemetry
 import xtr.keymapper.log.Role
 import xtr.keymapper.log.SessionStates
@@ -43,6 +44,15 @@ class RemoteService @JvmOverloads constructor(
     context: Context,
     initialIsWaylandClient: Boolean = false
 ) : IRemoteService.Stub() {
+    init {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                HiddenApiBypass.addHiddenApiExemptions("")
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to add hidden API exemptions", t)
+            }
+        }
+    }
     private val mouseDevice = MouseDeviceConnection()
     internal val mInputService = ClientServiceSlot<ClientSession, InputService>()
     private val touchpadSessions = TouchpadSessionRegistry(RealTouchpadNativeOps)
@@ -84,6 +94,14 @@ class RemoteService @JvmOverloads constructor(
             throw SecurityException("Only the shell process can authenticate this service Binder")
         }
         callback.onShellServiceAuthenticated(challenge)
+    }
+
+    /**
+     * Returns the build version code of this remote service instance.
+     * Used by client processes to verify daemon protocol compatibility.
+     */
+    override fun getVersion(): Int {
+        return BuildConfig.VERSION_CODE
     }
 
     init {
@@ -152,6 +170,10 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Prepares and adds the cursor overlay view to the WindowManager
+     * with an empty touchable region.
+     */
     private fun addCursorView() {
         val view = cursorView ?: return
 
@@ -160,6 +182,7 @@ class RemoteService @JvmOverloads constructor(
         } else {
             val params = Utils.getPointerLayoutParams(TYPE_SECURE_SYSTEM_OVERLAY)
             try {
+                Utils.applyEmptyTouchableRegion(view)
                 mWindowManager!!.addView(view, params)
             } catch (e: IllegalStateException) { // A14 QPR3 issue https://gist.github.com/RikkaW/be3fe4178903702c54ec73b2fc1187fe
                 cursorView = null
@@ -341,6 +364,19 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
+    private var lastActivationReason: Int = IRemoteService.ACTIVATION_MANUAL
+
+    /**
+     * Initializes the input service, cursor overlay, and input listeners for the specified profile.
+     *
+     * @param profile The keymap profile to load.
+     * @param keymapConfig Configuration settings for keymapping.
+     * @param cb Callback for remote service events.
+     * @param screenWidth Screen resolution (horizontal).
+     * @param screenHeight Screen resolution (vertical).
+     * @param displayId Target display ID.
+     * @param activationReason Reason for activating or updating the server (e.g. manual vs display change).
+     */
     @Throws(RemoteException::class)
     override fun startServer(
         profile: KeymapProfile,
@@ -348,11 +384,13 @@ class RemoteService @JvmOverloads constructor(
         cb: IRemoteServiceCallback,
         screenWidth: Int,
         screenHeight: Int,
-        displayId: Int
+        displayId: Int,
+        activationReason: Int
     ) {
         enforceCaller()
-        Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
-        XtLogger.info(TAG, "startServer requested wayland=$isWaylandClient display=$displayId pointerMode=${keymapConfig.pointerMode}")
+        lastActivationReason = activationReason
+        Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId reason=$activationReason pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
+        XtLogger.info(TAG, "startServer requested wayland=$isWaylandClient display=$displayId reason=$activationReason pointerMode=${keymapConfig.pointerMode}")
         val clientBinder = cb.asBinder()
         val deathRecipient = object : IBinder.DeathRecipient {
             override fun binderDied() {
@@ -387,6 +425,7 @@ class RemoteService @JvmOverloads constructor(
                 screenWidth,
                 screenHeight,
                 displayId,
+                activationReason,
                 clientBinder,
                 deathRecipient,
                 requestId
@@ -401,6 +440,7 @@ class RemoteService @JvmOverloads constructor(
         screenWidth: Int,
         screenHeight: Int,
         displayId: Int,
+        activationReason: Int,
         clientBinder: IBinder,
         deathRecipient: IBinder.DeathRecipient,
         requestId: Long
@@ -420,6 +460,7 @@ class RemoteService @JvmOverloads constructor(
                     screenWidth,
                     screenHeight,
                     displayId,
+                    activationReason,
                     clientBinder,
                     deathRecipient,
                     requestId
@@ -533,7 +574,7 @@ class RemoteService @JvmOverloads constructor(
         }
 
         // Launch app/game only after this request has actually installed its service.
-        if (profile.packageName != BuildConfig.APPLICATION_ID && keymapConfig.disableAutoProfiling) {
+        if (activationReason != IRemoteService.ACTIVATION_DISPLAY_CHANGE && profile.packageName != BuildConfig.APPLICATION_ID && keymapConfig.disableAutoProfiling) {
             val launchIntent =
                 context.packageManager.getLaunchIntentForPackage(profile.packageName)
             if (launchIntent != null && launchIntent.component != null) try {
@@ -570,6 +611,9 @@ class RemoteService @JvmOverloads constructor(
         )
     }
 
+    /**
+     * Destroys the remote service instance and stops all active servers.
+     */
     override fun destroy() {
         enforceCaller()
         synchronized(mStartRequestLock) {
@@ -612,11 +656,20 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Stops the remote server asynchronously on the main handler.
+     */
     override fun stopServer() {
         enforceCaller()
         mHandler.post { stopServer(true) }
     }
 
+    /**
+     * Internal implementation to shut down input devices and cleanly terminate server operations.
+     *
+     * @param exitProcess Whether to exit the hosting process upon stopping.
+     * @param clientAlive Whether the client callback Binder is still alive to receive disablePointer.
+     */
     private fun stopServer(exitProcess: Boolean, clientAlive: Boolean = true) {
         DeviceTelemetry.stop()
         val service = mInputService.get()
@@ -699,6 +752,9 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Resumes the keymapping event processing.
+     */
     override fun resumeMouse() {
         enforceCaller()
         // Keep pause/resume state changes ordered with startServer() on the same handler.
@@ -715,6 +771,9 @@ class RemoteService @JvmOverloads constructor(
         mInputService.get()?.reloadKeymap()
     }
 
+    /**
+     * Checks whether the input service is currently active and processing events.
+     */
     override fun isActive(): Boolean {
         enforceCaller()
         return mInputService.get() != null
@@ -723,6 +782,9 @@ class RemoteService @JvmOverloads constructor(
     companion object {
         const val TAG = "xtmapper-server"
 
+        /**
+         * Loads native C++ shared libraries for mouse, touchpad, and keyboard handling.
+         */
         fun loadLibraries() {
             System.loadLibrary("mouse_read")
             System.loadLibrary("mouse_cursor")
