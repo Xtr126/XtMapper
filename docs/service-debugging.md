@@ -128,8 +128,8 @@ Look for `Server cursor unavailable` in the server log and
 
 On a device that rejects the server cursor overlay, grant the debug app
 overlay access, unlock the device, and stop any open mapping session. Install
-the debug app and test APKs with `adb install -r`, then run the opt-in
-regression test while collecting both app and server logs:
+the debug app with `adb install -r` and the test APK with `adb install -r -t`.
+Run the opt-in regression test while collecting both app and server logs:
 
 ```bash
 adb shell am instrument -w -e shellCursorFallbackTest true \
