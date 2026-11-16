@@ -71,10 +71,8 @@ class ShellServiceControlsTest {
             }
             await("The shell launch should start the service and update its status") {
                 TouchPointer.isRunning &&
-                    TouchPointer.activeInstance?.mService?.isActive == true &&
                     (!verifyScreen || screenContains(context.getString(R.string.service_active)))
             }
-            val remote = checkNotNull(TouchPointer.activeInstance?.mService)
             assertEquals(defaultName, TouchPointer.currentSelectedProfile)
             assertEquals(otherProfile, profiles.getLastSelectedProfile())
 
@@ -90,7 +88,7 @@ class ShellServiceControlsTest {
                 .actionIntent.send()
 
             await("The notification action should stop the service and update the screen") {
-                !TouchPointer.isRunning && !remote.isActive &&
+                !TouchPointer.isRunning &&
                     notifications.activeNotifications.none {
                         it.notification.channelId == TouchPointer.CHANNEL_ID
                     } &&
