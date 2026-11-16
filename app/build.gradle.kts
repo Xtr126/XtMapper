@@ -28,7 +28,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        aaptOptions {
+        androidResources {
             ignoreAssetsPattern = ""
         }
     }
@@ -128,15 +128,20 @@ dependencies {
     testImplementation(libs.junit)
 }
 
+
+abstract class GenerateInputLabels : Exec() {
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+}
+
 val inputNdk = androidComponents.sdkComponents.ndkDirectory
 val inputToolchain = inputNdk.map { ndk ->
-    val prebuilt = File(ndk.asFile, "toolchains/llvm/prebuilt")
-    val toolchains = prebuilt.listFiles()
-        ?: throw GradleException("Cannot list NDK prebuilt toolchains in $prebuilt. Check the NDK installation.")
-    toolchains.first { it.isDirectory }
+    File(ndk.asFile, "toolchains/llvm/prebuilt").listFiles()!!.first { it.isDirectory }
 }
 val generatedInput = layout.buildDirectory.dir("generated/source/inputLabels")
-val generateInputLabels = tasks.register<Exec>("generateInputLabels") {
+
+val generateInputLabels = tasks.register<GenerateInputLabels>("generateInputLabels") {
+    description = "Generate input header labels"
     inputs.file("src/main/cpp/generate-input.h-labels.py")
     inputs.files(inputToolchain.map { toolchain ->
         listOf(
@@ -144,7 +149,8 @@ val generateInputLabels = tasks.register<Exec>("generateInputLabels") {
             File(toolchain, "sysroot/usr/include/linux/input-event-codes.h"),
         )
     })
-    outputs.dir(generatedInput)
+    outputDirectory.set(generatedInput)
+
     doFirst {
         val toolchain = inputToolchain.get()
         val python = File(toolchain, "python3/bin/python3").takeIf { it.exists() }
@@ -155,13 +161,14 @@ val generateInputLabels = tasks.register<Exec>("generateInputLabels") {
             File(toolchain, "sysroot/usr/include/linux/input.h"),
             File(toolchain, "sysroot/usr/include/linux/input-event-codes.h"),
             "--kotlin",
-            generatedInput.get().asFile,
+            outputDirectory.get().asFile,
         )
     }
 }
-android.sourceSets.getByName("main").java.srcDir(generatedInput)
-tasks.configureEach {
-    if (name == "preBuild" || name.matches(Regex("compile.*(Kotlin|JavaWithJavac)"))) {
-        dependsOn(generateInputLabels)
-    }
+
+androidComponents.onVariants { variant ->
+    variant.sources.kotlin!!.addGeneratedSourceDirectory(
+        generateInputLabels,
+        GenerateInputLabels::outputDirectory,
+    )
 }
