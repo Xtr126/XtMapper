@@ -149,4 +149,9 @@
     <string name="block_keyboard">Заблокировать клавиатуру</string>
     <string name="keyboard_blocked">Ввод с клавиатуры заблокирован</string>
     <string name="keyboard_unblocked">Ввод с клавиатуры разблокирован</string>
+    <string name="service_active">Служба активна</string>
+    <string name="service_inactive">Служба неактивна</string>
+    <string name="keymapper_service_running">Служба XtMapper запущена</string>
+    <string name="notification_launch_editor">Нажмите, чтобы открыть редактор (%1$s)</string>
+    <string name="stop_service">Остановить службу</string>
 </resources>

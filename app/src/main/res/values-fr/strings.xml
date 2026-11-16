@@ -143,4 +143,9 @@
     <string name="block_keyboard">Bloquer le clavier</string>
     <string name="keyboard_blocked">Les entrées clavier sont bloquées</string>
     <string name="keyboard_unblocked">Les entrées clavier sont débloquées</string>
+    <string name="service_active">Service actif</string>
+    <string name="service_inactive">Service inactif</string>
+    <string name="keymapper_service_running">Le service XtMapper est en cours</string>
+    <string name="notification_launch_editor">Appuyez pour ouvrir l’éditeur (%1$s)</string>
+    <string name="stop_service">Arrêter le service</string>
 </resources>

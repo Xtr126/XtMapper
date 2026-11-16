@@ -6,12 +6,13 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.os.Binder
+import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.Process
 import android.os.RemoteException
+import android.os.SystemClock
 import android.util.Log
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
@@ -48,6 +49,7 @@ object RemoteServiceHelper {
     private var shellAuthenticationRequestId = 0L
 
     private const val SHELL_AUTHENTICATION_TIMEOUT_MILLIS = 2_000L
+    private const val SHELL_VERSION_CHECK_TIMEOUT_MILLIS = 2_000L
 
     @JvmStatic
     @Volatile
@@ -188,18 +190,34 @@ object RemoteServiceHelper {
         return shellBinder.isBinderAlive && service?.asBinder() == shellBinder
     }
 
+    internal fun hasLiveShellService(binder: IBinder): Boolean =
+        synchronized(backendLock) { shellServiceBinder == binder && hasLiveShellService() }
+
     @JvmStatic
     fun isShellServiceAuthenticationPending(): Boolean = shellServiceAuthenticationPending
 
+    /** Clear pending state only while the request still owns it. Caller must hold backendLock. */
+    private fun clearShellServiceAuthenticationPendingLocked(
+        requestId: Long,
+        expectedBackendGeneration: Long,
+    ) {
+        if (shellAuthenticationRequestId != requestId ||
+            backendGeneration != expectedBackendGeneration
+        ) return
+
+        shellServiceAuthenticationPending = false
+    }
+
     /** Cache a shell Binder only after Android has verified the launching UID. */
     @JvmStatic
-    fun setAuthenticatedShellServiceBinder(binder: IBinder?) {
+    fun setAuthenticatedShellServiceBinder(binder: IBinder, onVerified: () -> Unit) {
         val (requestId, expectedBackendGeneration) = synchronized(backendLock) {
+            if (forceSelectedBackend || !binder.isBinderAlive) return
             shellAuthenticationRequestId++
-            shellServiceAuthenticationPending = false
+            shellServiceAuthenticationPending = true
             shellAuthenticationRequestId to backendGeneration
         }
-        validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, requirePending = false)
+        validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, onVerified)
     }
 
     /**
@@ -218,8 +236,9 @@ object RemoteServiceHelper {
         }
 
         val challenge = SecureRandom().nextLong()
-        val authenticator = ShellServiceAuthenticator(challenge, Process.SHELL_UID) {
-            validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, requirePending = true)
+        val expectedUid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Process.SHELL_UID else 2000
+        val authenticator = ShellServiceAuthenticator(challenge, expectedUid) {
+            validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration)
         }
         val callback = object : IShellAuthenticationCallback.Stub() {
             override fun onShellServiceAuthenticated(challengeResponse: Long) {
@@ -229,9 +248,7 @@ object RemoteServiceHelper {
 
         Handler(Looper.getMainLooper()).postDelayed({
             synchronized(backendLock) {
-                if (shellAuthenticationRequestId == requestId) {
-                    shellServiceAuthenticationPending = false
-                }
+                clearShellServiceAuthenticationPendingLocked(requestId, expectedBackendGeneration)
             }
         }, SHELL_AUTHENTICATION_TIMEOUT_MILLIS)
 
@@ -244,9 +261,7 @@ object RemoteServiceHelper {
             } finally {
                 if (!authenticator.isAuthenticated) {
                     synchronized(backendLock) {
-                        if (shellAuthenticationRequestId == requestId) {
-                            shellServiceAuthenticationPending = false
-                        }
+                        clearShellServiceAuthenticationPendingLocked(requestId, expectedBackendGeneration)
                     }
                 }
             }
@@ -261,14 +276,21 @@ object RemoteServiceHelper {
     * matches the current application build. Mismatched or outdated daemons are rejected.
     */
     private fun validateShellServiceBinderAsync(
-        binder: IBinder?,
+        binder: IBinder,
         requestId: Long,
         expectedBackendGeneration: Long,
-        requirePending: Boolean,
+        onVerified: (() -> Unit)? = null,
     ) {
-        if (binder == null || !binder.isBinderAlive) return
+        val versionCheckDeadline = SystemClock.uptimeMillis() + SHELL_VERSION_CHECK_TIMEOUT_MILLIS
+        Handler(Looper.getMainLooper()).postDelayed({
+            synchronized(backendLock) {
+                // clear pending state only for the matching request and backend generation; a late version result is rejected before it can be cached
+                clearShellServiceAuthenticationPendingLocked(requestId, expectedBackendGeneration)
+            }
+        }, SHELL_VERSION_CHECK_TIMEOUT_MILLIS)
+
         Thread({
-            val remote = IRemoteService.Stub.asInterface(binder) ?: return@Thread
+            val remote = IRemoteService.Stub.asInterface(binder)
             val daemonVersion = try {
                 remote.version
             } catch (e: Exception) {
@@ -276,14 +298,20 @@ object RemoteServiceHelper {
                 -1
             }
             var rejectDaemon = false
-            synchronized(backendLock) {
+            val verified = synchronized(backendLock) {
                 if (shellAuthenticationRequestId != requestId ||
                     backendGeneration != expectedBackendGeneration ||
                     forceSelectedBackend ||
-                    (requirePending && !shellServiceAuthenticationPending) ||
-                    !binder.isBinderAlive
-                ) return@synchronized
+                    !shellServiceAuthenticationPending
+                ) return@synchronized false
 
+                if (SystemClock.uptimeMillis() >= versionCheckDeadline) {
+                    clearShellServiceAuthenticationPendingLocked(requestId, expectedBackendGeneration)
+                    return@synchronized false
+                }
+
+                clearShellServiceAuthenticationPendingLocked(requestId, expectedBackendGeneration)
+                if (!binder.isBinderAlive) return@synchronized false
                 if (daemonVersion == BuildConfig.VERSION_CODE) {
                     cacheShellServiceBinderLocked(remote, daemonVersion)
                 } else {
@@ -293,7 +321,17 @@ object RemoteServiceHelper {
                     )
                     rejectDaemon = true
                 }
-                if (requirePending) shellServiceAuthenticationPending = false
+                hasLiveShellService() && shellServiceBinder == binder
+            }
+            if (verified && onVerified != null) {
+                Handler(Looper.getMainLooper()).post {
+                    val stillCurrent = synchronized(backendLock) {
+                        shellAuthenticationRequestId == requestId &&
+                            backendGeneration == expectedBackendGeneration &&
+                            shellServiceBinder == binder && hasLiveShellService()
+                    }
+                    if (stillCurrent) onVerified()
+                }
             }
             if (rejectDaemon) runCatching { remote.destroy() }
         }, "xtmapper-shell-version-check").apply {

@@ -26,6 +26,9 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.annotation.UiThread
 import androidx.appcompat.app.AlertDialog
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -187,11 +190,16 @@ class TouchPointer : Service() {
             )
         }
 
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-        return builder.setOngoing(true)
-            .setContentTitle("Keymapper service running")
-            .setContentText("Touch to launch editor ($selectedProfile)")
+        val stopIntent = PendingIntent.getService(
+            this, 0, Intent(this, TouchPointer::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setOngoing(true)
+            .setContentTitle(getString(R.string.keymapper_service_running))
+            .setContentText(getString(R.string.notification_launch_editor, selectedProfile.orEmpty()))
             .setContentIntent(pendingIntent)
+            .addAction(0, getString(R.string.stop_service), stopIntent)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setCategory(Notification.CATEGORY_SERVICE)
             .build()
@@ -647,8 +655,8 @@ class TouchPointer : Service() {
         const val DISPLAY_ID: String = "display_id"
         const val ACTION_STOP: String = "xtr.keymapper.action.STOP"
 
-        @Volatile
-        var isRunning: Boolean = false
+        var isRunning: Boolean by mutableStateOf(false)
+            private set
 
         @Volatile
         var currentSelectedProfile: String? = null
