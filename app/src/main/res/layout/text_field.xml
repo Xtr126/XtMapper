@@ -5,13 +5,12 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:theme="@style/Theme.XtMapper"
-    android:id="@+id/text_field"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
     <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/edit_text"
         style="@style/Widget.Material3.TextInputEditText.OutlinedBox"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/edit_text" />
+        android:layout_height="wrap_content" />
 
 </com.google.android.material.textfield.TextInputLayout>

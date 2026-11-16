@@ -28,9 +28,9 @@
         android:id="@+id/toggle"/>
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/edit_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/edit_button"
         android:contentDescription="@string/edit"
         style="@style/Widget.Material3.Button.IconButton.Filled"
         app:icon="@drawable/ic_create_white_36dp"/>

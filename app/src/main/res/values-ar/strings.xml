@@ -8,11 +8,8 @@
     <string name="logs_unsupported">Public app logs require Android 11 or later and All-files access. On this Android version, this app logs to Logcat only.</string>
     <string name="logs_settings_unavailable">Unable to open All-files access settings. Open Android Settings and search for All-files access.</string>
     <string name="start">ابدأ</string>
-    <string name="stop">أوقف</string>
     <string name="configure">الإعدادات</string>
-    <string name="edit_keymap">تعديل خريطة المفاتيح</string>
     <string name="help">مساعدة</string>
-    <string name="package_name">اسم الحزمة: </string>
     <string name="mouse_sensitivity">حساسية الماوس</string>
     <string name="mouse_aim_activated">        تم تفعيل وضع التصويب. انقر بزر الماوس الأيمن أو اضغط على مفتاح ~ للخروج
     </string>
@@ -31,9 +28,6 @@
     <string name="launch_editor">فتح المحرر</string>
     <string name="pause_resume">إيقاف/استئناف</string>
     <!-- bottom navigation in settings fragment -->
-    <string name="tuning">ضبط</string>
-    <string name="config">تكوين</string>
-    <string name="shortcuts">اختصارات</string>
     <string name="trigger_mouse_aim_with">تفعيل تصويب الماوس باستخدام:</string>
     <string name="right_click">النقر بزر الماوس الأيمن</string>
     <string name="key_grave">مفتاح ~</string>
@@ -61,7 +55,6 @@
     </string>
     <string name="disable_auto_profile">تعطيل التوصيف التلقائي</string>
     <string name="touchpad_input">مدخلات لوحة اللمس</string>
-    <string name="launch_app">فتح التطبيق</string>
     <string name="use_shizuku">استخدام Shizuku</string>
     <string name="pointer">وضع المؤشر</string>
     <string name="open_editor_as_overlay">فتح المحرر كطبقة علوية</string>
@@ -104,9 +97,7 @@
     <string name="export_selected">تصدير المحدد</string>
     <string name="select_all">تحديد الكل</string>
     <string name="import_button">استيراد</string>
-    <string name="rename">إعادة تسمية</string>
     <string name="delete">حذف</string>
-    <string name="enabled">مفعّل</string>
     <string name="no_profile_selected">لم يتم تحديد ملف شخصي</string>
     <string name="select_profile_from_below">اضغط على ملف تعريف من القائمة أدناه لتحديده</string>
     <string name="detected_shizuku">تم الكشف عن Shizuku</string>
@@ -145,9 +136,6 @@
     <string name="touch_jitter_spread">نطاق الارتعاش</string>
     <string name="touch_jitter_spread_px">نطاق ارتعاش اللمس: %d بكسل</string>
     <string name="quick_settings_tile_name">XtMapper</string>
-    <string name="input_mode">وضع الإدخال</string>
-    <string name="input_mode_root">Root</string>
-    <string name="input_mode_shizuku">Shizuku (ADB)</string>
     <string name="input_mode_changed">وضع الإدخال: %1$s</string>
     <string name="block_keyboard_input">حظر إدخال لوحة المفاتيح الخام</string>
     <string name="block_keyboard">حظر لوحة المفاتيح</string>

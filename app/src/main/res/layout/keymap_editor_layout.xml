@@ -153,9 +153,9 @@
                     />
 
                 <TextView
+                    android:id="@+id/swipe_delay_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:id="@+id/swipe_delay_text"
                     android:text="@string/swipe_delay_ms" />
 
                 <com.google.android.material.slider.Slider
@@ -170,9 +170,9 @@
                     />
 
                 <TextView
+                    android:id="@+id/shift_transition_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:id="@+id/shift_transition_text"
                     android:text="@string/shift_transition_ms" />
 
                 <com.google.android.material.slider.Slider
@@ -204,9 +204,9 @@
                     />
 
                 <TextView
+                    android:id="@+id/touch_jitter_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:id="@+id/touch_jitter_text"
                     android:text="@string/touch_jitter_spread" />
 
                 <com.google.android.material.slider.Slider

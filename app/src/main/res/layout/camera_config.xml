@@ -43,21 +43,21 @@
         android:layout_height="wrap_content"
         android:text="@string/x_sensitivity" />
     <com.google.android.material.slider.Slider
+        android:id="@+id/slider_x_sensitivity"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:valueFrom="0.1"
-        android:valueTo="5"
-        android:id="@+id/slider_x_sensitivity"/>
+        android:valueTo="5" />
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/y_sensitivity" />
     <com.google.android.material.slider.Slider
+        android:id="@+id/slider_y_sensitivity"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:valueFrom="0.1"
-        android:valueTo="5"
-        android:id="@+id/slider_y_sensitivity"/>
+        android:valueTo="5" />
 
 
 </LinearLayout>
