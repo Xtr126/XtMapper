@@ -1,5 +1,6 @@
 package xtr.keymapper.activity
 
+import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
@@ -30,6 +31,8 @@ class ShellServiceControlsTest {
     fun shellStartsDefaultAndNotificationStopsService() {
         assumeTrue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
         assumeTrue("Grant XtMapper overlay access", Settings.canDrawOverlays(context))
+        val keyguard = context.getSystemService(KeyguardManager::class.java)
+        val verifyScreen = !keyguard.isKeyguardLocked
         val notifications = context.getSystemService(NotificationManager::class.java)
         assumeTrue("Allow XtMapper notifications", notifications.areNotificationsEnabled())
 
@@ -66,8 +69,9 @@ class ShellServiceControlsTest {
             daemonPid = checkNotNull(launchOutput.toIntOrNull()) {
                 "Expected the shell daemon PID, got: $launchOutput"
             }
-            await("The shell launch should show the active service status") {
-                screenContains(context.getString(R.string.service_active))
+            await("The shell launch should start the service and update its status") {
+                TouchPointer.isRunning &&
+                    (!verifyScreen || screenContains(context.getString(R.string.service_active)))
             }
             assertEquals(defaultName, TouchPointer.currentSelectedProfile)
             assertEquals(otherProfile, profiles.getLastSelectedProfile())
@@ -83,7 +87,7 @@ class ShellServiceControlsTest {
                     notifications.activeNotifications.none {
                         it.notification.channelId == TouchPointer.CHANNEL_ID
                     } &&
-                    screenContains(context.getString(R.string.service_inactive))
+                    (!verifyScreen || screenContains(context.getString(R.string.service_inactive)))
             }
         } finally {
             instrumentation.runOnMainSync { TouchPointer.activeInstance?.stopKeymapper() }
