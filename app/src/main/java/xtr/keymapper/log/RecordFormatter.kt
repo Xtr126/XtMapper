@@ -98,7 +98,7 @@ object RecordFormatter {
     }
 
     private fun appendFrames(
-        frames: Array<java.lang.StackTraceElement>,
+        frames: Array<StackTraceElement>,
         out: StringBuilder,
         budget: IntArray,
     ) {

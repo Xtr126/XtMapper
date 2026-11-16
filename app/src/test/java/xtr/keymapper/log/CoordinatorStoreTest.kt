@@ -759,7 +759,7 @@ class CoordinatorStoreTest {
         repeat(fitsTheReserve + 1) { i ->
             verdict = store.append(name, listOf(sessionEndFrame(100_000L + i)))
             assertTrue("every step respects the cap", File(dir, name).length() <= cap)
-            assertTrue("the day stays in reserve mode", verdict!!.emergency)
+            assertTrue("the day stays in reserve mode", verdict.emergency)
         }
         assertTrue("the final end cannot fit the spent reserve", verdict!!.endUnpersisted)
         assertEquals("one notice marks the exhaustion", 1, store.readFrames(name).count { it.sid == DailyBudget.NOTICE_SID })

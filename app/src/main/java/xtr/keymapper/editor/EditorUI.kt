@@ -567,7 +567,7 @@ class EditorUI(
         val configString = generateConfigString()
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
         val clip = android.content.ClipData.newPlainText("XtMapper Config", configString)
-        clipboard?.setPrimaryClip(clip)
+        clipboard?.primaryClip = clip
         android.widget.Toast.makeText(context, "Configuration copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
     }
 

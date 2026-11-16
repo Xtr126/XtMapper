@@ -30,6 +30,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.draw.clip
 import xtr.keymapper.keymap.KeymapConfig
@@ -271,7 +272,7 @@ private fun createComposeState(activity: MainActivity): AppState {
         false
     }
     val hasShizuku = try {
-        isShizukuRunning && rikka.shizuku.Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+        isShizukuRunning && rikka.shizuku.Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
     } catch (_: Exception) {
         false
     }
@@ -1029,7 +1030,7 @@ private fun ProfileCard(
         ProfileMenuItem("Change App", Icons.Default.Apps, onChangeApp) { showMenu = false }
         ProfileMenuItem("Stop", Icons.Default.Stop, onStop) { showMenu = false }
         ProfileMenuItem("Launch App", Icons.Default.PlayArrow, onLaunch) { showMenu = false }
-        ProfileMenuItem("Help", Icons.Default.HelpOutline, onHelp) { showMenu = false }
+        ProfileMenuItem("Help", Icons.AutoMirrored.Filled.HelpOutline, onHelp) { showMenu = false }
         ProfileMenuItem("Delete Profile", Icons.Default.Delete, onDelete) { showMenu = false }
     }
 }

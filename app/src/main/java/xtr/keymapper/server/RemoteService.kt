@@ -84,7 +84,7 @@ class RemoteService @JvmOverloads constructor(
     }
 
     private fun enforceCaller() {
-        if (getCallingUid() != appUid && getCallingPid() != android.os.Process.myPid())
+        if (getCallingUid() != appUid && getCallingPid() != Process.myPid())
             throw SecurityException("XtMapper service access denied")
     }
 
@@ -364,7 +364,7 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
-    private var lastActivationReason: Int = IRemoteService.ACTIVATION_MANUAL
+    private var lastActivationReason: Int = ACTIVATION_MANUAL
 
     /**
      * Initializes the input service, cursor overlay, and input listeners for the specified profile.
@@ -574,7 +574,7 @@ class RemoteService @JvmOverloads constructor(
         }
 
         // Launch app/game only after this request has actually installed its service.
-        if (activationReason != IRemoteService.ACTIVATION_DISPLAY_CHANGE && profile.packageName != BuildConfig.APPLICATION_ID && keymapConfig.disableAutoProfiling) {
+        if (activationReason != ACTIVATION_DISPLAY_CHANGE && profile.packageName != BuildConfig.APPLICATION_ID && keymapConfig.disableAutoProfiling) {
             val launchIntent =
                 context.packageManager.getLaunchIntentForPackage(profile.packageName)
             if (launchIntent != null && launchIntent.component != null) try {

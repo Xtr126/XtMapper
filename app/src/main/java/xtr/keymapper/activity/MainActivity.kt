@@ -273,7 +273,7 @@ class MainActivity : AppCompatActivity() {
                 putExtra(EditorActivity.PROFILE_NAME, selectedProfileName)
                 if (displayId != null) putExtra(TouchPointer.DISPLAY_ID, displayId)
             }
-            isServiceBound = bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            isServiceBound = bindService(intent, connection, BIND_AUTO_CREATE)
             ContextCompat.startForegroundService(this, intent)
             setButtonState(false)
             if (!autoStart) requestNotificationPermission()
@@ -661,7 +661,7 @@ class ServerCrashDialogFragment : DialogFragment() {
             .create()
     }
 
-    override fun onCancel(dialog: android.content.DialogInterface) {
+    override fun onCancel(dialog: DialogInterface) {
         super.onCancel(dialog)
         notifyDismissed()
     }

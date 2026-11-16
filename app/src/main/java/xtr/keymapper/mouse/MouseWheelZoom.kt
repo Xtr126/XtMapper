@@ -37,9 +37,9 @@ class MouseWheelZoom(private val service: IInputInterface) : HandlerThread("mous
                     x1 += pixels / 5 * value
                     x2 -= pixels / 5 * value
                     service.injectEvent(x1.toFloat(), y.toFloat(), InputService.MOVE, MousePinchZoom.pointerId1)
-                    Thread.sleep(10)
+                    sleep(10)
                     service.injectEvent(x2.toFloat(), y.toFloat(), InputService.MOVE, MousePinchZoom.pointerId2)
-                    Thread.sleep(10)
+                    sleep(10)
                 }
                 releasePointers(x, y)
             } catch (e: RemoteException) {

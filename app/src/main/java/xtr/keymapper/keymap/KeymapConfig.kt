@@ -155,7 +155,7 @@ class KeymapConfig : Parcelable {
         touchJitterSpread = parcel.readFloat()
         inputMode = parcel.readInt()
         shiftTransitionMs = if (parcel.dataAvail() > 0) parcel.readInt() else 100
-        blockKeyboardInput = if (parcel.dataAvail() > 0) parcel.readByte().toInt() != 0 else false
+        blockKeyboardInput = parcel.dataAvail() > 0 && parcel.readByte().toInt() != 0
         blockKeyboardShortcutKey = if (parcel.dataAvail() > 0) parcel.readString() ?: "KEY_B" else "KEY_B"
         blockKeyboardShortcutKeyModifier = if (parcel.dataAvail() > 0) parcel.readString() else KEY_CTRL
     }

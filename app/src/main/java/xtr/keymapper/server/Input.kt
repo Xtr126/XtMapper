@@ -276,7 +276,7 @@ class Input(private val displayId: Int) {
 
         private fun next() {
             try {
-                Thread.sleep(DELAY_MS.toLong())
+                sleep(DELAY_MS.toLong())
                 var ivalue = event.value
 
                 val avalue = kotlin.math.abs(value)

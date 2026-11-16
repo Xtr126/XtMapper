@@ -58,24 +58,21 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         }
 
     private fun init() {
-        binding.sliderMouse.setValue(keymapConfig.mouseSensitivity!!)
-        binding.sliderScrollSpeed.setValue(keymapConfig.scrollSpeed!!)
-        binding.sliderSwipeDelay.setValue(keymapConfig.swipeDelayMs.toFloat())
-        binding.sliderFloatingKeysSize.setValue(keymapConfig.floatingKeysSize)
+        binding.sliderMouse.value = keymapConfig.mouseSensitivity!!
+        binding.sliderScrollSpeed.value = keymapConfig.scrollSpeed!!
+        binding.sliderSwipeDelay.value = keymapConfig.swipeDelayMs.toFloat()
+        binding.sliderFloatingKeysSize.value = keymapConfig.floatingKeysSize
 
-        binding.swipeDelayText.setText(
-            context.getString(R.string.swipe_delay_ms, keymapConfig.swipeDelayMs)
-        )
+        binding.swipeDelayText.text = context.getString(R.string.swipe_delay_ms, keymapConfig.swipeDelayMs)
         binding.sliderSwipeDelay.addOnChangeListener { _, value, _ ->
-            binding.swipeDelayText.setText(context.getString(R.string.swipe_delay_ms, value.toInt()))
+            binding.swipeDelayText.text = context.getString(R.string.swipe_delay_ms, value.toInt())
         }
 
-        binding.sliderShiftTransition.setValue(keymapConfig.shiftTransitionMs.toFloat())
-        binding.shiftTransitionText.setText(
+        binding.sliderShiftTransition.value = keymapConfig.shiftTransitionMs.toFloat()
+        binding.shiftTransitionText.text =
             context.getString(R.string.shift_transition_ms, keymapConfig.shiftTransitionMs)
-        )
         binding.sliderShiftTransition.addOnChangeListener { _, value, _ ->
-            binding.shiftTransitionText.setText(context.getString(R.string.shift_transition_ms, value.toInt()))
+            binding.shiftTransitionText.text = context.getString(R.string.shift_transition_ms, value.toInt())
         }
 
         val jitterSpread = if (keymapConfig.touchJitter) keymapConfig.touchJitterSpread else 0f
@@ -168,7 +165,7 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
         }
 
         settingsBinding.showControls.isChecked = keymapConfig.showControls
-        settingsBinding.showControlsOpacity.setValue(keymapConfig.showControlsOpacity)
+        settingsBinding.showControlsOpacity.value = keymapConfig.showControlsOpacity
 
         val saveSettings = {
             keymapConfig.disableAutoProfiling = settingsBinding.autoProfileSwitch.isChecked

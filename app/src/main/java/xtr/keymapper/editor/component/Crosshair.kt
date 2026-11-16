@@ -70,13 +70,13 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
    private fun onExpandButtonClicked(view: View) {
     val options = arrayOf<CharSequence>("Limit to specified area", "Allow moving pointer out of screen")
 
-    android.widget.Toast.makeText(context, "DEBUG: Dialog opening...", android.widget.Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, "DEBUG: Dialog opening...", Toast.LENGTH_SHORT).show()
 
     MaterialAlertDialogBuilder(context)
         .setTitle("Adjust bounds")
         .setItems(options) { _, which ->
 
-            android.widget.Toast.makeText(context, "DEBUG: Item clicked = $which", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "DEBUG: Item clicked = $which", Toast.LENGTH_SHORT).show()
 
             mouseAimConfig.apply {
                 width = 0f
@@ -86,7 +86,7 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
                     // Delay for 100ms to skip layout changes
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ ResizableArea() }, 100)
                 } else {
-                    android.widget.Toast.makeText(context, "DEBUG: Allow pointer out → limitedBounds = false", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "DEBUG: Allow pointer out → limitedBounds = false", Toast.LENGTH_SHORT).show()
                     limitedBounds = false
                 }
             }
@@ -94,7 +94,7 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
         .create()
         .apply {
             setupOverlayWindowType()
-            android.widget.Toast.makeText(context, "DEBUG: Dialog created, showing...", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "DEBUG: Dialog created, showing...", Toast.LENGTH_SHORT).show()
             show()
         }
 }
@@ -144,10 +144,10 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
 
     private fun AlertDialog.setupOverlayWindowType() {
     val canDraw = android.provider.Settings.canDrawOverlays(context)
-    android.widget.Toast.makeText(
+    Toast.makeText(
         context,
         "DEBUG: canDrawOverlays = $canDraw",
-        android.widget.Toast.LENGTH_LONG
+        Toast.LENGTH_LONG
     ).show()
 
     if (canDraw) {
@@ -158,16 +158,16 @@ class Crosshair(callback: EditorUiComponentCallback, context: Context, x: Float,
             else
                 WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
         )
-        android.widget.Toast.makeText(
+        Toast.makeText(
             context,
             "DEBUG: window type SET",
-            android.widget.Toast.LENGTH_SHORT
+            Toast.LENGTH_SHORT
         ).show()
     } else {
-        android.widget.Toast.makeText(
+        Toast.makeText(
             context,
             "DEBUG: window type NOT SET — canDrawOverlays = false",
-            android.widget.Toast.LENGTH_LONG
+            Toast.LENGTH_LONG
         ).show()
     }
 }

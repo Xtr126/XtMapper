@@ -60,7 +60,7 @@ class DeviceTelemetryTest {
         }
     }
 
-    private inner class Harness(
+    private class Harness(
         sdk: Int = 34,
         sessionBudget: Int = DeviceTelemetry.SESSION_BUDGET,
         captureMillis: Long = DeviceTelemetry.CAPTURE_MILLIS,

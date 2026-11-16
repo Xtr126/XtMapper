@@ -71,7 +71,7 @@ class DeviceTelemetryOwnershipTest {
     fun `platform construction failure cannot escape public start`() {
         setRole(Role.SHELL)
         val context = object : ContextWrapper(null) {
-            override fun getSystemService(name: String): Any? = throw SecurityException("denied")
+            override fun getSystemService(name: String): Any = throw SecurityException("denied")
         }
         DeviceTelemetry.start(context)
         DeviceTelemetry.stop()
