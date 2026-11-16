@@ -130,7 +130,10 @@ dependencies {
 
 val inputNdk = androidComponents.sdkComponents.ndkDirectory
 val inputToolchain = inputNdk.map { ndk ->
-    File(ndk.asFile, "toolchains/llvm/prebuilt").listFiles()!!.first { it.isDirectory }
+    val prebuilt = File(ndk.asFile, "toolchains/llvm/prebuilt")
+    val toolchains = prebuilt.listFiles()
+        ?: throw GradleException("Cannot list NDK prebuilt toolchains in $prebuilt. Check the NDK installation.")
+    toolchains.first { it.isDirectory }
 }
 val generatedInput = layout.buildDirectory.dir("generated/source/inputLabels")
 val generateInputLabels = tasks.register<Exec>("generateInputLabels") {
