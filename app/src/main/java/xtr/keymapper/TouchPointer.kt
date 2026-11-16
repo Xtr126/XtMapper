@@ -473,6 +473,7 @@ class TouchPointer : Service() {
                 val view = CursorBinding.inflate(
                     LayoutInflater.from(ContextThemeWrapper(displayContext, R.style.Theme_XtMapper))
                 ).root
+                view.setTag(R.id.tag_pointer_cursor_overlay, true)
                 val windowType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 } else {

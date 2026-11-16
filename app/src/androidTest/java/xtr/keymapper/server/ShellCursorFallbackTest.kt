@@ -45,6 +45,7 @@ class ShellCursorFallbackTest {
         val priorPointerMode = settings.all["pointer_mode"] as? Int
         val priorAutoProfilingMode = settings.all["disable_auto_profile"] as? Boolean
         val priorOverlayBypass = runShell("settings get system alert_window_bypass_low_ram")
+        val priorOverlayMode = appOpMode(runShell("appops get ${context.packageName} SYSTEM_ALERT_WINDOW"))
         val originalOverlays = cursorOverlays()
         var daemonPid: Int? = null
         var testPointer: TouchPointer? = null
@@ -60,6 +61,7 @@ class ShellCursorFallbackTest {
             assertTrue(settings.edit().putBoolean("disable_auto_profile", true).commit())
             assertTrue(settings.edit().putInt("pointer_mode", KeymapConfig.POINTER_OVERLAY).commit())
             assertTrue(profiles.edit().putStringSet(defaultName, setOf("ENABLED")).commit())
+            runShell("appops set ${context.packageName} SYSTEM_ALERT_WINDOW ignore")
 
             val app = context.applicationInfo
             val launchOutput = runShell(
@@ -69,6 +71,9 @@ class ShellCursorFallbackTest {
             )
             daemonPid = checkNotNull(launchOutput.toIntOrNull()) { "Expected shell daemon PID, got: $launchOutput" }
 
+            await("Expected shell startup to grant overlay access") {
+                Settings.canDrawOverlays(context)
+            }
             await("Expected the shell input service and an app-owned cursor overlay") {
                 val pointer = TouchPointer.activeInstance ?: return@await false
                 testPointer = pointer
@@ -90,6 +95,7 @@ class ShellCursorFallbackTest {
                 }
             }
             daemonPid?.let { runShell("kill $it") }
+            runShell("appops set ${context.packageName} SYSTEM_ALERT_WINDOW $priorOverlayMode")
             if (priorOverlayBypass == "null") {
                 runShell("settings delete system alert_window_bypass_low_ram")
             } else {
@@ -115,6 +121,7 @@ class ShellCursorFallbackTest {
                 val params = view.layoutParams as? WindowManager.LayoutParams
                 view.isAttachedToWindow &&
                     params?.type == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY &&
+                    view.getTag(R.id.tag_pointer_cursor_overlay) == true &&
                     view.getTag(R.id.tag_empty_touchable_region) == true
             }
         }
@@ -126,6 +133,10 @@ class ShellCursorFallbackTest {
         ParcelFileDescriptor.AutoCloseOutputStream(stdin).bufferedWriter().use { it.write("$command\n") }
         return ParcelFileDescriptor.AutoCloseInputStream(stdout).bufferedReader().use { it.readText().trim() }
     }
+
+    private fun appOpMode(output: String): String =
+        output.substringAfter(": ", "default").substringBefore(";").trim()
+            .takeIf { it.isNotEmpty() } ?: "default"
 
     private fun await(message: String, condition: () -> Boolean) {
         val deadline = SystemClock.elapsedRealtime() + 15_000

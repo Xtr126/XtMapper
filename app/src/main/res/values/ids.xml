@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="tag_empty_touchable_region" type="id" />
+    <item name="tag_pointer_cursor_overlay" type="id" />
 </resources>

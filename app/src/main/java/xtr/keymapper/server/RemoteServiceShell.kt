@@ -97,7 +97,7 @@ object RemoteServiceShell {
 
             XtLogger.info(TAG, "server configuration ready wayland=${mService.isWaylandClient}")
 
-            ProcessBuilder("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.SYSTEM_ALERT_WINDOW").inheritIO().start()
+            OverlayPermission.grant()
             val settingsArgs = "settings put system alert_window_bypass_low_ram 1".split(Regex("\\s+"))
             ProcessBuilder(settingsArgs).inheritIO().start()
 

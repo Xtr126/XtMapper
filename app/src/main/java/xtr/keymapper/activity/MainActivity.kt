@@ -293,7 +293,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (!autoStart) checkOverlayPermission(this)
+        if (!Settings.canDrawOverlays(this)) {
+            requestOverlayPermission {
+                startPointer(displayId, autoStart, profileName)
+            }
+            return
+        }
         val profiles = KeymapProfiles(this)
         val targetProfile = profileName ?: profiles.getLastSelectedProfile()
         if (!autoStart) selectedProfileName = targetProfile
@@ -308,6 +313,29 @@ class MainActivity : AppCompatActivity() {
             isServiceBound = bindService(intent, connection, BIND_AUTO_CREATE)
             ContextCompat.startForegroundService(this, intent)
             if (!autoStart) requestNotificationPermission()
+        }
+    }
+
+    private fun requestOverlayPermission(onGranted: (() -> Unit)? = null) {
+        if (Settings.canDrawOverlays(this)) {
+            onGranted?.invoke()
+            return
+        }
+
+        RemoteServiceHelper.getInstance(this) { service ->
+            Thread {
+                val granted = runCatching { service?.grantOverlayPermission() == true }
+                    .onFailure { Log.w("xtmapper-permission", "Privileged overlay grant failed", it) }
+                    .getOrDefault(false)
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    if (granted && Settings.canDrawOverlays(this)) {
+                        onGranted?.invoke()
+                    } else {
+                        checkOverlayPermission(this)
+                    }
+                }
+            }.start()
         }
     }
 
@@ -378,7 +406,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         if (Shizuku.pingBinder()) Shizuku.requestPermission(0)
-        showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, { _, _ -> launchShizukuAndExit() }, R.string.ok)
+        showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, { _, _ -> launchShizukuManager() }, R.string.ok)
     }
 
     private fun alertShizukuNotRunning() {
@@ -386,7 +414,7 @@ class MainActivity : AppCompatActivity() {
             alertShizukuNotInstalled()
             return
         }
-        showAlertDialog(R.string.shizuku_not_running_title, R.string.shizuku_not_running_message, { _, _ -> launchShizukuAndExit() }, R.string.start)
+        showAlertDialog(R.string.shizuku_not_running_title, R.string.shizuku_not_running_message, { _, _ -> launchShizukuManager() }, R.string.start)
     }
 
     private fun alertShizukuNotInstalled() {
@@ -400,11 +428,10 @@ class MainActivity : AppCompatActivity() {
         false
     }
 
-    private fun launchShizukuAndExit() {
+    private fun launchShizukuManager() {
         val launchIntent = packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
         if (launchIntent != null) {
             startActivity(launchIntent)
-            System.exit(0)
         } else {
             alertShizukuNotInstalled()
         }
@@ -435,7 +462,7 @@ class MainActivity : AppCompatActivity() {
             if (Shizuku.pingBinder()) alertShizukuNotAuthorized()
             else alertShizukuNotRunning()
         } else if (!Settings.canDrawOverlays(this)) {
-            checkOverlayPermission(this)
+            requestOverlayPermission()
         }
     }
 
@@ -585,7 +612,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun toggleOverlayFromCompose() {
-        if (!Settings.canDrawOverlays(this)) checkOverlayPermission(this)
+        if (!Settings.canDrawOverlays(this)) requestOverlayPermission()
     }
 
     fun openSettingsFromCompose() {
