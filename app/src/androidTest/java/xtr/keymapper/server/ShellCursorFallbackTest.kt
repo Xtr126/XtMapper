@@ -43,12 +43,21 @@ class ShellCursorFallbackTest {
         val priorProfile = profiles.getStringSet(defaultName, null)?.toSet()
         val settings = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
         val priorPointerMode = settings.all["pointer_mode"] as? Int
+        val priorAutoProfilingMode = settings.all["disable_auto_profile"] as? Boolean
         val priorOverlayBypass = runShell("settings get system alert_window_bypass_low_ram")
         val originalOverlays = cursorOverlays()
         var daemonPid: Int? = null
         var testPointer: TouchPointer? = null
 
         try {
+            /*
+            * Disable automatic profiling for this test and restore its setting.
+            * When automatic profiling is enabled, ActivityObserverService can select
+            *  another profiled app from recent tasks, even while XtMapper is foreground.
+            * TouchPointer.launchProfile() then replaces Default and writes the last-selected profile.
+            *  This can fail the profile assertion and leave the saved selection changed after cleanup.
+            */
+            assertTrue(settings.edit().putBoolean("disable_auto_profile", true).commit())
             assertTrue(settings.edit().putInt("pointer_mode", KeymapConfig.POINTER_OVERLAY).commit())
             assertTrue(profiles.edit().putStringSet(defaultName, setOf("ENABLED")).commit())
 
@@ -87,8 +96,13 @@ class ShellCursorFallbackTest {
                 runShell("settings put system alert_window_bypass_low_ram $priorOverlayBypass")
             }
             val restoreSettings = settings.edit()
+
             if (priorPointerMode == null) restoreSettings.remove("pointer_mode")
             else restoreSettings.putInt("pointer_mode", priorPointerMode)
+
+            if (priorAutoProfilingMode == null) restoreSettings.remove("disable_auto_profile")
+            else restoreSettings.putBoolean("disable_auto_profile", priorAutoProfilingMode)
+
             restoreSettings.commit()
             profiles.edit().putStringSet(defaultName, priorProfile).commit()
         }
