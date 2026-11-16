@@ -1,5 +1,6 @@
 package xtr.keymapper.activity
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.content.Context
@@ -7,6 +8,7 @@ import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.Settings
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -46,8 +48,12 @@ class ShellServiceControlsTest {
         val settings = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
         val priorPointerMode = settings.all["pointer_mode"] as? Int
         val priorOverlayBypass = shell("settings get system alert_window_bypass_low_ram")
+        val accessibility = automation.serviceInfo
+        val priorAccessibilityFlags = accessibility.flags
         var daemonPid: Int? = null
         try {
+            accessibility.flags = priorAccessibilityFlags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            automation.serviceInfo = accessibility
             assertTrue(settings.edit().putInt("pointer_mode", KeymapConfig.POINTER_COMBINED).commit())
             assertTrue(prefs.edit()
                 .putStringSet(defaultName, setOf("ENABLED"))
@@ -87,14 +93,20 @@ class ShellServiceControlsTest {
             notification.actions.single { it.title.toString() == context.getString(R.string.stop_service) }
                 .actionIntent.send()
 
-            await("The notification action should stop the service and update the screen") {
+            await("The notification action should stop the foreground service") {
                 !TouchPointer.isRunning &&
                     notifications.activeNotifications.none {
                         it.notification.channelId == TouchPointer.CHANNEL_ID
-                    } &&
-                    (!verifyScreen || screenContains(context.getString(R.string.service_inactive)))
+                    }
+            }
+            if (verifyScreen) {
+                await("The screen should show that the service stopped") {
+                    screenContains(context.getString(R.string.service_inactive))
+                }
             }
         } finally {
+            accessibility.flags = priorAccessibilityFlags
+            automation.serviceInfo = accessibility
             instrumentation.runOnMainSync { TouchPointer.activeInstance?.stopKeymapper() }
             daemonPid?.let { shell("kill $it") }
             if (priorOverlayBypass == "null") {
@@ -118,10 +130,18 @@ class ShellServiceControlsTest {
         ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command))
             .bufferedReader().use { it.readText().trim() }
 
-    private fun screenContains(label: String): Boolean {
-        val root = automation.rootInActiveWindow ?: return false
-        return root.packageName == context.packageName &&
-            root.findAccessibilityNodeInfosByText(label).any { it.text?.toString() == label }
+    private fun screenContains(label: String): Boolean =
+        automation.windows.any { window ->
+            val root = window.root
+            root?.packageName == context.packageName && nodeContains(root, label)
+        }
+
+    private fun nodeContains(node: AccessibilityNodeInfo, label: String): Boolean {
+        if (!node.refresh()) return false
+        if (node.text?.toString() == label) return true
+        return (0 until node.childCount).any { index ->
+            node.getChild(index)?.let { nodeContains(it, label) } == true
+        }
     }
 
     private fun await(message: String, condition: () -> Boolean) {
