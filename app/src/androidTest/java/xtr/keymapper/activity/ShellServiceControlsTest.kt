@@ -88,7 +88,7 @@ class ShellServiceControlsTest {
                 script.write(
                     "app_process -Djava.library.path='${app.nativeLibraryDir}' " +
                         "-Djava.class.path='${app.publicSourceDir}' / " +
-                        "${RemoteServiceShell::class.java.name} </dev/null >/dev/null 2>&1 & echo \$!\n"
+                            $$"$${RemoteServiceShell::class.java.name} --no-logcat </dev/null >/dev/null 2>&1 & echo $!\n"
                 )
             }
             val launchOutput = ParcelFileDescriptor.AutoCloseInputStream(stdout)
