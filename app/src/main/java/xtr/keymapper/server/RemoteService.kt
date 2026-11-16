@@ -23,6 +23,7 @@ import xtr.keymapper.IRemoteServiceCallback
 import xtr.keymapper.IShellAuthenticationCallback
 import xtr.keymapper.OnKeyEventListener
 import xtr.keymapper.R
+import xtr.keymapper.Utils
 import xtr.keymapper.activity.MainActivity
 import xtr.keymapper.databinding.CursorBinding
 import xtr.keymapper.keymap.KeymapConfig

@@ -30,9 +30,27 @@ uses its stdin protocol; the backend is selected before reader construction.
 ./gradlew :app:assembleDebug :app:testDebugUnitTest --console=plain
 ```
 
-Tests cover ABI/endianness, fragmented/batched records, repeat/release and unknown
-labels, signed mouse values, device removal, and descriptor ownership on shutdown.
-They do not exercise Android syscalls, Binder delivery, or actual evdev devices.
+JVM tests cover ABI/endianness, fragmented/batched records, repeat/release and
+unknown labels, signed mouse values, device removal, and descriptor ownership
+on shutdown.
+
+## Shell instrumentation
+
+On an unlocked test device where ADB shell can run `app_process` and register a
+virtual keyboard with `/system/bin/uinput`, run:
+
+```sh
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=xtr.keymapper.server.input.EvdevReaderDeviceTest \
+  -Pandroid.testInstrumentationRunnerArguments.evdevDeviceTest=true
+```
+
+The test runs the production reader under the shell UID. It asserts delivery
+of F24 press and release events from real evdev nodes, descriptor closure on
+unplug, delivery after reconnect, and closure and delivery across reader
+restart. The test uses `dumpsys input` to identify its own virtual keyboards.
+It can send F24 to the foreground app, so run it on a test device. The runner
+skips this scenario unless explicitly enabled.
 
 ## Device validation before leaving draft
 

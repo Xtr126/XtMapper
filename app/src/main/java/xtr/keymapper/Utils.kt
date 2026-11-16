@@ -21,7 +21,6 @@ object Utils {
         return start
     }
 
-    @JvmStatic
     /**
      * Builds WindowManager.LayoutParams for full-screen pass-through pointer overlay windows,
      * applying flags and capping alpha to 0.8 on Android 12+ to satisfy untrusted touch limits.
