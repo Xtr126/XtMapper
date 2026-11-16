@@ -145,4 +145,9 @@
     <string name="profile_disabled_label">Disabled</string>
     <string name="profile_disabled_title">Profile disabled</string>
     <string name="profile_disabled_activation">Profile “%1$s” is disabled. Enable it from the profile menu to start keymapping.</string>
+    <string name="service_active">ਸੇਵਾ ਚਾਲੂ ਹੈ</string>
+    <string name="service_inactive">ਸੇਵਾ ਬੰਦ ਹੈ</string>
+    <string name="keymapper_service_running">XtMapper ਸੇਵਾ ਚੱਲ ਰਹੀ ਹੈ</string>
+    <string name="notification_launch_editor">ਸੰਪਾਦਕ ਖੋਲ੍ਹਣ ਲਈ ਟੈਪ ਕਰੋ (%1$s)</string>
+    <string name="stop_service">ਸੇਵਾ ਬੰਦ ਕਰੋ</string>
 </resources>

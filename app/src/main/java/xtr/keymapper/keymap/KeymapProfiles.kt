@@ -83,6 +83,7 @@ class KeymapProfiles @JvmOverloads constructor(
 
     fun renameProfile(profileName: String, newProfile: String): Boolean {
         if (newProfile == KEY_LAST_SELECTED_PROFILE) return false
+        ensureDefaultProfile(profileName)
         migrateProfileCollidingWithMetadataKey()
         val designatedKeys = sharedPref.all
             .filter { (key, value) -> key.startsWith("designated_profile_") && value == profileName }
@@ -103,6 +104,7 @@ class KeymapProfiles @JvmOverloads constructor(
     fun setProfilePackageName(profileName: String?, packageName: String) {
         // getStringSet on the reserved metadata key would read a String on Android.
         if (profileName == KEY_LAST_SELECTED_PROFILE) return
+        if (profileName != null) ensureDefaultProfile(profileName)
         val stringSet = sharedPref.getStringSet(profileName, null) ?: return
         saveProfile(profileName, ArrayList<String?>(stringSet), packageName, stringSet.contains("ENABLED"), 0, 0)
     }
@@ -157,8 +159,16 @@ class KeymapProfiles @JvmOverloads constructor(
         }
     }
 
+    private fun ensureDefaultProfile(profileName: String) {
+        if (profileName == DEFAULT_PROFILE_NAME && !profileExists(profileName)) {
+            sharedPref.edit().putStringSet(profileName, emptySet()).apply()
+        }
+    }
+
     fun setProfileEnabled(profileName: String, enabled: Boolean) {
-        val lines = sharedPref.getStringSet(profileName, null)?.toMutableSet() ?: return
+        val storedLines = sharedPref.getStringSet(profileName, null)
+        if (storedLines == null && (profileName != DEFAULT_PROFILE_NAME || !enabled)) return
+        val lines = storedLines.orEmpty().toMutableSet()
         if (enabled) lines.add("ENABLED") else lines.remove("ENABLED")
         sharedPref.edit().putStringSet(profileName, lines).apply()
     }

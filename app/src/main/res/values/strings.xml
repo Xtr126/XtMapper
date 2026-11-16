@@ -160,4 +160,9 @@
     <string name="profile_disabled_label">Disabled</string>
     <string name="profile_disabled_title">Profile disabled</string>
     <string name="profile_disabled_activation">Profile “%1$s” is disabled. Enable it from the profile menu to start keymapping.</string>
+    <string name="service_active">Service Active</string>
+    <string name="service_inactive">Service Inactive</string>
+    <string name="keymapper_service_running">Keymapper service running</string>
+    <string name="notification_launch_editor">Touch to launch editor (%1$s)</string>
+    <string name="stop_service">Stop service</string>
 </resources>

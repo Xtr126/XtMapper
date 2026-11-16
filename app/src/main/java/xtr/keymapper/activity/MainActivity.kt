@@ -49,8 +49,6 @@ class MainActivity : AppCompatActivity() {
 
     var pointerOverlay: TouchPointer? = null
     private var selectedProfileName: String? = null
-    private var autoStartProfile: String? = null
-    private var composeServiceActive = false
     private var isServiceBound = false
     private var displaySelector: DisplaySelector? = null
 
@@ -94,13 +92,11 @@ class MainActivity : AppCompatActivity() {
             Environment.launchSignal = intent.getBooleanExtra(Environment.INTENT_EXTRA, false)
             XtLogger.info("MainActivity", "launch signal applied: environment=${Environment.name}")
         }
-        Log.i("xtmapper-startup", "MainActivity.onCreate: shellMarker=${intent.getStringExtra("data") == SHELL_INIT} binderPresent=${intent.extras?.getBinder(SHELL_SERVICE_BINDER) != null}")
-        intent.extras?.getBinder(SHELL_SERVICE_BINDER)?.let { binder ->
-            if (isAuthenticatedShellLaunch()) {
-                RemoteServiceHelper.setAuthenticatedShellServiceBinder(binder)
-            } else {
-                RemoteServiceHelper.authenticateShellServiceBinder(binder)
-            }
+        val shellBinder = intent.extras?.getBinder(SHELL_SERVICE_BINDER)
+        val authenticatedShellLaunch = isAuthenticatedShellLaunch()
+        Log.i("xtmapper-startup", "MainActivity.onCreate: shellMarker=${intent.getStringExtra("data") == SHELL_INIT} binderPresent=${shellBinder != null}")
+        if (!authenticatedShellLaunch) {
+            RemoteServiceHelper.authenticateShellServiceBinder(shellBinder)
         }
 
         val launchData = intent.getStringExtra("data")
@@ -110,34 +106,35 @@ class MainActivity : AppCompatActivity() {
             showServerCrashDialog(launchData)
         }
 
-        GameKeyMapperBridge.installGameKeyMapperContent(this)
-
         val keymapConfig = KeymapConfig(this)
         val profiles = KeymapProfiles(this)
         val availableProfiles = profiles.getAllProfiles().keys
-        val shellProfile = StartupLaunch.shellProfile(isAuthenticatedShellLaunch(), availableProfiles)
-        autoStartProfile = if (savedInstanceState == null) shellProfile else null
+        val shellProfile = StartupLaunch.shellProfile(authenticatedShellLaunch, availableProfiles)
+        val autoStartProfile = if (savedInstanceState == null) shellProfile else null
         selectedProfileName = savedInstanceState
             ?.getString(SELECTED_PROFILE_NAME_STATE)
-            ?.takeIf(availableProfiles::contains)
-            ?: shellProfile
+            ?.takeIf { it == KeymapProfiles.DEFAULT_PROFILE_NAME || it in availableProfiles }
+            ?: KeymapProfiles.DEFAULT_PROFILE_NAME.takeIf { authenticatedShellLaunch }
             ?: profiles.getLastSelectedProfile()
         Log.i("xtmapper-startup", "MainActivity: profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode} autoStart=${autoStartProfile != null}")
         TouchPointer.currentSelectedProfile = selectedProfileName
+        GameKeyMapperBridge.installGameKeyMapperContent(this)
 
         RemoteServiceHelper.useShizuku = keymapConfig.isShizukuMode
         Server.setupServer(this, mCallback)
 
         val dialogPending = supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) != null
-        if (!dialogPending) {
-            if (autoStartProfile == null) handleActivationFlow(keymapConfig)
-            else startPointer(null, autoStart = true)
+        if (authenticatedShellLaunch && shellBinder != null) {
+            RemoteServiceHelper.setAuthenticatedShellServiceBinder(shellBinder) { verified ->
+                if (verified && !isDestroyed && !isFinishing && !dialogPending && autoStartProfile != null) {
+                    startPointer(null, autoStart = true, profileName = autoStartProfile)
+                }
+            }
+        } else if (!dialogPending && autoStartProfile == null) {
+            handleActivationFlow(keymapConfig)
         }
 
         displaySelector = DisplaySelector(this).register { displayId -> startPointer(displayId) }
-        RemoteServiceHelper.runIfActive(this) {
-            runOnUiThread { composeServiceActive = true }
-        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -231,7 +228,11 @@ class MainActivity : AppCompatActivity() {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
             launchedFromUid == Process.SHELL_UID
 
-    private fun startPointer(displayId: Int?, autoStart: Boolean = false) {
+    private fun startPointer(
+        displayId: Int?,
+        autoStart: Boolean = false,
+        profileName: String? = selectedProfileName
+    ) {
         val keymapConfig = KeymapConfig(this)
         if (keymapConfig.isShizukuMode &&
             !RemoteServiceHelper.hasLiveShellService()
@@ -262,31 +263,24 @@ class MainActivity : AppCompatActivity() {
 
         if (!autoStart) checkOverlayPermission(this)
         val profiles = KeymapProfiles(this)
-        if (selectedProfileName == null) {
-            selectedProfileName = profiles.getLastSelectedProfile()
-        }
-        TouchPointer.currentSelectedProfile = selectedProfileName
+        val targetProfile = profileName ?: profiles.getLastSelectedProfile()
+        if (!autoStart) selectedProfileName = targetProfile
+        TouchPointer.currentSelectedProfile = targetProfile
         if (Settings.canDrawOverlays(this)) {
             // A shell auto-start must not overwrite the profile the user chose in the app.
-            if (!autoStart) profiles.setLastSelectedProfile(selectedProfileName)
+            if (!autoStart) profiles.setLastSelectedProfile(targetProfile)
             val intent = Intent(this, TouchPointer::class.java).apply {
-                putExtra(EditorActivity.PROFILE_NAME, selectedProfileName)
+                putExtra(EditorActivity.PROFILE_NAME, targetProfile)
                 if (displayId != null) putExtra(TouchPointer.DISPLAY_ID, displayId)
             }
             isServiceBound = bindService(intent, connection, BIND_AUTO_CREATE)
             ContextCompat.startForegroundService(this, intent)
-            setButtonState(false)
             if (!autoStart) requestNotificationPermission()
         }
     }
 
-    private fun setButtonState(start: Boolean) {
-        composeServiceActive = !start
-    }
-
     override fun onResume() {
         super.onResume()
-        composeServiceActive = TouchPointer.isRunning
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
             android.os.Environment.isExternalStorageManager()
         ) XtLogger.enableFileLoggingAsync()
@@ -299,7 +293,6 @@ class MainActivity : AppCompatActivity() {
             action = TouchPointer.ACTION_STOP
         }
         stopService(intent)
-        setButtonState(true)
     }
 
     private fun unbindTouchPointer() {
@@ -394,7 +387,7 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread { builder.create().show() }
     }
 
-    fun isComposeServiceActive(): Boolean = composeServiceActive || TouchPointer.isRunning
+    fun isComposeServiceActive(): Boolean = TouchPointer.isRunning
 
     fun selectedProfileNameForCompose(): String? = selectedProfileName
 

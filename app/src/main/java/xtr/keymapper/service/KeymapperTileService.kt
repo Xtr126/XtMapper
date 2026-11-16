@@ -51,7 +51,6 @@ class KeymapperTileService : TileService() {
                     return
                 }
             }
-            TouchPointer.isRunning = false
             updateTileState(false)
             Toast.makeText(this, "XtMapper stopped", Toast.LENGTH_SHORT).show()
         } else {
@@ -70,7 +69,6 @@ class KeymapperTileService : TileService() {
                 putExtra(EditorActivity.PROFILE_NAME, selectedProfile)
             }
             ContextCompat.startForegroundService(this, startIntent)
-            TouchPointer.isRunning = true
             updateTileState(true, selectedProfile)
             Toast.makeText(this, "XtMapper started ($selectedProfile)", Toast.LENGTH_SHORT).show()
         }

@@ -144,4 +144,9 @@
     <string name="profile_disabled_label">Disabled</string>
     <string name="profile_disabled_title">Profile disabled</string>
     <string name="profile_disabled_activation">Profile “%1$s” is disabled. Enable it from the profile menu to start keymapping.</string>
+    <string name="service_active">服务已启动</string>
+    <string name="service_inactive">服务已停止</string>
+    <string name="keymapper_service_running">XtMapper 服务正在运行</string>
+    <string name="notification_launch_editor">点按打开编辑器（%1$s）</string>
+    <string name="stop_service">停止服务</string>
 </resources>

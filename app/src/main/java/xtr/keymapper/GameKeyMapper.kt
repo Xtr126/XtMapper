@@ -95,7 +95,7 @@ internal data class AppState(
 
 @Composable
 private fun KeymapperApp(
-    state: MutableState<AppState>,
+    state: AppState,
     onToggleService: () -> Unit = {},
     onToggleInputMode: () -> Unit = {},
     onFixPermission: () -> Unit = {},
@@ -116,8 +116,6 @@ private fun KeymapperApp(
     onSettings: () -> Unit = {},
     onLogs: () -> Unit = {},
 ) {
-    val currentState = state.value
-
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = KeymapperTheme.Accent,
@@ -141,7 +139,6 @@ private fun KeymapperApp(
                     AppTopBarRow(
                         onSettings = onSettings,
                         onHelp = onHelp,
-                        onLogs = onLogs,
                     )
                 }
 
@@ -162,15 +159,11 @@ private fun KeymapperApp(
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             ) {
                                 GlobalStatusToggle(
-                                    state = currentState,
+                                    state = state,
                                     onToggleService = onToggleService,
                                     onToggleInputMode = onToggleInputMode,
                                     onFixPermission = onFixPermission
                                 )
-                            }
-
-                            TextButton(onClick = onLogs, modifier = Modifier.fillMaxWidth()) {
-                                Text(stringResource(R.string.logs))
                             }
 
                             Spacer(modifier = Modifier.height(20.dp))
@@ -179,7 +172,7 @@ private fun KeymapperApp(
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             ) {
                                 HardwareStatus(
-                                    devices = currentState.connectedDevices,
+                                    devices = state.connectedDevices,
                                     onTestInput = onTestInput
                                 )
                             }
@@ -188,8 +181,8 @@ private fun KeymapperApp(
                         }
 
                         profileGrid(
-                            profiles = currentState.profiles,
-                            isOverlayChecked = currentState.hasOverlayPermission,
+                            profiles = state.profiles,
+                            isOverlayChecked = state.hasOverlayPermission,
                             onSelectProfile = onSelectProfile,
                             onLaunchProfile = onLaunchProfile,
                             onEditProfile = onEditProfile,
@@ -203,6 +196,13 @@ private fun KeymapperApp(
                             onExport = onExportProfiles,
                             onImport = onImportProfiles
                         )
+
+                        item {
+                            TextButton(onClick = onLogs, modifier = Modifier.fillMaxWidth()) {
+                                Text(stringResource(R.string.logs))
+                            }
+                            Spacer(modifier = Modifier.height(60.dp))
+                        }
                     }
                 }
             }
@@ -234,16 +234,20 @@ object GameKeyMapperBridge {
 
 private fun createComposeState(activity: MainActivity): AppState {
     val keymapProfiles = KeymapProfiles(activity)
-    val profiles = mutableListOf<GameProfile>()
-
-    keymapProfiles.getAllProfiles().forEach { (profileName, profile) ->
+    val storedProfiles = keymapProfiles.getAllProfiles()
+    val defaultProfile = KeymapProfiles.DEFAULT_PROFILE_NAME
+    val profileNames = listOf(defaultProfile) + (storedProfiles.keys - defaultProfile)
+    val profiles = profileNames.map { profileName ->
+        val profile = storedProfiles[profileName] ?: keymapProfiles.getProfile(profileName, false)
         val packageName = profile.packageName
         var appName = profileName
         var icon: Drawable? = null
 
         try {
             val appInfo = activity.packageManager.getApplicationInfo(packageName, 0)
-            appName = activity.packageManager.getApplicationLabel(appInfo).toString()
+            if (profileName != defaultProfile) {
+                appName = activity.packageManager.getApplicationLabel(appInfo).toString()
+            }
             icon = activity.packageManager.getApplicationIcon(appInfo)
         } catch (_: PackageManager.NameNotFoundException) {
             // Keep the profile name and Compose fallback icon.
@@ -253,7 +257,7 @@ private fun createComposeState(activity: MainActivity): AppState {
             .getStringSet(profileName, emptySet())
             ?.size ?: 0
 
-        profiles += GameProfile(
+        GameProfile(
             id = profileName,
             appName = appName,
             packageName = packageName,
@@ -277,7 +281,6 @@ private fun createComposeState(activity: MainActivity): AppState {
         false
     }
     return AppState(
-        isServiceActive = activity.isComposeServiceActive(),
         isShizukuInstalled = isShizukuInstalled,
         isShizukuRunning = isShizukuRunning,
         hasShizukuPermission = hasShizuku,
@@ -316,7 +319,7 @@ private fun GameKeyMapperActivityContent(activity: MainActivity) {
     }
 
     KeymapperApp(
-        state = state,
+        state = state.value.copy(isServiceActive = TouchPointer.isRunning),
         onToggleService = {
             activity.toggleServiceFromCompose()
             refresh()
@@ -405,7 +408,9 @@ private fun GlobalStatusToggle(
     onFixPermission: () -> Unit
 ) {
     val statusColor = if (state.isServiceActive) KeymapperTheme.Success else KeymapperTheme.Error
-    val statusText = if (state.isServiceActive) "Service Active" else "Service Inactive"
+    val statusText = stringResource(
+        if (state.isServiceActive) R.string.service_active else R.string.service_inactive
+    )
 
     Card(
         modifier = modifier
@@ -863,10 +868,6 @@ private fun LazyListScope.profileGrid(
             )
         }
     }
-
-    item {
-        Spacer(modifier = Modifier.height(60.dp))
-    }
 }
 
 @Composable
@@ -1065,7 +1066,6 @@ private fun AppTopBarRow(
     modifier: Modifier = Modifier,
     onSettings: () -> Unit,
     onHelp: () -> Unit,
-    onLogs: () -> Unit,
 ) {
     Row(
         modifier = modifier
@@ -1095,10 +1095,6 @@ private fun AppTopBarRow(
                 onClick = onSettings,
                 tint = KeymapperTheme.Accent
             )
-
-            TextButton(onClick = onLogs, modifier = Modifier.height(36.dp)) {
-                Text(stringResource(R.string.logs), fontSize = 12.sp)
-            }
         }
     }
 }
@@ -1208,15 +1204,7 @@ private fun getSampleAppState(): AppState = AppState(
 @Preview(name = "Empty")
 fun KeymapperPreviewEmpty() {
     KeymapperApp(
-        state = remember {
-            mutableStateOf(
-                AppState(
-                    isServiceActive = false,
-                    hasOverlayPermission = false,
-                    profiles = emptyList()
-                )
-            )
-        }
+        state = AppState()
     )
 }
 
@@ -1225,7 +1213,7 @@ fun KeymapperPreviewEmpty() {
 @Preview(name = "Default View")
 fun KeymapperPreview() {
     KeymapperApp(
-        state = remember { mutableStateOf(getSampleAppState()) },
+        state = getSampleAppState(),
     )
 }
 
@@ -1233,11 +1221,11 @@ fun KeymapperPreview() {
 @Preview(name = "Service Inactive")
 fun KeymapperInactivePreview() {
     KeymapperApp(
-        state = remember { mutableStateOf(getSampleAppState().copy(
+        state = getSampleAppState().copy(
             isServiceActive = false,
             hasShizukuPermission = false,
             hasOverlayPermission = false
-        ))},
+        ),
     )
 }
 
@@ -1245,9 +1233,9 @@ fun KeymapperInactivePreview() {
 @Preview(name = "No Devices")
 fun KeymapperNoDevicesPreview() {
     KeymapperApp(
-        state = remember { mutableStateOf(getSampleAppState().copy(
+        state = getSampleAppState().copy(
             connectedDevices = emptyList()
-        ))},
+        ),
     )
 }
 
@@ -1255,8 +1243,8 @@ fun KeymapperNoDevicesPreview() {
 @Preview(name = "Empty Profiles")
 fun KeymapperEmptyProfilesPreview() {
     KeymapperApp(
-        state = remember { mutableStateOf(getSampleAppState().copy(
+        state = getSampleAppState().copy(
             profiles = emptyList()
-        ))},
+        ),
     )
 }

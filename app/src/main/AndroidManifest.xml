@@ -79,6 +79,7 @@
         <service
             android:name=".TouchPointer"
             android:enabled="true"
+            android:exported="false"
             android:foregroundServiceType="specialUse" /> <!-- Declares the input method service. -->
         <service
             android:name=".service.InputListenerService"

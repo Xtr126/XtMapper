@@ -193,13 +193,13 @@ object RemoteServiceHelper {
 
     /** Cache a shell Binder only after Android has verified the launching UID. */
     @JvmStatic
-    fun setAuthenticatedShellServiceBinder(binder: IBinder?) {
+    fun setAuthenticatedShellServiceBinder(binder: IBinder, onVerified: (Boolean) -> Unit) {
         val (requestId, expectedBackendGeneration) = synchronized(backendLock) {
             shellAuthenticationRequestId++
-            shellServiceAuthenticationPending = false
+            shellServiceAuthenticationPending = true
             shellAuthenticationRequestId to backendGeneration
         }
-        validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, requirePending = false)
+        validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, onVerified)
     }
 
     /**
@@ -219,7 +219,7 @@ object RemoteServiceHelper {
 
         val challenge = SecureRandom().nextLong()
         val authenticator = ShellServiceAuthenticator(challenge, Process.SHELL_UID) {
-            validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, requirePending = true)
+            validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration)
         }
         val callback = object : IShellAuthenticationCallback.Stub() {
             override fun onShellServiceAuthenticated(challengeResponse: Long) {
@@ -261,14 +261,13 @@ object RemoteServiceHelper {
     * matches the current application build. Mismatched or outdated daemons are rejected.
     */
     private fun validateShellServiceBinderAsync(
-        binder: IBinder?,
+        binder: IBinder,
         requestId: Long,
         expectedBackendGeneration: Long,
-        requirePending: Boolean,
+        onVerified: ((Boolean) -> Unit)? = null,
     ) {
-        if (binder == null || !binder.isBinderAlive) return
         Thread({
-            val remote = IRemoteService.Stub.asInterface(binder) ?: return@Thread
+            val remote = IRemoteService.Stub.asInterface(binder)
             val daemonVersion = try {
                 remote.version
             } catch (e: Exception) {
@@ -276,14 +275,15 @@ object RemoteServiceHelper {
                 -1
             }
             var rejectDaemon = false
-            synchronized(backendLock) {
+            val verified = synchronized(backendLock) {
                 if (shellAuthenticationRequestId != requestId ||
                     backendGeneration != expectedBackendGeneration ||
                     forceSelectedBackend ||
-                    (requirePending && !shellServiceAuthenticationPending) ||
-                    !binder.isBinderAlive
-                ) return@synchronized
+                    !shellServiceAuthenticationPending
+                ) return@synchronized false
 
+                shellServiceAuthenticationPending = false
+                if (!binder.isBinderAlive) return@synchronized false
                 if (daemonVersion == BuildConfig.VERSION_CODE) {
                     cacheShellServiceBinderLocked(remote, daemonVersion)
                 } else {
@@ -293,7 +293,10 @@ object RemoteServiceHelper {
                     )
                     rejectDaemon = true
                 }
-                if (requirePending) shellServiceAuthenticationPending = false
+                hasLiveShellService() && shellServiceBinder == binder
+            }
+            if (onVerified != null) {
+                Handler(Looper.getMainLooper()).post { onVerified(verified) }
             }
             if (rejectDaemon) runCatching { remote.destroy() }
         }, "xtmapper-shell-version-check").apply {

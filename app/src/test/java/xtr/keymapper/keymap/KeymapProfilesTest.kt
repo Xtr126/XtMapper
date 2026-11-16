@@ -96,6 +96,23 @@ class KeymapProfilesTest {
     }
 
     @Test
+    fun enablingAnUnsavedDefaultCreatesOnlyItsEnabledFlag() {
+        val data = mutableMapOf<String, Any?>(
+            "Game" to setOf("ENABLED"),
+            KeymapProfiles.KEY_LAST_SELECTED_PROFILE to "Game"
+        )
+        val (context, prefs) = createFakeContextAndPrefs(data)
+        val profiles = KeymapProfiles(context, prefs)
+
+        profiles.setProfileEnabled("Default", false)
+        assertFalse(profiles.profileExists("Default"))
+
+        profiles.setProfileEnabled("Default", true)
+        assertEquals(setOf("ENABLED"), data["Default"])
+        assertEquals("Game", profiles.getLastSelectedProfile())
+    }
+
+    @Test
     fun togglingOneProfileDoesNotChangeOtherProfilesForTheSameApp() {
         val lines = setOf("APPLICATION com.example.game", "ENABLED")
         val data = mutableMapOf<String, Any?>("First" to lines, "Second" to lines)
