@@ -136,8 +136,11 @@ abstract class GenerateInputLabels : Exec() {
 
 val inputNdk = androidComponents.sdkComponents.ndkDirectory
 val inputToolchain = inputNdk.map { ndk ->
-    File(ndk.asFile, "toolchains/llvm/prebuilt").listFiles()!!.first { it.isDirectory }
+    File(ndk.asFile, "toolchains/llvm/prebuilt").listFiles()
+        ?.find { it.isDirectory }
+        ?: throw GradleException("NDK prebuilt toolchain not found in " + ndk.asFile)
 }
+
 val generatedInput = layout.buildDirectory.dir("generated/source/inputLabels")
 
 val generateInputLabels = tasks.register<GenerateInputLabels>("generateInputLabels") {
