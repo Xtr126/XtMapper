@@ -4,12 +4,6 @@ JNI_SRC_PATH := $(LOCAL_PATH)/src/main/cpp
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := getevent
-LOCAL_SRC_FILES := $(JNI_SRC_PATH)/getevent.c
-include $(BUILD_SHARED_LIBRARY)
-
-include $(CLEAR_VARS)
-
 LOCAL_MODULE    := mouse_read
 LOCAL_SRC_FILES := $(JNI_SRC_PATH)/mouse_read.c $(JNI_SRC_PATH)/xt_diagnostics.c $(JNI_SRC_PATH)/xt_diag_events.c
 LOCAL_LDLIBS    := -llog

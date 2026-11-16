@@ -4,7 +4,6 @@ import android.util.Log
 import android.app.ApplicationErrorReport
 import android.content.ComponentName
 import android.content.Context
-import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
 import android.os.Binder
 import android.os.Build
@@ -35,6 +34,7 @@ import xtr.keymapper.log.Role
 import xtr.keymapper.log.SessionStates
 import xtr.keymapper.log.XtLogger
 import xtr.keymapper.server.event.KeyEventHandler
+import xtr.keymapper.server.input.EvdevReader
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.reflect.Method
@@ -59,14 +59,13 @@ class RemoteService @JvmOverloads constructor(
     private var mOnKeyEventListener: OnKeyEventListener? = null
     internal var isWaylandClient = initialIsWaylandClient
     private var activityObserverService: ActivityObserverService? = null
-    internal var nativeLibraryDir: String = System.getProperty("java.library.path").orEmpty()
     private var cursorView: View? = null
     private var TYPE_SECURE_SYSTEM_OVERLAY = 0
     private val mHandler = Handler(Looper.getMainLooper())
     private val mouseDeviceCoalescer = MouseDeviceCoalescer(
         schedule = { task ->
             if (!mHandler.post { task() }) {
-                Log.e(TAG, "getevent: main handler rejected mouse discovery drain")
+                Log.e(TAG, "evdev: main handler rejected mouse discovery drain")
             }
         },
         process = { device -> mouseDevice.discover(device) },
@@ -75,7 +74,7 @@ class RemoteService @JvmOverloads constructor(
     internal var context: Context = context
     internal var startedFromShell = false
 
-    private var geteventProcess: java.lang.Process? = null
+    private var evdevReader: EvdevReader? = null
     private var lastLoggedMouseDevice: String? = null
 
     // shortcut: single-user check; multi-user/work-profile installs have a different uid per user
@@ -130,16 +129,12 @@ class RemoteService @JvmOverloads constructor(
         }
     }
 
+    /** Starts the selected input monitor: stdin for Wayland, local evdev otherwise. */
     fun init() {
-        val pm = context.packageManager
-        val packageName = context.packageName
-        try {
-            val ai = pm.getApplicationInfo(packageName, 0)
-            nativeLibraryDir = ai.nativeLibraryDir
-            Thread({ start_getevent() }, "xtmapper-getevent-reader").start()
-        } catch (e: PackageManager.NameNotFoundException) {
-            XtLogger.error(TAG, "Unable to resolve app native library directory", e)
-            throw RuntimeException(e)
+        if (isWaylandClient) {
+            Thread({ readWaylandEvents() }, "xtmapper-wayland-stdin").start()
+        } else {
+            evdevReader = EvdevReader(::handleInputLine).also { it.start() }
         }
 
         Looper.getMainLooper().thread.setUncaughtExceptionHandler { t, e ->
@@ -226,60 +221,64 @@ class RemoteService @JvmOverloads constructor(
         return windowManager
     }
 
-    private fun stop_getevent() {
-        try {
-            geteventProcess?.destroy()
-            geteventProcess = null
-        } catch (_: Exception) {}
+    /** Requests asynchronous shutdown of the local evdev monitor and clears its reference. */
+    private fun stopInputReader() {
+        evdevReader?.close()
+        evdevReader = null
     }
 
-    private fun start_getevent() {
+    /** Reads Cage event lines until EOF and leaves process-owned stdin open. */
+    private fun readWaylandEvents() {
         try {
-            val getevent: BufferedReader
-            if (isWaylandClient) {
-                getevent = BufferedReader(InputStreamReader(System.`in`))
-            } else {
-                val proc = Utils.geteventStream(nativeLibraryDir)
-                geteventProcess = proc
-                getevent = BufferedReader(InputStreamReader(proc.inputStream))
-            }
-            var line: String?
-            while (getevent.readLine().also { line = it } != null) {
-                val data = line!!.split(":".toRegex()).dropLastWhile { it.isEmpty() }
-                    .toTypedArray() // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
-                if (addNewDevices(data)) {
-                    val service = mInputService.get()
-                    if (service != null) try {
-                        if (isWaylandClient && data[0].contains("wl_pointer"))
-                            service.onWaylandMouseEvent(data[1])
-
-                        if (!service.isKeyboardGrabbed) {
-                            val k: KeyEventHandler = service.keyEventHandler
-                            if (!service.stopEvents) {
-                                k.handleEvent(data[1])
-                            } else {
-                                k.handleKeyboardShortcutEvent(data[1])
-                            }
-                        }
-                    } catch (e: Exception) {
-                        XtLogger.error(TAG, "Error handling input event", e)
-                    }
-                    if (service == null || !service.isKeyboardGrabbed) {
-                        try {
-                            mOnKeyEventListener?.onKeyEvent(line)
-                        } catch (e: RemoteException) {
-                            mOnKeyEventListener = null
-                        } catch (e: Exception) {
-                            XtLogger.error(TAG, "Error notifying key listener", e)
-                        }
-                    }
-                }
+            val reader = BufferedReader(InputStreamReader(System.`in`))
+            while (true) {
+                val line = reader.readLine() ?: break
+                handleInputLine(line)
             }
         } catch (e: Exception) {
-            XtLogger.error(TAG, "Input event reader failed", e)
+            XtLogger.error(TAG, "Wayland input stream stopped", e)
         }
     }
 
+    /**
+     * Routes a device-prefixed event through discovery, mapping, and the editor listener.
+     * Keyboard grabbing suppresses mapping and editor delivery; stopped mapping still permits
+     * keyboard shortcuts. Wayland pointer events are also sent to the mouse handler.
+     * Handler/listener Exceptions are caught, and a RemoteException clears the editor listener.
+     */
+    private fun handleInputLine(line: String) {
+        val data = line.split(":".toRegex()).dropLastWhile { it.isEmpty() }
+            .toTypedArray() // split a string like "/dev/input/event2: EV_REL REL_X ffffffff"
+        if (addNewDevices(data)) {
+            val service = mInputService.get()
+            if (service != null) try {
+                if (isWaylandClient && data[0].contains("wl_pointer"))
+                    service.onWaylandMouseEvent(data[1])
+
+                if (!service.isKeyboardGrabbed) {
+                    val k: KeyEventHandler = service.keyEventHandler
+                    if (!service.stopEvents) {
+                        k.handleEvent(data[1])
+                    } else {
+                        k.handleKeyboardShortcutEvent(data[1])
+                    }
+                }
+            } catch (e: Exception) {
+                XtLogger.error(TAG, "Error handling input event", e)
+            }
+            if (service == null || !service.isKeyboardGrabbed) {
+                try {
+                    mOnKeyEventListener?.onKeyEvent(line)
+                } catch (e: RemoteException) {
+                    mOnKeyEventListener = null
+                } catch (e: Exception) {
+                    XtLogger.error(TAG, "Error notifying key listener", e)
+                }
+            }
+        }
+    }
+
+    /** Discovers local relative-input devices and queues keyboard grabs; Wayland bypasses discovery. */
     private fun addNewDevices(data: Array<String>): Boolean {
         if (data.size != 2) return false
         val evdev = data[0]
@@ -293,7 +292,7 @@ class RemoteService @JvmOverloads constructor(
         }
         if (input_event.getOrNull(1) == "EV_REL") {
             if (lastLoggedMouseDevice != evdev) {
-                Log.i(TAG, "getevent: queue mouse discovery device=$evdev serviceReady=${mInputService.get() != null} thread=${Thread.currentThread().name}")
+                Log.i(TAG, "evdev: queue mouse discovery device=$evdev serviceReady=${mInputService.get() != null} thread=${Thread.currentThread().name}")
                 lastLoggedMouseDevice = evdev
             }
             mouseDeviceCoalescer.request(evdev)
@@ -686,7 +685,7 @@ class RemoteService @JvmOverloads constructor(
             XtLogger.info(TAG, "server stopped; exiting process")
             // END marker before the existing System.exit; endSession is bounded.
             XtLogger.endSession(SessionStates.STATUS_SERVICE_STOP)
-            stop_getevent()
+            stopInputReader()
             System.exit(0)
         } else if (service != null && !isWaylandClient) {
             service.stopEvents = true
