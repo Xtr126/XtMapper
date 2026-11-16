@@ -28,7 +28,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        aaptOptions {
+        androidResources {
             ignoreAssetsPattern = ""
         }
     }
@@ -126,4 +126,52 @@ dependencies {
 
     compileOnly(project(path = ":app:hidden-api"))
     testImplementation(libs.junit)
+}
+
+
+abstract class GenerateInputLabels : Exec() {
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+}
+
+val inputNdk = androidComponents.sdkComponents.ndkDirectory
+val inputToolchain = inputNdk.map { ndk ->
+    File(ndk.asFile, "toolchains/llvm/prebuilt").listFiles()
+        ?.find { it.isDirectory }
+        ?: throw GradleException("NDK prebuilt toolchain not found in " + ndk.asFile)
+}
+
+val generatedInput = layout.buildDirectory.dir("generated/source/inputLabels")
+
+val generateInputLabels = tasks.register<GenerateInputLabels>("generateInputLabels") {
+    description = "Generate input header labels"
+    inputs.file("src/main/cpp/generate-input.h-labels.py")
+    inputs.files(inputToolchain.map { toolchain ->
+        listOf(
+            File(toolchain, "sysroot/usr/include/linux/input.h"),
+            File(toolchain, "sysroot/usr/include/linux/input-event-codes.h"),
+        )
+    })
+    outputDirectory.set(generatedInput)
+
+    doFirst {
+        val toolchain = inputToolchain.get()
+        val python = File(toolchain, "python3/bin/python3").takeIf { it.exists() }
+            ?: File(toolchain, "python3/python.exe")
+        commandLine(
+            python,
+            file("src/main/cpp/generate-input.h-labels.py"),
+            File(toolchain, "sysroot/usr/include/linux/input.h"),
+            File(toolchain, "sysroot/usr/include/linux/input-event-codes.h"),
+            "--kotlin",
+            outputDirectory.get().asFile,
+        )
+    }
+}
+
+androidComponents.onVariants { variant ->
+    variant.sources.kotlin!!.addGeneratedSourceDirectory(
+        generateInputLabels,
+        GenerateInputLabels::outputDirectory,
+    )
 }

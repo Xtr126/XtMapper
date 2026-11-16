@@ -11,3 +11,6 @@ keystore.jks
 tasks/todo.md
 tasks/lessons.md
 app/release/baselineProfiles/
+
+# Python generator regression tests
+__pycache__/

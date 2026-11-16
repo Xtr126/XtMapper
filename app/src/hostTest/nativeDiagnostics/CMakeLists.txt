@@ -58,7 +58,7 @@ add_executable(keyboard_diagnostics_host_tests
   ${XTMAPPER_CPP}/xt_diagnostics.c
   ${XTMAPPER_CPP}/xt_diag_events.c
 )
-target_include_directories(keyboard_diagnostics_host_tests PRIVATE ${XTMAPPER_CPP} ${CMAKE_CURRENT_BINARY_DIR}/ndk-jni)
+target_include_directories(keyboard_diagnostics_host_tests PRIVATE ${XTMAPPER_CPP} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/ndk-jni)
 target_link_libraries(keyboard_diagnostics_host_tests PRIVATE Threads::Threads)
 target_link_options(keyboard_diagnostics_host_tests PRIVATE
   -Wl,--wrap=pipe2 -Wl,--wrap=open -Wl,--wrap=ioctl -Wl,--wrap=close

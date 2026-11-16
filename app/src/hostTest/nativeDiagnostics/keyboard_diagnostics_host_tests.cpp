@@ -4,9 +4,6 @@
 #include <thread>
 #include <vector>
 
-// Key translation is unrelated to diagnostics; all injected events use KEY_A.
-#define LINUX_KEY_TABLE_H
-static const char *get_linux_key_name(int) { return "KEY_A"; }
 #include "../../main/cpp/keyboard_grab.cpp"
 
 static bool pipeFails = false;
