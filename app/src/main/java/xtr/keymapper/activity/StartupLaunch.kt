@@ -16,3 +16,19 @@ internal object StartupLaunch {
     fun autoStartProfile(authenticatedShellLaunch: Boolean, availableProfiles: Set<String>): String? =
         shellProfile(authenticatedShellLaunch, availableProfiles)
 }
+
+internal class PendingShellStartup(profileName: String?) {
+    var profileName: String? = profileName
+        private set
+
+    fun startIfOverlayGranted(
+        hasOverlayPermission: Boolean,
+        startProfile: (String) -> Unit,
+    ): Boolean {
+        if (!hasOverlayPermission) return false
+        val profile = profileName ?: return false
+        profileName = null
+        startProfile(profile)
+        return true
+    }
+}
