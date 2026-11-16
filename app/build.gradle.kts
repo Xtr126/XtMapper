@@ -127,6 +127,7 @@ dependencies {
     compileOnly(project(path = ":app:hidden-api"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }
 
 
