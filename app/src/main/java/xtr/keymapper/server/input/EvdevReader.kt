@@ -22,8 +22,11 @@ internal object AndroidEvdevIo : EvdevIo {
     override fun paths() = File("/dev/input").listFiles()
         ?.filter { it.name.matches(Regex("event[0-9]+")) }
         ?.map { it.absolutePath }?.toSet().orEmpty()
-    override fun open(path: String): FileDescriptor =
-        Os.open(path, OsConstants.O_RDONLY or OsConstants.O_NONBLOCK or OsConstants.O_CLOEXEC, 0)
+    override fun open(path: String): FileDescriptor {
+        var flags = OsConstants.O_RDONLY or OsConstants.O_NONBLOCK
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) flags = flags or OsConstants.O_CLOEXEC
+        return Os.open(path, flags, 0)
+    }
     override fun poll(fds: List<FileDescriptor>, timeout: Int): IntArray {
         val polls = fds.map { descriptor -> StructPollfd().apply {
             fd = descriptor
