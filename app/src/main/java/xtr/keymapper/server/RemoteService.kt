@@ -103,6 +103,11 @@ class RemoteService @JvmOverloads constructor(
         return BuildConfig.VERSION_CODE
     }
 
+    override fun grantOverlayPermission(): Boolean {
+        enforceCaller()
+        return OverlayPermission.grant()
+    }
+
     init {
         if (!XtLogger.isInitialized) {
             when (Process.myUid()) {

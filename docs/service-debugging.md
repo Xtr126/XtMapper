@@ -112,13 +112,30 @@ an input service. The old “connecting to server” toast was misleading. The U
 now exposes enable/disable controls and explains disabled activation with a toast.
 This case demonstrates why device-discovery logs alone were insufficient.
 
-A separate, intermittent crash began with `Unknown pid=… uid=2000` in
-`IWindowManager.openSession` while adding the server cursor overlay. That
-`IllegalStateException` was caught, then the cursor fallback called the app's
-`enablePointer()` and received a `NullPointerException` over Binder. This trace
-establishes the failing sequence, but does not identify the app-side null value.
-Capture both processes and full crash context if it recurs; do not treat it as
-proof that mouse discovery or the lifecycle fix failed.
+A separate crash began with `Unknown pid=… uid=2000` in
+`IWindowManager.openSession` while adding the server cursor overlay. The
+server caught the error and called the client's `enablePointer()`. The
+callback stopped the client service, which cleared its remote Binder, then
+called stop again through that cleared reference. The server received the
+resulting `NullPointerException` over Binder.
+
+The fallback now uses the existing callback delivered with `startServer()`
+after shell Binder authentication. When the server cursor is unavailable,
+the input session uses combined pointer mode and the client attaches the
+cursor overlay on its main handler. The saved pointer mode is preserved.
+Look for `Server cursor unavailable` in the server log and
+`Attached client cursor overlay` in the app log.
+
+On a device that rejects the server cursor overlay, grant the debug app
+overlay access, unlock the device, and stop any open mapping session. Install
+the debug app with `adb install -r` and the test APK with `adb install -r -t`.
+Run the opt-in regression test while collecting both app and server logs:
+
+```bash
+adb shell am instrument -w -e shellCursorFallbackTest true \
+  -e class xtr.keymapper.server.ShellCursorFallbackTest \
+  xtr.keymapper.debug.test/androidx.test.runner.AndroidJUnitRunner
+```
 
 ## Local regression checks
 

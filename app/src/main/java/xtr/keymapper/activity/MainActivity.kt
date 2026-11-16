@@ -14,7 +14,9 @@ import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.Process
 import android.os.RemoteException
 import android.provider.Settings
@@ -44,12 +46,14 @@ import xtr.keymapper.profiles.ProfileSelector
 import xtr.keymapper.profiles.ProfilesApps
 import xtr.keymapper.ui.DialogWindowMode
 import xtr.keymapper.server.RemoteServiceHelper
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : AppCompatActivity() {
 
     var pointerOverlay: TouchPointer? = null
     private var selectedProfileName: String? = null
-    private var pendingShellProfile: String? = null
+    private var pendingShellStartup = PendingShellStartup(null)
+    private var isRequestingShellOverlayPermission = false
     private var verifiedShellBinder: IBinder? = null
     private var canStartShellProfile = false
     private var isServiceBound = false
@@ -61,6 +65,7 @@ class MainActivity : AppCompatActivity() {
         private const val SERVER_CRASH_DIALOG_TAG = "server_crash_dialog"
         private const val SERVER_CRASH_DISMISSED_REQUEST = "server_crash_dismissed"
         private const val MAX_DIAGNOSTIC_MESSAGE_CHARS = 16 * 1024
+        private const val OVERLAY_PERMISSION_REQUEST_TIMEOUT_MILLIS = 10_000L
         private const val SELECTED_PROFILE_NAME_STATE = "selected_profile_name"
         private const val PENDING_SHELL_PROFILE_STATE = "pending_shell_profile"
 
@@ -114,17 +119,18 @@ class MainActivity : AppCompatActivity() {
         val profiles = KeymapProfiles(this)
         val availableProfiles = profiles.getAllProfiles().keys
         val shellProfile = StartupLaunch.shellProfile(authenticatedShellLaunch, availableProfiles)
-        pendingShellProfile = if (savedInstanceState == null) {
+        val pendingProfile = if (savedInstanceState == null) {
             shellProfile
         } else {
             savedInstanceState.getString(PENDING_SHELL_PROFILE_STATE)?.takeIf { it == shellProfile }
         }
+        pendingShellStartup = PendingShellStartup(pendingProfile)
         selectedProfileName = savedInstanceState
             ?.getString(SELECTED_PROFILE_NAME_STATE)
             ?.takeIf { it == KeymapProfiles.DEFAULT_PROFILE_NAME || it in availableProfiles }
             ?: KeymapProfiles.DEFAULT_PROFILE_NAME.takeIf { authenticatedShellLaunch }
             ?: profiles.getLastSelectedProfile()
-        Log.i("xtmapper-startup", "MainActivity: profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode} autoStart=${pendingShellProfile != null}")
+        Log.i("xtmapper-startup", "MainActivity: profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode} autoStart=${pendingShellStartup.profileName != null}")
         TouchPointer.currentSelectedProfile = selectedProfileName
         GameKeyMapperBridge.installGameKeyMapperContent(this)
 
@@ -137,7 +143,7 @@ class MainActivity : AppCompatActivity() {
                 verifiedShellBinder = shellBinder
                 startPendingShellProfile()
             }
-        } else if (!dialogPending && pendingShellProfile == null) {
+        } else if (!dialogPending && pendingShellStartup.profileName == null) {
             handleActivationFlow(keymapConfig)
         }
 
@@ -147,7 +153,7 @@ class MainActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         canStartShellProfile = false
         selectedProfileName?.let { outState.putString(SELECTED_PROFILE_NAME_STATE, it) }
-        pendingShellProfile?.let { outState.putString(PENDING_SHELL_PROFILE_STATE, it) }
+        pendingShellStartup.profileName?.let { outState.putString(PENDING_SHELL_PROFILE_STATE, it) }
         super.onSaveInstanceState(outState)
     }
 
@@ -163,15 +169,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startPendingShellProfile() {
-        val profileName = pendingShellProfile ?: return
+        if (pendingShellStartup.profileName == null) return
         val binder = verifiedShellBinder ?: return
         if (!canStartShellProfile || isFinishing || isDestroyed ||
             supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) != null ||
             !RemoteServiceHelper.hasLiveShellService(binder)
         ) return
 
-        pendingShellProfile = null
-        startPointer(null, autoStart = true, profileName = profileName)
+        val hasOverlayPermission = Settings.canDrawOverlays(this)
+        if (!hasOverlayPermission) {
+            if (isRequestingShellOverlayPermission) return
+            isRequestingShellOverlayPermission = true
+            requestOverlayPermission(
+                onGranted = { startPendingShellProfile() },
+                onComplete = { isRequestingShellOverlayPermission = false }
+            )
+            return
+        }
+
+        pendingShellStartup.startIfOverlayGranted(hasOverlayPermission) { profileName ->
+            startPointer(null, autoStart = true, profileName = profileName)
+        }
     }
 
     private fun handleActivationFlow(keymapConfig: KeymapConfig) {
@@ -293,7 +311,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (!autoStart) checkOverlayPermission(this)
+        if (!Settings.canDrawOverlays(this)) {
+            requestOverlayPermission(
+                onGranted = { startPointer(displayId, autoStart, profileName) }
+            )
+            return
+        }
         val profiles = KeymapProfiles(this)
         val targetProfile = profileName ?: profiles.getLastSelectedProfile()
         if (!autoStart) selectedProfileName = targetProfile
@@ -308,6 +331,53 @@ class MainActivity : AppCompatActivity() {
             isServiceBound = bindService(intent, connection, BIND_AUTO_CREATE)
             ContextCompat.startForegroundService(this, intent)
             if (!autoStart) requestNotificationPermission()
+        }
+    }
+
+    private fun requestOverlayPermission(
+        onGranted: (() -> Unit)? = null,
+        onComplete: ((Boolean) -> Unit)? = null,
+    ) {
+        if (Settings.canDrawOverlays(this)) {
+            onGranted?.invoke()
+            onComplete?.invoke(true)
+            return
+        }
+
+        val mainHandler = Handler(Looper.getMainLooper())
+        val requestCompleted = AtomicBoolean(false)
+        lateinit var timeout: Runnable
+        fun completeRequest() {
+            if (!requestCompleted.compareAndSet(false, true)) return
+            mainHandler.removeCallbacks(timeout)
+            if (isFinishing || isDestroyed) return
+            val hasOverlayPermission = Settings.canDrawOverlays(this)
+            if (hasOverlayPermission) onGranted?.invoke()
+            else checkOverlayPermission(this)
+            onComplete?.invoke(hasOverlayPermission)
+        }
+        timeout = Runnable { completeRequest() }
+        mainHandler.postDelayed(timeout, OVERLAY_PERMISSION_REQUEST_TIMEOUT_MILLIS)
+
+        try {
+            RemoteServiceHelper.getInstance(this) { service ->
+                if (!requestCompleted.get()) {
+                    if (service == null) {
+                        mainHandler.post { completeRequest() }
+                    } else {
+                        Thread({
+                            val granted = runCatching { service.grantOverlayPermission() }
+                                .onFailure { Log.w("xtmapper-permission", "Privileged overlay grant failed", it) }
+                                .getOrDefault(false)
+                            if (!granted) Log.i("xtmapper-permission", "Checking current overlay access after privileged grant failure")
+                            mainHandler.post { completeRequest() }
+                        }, "overlay-permission-grant").start()
+                    }
+                }
+            }
+        } catch (e: RuntimeException) {
+            Log.w("xtmapper-permission", "Unable to bind a privileged overlay service", e)
+            mainHandler.post { completeRequest() }
         }
     }
 
@@ -378,7 +448,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         if (Shizuku.pingBinder()) Shizuku.requestPermission(0)
-        showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, { _, _ -> launchShizukuAndExit() }, R.string.ok)
+        showAlertDialog(R.string.shizuku_not_authorized_title, R.string.shizuku_not_authorized_message, { _, _ -> launchShizukuManager() }, R.string.ok)
     }
 
     private fun alertShizukuNotRunning() {
@@ -386,7 +456,7 @@ class MainActivity : AppCompatActivity() {
             alertShizukuNotInstalled()
             return
         }
-        showAlertDialog(R.string.shizuku_not_running_title, R.string.shizuku_not_running_message, { _, _ -> launchShizukuAndExit() }, R.string.start)
+        showAlertDialog(R.string.shizuku_not_running_title, R.string.shizuku_not_running_message, { _, _ -> launchShizukuManager() }, R.string.start)
     }
 
     private fun alertShizukuNotInstalled() {
@@ -400,11 +470,10 @@ class MainActivity : AppCompatActivity() {
         false
     }
 
-    private fun launchShizukuAndExit() {
+    private fun launchShizukuManager() {
         val launchIntent = packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
         if (launchIntent != null) {
             startActivity(launchIntent)
-            System.exit(0)
         } else {
             alertShizukuNotInstalled()
         }
@@ -435,7 +504,7 @@ class MainActivity : AppCompatActivity() {
             if (Shizuku.pingBinder()) alertShizukuNotAuthorized()
             else alertShizukuNotRunning()
         } else if (!Settings.canDrawOverlays(this)) {
-            checkOverlayPermission(this)
+            requestOverlayPermission()
         }
     }
 
@@ -585,7 +654,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun toggleOverlayFromCompose() {
-        if (!Settings.canDrawOverlays(this)) checkOverlayPermission(this)
+        if (!Settings.canDrawOverlays(this)) requestOverlayPermission()
     }
 
     fun openSettingsFromCompose() {

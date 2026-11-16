@@ -462,36 +462,31 @@ class TouchPointer : Service() {
          * with an empty touchable region if the service is currently running.
          */
         override fun enablePointer() {
-            val keymapConfig = requestKeymapConfig()
-
-            // Set combined pointer mode automatically for 14 QPR3 and above
-            if (keymapConfig.pointerMode == KeymapConfig.POINTER_OVERLAY) {
-                keymapConfig.pointerMode = KeymapConfig.POINTER_COMBINED
-                keymapConfig.applySharedPrefs()
-                activityCallback?.stopPointer()
-                try {
-                    stopServer()
-                } catch (_: RemoteException) {
-                }
-                return
-            }
-
+            // The remote start already supplied this callback. Attach the client overlay
+            // without tearing down or replacing the input session that requested it.
             mHandler.post {
-                if (cursorView == null && isRunning) {
-                    val binding = CursorBinding.inflate(
-                        LayoutInflater.from(
-                            ContextThemeWrapper(displayContext, R.style.Theme_XtMapper)
-                        )
-                    )
-                    val view = binding.root
-                    cursorView = view
-
-                    val mParams =
-                        Utils.getPointerLayoutParams(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT)
-
+                if (!isRunning || activeInstance !== this@TouchPointer || cursorView != null) {
+                    return@post
+                }
+                val wm = mWindowManager ?: displayContext.getSystemService(WindowManager::class.java)
+                    ?: return@post
+                val view = CursorBinding.inflate(
+                    LayoutInflater.from(ContextThemeWrapper(displayContext, R.style.Theme_XtMapper))
+                ).root
+                view.setTag(R.id.tag_pointer_cursor_overlay, true)
+                val windowType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                } else {
+                    WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
+                }
+                val params = Utils.getPointerLayoutParams(windowType)
+                try {
                     Utils.applyEmptyTouchableRegion(view)
-                    val wm = mWindowManager ?: displayContext.getSystemService(WindowManager::class.java)
-                    wm?.addView(view, mParams)
+                    wm.addView(view, params)
+                    cursorView = view
+                    Log.i("TouchPointer", "Attached client cursor overlay")
+                } catch (e: RuntimeException) {
+                    Log.w("TouchPointer", "Failed to attach client cursor overlay", e)
                 }
             }
         }

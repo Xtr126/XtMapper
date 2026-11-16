@@ -3,6 +3,7 @@ package xtr.keymapper.server
 import android.os.Handler
 import android.os.Looper
 import android.os.RemoteException
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import xtr.keymapper.InputEventCodes.BTN_MIDDLE
@@ -52,7 +53,12 @@ class InputService @Throws(RemoteException::class) constructor(
 
     init {
         profile.scale(screenWidth.toFloat(), screenHeight.toFloat())
-        this.currentPointerMode = keymapConfig.pointerMode
+        currentPointerMode = if (keymapConfig.pointerMode == KeymapConfig.POINTER_OVERLAY && cursorView == null) {
+            Log.i(RemoteService.TAG, "Server cursor unavailable; using the client callback in combined mode")
+            KeymapConfig.POINTER_COMBINED
+        } else {
+            keymapConfig.pointerMode
+        }
         if (currentPointerMode != KeymapConfig.POINTER_OVERLAY) {
             initMouseCursor(screenWidth, screenHeight)
             // Reduce visibility of system pointer
