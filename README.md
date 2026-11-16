@@ -37,7 +37,7 @@ https://xtr126.github.io/XtMapper-docs/guides/about
 
 ## Development
 
-See [BUILDING.md](BUILDING.md) for build prerequisites, signing setup, and Gradle commands.
+See the [development guide](docs/development.md) for build setup and Android instrumentation.
 See [CONTRIBUTING.md](CONTRIBUTING.md) to report issues, ask questions, or contribute.
 
 ## Help and support 

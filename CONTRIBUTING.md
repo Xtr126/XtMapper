@@ -10,7 +10,10 @@ Contributions are welcome. Please open a pull request with a clear description o
 
 Please split large changes into smaller, focused pull requests where possible.
 
-See [BUILDING.md](BUILDING.md) for the project build instructions. Keep changes focused and preserve the project's existing code and attribution conventions. 
+Follow the [development guide](docs/development.md) and report the checks you ran
+using the [validation guide](docs/validation.md). Open and future PRs should add
+Android instrumentation tests when the changed behavior depends on Android
+runtime integration. Generated code requires human review before merge.
 
 ## Translations
 

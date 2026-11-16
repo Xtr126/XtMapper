@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - JDK 21. The Gradle daemon JVM configuration requests this version and can provision it through Foojay.
-- Android SDK Platform 37 and Android NDK `28.0.13004108`, as configured by the app module.
+- Android SDK Platform 37.0, Build Tools `36.0.0`, and Android NDK `30.0.16248370`, as configured by the app module.
 - An Android SDK installation with its licenses accepted. Gradle downloads the wrapper and project dependencies on the first build.
 
 Open the project in Android Studio to install missing SDK components, or install them with the Android SDK command-line tools.
@@ -26,7 +26,9 @@ The debug APK is written to `app/build/outputs/apk/debug/`.
 
 ## Signing configuration
 
-The app module loads `keystore.properties` from the project root whenever Gradle configures the project. Create this ignored local file before running Gradle, including for a debug build. The debug variant does not use the release signing configuration, but the file is still loaded during configuration.
+The debug variant uses the standard debug key. The checked-in
+`keystore.properties` supplies placeholder release settings for Gradle configuration.
+Keep local signing credentials out of commits.
 
 The release build uses these properties:
 
@@ -60,11 +62,8 @@ do not override labels. Event lookups select a table by event type and return
 null for unknown values. These are evdev names, without XKB translation or
 legacy Cage profile migration.
 
-Coverage follows the configured NDK. NDK `28.0.13004108` lacks seven keyboard
-labels from the former table: `KEY_LINK_PHONE`, `KEY_EPRIVACY_SCREEN_ON`,
-`KEY_EPRIVACY_SCREEN_OFF`, `KEY_ACTION_ON_SELECTION`, `KEY_CONTEXTUAL_INSERT`,
-`KEY_CONTEXTUAL_QUERY`, and `KEY_PERFORMANCE`. Keyboard capture ignores those
-unknown codes until the NDK supplies their definitions.
+Coverage follows the configured NDK headers. Keyboard capture ignores codes
+whose labels are absent from those headers.
 
 Run generator checks with host Python 3 and a C++ compiler, and Kotlin checks
 with Gradle:
