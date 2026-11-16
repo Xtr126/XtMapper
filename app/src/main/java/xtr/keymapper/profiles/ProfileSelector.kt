@@ -83,8 +83,8 @@ class ProfileSelector {
         fun showEnableProfileDialog(
             @UiContext context: Context,
             packageName: String,
-            listener: OnProfileEnabledListener,
-            windowMode: DialogWindowMode
+            windowMode: DialogWindowMode,
+            listener: OnProfileEnabledListener
         ) {
             context.setTheme(R.style.Theme_XtMapper)
             val builder = MaterialAlertDialogBuilder(context)
