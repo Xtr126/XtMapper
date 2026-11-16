@@ -71,11 +71,18 @@ class ShellServiceControlsTest {
             }
             await("The shell launch should start the service and update its status") {
                 TouchPointer.isRunning &&
+                    TouchPointer.activeInstance?.mService?.isActive == true &&
                     (!verifyScreen || screenContains(context.getString(R.string.service_active)))
             }
+            val remote = checkNotNull(TouchPointer.activeInstance?.mService)
             assertEquals(defaultName, TouchPointer.currentSelectedProfile)
             assertEquals(otherProfile, profiles.getLastSelectedProfile())
 
+            await("The foreground service should post the editor notification") {
+                notifications.activeNotifications.any {
+                    it.notification.channelId == TouchPointer.CHANNEL_ID
+                }
+            }
             val notification = notifications.activeNotifications
                 .first { it.notification.channelId == TouchPointer.CHANNEL_ID }.notification
             assertNotNull(notification.contentIntent)
@@ -83,7 +90,7 @@ class ShellServiceControlsTest {
                 .actionIntent.send()
 
             await("The notification action should stop the service and update the screen") {
-                !TouchPointer.isRunning &&
+                !TouchPointer.isRunning && !remote.isActive &&
                     notifications.activeNotifications.none {
                         it.notification.channelId == TouchPointer.CHANNEL_ID
                     } &&
