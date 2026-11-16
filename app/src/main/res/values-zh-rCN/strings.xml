@@ -8,11 +8,8 @@
     <string name="logs_unsupported">Public app logs require Android 11 or later and All-files access. On this Android version, this app logs to Logcat only.</string>
     <string name="logs_settings_unavailable">Unable to open All-files access settings. Open Android Settings and search for All-files access.</string>
     <string name="start">开始</string>
-    <string name="stop">停止</string>
     <string name="configure">设置</string>
-    <string name="edit_keymap">编辑键映射</string>
     <string name="help">帮助</string>
-    <string name="package_name">包名：</string>
     <string name="mouse_sensitivity">鼠标灵敏度</string>
     <string name="mouse_aim_activated">    射击模式点击右键或~键退出
     </string>
@@ -30,9 +27,6 @@
     <string name="launch_editor">启动编辑器</string>
     <string name="pause_resume">暂停/恢复</string>
     <!-- bottom navigation in settings fragment -->
-    <string name="tuning">微调</string>
-    <string name="config">配置</string>
-    <string name="shortcuts">快捷</string>
     <string name="trigger_mouse_aim_with">触发鼠标瞄准：</string>
     <string name="right_click">右键单击</string>
     <string name="key_grave">~键</string>
@@ -59,7 +53,6 @@
     </string>
     <string name="disable_auto_profile">禁用自动分析</string>
     <string name="touchpad_input">触摸板输入</string>
-    <string name="launch_app">启动应用</string>
     <string name="use_shizuku">使用 Shizuku</string>
     <string name="pointer">指针模式</string>
     <string name="open_editor_as_overlay">以叠加方式打开编辑器</string>
@@ -102,9 +95,7 @@
     <string name="export_selected">导出已选</string>
     <string name="select_all">选择全部</string>
     <string name="import_button">导入</string>
-    <string name="rename">重命名</string>
     <string name="delete">删除</string>
-    <string name="enabled">启用</string>
     <string name="no_profile_selected">未选择配置文件</string>
     <string name="select_profile_from_below">点击下方列表中的配置以选择它</string>
     <string name="detected_shizuku">检测到Shizuku</string>
@@ -143,9 +134,6 @@
     <string name="touch_jitter_spread">抖动范围</string>
     <string name="touch_jitter_spread_px">触控抖动范围: %d 像素</string>
     <string name="quick_settings_tile_name">XtMapper</string>
-    <string name="input_mode">输入模式</string>
-    <string name="input_mode_root">Root</string>
-    <string name="input_mode_shizuku">Shizuku (ADB)</string>
     <string name="input_mode_changed">输入模式：%1$s</string>
     <string name="block_keyboard_input">阻止原始键盘输入</string>
     <string name="block_keyboard">屏蔽键盘</string>

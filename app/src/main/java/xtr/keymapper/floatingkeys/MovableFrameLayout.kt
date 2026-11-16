@@ -46,7 +46,7 @@ class MovableFrameLayout @JvmOverloads constructor(
     }
 
     override fun onTouch(view: View, motionEvent: MotionEvent): Boolean {
-        val layoutParams = view.layoutParams as ViewGroup.MarginLayoutParams
+        val layoutParams = view.layoutParams as MarginLayoutParams
 
         when (motionEvent.action) {
             MotionEvent.ACTION_DOWN -> {

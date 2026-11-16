@@ -75,7 +75,7 @@ object FrameCodec {
         "%08x".format(CRC32().apply {
             update("P1|$sid|$seq|$len|".toByteArray(Charsets.US_ASCII))
             update(raw)
-        }.getValue())
+        }.value)
     private fun escape(p: String) = p.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r")
 
     private fun unescape(s: String): String? {

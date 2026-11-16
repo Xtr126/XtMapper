@@ -352,7 +352,7 @@ class LoggingPipelineTest {
             }
 
             override fun close() {
-                withSinkLock { Unit }
+                withSinkLock { }
             }
         }
 

@@ -4,10 +4,10 @@
     android:layout_height="wrap_content"
     android:layout_gravity="center">
         <ImageView
+            android:id="@+id/app_icon"
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:padding="10dp"
-            android:id="@+id/app_icon"
             android:src="@mipmap/ic_launcher"
             />
 

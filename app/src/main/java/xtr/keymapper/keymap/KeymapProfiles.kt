@@ -113,8 +113,7 @@ class KeymapProfiles @JvmOverloads constructor(
     }
 
     fun profileExists(profileName: String?): Boolean {
-        if (profileName.isNullOrEmpty()) return false
-        return sharedPref.contains(profileName) && sharedPref.getStringSet(profileName, null) != null
+        return !profileName.isNullOrEmpty() && sharedPref.contains(profileName) && sharedPref.getStringSet(profileName, null) != null
     }
 
     fun profileExistsWithPackageName(packageName: String): Boolean {

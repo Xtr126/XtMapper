@@ -8,11 +8,8 @@
     <string name="logs_unsupported">Public app logs require Android 11 or later and All-files access. On this Android version, this app logs to Logcat only.</string>
     <string name="logs_settings_unavailable">Unable to open All-files access settings. Open Android Settings and search for All-files access.</string>
     <string name="start">Start</string>
-    <string name="stop">Stop</string>
     <string name="configure">Settings</string>
-    <string name="edit_keymap">Edit keymap</string>
     <string name="help">Help</string>
-    <string name="package_name">package name: </string>
     <string name="mouse_sensitivity">Mouse Sensitivity</string>
     <string name="mouse_aim_activated">
         Shooting mode activated Right click or ~ key to exit
@@ -36,9 +33,6 @@
     <string name="pause_resume">Pause/Resume</string>
 
     <!-- bottom navigation in settings fragment -->
-    <string name="tuning">Tuning</string>
-    <string name="config">Config</string>
-    <string name="shortcuts">Shortcuts</string>
 
     <string name="trigger_mouse_aim_with">Trigger mouse aim with:</string>
     <string name="right_click">Right click</string>
@@ -69,7 +63,6 @@
     </string>
     <string name="disable_auto_profile">Disable auto profiling</string>
     <string name="touchpad_input">Touchpad Input</string>
-    <string name="launch_app">Launch App</string>
     <string name="use_shizuku">Use Shizuku</string>
     <string name="pointer">Pointer Mode</string>
     <string name="open_editor_as_overlay">Open editor as overlay</string>
@@ -117,9 +110,7 @@
     <string name="export_selected">Export selected</string>
     <string name="select_all">Select all</string>
     <string name="import_button">Import</string>
-    <string name="rename">Rename</string>
     <string name="delete">Delete</string>
-    <string name="enabled">Enabled</string>
     <string name="no_profile_selected">No profile selected</string>
     <string name="select_profile_from_below">Tap on a profile from the list below to select it</string>
     <string name="detected_shizuku">Detected Shizuku</string>
@@ -159,9 +150,6 @@
     <string name="touch_jitter_spread">Touch Jitter Spread</string>
     <string name="touch_jitter_spread_px">Touch jitter spread: %d px</string>
     <string name="quick_settings_tile_name">XtMapper</string>
-    <string name="input_mode">Input Mode</string>
-    <string name="input_mode_root">Root</string>
-    <string name="input_mode_shizuku">Shizuku (ADB)</string>
     <string name="input_mode_changed">Input Mode: %1$s</string>
     <string name="block_keyboard_input">Block raw keyboard input</string>
     <string name="block_keyboard">Block Keyboard</string>

@@ -2,11 +2,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">XtMapper</string>
     <string name="start">Démarrer</string>
-    <string name="stop">Arrêter</string>
     <string name="configure">Paramètres</string>
-    <string name="edit_keymap">Modifier la disposition des touches</string>
     <string name="help">Aide</string>
-    <string name="package_name">nom du paquet : </string>
     <string name="mouse_sensitivity">Sensibilité de la souris</string>
     <string name="mouse_aim_activated">
         Mode visée activé Clic droit ou appuyez sur ~ pour quitter
@@ -27,9 +24,6 @@
     <string name="pause_resume">Pause/Reprendre</string>
 
     <!-- bottom navigation in settings fragment -->
-    <string name="tuning">Réglage</string>
-    <string name="config">Configuration</string>
-    <string name="shortcuts">Raccourcis</string>
 
     <string name="trigger_mouse_aim_with">Déclencher la visée avec :</string>
     <string name="right_click">Clic droit</string>
@@ -57,7 +51,6 @@
     <string name="root_no_privileges_message">Impossible d\'obtenir les privilèges. Voulez-vous quitter l\'application ?&#10;Si vous avez déjà accordé les privilèges de superutilisateur, cela pourrait fonctionner après la fermeture et l\'ouverture de l\'application.</string>
     <string name="disable_auto_profile">Désactiver le profil automatique</string>
     <string name="touchpad_input">Entrée du pavé tactile</string>
-    <string name="launch_app">Lancer l\'application</string>
     <string name="use_shizuku">Utiliser Shizuku</string>
     <string name="pointer">Mode pointeur</string>
     <string name="open_editor_as_overlay">Ouvrir l\'éditeur comme superposition</string>
@@ -100,9 +93,7 @@
     <string name="export_selected">Exporter la sélection</string>
     <string name="select_all">Sélectionner tout</string>
     <string name="import_button">Importer</string>
-    <string name="rename">Renommer</string>
     <string name="delete">Supprimer</string>
-    <string name="enabled">Activé</string>
     <string name="no_profile_selected">Aucun profil sélectionné</string>
     <string name="select_profile_from_below">Appuyez sur un profil de la liste ci-dessous pour le sélectionner</string>
     <string name="detected_shizuku">Shizuku détecté</string>
@@ -140,9 +131,6 @@
     <string name="touch_jitter_spread">Dispersion de la gigue</string>
     <string name="touch_jitter_spread_px">Dispersion de la gigue: %d px</string>
     <string name="quick_settings_tile_name">XtMapper</string>
-    <string name="input_mode">Mode de saisie</string>
-    <string name="input_mode_root">Root</string>
-    <string name="input_mode_shizuku">Shizuku (ADB)</string>
     <string name="shizuku_not_installed_title">Shizuku n’est pas installé</string>
     <string name="shizuku_not_installed_message">Installez l’application Shizuku avant de sélectionner le mode de saisie Shizuku.</string>
     <string name="test_input_service_inactive">Démarrez le service de mappage des touches avant de tester la saisie.</string>

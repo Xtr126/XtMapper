@@ -146,8 +146,8 @@ object RemoteServiceHelper {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             Log.i("xtmapper-startup", "onServiceConnected: component=$name alive=${service.isBinderAlive}")
             connectedBinder = service
-            if (requestGeneration != RemoteServiceHelper.backendGeneration ||
-                requestedShizuku != RemoteServiceHelper.useShizuku
+            if (requestGeneration != backendGeneration ||
+                requestedShizuku != useShizuku
             ) {
                 releaseStaleBinding(service)
                 return
@@ -156,7 +156,7 @@ object RemoteServiceHelper {
 
             val remote = IRemoteService.Stub.asInterface(service)
             RemoteServiceHelper.service = remote
-            RemoteServiceHelper.forceSelectedBackend = false
+            forceSelectedBackend = false
             try {
                 service.linkToDeath({
                     if (RemoteServiceHelper.service?.asBinder() == service) {
@@ -168,14 +168,14 @@ object RemoteServiceHelper {
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
-            if (requestGeneration != RemoteServiceHelper.backendGeneration ||
-                requestedShizuku != RemoteServiceHelper.useShizuku
+            if (requestGeneration != backendGeneration ||
+                requestedShizuku != useShizuku
             ) {
                 releaseStaleBinding()
                 return
             }
-            if (RemoteServiceHelper.service?.asBinder() == connectedBinder) {
-                RemoteServiceHelper.service = null
+            if (service?.asBinder() == connectedBinder) {
+                service = null
                 cb.onConnection(null)
             }
         }
@@ -223,7 +223,7 @@ object RemoteServiceHelper {
         }
         val callback = object : IShellAuthenticationCallback.Stub() {
             override fun onShellServiceAuthenticated(challengeResponse: Long) {
-                authenticator.authenticate(Binder.getCallingUid(), challengeResponse)
+                authenticator.authenticate(getCallingUid(), challengeResponse)
             }
         }
 

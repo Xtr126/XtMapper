@@ -263,9 +263,9 @@ object XtLogger {
         val metadata = SessionMetadata(
             appVersion = BuildConfig.VERSION_NAME,
             buildType = BuildConfig.BUILD_TYPE,
-            androidVersion = android.os.Build.VERSION.RELEASE,
-            sdkInt = android.os.Build.VERSION.SDK_INT,
-            deviceModel = android.os.Build.MODEL,
+            androidVersion = Build.VERSION.RELEASE,
+            sdkInt = Build.VERSION.SDK_INT,
+            deviceModel = Build.MODEL,
             environment = xtr.keymapper.Environment.name,
         )
         val newPipeline = LoggingPipeline(

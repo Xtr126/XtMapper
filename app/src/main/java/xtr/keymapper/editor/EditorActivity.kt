@@ -103,10 +103,7 @@ class EditorActivity : ComponentActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (editor?.onKey(keyCode, event) == true) {
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
+        return editor?.onKey(keyCode, event) == true || super.onKeyDown(keyCode, event)
     }
 
     companion object {

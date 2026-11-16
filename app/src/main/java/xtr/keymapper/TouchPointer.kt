@@ -53,7 +53,6 @@ class TouchPointer : Service() {
     private var mWindowManager: WindowManager? = null
     private var displayId = 0
     private var displayListener: DisplayListener? = null
-    private var lastForegroundPackage: String? = null
     private var lastDisplayWidth = 0
     private var lastDisplayHeight = 0
     private var lastDisplayRotation = -1
@@ -164,7 +163,7 @@ class TouchPointer : Service() {
     /**
      * Builds the persistent foreground notification for the Keymapper service.
      */
-    private fun buildNotification(): android.app.Notification {
+    private fun buildNotification(): Notification {
         val keymapConfig = KeymapConfig(this)
         val pendingIntent: PendingIntent?
 

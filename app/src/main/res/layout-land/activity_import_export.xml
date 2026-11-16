@@ -49,10 +49,10 @@
                 </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/import_button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/import_button"
-                    android:id="@+id/import_button"
                     style="?attr/borderlessButtonStyle"/>
             </LinearLayout>
 
@@ -98,17 +98,17 @@
                     android:orientation="horizontal"
                     android:paddingBottom="8dp">
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/export_button"
                         android:layout_width="match_parent"
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
-                        android:id="@+id/export_button"
                         android:text="@string/export_selected"
                         style="?attr/borderlessButtonStyle"/>
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/select_all_button"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/select_all"
-                        android:id="@+id/select_all_button"
                         android:layout_weight="1"
                         style="?attr/borderlessButtonStyle"/>
                 </LinearLayout>

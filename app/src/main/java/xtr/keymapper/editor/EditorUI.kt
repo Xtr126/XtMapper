@@ -1,6 +1,7 @@
 package xtr.keymapper.editor
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
@@ -566,7 +567,7 @@ class EditorUI(
     private fun handleExportAction() {
         val configString = generateConfigString()
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-        val clip = android.content.ClipData.newPlainText("XtMapper Config", configString)
+        val clip = ClipData.newPlainText("XtMapper Config", configString)
         clipboard?.setPrimaryClip(clip)
         android.widget.Toast.makeText(context, "Configuration copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
     }

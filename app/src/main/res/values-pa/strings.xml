@@ -8,11 +8,8 @@
     <string name="logs_unsupported">Public app logs require Android 11 or later and All-files access. On this Android version, this app logs to Logcat only.</string>
     <string name="logs_settings_unavailable">Unable to open All-files access settings. Open Android Settings and search for All-files access.</string>
     <string name="start">ਚਲਾਓੁ</string>
-    <string name="stop">ਰੋਕੋ</string>
     <string name="configure">ਸੈਟਿਗ</string>
-    <string name="edit_keymap">ਕੀ ਮੈਪ ਵਿਚ ਬਦਲਾਵ</string>
     <string name="help">ਮਦਦ</string>
-    <string name="package_name">ਪੈਕੇਜ ਦਾ ਨਾਮ: </string>
     <string name="mouse_sensitivity">ਮਾਊਸ ਸੰਵੇਦਨਸ਼ੀਲਤਾ</string>
     <string name="mouse_aim_activated">       ਸ਼ੂਟਿੰਗ ਮੋਡ ਚਲਾ ਦਿੱਤਾ ਗਿਆ ਹੈ ਬਾਹਰ ਜਾਣ ਲਈ ਸੱਜਾ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ~ ਕੁੰਜੀ
     </string>
@@ -30,9 +27,6 @@
     <string name="launch_editor">ਏਡੀਟਰ ਲਾਂਚ ਕਰੋ</string>
     <string name="pause_resume">ਰੋਕੋ/ਮੁੜ ਸ਼ੁਰੂ ਕਰੋ</string>
     <!-- bottom navigation in settings fragment -->
-    <string name="tuning">ਟਿਊਨਿੰਗ</string>
-    <string name="config">ਕੋਨਫਿਗ</string>
-    <string name="shortcuts">ਸ਼ਾਰਟਕੱਟ</string>
     <string name="trigger_mouse_aim_with">ਇਸ ਨਾਲ ਮਾਊਸ ਏਮ ਨੂੰ ਟਰਿੱਗਰ ਕਰੋ:</string>
     <string name="right_click">ਸੱਜਾ ਕਲਿੱਕ</string>
     <string name="key_grave">~ ਬਟਨ</string>
@@ -60,7 +54,6 @@
     </string>
     <string name="disable_auto_profile">ਆਟੋ ਪ੍ਰੋਫਾਈਲਿੰਗ ਨੂੰ ਬੰਦ ਕਰੋ</string>
     <string name="touchpad_input">ਟੱਚਪੈਡ ਇਨਪੁਟ</string>
-    <string name="launch_app">ਐਪ ਖੋਲੋ</string>
     <string name="use_shizuku">Shizuku ਵਰਤੋ</string>
     <string name="pointer">ਪੁਆਇੰਟਰ ਮੋਡ</string>
     <string name="open_editor_as_overlay">ਓਵਰਲੇਅ ਵਜੋਂ ਏਡੀਟਰ ਖੋਲ੍ਹੋ</string>
@@ -103,9 +96,7 @@
     <string name="export_selected">ਐਕਸਪੋਰਟ ਚੁਣਿਆ ਗਿਆ</string>
     <string name="select_all">ਚੁਣੋ</string>
     <string name="import_button">ਇੰਪੋਰਟ</string>
-    <string name="rename">ਨਾਮ ਬਦਲੋ</string>
     <string name="delete">ਮਿਟਾਓ</string>
-    <string name="enabled">ਸਮਰੱਥ ਹੈ</string>
     <string name="no_profile_selected">ਕੋਈ ਪ੍ਰੋਫਾਈਲ ਨਹੀਂ ਚੁਣਿਆ ਗਿਆ</string>
     <string name="select_profile_from_below">ਇਸ ਨੂੰ ਚੁਣਨ ਲਈ ਹੇਠਾਂ ਦਿੱਤੀ ਸੂਚੀ ਵਿੱਚੋਂ ਇੱਕ ਪ੍ਰੋਫਾਈਲ \'ਤੇ ਟੈਪ ਕਰੋ</string>
     <string name="detected_shizuku">Shizuku ਮਿਲਿਆ ਹੈ</string>
@@ -144,9 +135,6 @@
     <string name="touch_jitter_spread">ਜਿਟਰ ਫੈਲਾਓ</string>
     <string name="touch_jitter_spread_px">ਟਚ ਜਿਟਰ ਫੈਲਾਓ: %d ਪਿਕਸਲ</string>
     <string name="quick_settings_tile_name">XtMapper</string>
-    <string name="input_mode">ਇਨਪੁਟ ਮੋਡ</string>
-    <string name="input_mode_root">Root</string>
-    <string name="input_mode_shizuku">Shizuku (ADB)</string>
     <string name="input_mode_changed">ਇਨਪੁੱਟ ਮੋਡ: %1$s</string>
     <string name="block_keyboard_input">ਸਿੱਧੇ ਕੀਬੋਰਡ ਇਨਪੁੱਟ ਨੂੰ ਰੋਕੋ</string>
     <string name="block_keyboard">ਕੀਬੋਰਡ ਰੋਕੋ</string>

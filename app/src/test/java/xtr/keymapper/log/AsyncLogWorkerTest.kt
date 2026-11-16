@@ -265,8 +265,8 @@ class AsyncLogWorkerTest {
 
     @Test
     fun `flush times out instead of hanging when the sink is stuck`() {
-        val entered = java.util.concurrent.CountDownLatch(1)
-        val release = java.util.concurrent.CountDownLatch(1)
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
         val stuckStore = object : LogStore {
             override fun listFiles() = emptyList<LogFileInfo>()
             override fun openAppendWriter(name: String): LogFileWriter = object : LogFileWriter {
