@@ -14,7 +14,9 @@ import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.Process
 import android.os.RemoteException
 import android.provider.Settings
@@ -44,6 +46,7 @@ import xtr.keymapper.profiles.ProfileSelector
 import xtr.keymapper.profiles.ProfilesApps
 import xtr.keymapper.ui.DialogWindowMode
 import xtr.keymapper.server.RemoteServiceHelper
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : AppCompatActivity() {
 
@@ -61,6 +64,7 @@ class MainActivity : AppCompatActivity() {
         private const val SERVER_CRASH_DIALOG_TAG = "server_crash_dialog"
         private const val SERVER_CRASH_DISMISSED_REQUEST = "server_crash_dismissed"
         private const val MAX_DIAGNOSTIC_MESSAGE_CHARS = 16 * 1024
+        private const val OVERLAY_PERMISSION_REQUEST_TIMEOUT_MILLIS = 10_000L
         private const val SELECTED_PROFILE_NAME_STATE = "selected_profile_name"
         private const val PENDING_SHELL_PROFILE_STATE = "pending_shell_profile"
 
@@ -322,20 +326,37 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        RemoteServiceHelper.getInstance(this) { service ->
-            Thread {
-                val granted = runCatching { service?.grantOverlayPermission() == true }
-                    .onFailure { Log.w("xtmapper-permission", "Privileged overlay grant failed", it) }
-                    .getOrDefault(false)
-                runOnUiThread {
-                    if (isFinishing || isDestroyed) return@runOnUiThread
-                    if (granted && Settings.canDrawOverlays(this)) {
-                        onGranted?.invoke()
+        val mainHandler = Handler(Looper.getMainLooper())
+        val requestCompleted = AtomicBoolean(false)
+        lateinit var timeout: Runnable
+        fun completeRequest(granted: Boolean) {
+            if (!requestCompleted.compareAndSet(false, true)) return
+            mainHandler.removeCallbacks(timeout)
+            if (isFinishing || isDestroyed) return
+            if (granted && Settings.canDrawOverlays(this)) onGranted?.invoke()
+            else checkOverlayPermission(this)
+        }
+        timeout = Runnable { completeRequest(false) }
+        mainHandler.postDelayed(timeout, OVERLAY_PERMISSION_REQUEST_TIMEOUT_MILLIS)
+
+        try {
+            RemoteServiceHelper.getInstance(this) { service ->
+                if (!requestCompleted.get()) {
+                    if (service == null) {
+                        mainHandler.post { completeRequest(false) }
                     } else {
-                        checkOverlayPermission(this)
+                        Thread({
+                            val granted = runCatching { service.grantOverlayPermission() }
+                                .onFailure { Log.w("xtmapper-permission", "Privileged overlay grant failed", it) }
+                                .getOrDefault(false)
+                            mainHandler.post { completeRequest(granted) }
+                        }, "overlay-permission-grant").start()
                     }
                 }
-            }.start()
+            }
+        } catch (e: RuntimeException) {
+            Log.w("xtmapper-permission", "Unable to bind a privileged overlay service", e)
+            mainHandler.post { completeRequest(false) }
         }
     }
 
