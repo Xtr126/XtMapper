@@ -1,6 +1,7 @@
 package xtr.keymapper.activity
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.ActivityManager
 import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.content.Context
@@ -11,12 +12,16 @@ import android.provider.Settings
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleCallback
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.atomic.AtomicInteger
 import xtr.keymapper.R
 import xtr.keymapper.TouchPointer
 import xtr.keymapper.keymap.KeymapConfig
@@ -37,6 +42,9 @@ class ShellServiceControlsTest {
         val verifyScreen = !keyguard.isKeyguardLocked
         val notifications = context.getSystemService(NotificationManager::class.java)
         assumeTrue("Allow XtMapper notifications", notifications.areNotificationsEnabled())
+        var idle = false
+        instrumentation.runOnMainSync { idle = isTouchPointerIdle() }
+        assumeTrue("Stop XtMapper before running this test", idle)
 
         val profiles = KeymapProfiles(context)
         val prefs = profiles.sharedPref
@@ -50,7 +58,17 @@ class ShellServiceControlsTest {
         val priorOverlayBypass = shell("settings get system alert_window_bypass_low_ram")
         val accessibility = automation.serviceInfo
         val priorAccessibilityFlags = accessibility.flags
+        val activityCreations = AtomicInteger()
+        val lifecycleMonitor = ActivityLifecycleMonitorRegistry.getInstance()
+        val recreateBeforeVerification = ActivityLifecycleCallback { activity, stage ->
+            if (activity is MainActivity && stage == Stage.PRE_ON_CREATE &&
+                activityCreations.incrementAndGet() == 1
+            ) {
+                activity.recreate()
+            }
+        }
         var daemonPid: Int? = null
+        var testService: TouchPointer? = null
         try {
             accessibility.flags = priorAccessibilityFlags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             automation.serviceInfo = accessibility
@@ -61,6 +79,9 @@ class ShellServiceControlsTest {
                 .putString(KeymapProfiles.KEY_LAST_SELECTED_PROFILE, otherProfile)
                 .commit())
 
+            instrumentation.runOnMainSync {
+                lifecycleMonitor.addLifecycleCallback(recreateBeforeVerification)
+            }
             val app = context.applicationInfo
             val (stdout, stdin) = automation.executeShellCommandRw("sh")
             ParcelFileDescriptor.AutoCloseOutputStream(stdin).bufferedWriter().use { script ->
@@ -75,9 +96,14 @@ class ShellServiceControlsTest {
             daemonPid = checkNotNull(launchOutput.toIntOrNull()) {
                 "Expected the shell daemon PID, got: $launchOutput"
             }
-            await("The shell launch should start the service and update its status") {
-                TouchPointer.isRunning &&
-                    (!verifyScreen || screenContains(context.getString(R.string.service_active)))
+            await("The shell launch should start the service") {
+                testService = TouchPointer.activeInstance
+                TouchPointer.isRunning && testService != null && activityCreations.get() >= 2
+            }
+            if (verifyScreen) {
+                await("The screen should show that the service started") {
+                    screenContains(context.getString(R.string.service_active))
+                }
             }
             assertEquals(defaultName, TouchPointer.currentSelectedProfile)
             assertEquals(otherProfile, profiles.getLastSelectedProfile())
@@ -107,7 +133,10 @@ class ShellServiceControlsTest {
         } finally {
             accessibility.flags = priorAccessibilityFlags
             automation.serviceInfo = accessibility
-            instrumentation.runOnMainSync { TouchPointer.activeInstance?.stopKeymapper() }
+            instrumentation.runOnMainSync {
+                lifecycleMonitor.removeLifecycleCallback(recreateBeforeVerification)
+                testService?.takeIf { it === TouchPointer.activeInstance }?.stopKeymapper()
+            }
             daemonPid?.let { shell("kill $it") }
             if (priorOverlayBypass == "null") {
                 shell("settings delete system alert_window_bypass_low_ram")
@@ -125,6 +154,13 @@ class ShellServiceControlsTest {
                 .commit()
         }
     }
+
+    @Suppress("DEPRECATION") // Android still reports this app's own running services.
+    private fun isTouchPointerIdle(): Boolean =
+        !TouchPointer.isRunning && TouchPointer.activeInstance == null &&
+            context.getSystemService(ActivityManager::class.java)
+                .getRunningServices(Int.MAX_VALUE)
+                .none { it.service.className == TouchPointer::class.java.name }
 
     private fun shell(command: String): String =
         ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command))

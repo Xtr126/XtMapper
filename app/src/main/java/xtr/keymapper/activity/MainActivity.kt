@@ -49,6 +49,9 @@ class MainActivity : AppCompatActivity() {
 
     var pointerOverlay: TouchPointer? = null
     private var selectedProfileName: String? = null
+    private var pendingShellProfile: String? = null
+    private var verifiedShellBinder: IBinder? = null
+    private var canStartShellProfile = false
     private var isServiceBound = false
     private var displaySelector: DisplaySelector? = null
 
@@ -59,6 +62,7 @@ class MainActivity : AppCompatActivity() {
         private const val SERVER_CRASH_DISMISSED_REQUEST = "server_crash_dismissed"
         private const val MAX_DIAGNOSTIC_MESSAGE_CHARS = 16 * 1024
         private const val SELECTED_PROFILE_NAME_STATE = "selected_profile_name"
+        private const val PENDING_SHELL_PROFILE_STATE = "pending_shell_profile"
 
         init {
             // Set settings before the main shell can be created
@@ -110,13 +114,17 @@ class MainActivity : AppCompatActivity() {
         val profiles = KeymapProfiles(this)
         val availableProfiles = profiles.getAllProfiles().keys
         val shellProfile = StartupLaunch.shellProfile(authenticatedShellLaunch, availableProfiles)
-        val autoStartProfile = if (savedInstanceState == null) shellProfile else null
+        pendingShellProfile = if (savedInstanceState == null) {
+            shellProfile
+        } else {
+            savedInstanceState.getString(PENDING_SHELL_PROFILE_STATE)?.takeIf { it == shellProfile }
+        }
         selectedProfileName = savedInstanceState
             ?.getString(SELECTED_PROFILE_NAME_STATE)
             ?.takeIf { it == KeymapProfiles.DEFAULT_PROFILE_NAME || it in availableProfiles }
             ?: KeymapProfiles.DEFAULT_PROFILE_NAME.takeIf { authenticatedShellLaunch }
             ?: profiles.getLastSelectedProfile()
-        Log.i("xtmapper-startup", "MainActivity: profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode} autoStart=${autoStartProfile != null}")
+        Log.i("xtmapper-startup", "MainActivity: profile=$selectedProfileName shizuku=${keymapConfig.isShizukuMode} autoStart=${pendingShellProfile != null}")
         TouchPointer.currentSelectedProfile = selectedProfileName
         GameKeyMapperBridge.installGameKeyMapperContent(this)
 
@@ -125,12 +133,11 @@ class MainActivity : AppCompatActivity() {
 
         val dialogPending = supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) != null
         if (authenticatedShellLaunch && shellBinder != null) {
-            RemoteServiceHelper.setAuthenticatedShellServiceBinder(shellBinder) { verified ->
-                if (verified && !isDestroyed && !isFinishing && !dialogPending && autoStartProfile != null) {
-                    startPointer(null, autoStart = true, profileName = autoStartProfile)
-                }
+            RemoteServiceHelper.setAuthenticatedShellServiceBinder(shellBinder) {
+                verifiedShellBinder = shellBinder
+                startPendingShellProfile()
             }
-        } else if (!dialogPending && autoStartProfile == null) {
+        } else if (!dialogPending && pendingShellProfile == null) {
             handleActivationFlow(keymapConfig)
         }
 
@@ -138,8 +145,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
+        canStartShellProfile = false
         selectedProfileName?.let { outState.putString(SELECTED_PROFILE_NAME_STATE, it) }
+        pendingShellProfile?.let { outState.putString(PENDING_SHELL_PROFILE_STATE, it) }
         super.onSaveInstanceState(outState)
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        canStartShellProfile = true
+        startPendingShellProfile()
+    }
+
+    override fun onPause() {
+        canStartShellProfile = false
+        super.onPause()
+    }
+
+    private fun startPendingShellProfile() {
+        val profileName = pendingShellProfile ?: return
+        val binder = verifiedShellBinder ?: return
+        if (!canStartShellProfile || isFinishing || isDestroyed ||
+            supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) != null ||
+            !RemoteServiceHelper.hasLiveShellService(binder)
+        ) return
+
+        pendingShellProfile = null
+        startPointer(null, autoStart = true, profileName = profileName)
     }
 
     private fun handleActivationFlow(keymapConfig: KeymapConfig) {

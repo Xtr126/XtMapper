@@ -188,13 +188,17 @@ object RemoteServiceHelper {
         return shellBinder.isBinderAlive && service?.asBinder() == shellBinder
     }
 
+    internal fun hasLiveShellService(binder: IBinder): Boolean =
+        synchronized(backendLock) { shellServiceBinder == binder && hasLiveShellService() }
+
     @JvmStatic
     fun isShellServiceAuthenticationPending(): Boolean = shellServiceAuthenticationPending
 
     /** Cache a shell Binder only after Android has verified the launching UID. */
     @JvmStatic
-    fun setAuthenticatedShellServiceBinder(binder: IBinder, onVerified: (Boolean) -> Unit) {
+    fun setAuthenticatedShellServiceBinder(binder: IBinder, onVerified: () -> Unit) {
         val (requestId, expectedBackendGeneration) = synchronized(backendLock) {
+            if (forceSelectedBackend || !binder.isBinderAlive) return
             shellAuthenticationRequestId++
             shellServiceAuthenticationPending = true
             shellAuthenticationRequestId to backendGeneration
@@ -264,7 +268,7 @@ object RemoteServiceHelper {
         binder: IBinder,
         requestId: Long,
         expectedBackendGeneration: Long,
-        onVerified: ((Boolean) -> Unit)? = null,
+        onVerified: (() -> Unit)? = null,
     ) {
         Thread({
             val remote = IRemoteService.Stub.asInterface(binder)
@@ -295,8 +299,15 @@ object RemoteServiceHelper {
                 }
                 hasLiveShellService() && shellServiceBinder == binder
             }
-            if (onVerified != null) {
-                Handler(Looper.getMainLooper()).post { onVerified(verified) }
+            if (verified && onVerified != null) {
+                Handler(Looper.getMainLooper()).post {
+                    val stillCurrent = synchronized(backendLock) {
+                        shellAuthenticationRequestId == requestId &&
+                            backendGeneration == expectedBackendGeneration &&
+                            shellServiceBinder == binder && hasLiveShellService()
+                    }
+                    if (stillCurrent) onVerified()
+                }
             }
             if (rejectDaemon) runCatching { remote.destroy() }
         }, "xtmapper-shell-version-check").apply {
