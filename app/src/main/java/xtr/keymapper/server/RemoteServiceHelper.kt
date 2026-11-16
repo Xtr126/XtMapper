@@ -222,7 +222,8 @@ object RemoteServiceHelper {
         }
 
         val challenge = SecureRandom().nextLong()
-        val authenticator = ShellServiceAuthenticator(challenge, Process.SHELL_UID) {
+        val expectedUid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Process.SHELL_UID else 2000
+        val authenticator = ShellServiceAuthenticator(challenge, expectedUid) {
             validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration)
         }
         val callback = object : IShellAuthenticationCallback.Stub() {
