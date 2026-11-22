@@ -61,3 +61,12 @@ include $(BUILD_SHARED_LIBRARY)
 
 # ndk-build must generate the header before the first compilation too.
 $(JNI_SRC_PATH)/keyboard_grab.cpp: | $(input_header)
+
+ifeq ($(XTMAPPER_WAYLAND_PROBE),1)
+include $(CLEAR_VARS)
+LOCAL_MODULE    := wayland_probe
+LOCAL_SRC_FILES := src/debug/cpp/wayland_probe.cpp
+LOCAL_CPPFLAGS  := -std=c++17
+LOCAL_LDLIBS    := -llog
+include $(BUILD_SHARED_LIBRARY)
+endif

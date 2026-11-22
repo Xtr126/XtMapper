@@ -1,6 +1,7 @@
 # Waydroid capture overlay: replacement plan
 
-Status: design and prerequisite gathering; no runtime implementation yet.
+Status: design and prerequisite testing. The [Wayland feasibility probe](waydroid-wayland-probe.md)
+isolates the connection, focus, and placement gate before backend integration.
 
 Replace cage-xtmapper's nested compositor with an Android-native Wayland client
 derived from wayland-getevent. The client runs inside the Android container,
@@ -80,6 +81,14 @@ Manual Waydroid selection must still validate the endpoint and run the same capa
 if properties are missing or invalid, report the configuration problem without
 guessing a display path or claiming capture. Detection must work without Cage,
 including when no capture backend is connected.
+
+[SoufianoDev's proposal](https://github.com/Xtr126/XtMapper/pull/237#issuecomment-6953867826)
+calls for resolving environment evidence before service and XtLogger startup.
+Evaluate multiple consistent Waydroid-specific signals for automatic selection.
+Keep Linux host capabilities such as XtCrash's browser handoff and XtLogger's
+host-accessible log storage behind a separate integration boundary. The
+Wayland connection serves the compositor client. Socket access and each host
+integration require their own capability checks.
 
 ## Context and evidence
 
@@ -199,8 +208,9 @@ host wayland-scanner + pinned protocol XMLs -> generated client bindings --^
    API availability with NDK tools. Verify page-size compatibility and APK
    extraction/loading via the installed native-library path in app_process.
 
-For new physical-key profiles, use Wayland's evdev key codes and XtMapper's
-Linux key-name table (`app/src/main/cpp/linux_key_table.h`). This avoids
+For new physical-key profiles, use Wayland's evdev key codes and the
+NDK-generated event labels introduced by [PR #239](https://github.com/Xtr126/XtMapper/pull/239).
+This avoids
 libxkbcommon and an XKB data-tree deployment for the initial client, but is
 not a drop-in interpretation of existing Cage profiles. Cage derives names
 from XKB symbols (including modifier-sensitive names and special aliases),
@@ -310,8 +320,9 @@ lock the pointer instead of confining it at window edges. On focus/seat/global
 loss, release held input; retain desired visibility without reporting capture
 until focus and constraints recover.
 
-Gate: an NDK probe launched under the real shell-server identity must connect,
-show a transparent capture surface, receive input, hide, return input to
+Gate: launch the NDK probe from a fresh `sudo waydroid shell` and record its
+Android UID and domain. The probe must connect, show a transparent capture
+surface, receive input, hide, return input to
 Waydroid, and show again. Include focus restoration and correct Android game
 touch injection while the host focuses the overlay. If this needs compositor
 rules, document them; if a compositor cannot support it, offer the retained
@@ -418,8 +429,5 @@ Android cursor modes for duplicate movement. Capture both app and server logs
 using [service-debugging.md](service-debugging.md), logging transitions and
 capabilities rather than high-frequency events.
 
-Current verification is source/configuration research and documentation review
-only. The NDK cross-build, live socket access, compositor focus/stacking,
-map/unmap behavior and Android input injection remain unverified. An ADB device
-was listed, but it was not identified as this stopped Waydroid session and was
-not used to claim runtime validation.
+See the [probe results](waydroid-wayland-probe.md#observed-results) for the
+current gate status and remaining device checks.
