@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">XtMapper</string>
+    <string name="logs">Journaux</string>
+    <string name="logs_access_needed">L’accès à tous les fichiers est nécessaire pour enregistrer les journaux dans des fichiers publics dans le dossier indiqué ci-dessous. Pour l’instant, l’application écrit uniquement dans Logcat. Vous pouvez continuer à utiliser l’application sans autoriser cet accès.</string>
+    <string name="logs_grant_access">Autoriser l’accès</string>
+    <string name="logs_active">L’enregistrement des journaux dans des fichiers publics est actif dans le dossier indiqué ci-dessous.</string>
+    <string name="logs_unavailable">L’enregistrement des journaux dans des fichiers publics est indisponible. L’application écrit uniquement dans Logcat. Vérifiez que le stockage partagé est accessible en écriture.</string>
+    <string name="logs_unsupported">Les journaux publics de l’application nécessitent Android 11 ou une version ultérieure et l’accès à tous les fichiers. Sur cette version d’Android, l’application écrit uniquement dans Logcat.</string>
+    <string name="logs_settings_unavailable">Impossible d’ouvrir les paramètres d’accès à tous les fichiers. Ouvrez les paramètres Android et recherchez « Accès à tous les fichiers ».</string>
     <string name="start">Démarrer</string>
     <string name="configure">Paramètres</string>
     <string name="help">Aide</string>
@@ -148,4 +155,9 @@
     <string name="keymapper_service_running">Le service XtMapper est en cours</string>
     <string name="notification_launch_editor">Appuyez pour ouvrir l’éditeur (%1$s)</string>
     <string name="stop_service">Arrêter le service</string>
+    <string name="enable_profile">Activer le profil</string>
+    <string name="disable_profile">Désactiver le profil</string>
+    <string name="profile_disabled_label">Désactivé</string>
+    <string name="profile_disabled_title">Profil désactivé</string>
+    <string name="profile_disabled_activation">Le profil « %1$s » est désactivé. Activez-le dans le menu du profil pour démarrer le remappage des touches.</string>
 </resources>

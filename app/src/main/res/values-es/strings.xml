@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">XtMapper</string>
+    <string name="logs">Registros</string>
+    <string name="logs_access_needed">Se necesita acceso a todos los archivos para guardar archivos de registro públicos en la carpeta indicada abajo. Por ahora, la aplicación solo registra en Logcat. Puedes seguir usando la aplicación sin conceder el acceso.</string>
+    <string name="logs_grant_access">Conceder acceso</string>
+    <string name="logs_active">Los registros se están guardando en archivos públicos en la carpeta indicada abajo.</string>
+    <string name="logs_unavailable">No se pueden guardar los registros en archivos públicos. La aplicación solo registra en Logcat. Comprueba que se puede escribir en el almacenamiento compartido.</string>
+    <string name="logs_unsupported">Los registros públicos de la aplicación requieren Android 11 o posterior y acceso a todos los archivos. En esta versión de Android, la aplicación solo registra en Logcat.</string>
+    <string name="logs_settings_unavailable">No se pudo abrir la configuración de acceso a todos los archivos. Abre la configuración de Android y busca «Acceso a todos los archivos».</string>
     <string name="start">Empezar</string>
     <string name="configure">Configuración</string>
     <string name="help">Ayuda</string>
@@ -154,4 +161,9 @@
     <string name="keymapper_service_running">El servicio de XtMapper está en ejecución</string>
     <string name="notification_launch_editor">Toca para abrir el editor (%1$s)</string>
     <string name="stop_service">Detener servicio</string>
+    <string name="enable_profile">Activar perfil</string>
+    <string name="disable_profile">Desactivar perfil</string>
+    <string name="profile_disabled_label">Desactivado</string>
+    <string name="profile_disabled_title">Perfil desactivado</string>
+    <string name="profile_disabled_activation">El perfil «%1$s» está desactivado. Actívalo en el menú del perfil para iniciar el remapeo de teclas.</string>
 </resources>

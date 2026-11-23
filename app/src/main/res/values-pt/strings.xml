@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">XtMapper</string>
+    <string name="logs">Registros</string>
+    <string name="logs_access_needed">É necessário ter acesso a todos os arquivos para salvar arquivos de registro públicos na pasta indicada abaixo. No momento, o aplicativo registra apenas no Logcat. Você pode continuar usando o aplicativo sem conceder acesso.</string>
+    <string name="logs_grant_access">Conceder acesso</string>
+    <string name="logs_active">Os registros estão sendo salvos em arquivos públicos na pasta indicada abaixo.</string>
+    <string name="logs_unavailable">Não é possível salvar os registros em arquivos públicos. O aplicativo registra apenas no Logcat. Verifique se é possível gravar no armazenamento compartilhado.</string>
+    <string name="logs_unsupported">Os registros públicos do aplicativo exigem Android 11 ou posterior e acesso a todos os arquivos. Nesta versão do Android, o aplicativo registra apenas no Logcat.</string>
+    <string name="logs_settings_unavailable">Não foi possível abrir as configurações de acesso a todos os arquivos. Abra as configurações do Android e procure por “Acesso a todos os arquivos”.</string>
     <string name="start">Iniciar</string>
     <string name="configure">Configurações</string>
     <string name="help">Ajuda</string>
@@ -154,4 +161,9 @@
     <string name="keymapper_service_running">O serviço do XtMapper está em execução</string>
     <string name="notification_launch_editor">Toque para abrir o editor (%1$s)</string>
     <string name="stop_service">Parar serviço</string>
+    <string name="enable_profile">Ativar perfil</string>
+    <string name="disable_profile">Desativar perfil</string>
+    <string name="profile_disabled_label">Desativado</string>
+    <string name="profile_disabled_title">Perfil desativado</string>
+    <string name="profile_disabled_activation">O perfil “%1$s” está desativado. Ative-o no menu do perfil para iniciar o remapeamento de teclas.</string>
 </resources>
