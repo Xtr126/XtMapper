@@ -48,8 +48,8 @@ To share your thoughts on XtMapper or ask any questions please create a post at 
 ## Using on waydroid
 https://xtr126.github.io/XtMapper-docs/waydroid/1-overview/
 
-See the [Android Wayland capture-overlay replacement plan](docs/waydroid-wayland-client-plan.md)
-for the proposed alternative to cage-xtmapper (design only; not implemented).
+See the [Android Wayland capture-overlay plan](docs/waydroid-wayland-client-plan.md)
+for the experimental alternative to cage-xtmapper and its device validation status.
 
 ## Credits
 |  |  |

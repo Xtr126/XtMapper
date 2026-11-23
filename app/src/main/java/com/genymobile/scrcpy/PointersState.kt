@@ -14,6 +14,10 @@ class PointersState {
 
     operator fun get(index: Int): Pointer = pointers[index]
 
+    fun clear() {
+        pointers.clear()
+    }
+
     fun getPointerIndex(id: Long): Int {
         val index = indexOf(id)
         if (index != -1) {

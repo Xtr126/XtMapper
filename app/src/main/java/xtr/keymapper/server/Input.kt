@@ -54,6 +54,27 @@ class Input(private val displayId: Int) {
         initPointers()
     }
 
+    internal fun cancelTouches() {
+        val count = pointersState.update(pointerProperties, pointerCoords)
+        if (count == 0) return
+        val source = if (pointerProperties[0]?.toolType == MotionEvent.TOOL_TYPE_MOUSE) {
+            InputDevice.SOURCE_MOUSE
+        } else {
+            InputDevice.SOURCE_TOUCHSCREEN
+        }
+        val event = MotionEvent.obtain(
+            lastTouchDown, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL, count,
+            pointerProperties, pointerCoords, 0, 0, 1f, 1f, 0, 0, source, 0,
+        )
+        pointersState.clear()
+        pointerCount = 0
+        try {
+            injectInputEvent(event)
+        } finally {
+            event.recycle()
+        }
+    }
+
     fun injectTouch(actionIn: Int, pointerId: Int, pressure: Float, x: Float, y: Float) {
         var action = actionIn
         val now = SystemClock.uptimeMillis()

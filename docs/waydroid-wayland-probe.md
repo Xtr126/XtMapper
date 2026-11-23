@@ -142,7 +142,45 @@ probe is focused. Keep the existing UID 2000 Binder authentication
 when designing the eventual service handoff for a root-launched
 capture client.
 
+### Follow-up on KWin
+
+The probe launched through `pkexec /usr/bin/waydroid shell` and returned
+`0` on Android 13/API 33, x86_64. At a forced Android resolution of
+1280 × 720, the maximized probe covered a larger host area than Waydroid.
+After clearing `persist.waydroid.width` and `persist.waydroid.height` and
+restarting Waydroid, Android reported 2560 × 1418 and KWin reported matching
+Waydroid and probe frame bounds at (0, 22).
+
+While KWin reported keyboard focus on the probe, `adb shell input tap`
+opened the Network & internet screen in Android Settings. This checks Android
+shell injection during host overlay focus. On the final repeat, KWin reported
+Waydroid active before the probe mapped and reactivated it at both hide
+timestamps. The desktop switched focus briefly during the first visible
+interval, then returned it to the probe ahead of the hide. Touch through
+XtMapper's authenticated mapping service and a controlled visual
+transparency check remain open.
+
+The packaged launcher opened the compositor socket as UID 0 and handed the
+connected descriptor to `RemoteServiceShell` running as UID 2000. The native
+service completed the Wayland registry exchange and the Android 13 app
+authenticated and cached the shell Binder. This run used the installed debug
+APK and a classpath copied from the running Android image. A second run
+through the app-generated script resolved the classpath in the container and
+also reached Binder authentication. Capture was disabled for both startup
+smoke tests.
+
 ## Build and test results
+
+The experimental backend built in both debug APKs with four native ABIs.
+The 64-bit load segments use 16 KiB alignment. The serialized JVM run passed
+425 tests and both host suites passed eight checks. Ten targeted Android
+instrumentation tests passed on API 33, covering the probe, launcher generation
+and mode persistence, profile metadata transfer, and JNI capture with a fake
+compositor. The fake compositor suite checks physical-key delivery, pointer
+lock, relative motion, and hide and disconnect.
+
+The following results were recorded for the standalone probe before the
+experimental backend was added.
 
 - `./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest`
   built both APKs and passed 423 JVM tests. The probe library was packaged for

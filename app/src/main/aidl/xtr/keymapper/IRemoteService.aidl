@@ -32,4 +32,6 @@ interface IRemoteService {
     void authenticateShellClient(IShellAuthenticationCallback callback, long challenge) = 12;
     int getVersion() = 13;
     boolean grantOverlayPermission() = 14;
+    boolean isNativeWaylandBackend() = 15;
+    boolean isNativeWaylandCaptureEnabled() = 16;
 }

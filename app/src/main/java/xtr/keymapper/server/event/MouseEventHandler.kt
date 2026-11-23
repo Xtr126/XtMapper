@@ -65,6 +65,8 @@ class MouseEventHandler(private val mInput: IInputInterface) {
     private var mouseWalkActive = false
     private var mouseWalkHandler: MouseWalkHandler? = null
 
+    internal var canActivateAim: () -> Boolean = { true }
+
     fun triggerMouseAim(): Boolean {
         return triggerMouseAimOrCamera(mouseAimHandler)
     }
@@ -74,7 +76,7 @@ class MouseEventHandler(private val mInput: IInputInterface) {
     }
 
     private fun triggerMouseAimOrCamera(instance: MouseAimHandler?): Boolean {
-        if (instance == null) return false
+        if (instance == null || (!mouseAimActive && !canActivateAim())) return false
 
         synchronized(this) {
             mouseAimOrCameraHandler = instance
@@ -233,7 +235,7 @@ class MouseEventHandler(private val mInput: IInputInterface) {
             }
             BTN_EXTRA, BTN_SIDE, BTN_MIDDLE -> if (value == 1 && Objects.equals(mInput.keymapConfig.mouseAimShortcutKey, "KEY_MMB")) {
                 triggerMouseAim()
-            } else if (value == 1 && Objects.equals(mInput.keymapProfile.camera!!.triggerKeyCode, "KEY_MMB")) {
+            } else if (value == 1 && Objects.equals(mInput.keymapProfile.camera?.triggerKeyCode, "KEY_MMB")) {
                 triggerCamera()
             } else {
                 mInput.injectMiddleClickEvent(x1.toFloat(), y1.toFloat(), pointerId, value == 1)
@@ -252,6 +254,10 @@ class MouseEventHandler(private val mInput: IInputInterface) {
         if (dx != 0 || dy != 0) {
             updatePositionAndInject(dx, dy)
         }
+    }
+
+    internal fun absolutePosition(x: Int, y: Int) {
+        updatePositionAndInject(x - x1, y - y1)
     }
 
     fun evAbsY(y: Int) {

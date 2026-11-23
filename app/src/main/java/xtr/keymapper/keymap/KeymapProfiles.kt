@@ -230,6 +230,20 @@ class KeymapProfiles @JvmOverloads constructor(
 
     fun getProfile(lines: Set<String>?): KeymapProfile = parse(lines)
 
+    internal fun saveMigrationCopy(
+        sourceName: String,
+        sourceLines: Set<String>,
+        copyName: String,
+        copyLines: Set<String>
+    ): Boolean {
+        if (copyName.isBlank() || copyName == KEY_LAST_SELECTED_PROFILE ||
+            copyName.startsWith("designated_profile_") || sharedPref.contains(copyName) ||
+            sharedPref.getStringSet(sourceName, null) != sourceLines
+        ) return false
+        sharedPref.edit().putStringSet(copyName, copyLines).apply()
+        return true
+    }
+
     companion object {
         const val MOUSE_RIGHT = "MOUSE_RIGHT"
         const val KEY_LAST_SELECTED_PROFILE = "last_selected_profile"
@@ -238,6 +252,12 @@ class KeymapProfiles @JvmOverloads constructor(
         fun parse(lines: Set<String>?): KeymapProfile {
             val profile = KeymapProfile()
             profile.disabled = true
+            profile.keySemantics = ProfileKeySemantics.parse(
+                lines?.singleOrNull { it.startsWith(ProfileKeySemantics.TAG) }
+            )
+            if (profile.keySemantics == ProfileKeySemantics.PHYSICAL_EVDEV) {
+                profile.waydroidShortcuts = ProfileShortcuts.parse(lines.orEmpty())
+            }
             lines?.forEach { line ->
 
                 val data = line.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray() // Split a String like KEY_G 760.86346 426.18607
@@ -286,7 +306,7 @@ class KeymapProfiles @JvmOverloads constructor(
                         if (ShiftKey.isValidData(data)) profile.shiftKeys.add(ShiftKey(data))
 
                     Camera.TAG ->
-                        if (data.size >= 4)
+                        if (data.size >= 6)
                             profile.camera = Camera(data)
 
                     MouseWalk.TAG ->

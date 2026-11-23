@@ -23,6 +23,7 @@ import xtr.keymapper.databinding.MacroDialogLayoutBinding
 import xtr.keymapper.databinding.MacroListItemBinding
 import xtr.keymapper.databinding.TextFieldBinding
 import xtr.keymapper.keymap.KeymapProfile
+import xtr.keymapper.keymap.ProfileKeySemantics
 import xtr.keymapper.macro.Macro
 import xtr.keymapper.macro.MacroSharedPreferences
 
@@ -34,6 +35,7 @@ class MacroDialog(
 
     private val macroSharedPreferences = MacroSharedPreferences(context)
     private val macroIdMap: HashMap<String, Macro> = profile.macroIdMap
+    private val physicalKeys = profile.keySemantics == ProfileKeySemantics.PHYSICAL_EVDEV
     private var dialog: AlertDialog? = null
     private val mHandler = Handler(Looper.getMainLooper())
     private var keyInFocus: TextView? = null
@@ -142,7 +144,11 @@ class MacroDialog(
                 if (event.action == KeyEvent.ACTION_DOWN) {
                     val macro = macroIdMap[macroId]
                     if (macro != null) {
-                        val key = KeyUtils.resolveKeyName(keyCode, event)
+                        val key = if (physicalKeys) {
+                            ProfileKeySemantics.physicalKey(event.scanCode)?.removePrefix("KEY_")
+                        } else {
+                            KeyUtils.resolveKeyName(keyCode, event)
+                        }
                         if (key != null) {
                             macro.triggerKey = key
                             (view as EditText).setText(key)

@@ -13,6 +13,8 @@ import xtr.keymapper.editor.EditorUiComponentCallback
 import xtr.keymapper.editor.onKeyboardKeyPress
 import xtr.keymapper.editor.onMouseClick
 import xtr.keymapper.editor.keyCodePrefix
+import xtr.keymapper.keymap.ProfileKeySemantics
+import android.view.KeyEvent
 
 class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y: Float) :
     EditorUiComponent(callback, context, x, y) {
@@ -54,11 +56,20 @@ class Camera(callback: EditorUiComponentCallback, context: Context, x: Float, y:
         val currentCamera = cameraElement
 
         with(binding) {
-            key.setText(currentCamera.triggerKeyCode.toString())
+            key.setText(currentCamera.triggerKeyCode.removePrefix("KEY_"))
             toggleSwitch.isChecked = currentCamera.toggle
             sliderXSensitivity.value = currentCamera.xSensitivity
             sliderYSensitivity.value = currentCamera.ySensitivity
-            key.setOnKeyListener(::onKeyboardKeyPress)
+            key.setOnKeyListener { view, keyCode, event ->
+                if (callback.profile.keySemantics != ProfileKeySemantics.PHYSICAL_EVDEV) {
+                    onKeyboardKeyPress(view, keyCode, event)
+                } else if (event.action == KeyEvent.ACTION_DOWN) {
+                    ProfileKeySemantics.physicalKey(event.scanCode)?.let { key.setText(it.removePrefix("KEY_")) }
+                    true
+                } else {
+                    false
+                }
+            }
             key.setOnGenericMotionListener(::onMouseClick)
         }
 

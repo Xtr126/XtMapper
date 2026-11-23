@@ -5,6 +5,8 @@ import android.Manifest.permission.POST_NOTIFICATIONS
 import android.app.Activity
 import android.app.Dialog
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.DialogInterface
@@ -43,10 +45,12 @@ import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfiles
 import xtr.keymapper.log.XtLogger
 import xtr.keymapper.profiles.ProfileSelector
+import xtr.keymapper.profiles.ProfileMigrationDialog
 import xtr.keymapper.profiles.ProfilesApps
 import xtr.keymapper.ui.DialogWindowMode
 import xtr.keymapper.server.RemoteServiceHelper
 import java.util.concurrent.atomic.AtomicBoolean
+import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
 
@@ -62,6 +66,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val SHELL_INIT = "shell"
         const val SHELL_SERVICE_BINDER = "xtr.keymapper.extra.SHELL_SERVICE_BINDER"
+        const val WAYDROID_SHELL_SERVICE = "xtr.keymapper.extra.WAYDROID_SHELL_SERVICE"
         private const val SERVER_CRASH_DIALOG_TAG = "server_crash_dialog"
         private const val SERVER_CRASH_DISMISSED_REQUEST = "server_crash_dismissed"
         private const val MAX_DIAGNOSTIC_MESSAGE_CHARS = 16 * 1024
@@ -96,17 +101,12 @@ class MainActivity : AppCompatActivity() {
         ) { _, _ ->
             handleActivationFlow(KeymapConfig(this))
         }
-        // The environment signal is separate from the legacy "data" extra.
-        if (intent.hasExtra(Environment.INTENT_EXTRA)) {
-            Environment.launchSignal = intent.getBooleanExtra(Environment.INTENT_EXTRA, false)
-            XtLogger.info("MainActivity", "launch signal applied: environment=${Environment.name}")
-        }
+        val keymapConfig = KeymapConfig(this)
         val shellBinder = intent.extras?.getBinder(SHELL_SERVICE_BINDER)
-        val authenticatedShellLaunch = isAuthenticatedShellLaunch()
+        val waydroidLaunch = intent.getBooleanExtra(WAYDROID_SHELL_SERVICE, false)
+        val acceptsShellLaunch = shellBinder != null && waydroidLaunch == keymapConfig.isWaydroidMode
+        val authenticatedShellLaunch = acceptsShellLaunch && isAuthenticatedShellLaunch()
         Log.i("xtmapper-startup", "MainActivity.onCreate: shellMarker=${intent.getStringExtra("data") == SHELL_INIT} binderPresent=${shellBinder != null}")
-        if (!authenticatedShellLaunch) {
-            RemoteServiceHelper.authenticateShellServiceBinder(shellBinder)
-        }
 
         val launchData = intent.getStringExtra("data")
 
@@ -115,7 +115,6 @@ class MainActivity : AppCompatActivity() {
             showServerCrashDialog(launchData)
         }
 
-        val keymapConfig = KeymapConfig(this)
         val profiles = KeymapProfiles(this)
         val availableProfiles = profiles.getAllProfiles().keys
         val shellProfile = StartupLaunch.shellProfile(authenticatedShellLaunch, availableProfiles)
@@ -138,10 +137,24 @@ class MainActivity : AppCompatActivity() {
         Server.setupServer(this, mCallback)
 
         val dialogPending = supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) != null
-        if (authenticatedShellLaunch && shellBinder != null) {
-            RemoteServiceHelper.setAuthenticatedShellServiceBinder(shellBinder) {
+        if (acceptsShellLaunch) {
+            val onVerified = {
                 verifiedShellBinder = shellBinder
+                if (waydroidLaunch && !isDestroyed && !isFinishing) {
+                    if (!authenticatedShellLaunch && (savedInstanceState == null ||
+                            savedInstanceState.getString(PENDING_SHELL_PROFILE_STATE) == KeymapProfiles.DEFAULT_PROFILE_NAME)) {
+                        val defaultProfile = StartupLaunch.shellProfile(true, availableProfiles)
+                        pendingShellStartup = PendingShellStartup(defaultProfile)
+                        selectedProfileName = KeymapProfiles.DEFAULT_PROFILE_NAME
+                        TouchPointer.currentSelectedProfile = selectedProfileName
+                    }
+                }
                 startPendingShellProfile()
+            }
+            if (authenticatedShellLaunch) {
+                RemoteServiceHelper.setAuthenticatedShellServiceBinder(shellBinder, waydroidLaunch, onVerified)
+            } else {
+                RemoteServiceHelper.authenticateShellServiceBinder(shellBinder, waydroidLaunch, onVerified)
             }
         } else if (!dialogPending && pendingShellStartup.profileName == null) {
             handleActivationFlow(keymapConfig)
@@ -175,6 +188,7 @@ class MainActivity : AppCompatActivity() {
             supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) != null ||
             !RemoteServiceHelper.hasLiveShellService(binder)
         ) return
+        if (KeymapConfig(this).isWaydroidMode && !RemoteServiceHelper.isWaydroidShellCaptureEnabled) return
 
         val hasOverlayPermission = Settings.canDrawOverlays(this)
         if (!hasOverlayPermission) {
@@ -193,18 +207,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleActivationFlow(keymapConfig: KeymapConfig) {
-        if (RemoteServiceHelper.hasLiveShellService() ||
+        if (keymapConfig.isWaydroidMode || RemoteServiceHelper.hasLiveShellService() ||
             RemoteServiceHelper.isShellServiceAuthenticationPending()
         ) return
 
         if (!RemoteServiceHelper.useShizuku) {
             Shell.getShell {
+                if (!KeymapConfig(this).isRootMode) return@getShell
                 if (Shizuku.pingBinder() || packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api") != null) {
                     showAlertDialog(R.string.detected_shizuku, R.string.use_shizuku_for_activation, { _, _ ->
+                        if (!KeymapConfig(this).isRootMode) return@showAlertDialog
                         RemoteServiceHelper.useShizuku = true
-                        keymapConfig.useShizuku = true
-                        keymapConfig.inputMode = KeymapConfig.MODE_SHIZUKU
-                        keymapConfig.applySharedPrefs()
+                        keymapConfig.selectInputMode(KeymapConfig.MODE_SHIZUKU)
                         alertShizukuNotAuthorized()
                     }, R.string.ok)
                 } else if (Shell.isAppGrantedRoot() == false &&
@@ -255,10 +269,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun activateSelectedProfile() {
-        if (selectedProfileName == null) {
+        val name = selectedProfileName
+        if (name == null) {
             showAlertDialog(R.string.no_profile_selected, R.string.select_profile_from_below, null, R.string.ok)
         } else {
-            if (isServiceBound) pointerOverlay?.launchProfile(selectedProfileName)
+            if (offerWaydroidProfileMigration(KeymapConfig(this), name)) return
+            if (isServiceBound) pointerOverlay?.launchProfile(name)
             else startPointer()
         }
     }
@@ -284,6 +300,19 @@ class MainActivity : AppCompatActivity() {
         profileName: String? = selectedProfileName
     ) {
         val keymapConfig = KeymapConfig(this)
+        val profiles = KeymapProfiles(this)
+        val targetProfile = profileName ?: profiles.getLastSelectedProfile()
+        if (offerWaydroidProfileMigration(keymapConfig, targetProfile)) return
+        if (keymapConfig.isWaydroidMode) {
+            if (!RemoteServiceHelper.isWaydroidShellServiceReady) {
+                if (!autoStart && !RemoteServiceHelper.isShellServiceAuthenticationPending()) showWaydroidCommand()
+                return
+            }
+            if (!RemoteServiceHelper.isWaydroidShellCaptureEnabled) {
+                if (!autoStart) showWaydroidCaptureUnavailable()
+                return
+            }
+        }
         if (keymapConfig.isShizukuMode &&
             !RemoteServiceHelper.hasLiveShellService()
         ) {
@@ -302,7 +331,7 @@ class MainActivity : AppCompatActivity() {
                     return
                 }
             }
-        } else if (Shell.isAppGrantedRoot() == false &&
+        } else if (keymapConfig.isRootMode && Shell.isAppGrantedRoot() == false &&
             !RemoteServiceHelper.hasLiveShellService()
         ) {
             if (!RemoteServiceHelper.isShellServiceAuthenticationPending() && !autoStart) {
@@ -317,8 +346,6 @@ class MainActivity : AppCompatActivity() {
             )
             return
         }
-        val profiles = KeymapProfiles(this)
-        val targetProfile = profileName ?: profiles.getLastSelectedProfile()
         if (!autoStart) selectedProfileName = targetProfile
         TouchPointer.currentSelectedProfile = targetProfile
         if (Settings.canDrawOverlays(this)) {
@@ -498,7 +525,9 @@ class MainActivity : AppCompatActivity() {
 
     fun fixPermissionFromCompose() {
         val config = KeymapConfig(this)
-        if (config.isShizukuMode && !isShizukuInstalled()) {
+        if (config.isWaydroidMode && !RemoteServiceHelper.isWaydroidShellServiceReady) {
+            showWaydroidCommand()
+        } else if (config.isShizukuMode && !isShizukuInstalled()) {
             alertShizukuNotInstalled()
         } else if (config.isShizukuMode && (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PERMISSION_GRANTED)) {
             if (Shizuku.pingBinder()) alertShizukuNotAuthorized()
@@ -508,33 +537,107 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun toggleInputModeFromCompose() {
+    fun chooseInputModeFromCompose(onChanged: () -> Unit) {
         val config = KeymapConfig(this)
-        val nextMode = if (config.isShizukuMode) {
-            KeymapConfig.MODE_ROOT
-        } else {
-            KeymapConfig.MODE_SHIZUKU
+        val modes = intArrayOf(KeymapConfig.MODE_ROOT, KeymapConfig.MODE_SHIZUKU, KeymapConfig.MODE_WAYDROID)
+        val labels = modes.map { mode ->
+            getString(if (mode == KeymapConfig.MODE_WAYDROID && Environment.isWaydroid) {
+                R.string.input_mode_waydroid_detected
+            } else {
+                inputModeLabel(mode)
+            })
+        }.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.input_mode_title)
+            .setSingleChoiceItems(labels, modes.indexOf(config.inputMode)) { dialog, index ->
+                dialog.dismiss()
+                selectInputMode(modes[index])
+                onChanged()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun selectInputMode(nextMode: Int) {
+        val config = KeymapConfig(this)
+        if (config.inputMode == nextMode) {
+            if (config.isWaydroidMode && !RemoteServiceHelper.isWaydroidShellServiceReady) showWaydroidCommand()
+            return
         }
-        config.inputMode = nextMode
-        config.useShizuku = (nextMode == KeymapConfig.MODE_SHIZUKU)
+        val wasActive = isComposeServiceActive()
+        if (wasActive) stopPointer()
+        pendingShellStartup = PendingShellStartup(null)
+        verifiedShellBinder = null
+        config.selectInputMode(nextMode)
         RemoteServiceHelper.useShizuku = config.useShizuku
-        config.applySharedPrefs()
-        val modeStr = if (nextMode == KeymapConfig.MODE_SHIZUKU) "Shizuku (ADB)" else "Root"
+        RemoteServiceHelper.prepareForBackendSwitch()
+        val modeStr = getString(inputModeLabel(nextMode))
         Toast.makeText(this, getString(R.string.input_mode_changed, modeStr), Toast.LENGTH_SHORT).show()
+        if (config.isWaydroidMode) {
+            showWaydroidCommand()
+            return
+        }
         if (config.isShizukuMode) {
             if (!isShizukuInstalled()) alertShizukuNotInstalled()
             else if (!Shizuku.pingBinder()) alertShizukuNotRunning()
             else if (Shizuku.checkSelfPermission() != PERMISSION_GRANTED) alertShizukuNotAuthorized()
         }
-        RemoteServiceHelper.prepareForBackendSwitch()
-        if (isComposeServiceActive()) {
-            stopPointer()
-            startPointer()
+        if (wasActive) startPointer()
+    }
+
+    private fun showWaydroidCommand() {
+        val command = try {
+            Server.prepareWaydroidCommand(this)
+        } catch (e: IOException) {
+            XtLogger.error("MainActivity", "Failed to prepare the Waydroid launcher", e)
+            showAlertDialog(R.string.input_mode_waydroid, R.string.waydroid_script_error, null, R.string.ok)
+            return
         }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.input_mode_waydroid)
+            .setMessage(getString(R.string.waydroid_start_command, command))
+            .setPositiveButton(R.string.waydroid_copy_command) { _, _ ->
+                getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText(getString(R.string.input_mode_waydroid), command))
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showWaydroidCaptureUnavailable() {
+        Toast.makeText(this, R.string.waydroid_capture_validation_only, Toast.LENGTH_LONG).show()
+    }
+
+    private fun offerWaydroidProfileMigration(config: KeymapConfig, profileName: String): Boolean {
+        if (!config.isWaydroidMode) return false
+        val profile = KeymapProfiles(this).getProfile(profileName, false)
+        if (profile.disabled || profile.isNativeWaylandReady()) return false
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.waydroid_profile_copy_title)
+            .setMessage(R.string.waydroid_profile_migration_required)
+            .setPositiveButton(R.string.waydroid_profile_rebind) { _, _ ->
+                ProfileMigrationDialog.show(this, profileName) { copy ->
+                    onProfileSelected(copy)
+                    if (isServiceBound) pointerOverlay?.launchProfile(copy) else startPointer()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+        return true
     }
 
     fun testInputFromCompose() {
         val config = KeymapConfig(this)
+        if (config.isWaydroidMode) {
+            if (!RemoteServiceHelper.isWaydroidShellServiceReady) {
+                showWaydroidCommand()
+                return
+            }
+            if (!RemoteServiceHelper.isWaydroidShellCaptureEnabled) {
+                showWaydroidCaptureUnavailable()
+                return
+            }
+        }
         if (config.isShizukuMode) {
             when {
                 !isShizukuInstalled() -> {
@@ -550,7 +653,7 @@ class MainActivity : AppCompatActivity() {
                     return
                 }
             }
-        } else if (Shell.isAppGrantedRoot() == false &&
+        } else if (config.isRootMode && Shell.isAppGrantedRoot() == false &&
             !RemoteServiceHelper.hasLiveShellService() &&
             !RemoteServiceHelper.isShellServiceAuthenticationPending()
         ) {
@@ -562,7 +665,7 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.test_input_service_inactive, Toast.LENGTH_LONG).show()
             return
         }
-        val modeName = if (config.isShizukuMode) "Shizuku (ADB)" else "Root"
+        val modeName = getString(inputModeLabel(config.inputMode))
         Toast.makeText(this, getString(R.string.test_input_ready, modeName), Toast.LENGTH_SHORT).show()
     }
 
@@ -742,6 +845,13 @@ class MainActivity : AppCompatActivity() {
             isServiceBound = false
         }
     }
+}
+
+@StringRes
+internal fun inputModeLabel(mode: Int): Int = when (mode) {
+    KeymapConfig.MODE_WAYDROID -> R.string.input_mode_waydroid
+    KeymapConfig.MODE_SHIZUKU -> R.string.input_mode_shizuku
+    else -> R.string.input_mode_root
 }
 
 

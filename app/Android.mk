@@ -62,6 +62,26 @@ include $(BUILD_SHARED_LIBRARY)
 # ndk-build must generate the header before the first compilation too.
 $(JNI_SRC_PATH)/keyboard_grab.cpp: | $(input_header)
 
+include $(CLEAR_VARS)
+LOCAL_MODULE    := xtmapper_wayland
+LOCAL_SRC_FILES := $(JNI_SRC_PATH)/wayland_capture.cpp $(JNI_SRC_PATH)/wayland_launcher.cpp
+LOCAL_CPPFLAGS  := -std=c++17
+LOCAL_LDLIBS    := -llog
+
+wayland_wire_header := $(NDK_OUT)/local/$(TARGET_ARCH_ABI)/generated/xtmapper_wayland/wayland-wire.h
+wayland_wire_generator := $(JNI_SRC_PATH)/generate-wayland-wire.py
+wayland_wire_xml := $(wildcard $(JNI_SRC_PATH)/wayland-protocol/*.xml)
+
+$(wayland_wire_header): PRIVATE_GENERATOR := $(wayland_wire_generator)
+$(wayland_wire_header): PRIVATE_XML := $(wayland_wire_xml)
+$(wayland_wire_header): $(wayland_wire_generator) $(wayland_wire_xml)
+	$(hide)$(HOST_PYTHON) "$(PRIVATE_GENERATOR)" "$@" $(PRIVATE_XML)
+
+LOCAL_C_INCLUDES := $(dir $(wayland_wire_header))
+include $(BUILD_SHARED_LIBRARY)
+
+$(JNI_SRC_PATH)/wayland_capture.cpp: | $(wayland_wire_header)
+
 ifeq ($(XTMAPPER_WAYLAND_PROBE),1)
 include $(CLEAR_VARS)
 LOCAL_MODULE    := wayland_probe

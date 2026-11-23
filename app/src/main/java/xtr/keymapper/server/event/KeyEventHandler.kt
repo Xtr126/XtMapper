@@ -3,7 +3,6 @@ package xtr.keymapper.server.event
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.RemoteException
-import xtr.keymapper.Utils
 import xtr.keymapper.dpad.DpadHandler
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapConfig.Companion.KEY_ALT
@@ -24,8 +23,10 @@ import xtr.keymapper.swipekey.SwipeKeyHandler
 
 class KeyEventHandler(private val mInput: IInputInterface) {
     @JvmField
+    @Volatile
     var ctrlKeyPressed = false
     @JvmField
+    @Volatile
     var altKeyPressed = false
     private var dpadHandlers: Array<DpadHandler?>? = null
     private var swipeKeyHandlers: ArrayList<SwipeKeyHandler>? = null
@@ -33,6 +34,9 @@ class KeyEventHandler(private val mInput: IInputInterface) {
     private val pidProvider = PidProvider()
     private var mHandlerThread: HandlerThread? = null
     private var eventHandler: Handler? = null
+    private val heldModifiers = mutableSetOf<String>()
+    private val macroLock = Any()
+    private val playback = mutableMapOf<String, Thread>()
 
     fun init() {
         mHandlerThread = HandlerThread("events").also { it.start() }
@@ -64,13 +68,30 @@ class KeyEventHandler(private val mInput: IInputInterface) {
     }
 
     fun stop() {
-        shiftKeyHandlers?.forEach { it.stop(mInput, pidProvider) }
+        cancelPendingActions()
         dpadHandlers = null
         swipeKeyHandlers = null
         shiftKeyHandlers = null
         mHandlerThread?.quit()
         mHandlerThread = null
         eventHandler = null
+    }
+
+    internal fun cancelPendingActions() {
+        eventHandler?.removeCallbacksAndMessages(null)
+        shiftKeyHandlers?.forEach { it.stop(mInput, pidProvider) }
+        synchronized(macroLock) {
+            playback.forEach { (macroId, thread) ->
+                thread.interrupt()
+                pidProvider.releasePidFor(macroId)
+            }
+            playback.clear()
+        }
+        synchronized(heldModifiers) {
+            heldModifiers.clear()
+            ctrlKeyPressed = false
+            altKeyPressed = false
+        }
     }
 
     class KeyEvent {
@@ -91,15 +112,11 @@ class KeyEventHandler(private val mInput: IInputInterface) {
         detectCtrlAltKeys(event)
         if (event.action == InputService.DOWN) if (handleKeyboardShortcuts(event.code)) return
         handleMouseAimAndCamera(event.code, event.action)
-        val i = Utils.obtainIndex(event.code)
-        if (i > 0) {
-            // A-Z and 0-9 keys
-        } else { // CTRL, ALT, Arrow keys
-            if (event.code == "KEY_GRAVE" && event.action == InputService.DOWN)
-                if (keymapConfig.keyGraveMouseAim) {
-                    mInput.mouseEventHandler.triggerMouseAim()
-                    return
-                }
+        if (event.code == keymapConfig.graveMouseAimShortcutKey &&
+            event.action == InputService.DOWN && keymapConfig.keyGraveMouseAim
+        ) {
+            mInput.mouseEventHandler.triggerMouseAim()
+            return
         }
 
         dpadHandlers?.forEach { dpadHandler ->
@@ -121,18 +138,64 @@ class KeyEventHandler(private val mInput: IInputInterface) {
         }
 
         val macroIdMap = mInput.keymapProfile.macroIdMap
-        if (macroIdMap.isNotEmpty())
+        val native = keymapConfig.usePhysicalWaylandShortcuts
+        if (!native || event.action == InputService.DOWN)
             macroIdMap.forEach { (macroId, macro) ->
-                if (event.code == "KEY_" + macro.triggerKey) Thread {
-                    macro.runMacro(mInput, pidProvider.getPid(macroId))
-                    pidProvider.releasePidFor(macroId)
-                }.start()
+                if (event.code != "KEY_" + macro.triggerKey) return@forEach
+                if (native) {
+                    startCancellableMacro(macroId, macro)
+                } else {
+                    Thread {
+                        try {
+                            macro.runMacro(mInput, pidProvider.getPid(macroId))
+                        } finally {
+                            pidProvider.releasePidFor(macroId)
+                        }
+                    }.start()
+                }
             }
     }
 
+    private fun startCancellableMacro(id: String, macro: Macro) {
+        synchronized(macroLock) {
+            if (id in playback) return
+            val pid = pidProvider.getPid(id)
+            playback[id] = Thread({
+                val current = Thread.currentThread()
+                try {
+                    macro.runMacro(mInput, pid) { x, y, action, pointerId ->
+                        synchronized(macroLock) {
+                            if (playback[id] == current) mInput.injectEvent(x, y, action, pointerId)
+                        }
+                    }
+                } finally {
+                    synchronized(macroLock) {
+                        if (playback[id] == current) {
+                            playback.remove(id)
+                            pidProvider.releasePidFor(id)
+                        }
+                    }
+                }
+            }, "xtmapper-macro").also { it.start() }
+        }
+    }
+
     private fun detectCtrlAltKeys(event: KeyEvent) {
-        if (event.code.contains("CTRL")) ctrlKeyPressed = event.action == InputService.DOWN
-        if (event.code.contains("ALT")) altKeyPressed = event.action == InputService.DOWN
+        val pressed = event.action == InputService.DOWN
+        if (!mInput.keymapConfig.usePhysicalWaylandShortcuts) {
+            if (event.code.contains("CTRL")) ctrlKeyPressed = pressed
+            if (event.code.contains("ALT")) altKeyPressed = pressed
+            return
+        }
+        when (event.code) {
+            "KEY_LEFTCTRL", "KEY_RIGHTCTRL", "KEY_LEFTALT", "KEY_RIGHTALT" -> Unit
+            else -> return
+        }
+        synchronized(heldModifiers) {
+            if (pressed) heldModifiers.add(event.code) else heldModifiers.remove(event.code)
+            ctrlKeyPressed = heldModifiers.any { it.contains("CTRL") }
+            altKeyPressed = heldModifiers.any { it.contains("ALT") }
+        }
     }
 
     private fun getEvent(line: String): KeyEvent? {
@@ -201,7 +264,7 @@ class KeyEventHandler(private val mInput: IInputInterface) {
             mInput.mouseEventHandler.triggerMouseAim()
         } else {
             val camera: Camera? = mInput.keymapProfile.camera
-            if (camera != null && keycode.length == 5) {
+            if (camera != null) {
                 if (keycode == camera.triggerKeyCode) {
                     // If not toggle then hold down key to move camera
                     if (camera.toggle && action == InputService.UP) return

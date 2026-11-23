@@ -172,6 +172,23 @@ contents were not read. No Android build was run for this documentation change.
 
 ## Native build approach
 
+The experimental APK backend extends the probe's Wayland wire client. The
+NDK build generates C++ request and event opcodes from the vendored protocol
+XML using its bundled Python. The upstream XML carries its license and is
+pinned to these releases:
+
+| Protocol | Release | SHA-256 |
+| --- | --- | --- |
+| [Wayland core](https://gitlab.freedesktop.org/wayland/wayland/-/blob/1.24.0/protocol/wayland.xml) | Wayland 1.24.0 | `60abb5864546288a660f3d8af0c838fc87c85bb386582da23e52cb8476e9adbf` |
+| [xdg-shell](https://gitlab.freedesktop.org/wayland/wayland-protocols/-/blob/1.41/stable/xdg-shell/xdg-shell.xml) | wayland-protocols 1.41 | `f241ab95c262eb45af6507bf0178b8dcd88d5e1cc8fc6ec4a9944d9e5b15ac98` |
+| [Pointer constraints](https://gitlab.freedesktop.org/wayland/wayland-protocols/-/blob/1.41/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml) | wayland-protocols 1.41 | `f980fac900ba1dcfbbe97f588fc17b893926bd2b57624563653a1bfe4d035948` |
+| [Relative pointer](https://gitlab.freedesktop.org/wayland/wayland-protocols/-/blob/1.41/unstable/relative-pointer/relative-pointer-unstable-v1.xml) | wayland-protocols 1.41 | `ab4930dd3084f732b6fdd12ee6dbd0a112a758ed8a57b170366391dbeb1a22ff` |
+
+The [XML sources](../app/src/main/cpp/wayland-protocol/) are build inputs.
+The backend implements framing, descriptor passing and object lifecycle in
+`wayland_capture.cpp`. The libwayland-client cross-build and scanner-generated
+C bindings described below remain follow-up work.
+
 [wlroots-android-bridge issue #5](https://github.com/Xtr126/wlroots-android-bridge/issues/5)
 reports Linux-hosted Meson/NDK r28 cross-compilation, including libffi 3.4.6,
 expat 2.6.4, Wayland 1.24.0 and wayland-protocols 1.41. It identifies host
@@ -365,6 +382,22 @@ the selected pointer mode actually needs them. Preserve shell startup's
 `Default` selection and other profiles' mappings/metadata.
 
 ## Implementation sequence and validation
+
+Debug builds can opt in to mapping for device validation. Select **Waydroid**
+in the app to generate the private launcher, then add the environment variable
+before the generated command's `sh`:
+
+```sh
+sudo waydroid shell -- env XTMAPPER_EXPERIMENTAL_WAYLAND_CAPTURE=1 \
+  sh /data/user/0/xtr.keymapper.debug/files/start-waydroid.sh
+```
+
+Use the script path displayed by the installed app. Capture requires a
+physical-key profile. The native surface uses the Android display size as its
+initial logical size with app ID `org.xtmapper.WaylandCapture`. Compare its
+actual KWin frame with the Waydroid content bounds at the configured host
+scale. Release builds keep mapping disabled while device qualification is
+in progress.
 
 1. **Mode detection and prerequisite probe:** define the property detector,
    persistent Root/Shizuku/Waydroid selection and backend-independent environment state; capture
