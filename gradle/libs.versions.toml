@@ -1,6 +1,6 @@
 [versions]
 activityCompose = "1.13.0"
-agp = "9.5.1"
+agp = "9.5.3"
 androidxConstraintlayout = "2.2.2"
 api = "13.1.5"
 composeBom = "2026.09.00"
