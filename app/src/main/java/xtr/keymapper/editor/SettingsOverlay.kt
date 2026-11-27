@@ -144,6 +144,7 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
 
         settingsBinding.autoProfileSwitch.isChecked = keymapConfig.disableAutoProfiling
         settingsBinding.useShizuku.isChecked = keymapConfig.isShizukuMode
+        settingsBinding.useShizuku.visibility = if (keymapConfig.isWaydroidMode) View.GONE else View.VISIBLE
         settingsBinding.editorOverlay.isChecked = keymapConfig.editorOverlay
 
         val isRoot = keymapConfig.isRootMode
@@ -169,10 +170,12 @@ class SettingsOverlay(private val context: Context, private val startMode: Int) 
 
         val saveSettings = {
             keymapConfig.disableAutoProfiling = settingsBinding.autoProfileSwitch.isChecked
-            val shizuku = settingsBinding.useShizuku.isChecked
-            keymapConfig.useShizuku = shizuku
-            keymapConfig.inputMode = if (shizuku) KeymapConfig.MODE_SHIZUKU else KeymapConfig.MODE_ROOT
-            keymapConfig.blockKeyboardInput = !shizuku && settingsBinding.blockKeyboardInput.isChecked
+            if (!keymapConfig.isWaydroidMode) {
+                val shizuku = settingsBinding.useShizuku.isChecked
+                keymapConfig.useShizuku = shizuku
+                keymapConfig.inputMode = if (shizuku) KeymapConfig.MODE_SHIZUKU else KeymapConfig.MODE_ROOT
+                keymapConfig.blockKeyboardInput = !shizuku && settingsBinding.blockKeyboardInput.isChecked
+            }
             keymapConfig.editorOverlay = settingsBinding.editorOverlay.isChecked
             keymapConfig.touchJitter = settingsBinding.touchJitterSwitch.isChecked
             keymapConfig.touchJitterSpread = settingsBinding.touchJitterSpread.value

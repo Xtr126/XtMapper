@@ -10,6 +10,7 @@ import xtr.keymapper.server.RemoteService
 
 class MouseWheelZoom(private val service: IInputInterface) : HandlerThread("mouse_wheel") {
     private val mHandler: Handler
+    private var closed = false
 
     init {
         start()
@@ -26,26 +27,43 @@ class MouseWheelZoom(private val service: IInputInterface) : HandlerThread("mous
         service.injectEvent(x.toFloat(), y.toFloat(), InputService.UP, MousePinchZoom.pointerId2)
     }
 
+    @Synchronized
+    fun close() {
+        closed = true
+        quit()
+        interrupt()
+    }
+
+    @Synchronized
+    private fun whileOpen(action: () -> Unit): Boolean {
+        if (closed) return false
+        action()
+        return true
+    }
+
     fun onScrollEvent(value: Int, x: Int, y: Int) {
         mHandler.post {
-            // Shift initial position of two pointers by 50 pixels
             var x1 = x + pixels
             var x2 = x - pixels
             try {
-                initPointers(x1, x2, y)
+                if (!whileOpen { initPointers(x1, x2, y) }) return@post
                 repeat(5) {
                     x1 += pixels / 5 * value
                     x2 -= pixels / 5 * value
-                    service.injectEvent(x1.toFloat(), y.toFloat(), InputService.MOVE, MousePinchZoom.pointerId1)
+                    if (!whileOpen {
+                            service.injectEvent(x1.toFloat(), y.toFloat(), InputService.MOVE, MousePinchZoom.pointerId1)
+                        }) return@post
                     sleep(10)
-                    service.injectEvent(x2.toFloat(), y.toFloat(), InputService.MOVE, MousePinchZoom.pointerId2)
+                    if (!whileOpen {
+                            service.injectEvent(x2.toFloat(), y.toFloat(), InputService.MOVE, MousePinchZoom.pointerId2)
+                        }) return@post
                     sleep(10)
                 }
-                releasePointers(x, y)
+                whileOpen { releasePointers(x, y) }
             } catch (e: RemoteException) {
                 Log.e(RemoteService.TAG, e.message, e)
             } catch (e: InterruptedException) {
-                Log.e(RemoteService.TAG, e.message, e)
+                whileOpen { Log.e(RemoteService.TAG, e.message, e) }
             }
         }
     }

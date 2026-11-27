@@ -32,7 +32,12 @@ class KeymapConfigTest {
 
         config.inputMode = KeymapConfig.MODE_ROOT
         config.useShizuku = true
-        assertTrue(config.isShizukuMode)
+        assertFalse(config.isShizukuMode)
+        assertTrue(config.isRootMode)
+
+        config.inputMode = KeymapConfig.MODE_WAYDROID
+        assertTrue(config.isWaydroidMode)
+        assertFalse(config.isShizukuMode)
         assertFalse(config.isRootMode)
     }
 

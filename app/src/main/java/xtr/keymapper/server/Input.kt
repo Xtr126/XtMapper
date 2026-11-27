@@ -24,7 +24,7 @@ class Input(private val displayId: Int) {
     private var lastTouchDown: Long = 0
     private var pointerCount = 0
 
-    private val mScrollThread = SmoothScrollThread()
+    private var mScrollThread: SmoothScrollThread? = null
 
     private fun initPointers() {
         for (i in 0 until PointersState.MAX_POINTERS) {
@@ -52,6 +52,27 @@ class Input(private val displayId: Int) {
 
     init {
         initPointers()
+    }
+
+    internal fun cancelTouches() {
+        val count = pointersState.update(pointerProperties, pointerCoords)
+        if (count == 0) return
+        val source = if (pointerProperties[0]?.toolType == MotionEvent.TOOL_TYPE_MOUSE) {
+            InputDevice.SOURCE_MOUSE
+        } else {
+            InputDevice.SOURCE_TOUCHSCREEN
+        }
+        val event = MotionEvent.obtain(
+            lastTouchDown, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL, count,
+            pointerProperties, pointerCoords, 0, 0, 1f, 1f, 0, 0, source, 0,
+        )
+        pointersState.clear()
+        pointerCount = 0
+        try {
+            injectInputEvent(event)
+        } finally {
+            event.recycle()
+        }
     }
 
     fun injectTouch(actionIn: Int, pointerId: Int, pressure: Float, x: Float, y: Float) {
@@ -195,8 +216,16 @@ class Input(private val displayId: Int) {
         injectInputEvent(event)
     }
 
+    @Synchronized
     fun onScrollEvent(x: Float, y: Float, value: Float) {
-        mScrollThread.onScrollEvent(x, y, value)
+        val worker = mScrollThread ?: SmoothScrollThread().also { mScrollThread = it }
+        worker.onScrollEvent(x, y, value)
+    }
+
+    @Synchronized
+    internal fun cancelScroll() {
+        mScrollThread?.close()
+        mScrollThread = null
     }
 
     private fun injectScroll(event: ScrollEvent, value: Float) {
@@ -235,12 +264,14 @@ class Input(private val displayId: Int) {
         var value = 0f
     }
 
-    private inner class SmoothScrollThread : HandlerThread("scroll") {
+    private inner class SmoothScrollThread : HandlerThread("xtmapper-scroll") {
         private val event = ScrollEvent()
         var active = false
         var value = 0f
         var DELAY_MS = 50
         private val mHandler: Handler
+        @Volatile
+        private var closed = false
 
         init {
             start()
@@ -255,17 +286,24 @@ class Input(private val displayId: Int) {
             if (!active) mHandler.post(this::scroll)
         }
 
+        @Synchronized
+        fun close() {
+            closed = true
+            quit()
+            interrupt()
+        }
+
         fun scroll() {
             active = true
             if (value > 0) {
                 event.value = 0.02f
-                while (value > 0) {
+                while (!closed && value > 0) {
                     value -= event.value
                     next()
                 }
             } else if (value < 0) {
                 event.value = -0.02f
-                while (value < 0) {
+                while (!closed && value < 0) {
                     value -= event.value
                     next()
                 }
@@ -292,9 +330,11 @@ class Input(private val displayId: Int) {
                 else if (avalue > 0.4) DELAY_MS = 6
                 else if (avalue > 0.1) DELAY_MS = 10
 
-                injectScroll(event, ivalue)
+                synchronized(this) {
+                    if (!closed) injectScroll(event, ivalue)
+                }
             } catch (e: InterruptedException) {
-                XtLogger.error(RemoteService.TAG, "Input operation failed", e)
+                if (!closed) XtLogger.error(RemoteService.TAG, "Input operation failed", e)
             }
         }
     }

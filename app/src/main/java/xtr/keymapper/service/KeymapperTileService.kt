@@ -1,5 +1,6 @@
 package xtr.keymapper.service
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
@@ -77,6 +78,7 @@ class KeymapperTileService : TileService() {
     /**
      * Launches an intent and collapses the notification shade, compatible with Android 14+.
      */
+    @SuppressLint("StartActivityAndCollapseDeprecated") // The PendingIntent overload starts at API 34.
     private fun launchIntent(intent: Intent) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val pendingIntent = PendingIntent.getActivity(

@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">XtMapper</string>
+    <string name="logs">Журналы</string>
+    <string name="logs_access_needed">Для сохранения общедоступных файлов журналов в указанную ниже папку нужен доступ ко всем файлам. Сейчас приложение пишет журналы только в Logcat. Вы можете продолжить пользоваться приложением, не предоставляя доступ.</string>
+    <string name="logs_grant_access">Предоставить доступ</string>
+    <string name="logs_active">Общедоступные файлы журналов сохраняются в указанную ниже папку.</string>
+    <string name="logs_unavailable">Сохранение общедоступных файлов журналов недоступно. Приложение пишет журналы только в Logcat. Проверьте, доступно ли общее хранилище для записи.</string>
+    <string name="logs_unsupported">Для общедоступных журналов приложения нужны Android 11 или более поздняя версия и доступ ко всем файлам. На этой версии Android приложение пишет журналы только в Logcat.</string>
+    <string name="logs_settings_unavailable">Не удалось открыть настройки доступа ко всем файлам. Откройте настройки Android и найдите пункт «Доступ ко всем файлам».</string>
     <string name="start">Начать</string>
     <string name="configure">Параметры</string>
     <string name="help">Справка</string>
@@ -154,4 +161,9 @@
     <string name="keymapper_service_running">Служба XtMapper запущена</string>
     <string name="notification_launch_editor">Нажмите, чтобы открыть редактор (%1$s)</string>
     <string name="stop_service">Остановить службу</string>
+    <string name="enable_profile">Включить профиль</string>
+    <string name="disable_profile">Отключить профиль</string>
+    <string name="profile_disabled_label">Отключён</string>
+    <string name="profile_disabled_title">Профиль отключён</string>
+    <string name="profile_disabled_activation">Профиль «%1$s» отключён. Включите его в меню профиля, чтобы начать переназначение клавиш.</string>
 </resources>

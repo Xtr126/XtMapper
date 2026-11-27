@@ -18,6 +18,9 @@ import android.view.View
 import android.view.WindowManager
 import xtr.keymapper.ActivityObserver
 import xtr.keymapper.BuildConfig
+import xtr.keymapper.InputEventCodes
+import xtr.keymapper.wayland.WaylandCaptureNative
+import kotlin.math.roundToInt
 import xtr.keymapper.IRemoteService
 import xtr.keymapper.IRemoteServiceCallback
 import xtr.keymapper.IShellAuthenticationCallback
@@ -42,7 +45,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 class RemoteService @JvmOverloads constructor(
     context: Context,
-    initialIsWaylandClient: Boolean = false
+    initialIsWaylandClient: Boolean = false,
+    private val nativeWaylandFd: Int? = null,
 ) : IRemoteService.Stub() {
     init {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -57,11 +61,29 @@ class RemoteService @JvmOverloads constructor(
     internal val mInputService = ClientServiceSlot<ClientSession, InputService>()
     private val touchpadSessions = TouchpadSessionRegistry(RealTouchpadNativeOps)
     private var mOnKeyEventListener: OnKeyEventListener? = null
-    internal var isWaylandClient = initialIsWaylandClient
+    private val usesLegacyWaylandInput = initialIsWaylandClient
+    internal val isWaylandClient = usesLegacyWaylandInput || nativeWaylandFd != null
+
+    override fun isNativeWaylandBackend(): Boolean {
+        enforceCaller()
+        return nativeWaylandFd != null
+    }
+
+    override fun isNativeWaylandCaptureEnabled(): Boolean {
+        enforceCaller()
+        return nativeWaylandFd != null && BuildConfig.DEBUG &&
+            System.getenv("XTMAPPER_EXPERIMENTAL_WAYLAND_CAPTURE") == "1"
+    }
     private var activityObserverService: ActivityObserverService? = null
     private var cursorView: View? = null
     private var TYPE_SECURE_SYSTEM_OVERLAY = 0
     private val mHandler = Handler(Looper.getMainLooper())
+    private var waylandCapture: WaylandCaptureNative? = null
+    private var waylandGeneration = 0L
+    private var waylandState = 0
+    private var waylandWantsLock = false
+    private var waylandWidth = 0
+    private var waylandHeight = 0
     private val mouseDeviceCoalescer = MouseDeviceCoalescer(
         schedule = { task ->
             if (!mHandler.post { task() }) {
@@ -96,11 +118,10 @@ class RemoteService @JvmOverloads constructor(
     }
 
     /**
-     * Returns the build version code of this remote service instance.
-     * Used by client processes to verify daemon protocol compatibility.
+     * Returns the Binder protocol version used by this daemon.
      */
     override fun getVersion(): Int {
-        return BuildConfig.VERSION_CODE
+        return PROTOCOL_VERSION
     }
 
     override fun grantOverlayPermission(): Boolean {
@@ -136,10 +157,11 @@ class RemoteService @JvmOverloads constructor(
 
     /** Starts the selected input monitor: stdin for Wayland, local evdev otherwise. */
     fun init() {
-        if (isWaylandClient) {
-            Thread({ readWaylandEvents() }, "xtmapper-wayland-stdin").start()
-        } else {
-            evdevReader = EvdevReader(::handleInputLine).also { it.start() }
+        when {
+            nativeWaylandFd != null -> initWaylandCapture(nativeWaylandFd)
+            usesLegacyWaylandInput ->
+                Thread({ readWaylandEvents() }, "xtmapper-wayland-stdin").start()
+            else -> evdevReader = EvdevReader(::handleInputLine).also { it.start() }
         }
 
         Looper.getMainLooper().thread.setUncaughtExceptionHandler { t, e ->
@@ -230,6 +252,76 @@ class RemoteService @JvmOverloads constructor(
     private fun stopInputReader() {
         evdevReader?.close()
         evdevReader = null
+    }
+
+    private fun initWaylandCapture(fd: Int) {
+        waylandCapture = WaylandCaptureNative(fd, object : WaylandCaptureNative.Callback {
+            override fun onState(generation: Long, state: Int) {
+                mHandler.post {
+                    if (generation == waylandGeneration) {
+                        val previous = waylandState
+                        waylandState = state
+                        Log.i(TAG, "Wayland capture generation=$generation state=$state")
+                        val lost = previous and state.inv()
+                        val lostRequestedLock = waylandWantsLock &&
+                            lost and WaylandCaptureNative.POINTER_LOCKED != 0
+                        if (lost and WAYLAND_INPUT_FOCUS != 0 || lostRequestedLock) {
+                            mInputService.get()?.releaseWaylandEvents()
+                            if (waylandWantsLock && state and WaylandCaptureNative.MAPPED != 0) {
+                                waylandWantsLock = false
+                                waylandCapture?.setVisible(true, generation, false, waylandWidth, waylandHeight)
+                            }
+                        }
+                    }
+                }
+            }
+
+            override fun onEvent(generation: Long, type: Int, code: Int, x: Double, y: Double) {
+                mHandler.post {
+                    if (generation != waylandGeneration) return@post
+                    val service = mInputService.get() ?: return@post
+                    if (service.stopEvents || waylandState and WaylandCaptureNative.MAPPED == 0) return@post
+                    val focus = if (type == WaylandCaptureNative.KEY) {
+                        WaylandCaptureNative.KEYBOARD_FOCUS
+                    } else {
+                        WaylandCaptureNative.POINTER_FOCUS
+                    }
+                    if (waylandState and focus == 0) return@post
+                    when (type) {
+                        WaylandCaptureNative.KEY -> service.onWaylandKey(code, x != 0.0)
+                        WaylandCaptureNative.BUTTON -> service.onWaylandButton(code, x != 0.0)
+                        WaylandCaptureNative.ABSOLUTE -> if (!waylandWantsLock) {
+                            service.mouseEventHandler.absolutePosition(
+                                (x.coerceIn(0.0, 1.0) * (waylandWidth - 1)).roundToInt(),
+                                (y.coerceIn(0.0, 1.0) * (waylandHeight - 1)).roundToInt(),
+                            )
+                        }
+                        WaylandCaptureNative.RELATIVE -> if (waylandState and WaylandCaptureNative.POINTER_LOCKED != 0) {
+                            service.sendMouseEvent(InputEventCodes.REL_X, x.roundToInt())
+                            service.sendMouseEvent(InputEventCodes.REL_Y, y.roundToInt())
+                        }
+                        WaylandCaptureNative.SCROLL -> service.sendMouseEvent(InputEventCodes.REL_WHEEL, y.roundToInt())
+                    }
+                    val wantsLock = service.mouseEventHandler.mouseAimActive
+                    if (!service.stopEvents && wantsLock != waylandWantsLock) {
+                        waylandWantsLock = wantsLock
+                        waylandCapture?.setVisible(true, waylandGeneration, wantsLock, waylandWidth, waylandHeight)
+                    }
+                }
+            }
+        })
+    }
+
+    private fun setWaylandVisible(visible: Boolean, service: InputService?) {
+        val capture = waylandCapture ?: return
+        waylandGeneration++
+        waylandState = 0
+        waylandWantsLock = visible && service?.mouseEventHandler?.mouseAimActive == true
+        try {
+            capture.setVisible(visible, waylandGeneration, waylandWantsLock, waylandWidth, waylandHeight)
+        } finally {
+            if (!visible) service?.releaseWaylandEvents()
+        }
     }
 
     /** Reads Cage event lines until EOF and leaves process-owned stdin open. */
@@ -329,7 +421,7 @@ class RemoteService @JvmOverloads constructor(
             return
         }
         val session = ClientSession(clientBinder, deathRecipient)
-        if (isWaylandClient) {
+        if (usesLegacyWaylandInput) {
             val installedSession = mInputService.owner()
             if (installedSession != null && installedSession.binder != clientBinder) {
                 XtLogger.info(TAG, "ignored death notification of a replaced client Binder")
@@ -392,6 +484,16 @@ class RemoteService @JvmOverloads constructor(
         activationReason: Int
     ) {
         enforceCaller()
+        if (nativeWaylandFd != null) {
+            check(isNativeWaylandCaptureEnabled()) {
+                "Native Wayland capture is available only in an opted-in validation build"
+            }
+            require(!profile.disabled && profile.isNativeWaylandReady()) {
+                "Native Wayland capture requires an enabled physical-key profile"
+            }
+            require(screenWidth > 0 && screenHeight > 0)
+            profile.waydroidShortcuts?.applyTo(keymapConfig)
+        }
         lastActivationReason = activationReason
         Log.i(TAG, "startServer: requested wayland=$isWaylandClient display=$displayId reason=$activationReason pointerMode=${keymapConfig.pointerMode} thread=${Thread.currentThread().name}")
         XtLogger.info(TAG, "startServer requested wayland=$isWaylandClient display=$displayId reason=$activationReason pointerMode=${keymapConfig.pointerMode}")
@@ -483,7 +585,7 @@ class RemoteService @JvmOverloads constructor(
 
         val service = mInputService.get()
         if (service != null) {
-            if (isWaylandClient) {
+            if (usesLegacyWaylandInput) {
                 service.hideCursor()
                 service.stop()
             }
@@ -497,7 +599,7 @@ class RemoteService @JvmOverloads constructor(
         }
 
         mWindowManager = getWindowManager(displayId)
-        if (keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
+        if (nativeWaylandFd == null && keymapConfig.pointerMode != KeymapConfig.POINTER_SYSTEM) {
             addCursorView()
         } else {
             cursorView = null
@@ -574,6 +676,21 @@ class RemoteService @JvmOverloads constructor(
             }
             Log.i(TAG, "startServer: mouse connection initialized isOpen=${mouseDevice.isOpen}")
         } else {
+            if (waylandCapture != null) {
+                newService.mouseEventHandler.canActivateAim = {
+                    val available = waylandState and WaylandCaptureNative.RELATIVE_POINTER_AVAILABLE != 0
+                    if (!available) Log.w(TAG, "Wayland aim requires relative pointer and pointer constraints")
+                    available
+                }
+                waylandWidth = screenWidth
+                waylandHeight = screenHeight
+                newService.onWaylandPauseChanged = {
+                    if (mInputService.get() === newService) {
+                        setWaylandVisible(!newService.stopEvents, newService)
+                    }
+                }
+                setWaylandVisible(true, newService)
+            }
             Log.i(TAG, "startServer: Wayland mode; skipping evdev mouse connection")
         }
 
@@ -624,7 +741,21 @@ class RemoteService @JvmOverloads constructor(
             destroyRequested = true
             mStartRequestSequence.incrementAndGet()
         }
-        if (isWaylandClient) {
+        if (nativeWaylandFd != null) {
+            mHandler.post {
+                try {
+                    stopServer(true)
+                } finally {
+                    try {
+                        waylandCapture?.close()
+                    } finally {
+                        waylandCapture = null
+                        XtLogger.endSession(SessionStates.STATUS_SERVICE_STOP)
+                        System.exit(0)
+                    }
+                }
+            }
+        } else if (usesLegacyWaylandInput) {
             val session = mInputService.owner()
             if (session == null) {
                 hideOverlayCursor()
@@ -678,7 +809,7 @@ class RemoteService @JvmOverloads constructor(
         DeviceTelemetry.stop()
         val service = mInputService.get()
         Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient clientAlive=$clientAlive")
-        if (service != null && clientAlive) {
+        if (nativeWaylandFd == null && service != null && clientAlive) {
             try {
                 service.callback.disablePointer()
             } catch (e: RemoteException) {
@@ -686,7 +817,19 @@ class RemoteService @JvmOverloads constructor(
             }
         }
 
-        if (!startedFromShell && exitProcess) {
+        if (nativeWaylandFd != null) {
+            service?.stopEvents = true
+            service?.onWaylandPauseChanged = null
+            OrderedCleanup.run(
+                "hide Waydroid capture" to { setWaylandVisible(false, service) },
+                "hide input cursor" to { service?.hideCursor() },
+                "stop input service" to { service?.stop() },
+                "clear input service slot" to { mInputService.clear() },
+                "disable client pointer" to {
+                    if (clientAlive) service?.callback?.disablePointer()
+                },
+            )
+        } else if (!startedFromShell && exitProcess) {
             XtLogger.info(TAG, "server stopped; exiting process")
             // END marker before the existing System.exit; endSession is bounded.
             XtLogger.endSession(SessionStates.STATUS_SERVICE_STOP)
@@ -712,9 +855,11 @@ class RemoteService @JvmOverloads constructor(
                 }
             )
         }
-        // A shell-started process survives stopServer: admission reopens only after the
-        // non-exit cleanup completes, never where the destroy request was recorded.
-        synchronized(mStartRequestLock) { destroyRequested = false }
+        // The native Waydroid daemon exits on destroy. Ordinary stops never close admission.
+        // Legacy shell daemons can reopen admission after their non-exit cleanup.
+        if (nativeWaylandFd == null) {
+            synchronized(mStartRequestLock) { destroyRequested = false }
+        }
     }
 
     private val mKeyEventListenerDeathRecipient = IBinder.DeathRecipient {
@@ -772,7 +917,11 @@ class RemoteService @JvmOverloads constructor(
 
     override fun reloadKeymap() {
         enforceCaller()
-        mInputService.get()?.reloadKeymap()
+        if (nativeWaylandFd != null) {
+            mHandler.post { mInputService.get()?.reloadKeymap() }
+        } else {
+            mInputService.get()?.reloadKeymap()
+        }
     }
 
     /**
@@ -784,7 +933,11 @@ class RemoteService @JvmOverloads constructor(
     }
 
     companion object {
+        // Keep the version distinct from APKs predating the Waydroid profile parcel fields.
+        internal const val PROTOCOL_VERSION = BuildConfig.VERSION_CODE + 10_000_000
         const val TAG = "xtmapper-server"
+        private const val WAYLAND_INPUT_FOCUS = WaylandCaptureNative.MAPPED or
+            WaylandCaptureNative.KEYBOARD_FOCUS or WaylandCaptureNative.POINTER_FOCUS
 
         /**
          * Loads native C++ shared libraries for mouse, touchpad, and keyboard handling.

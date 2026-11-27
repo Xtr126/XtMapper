@@ -12,8 +12,11 @@ import android.os.Bundle
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
+import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.SystemProperties
+import android.system.Os
+import android.system.OsConstants
 import android.util.Log
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import xtr.keymapper.BuildConfig
@@ -29,10 +32,10 @@ import kotlin.system.exitProcess
 object RemoteServiceShell {
 
     private const val TAG = "xtmapper-server"
+    private const val NATIVE_WAYLAND_FD_ARG = "--native-wayland-fd="
 
     @JvmStatic
     fun main(args: Array<String>) {
-        Environment.launchSignal = args.contains(Environment.CLI_ARG)
         // Logging next so even startup failures below can be recorded (uid/role based storage).
         XtLogger.initStandalone(Role.SHELL)
         XtLogger.debug(TAG, "app_process server starting (args=${args.joinToString(",")})")
@@ -47,6 +50,7 @@ object RemoteServiceShell {
             Looper.prepareMainLooper()
             var noLogcat = false
             var isWaylandClient = false
+            var nativeWaylandFd: Int? = null
 
             var autoLaunchClientActivity = true
             for (arg in args) {
@@ -57,9 +61,27 @@ object RemoteServiceShell {
                     }
                     "--no-auto-launch" -> autoLaunchClientActivity = false
                     "--no-logcat" -> noLogcat = true
-                    // Already applied above.
-                    Environment.CLI_ARG -> {}
-                    else -> println("Invalid argument: $arg")
+                    Environment.LEGACY_CAGE_ARG -> {}
+                    else -> if (arg.startsWith(NATIVE_WAYLAND_FD_ARG)) {
+                        check(nativeWaylandFd == null) { "Duplicate Wayland descriptor" }
+                        nativeWaylandFd = arg.substringAfter('=').toIntOrNull()?.takeIf { it > 2 }
+                            ?: error("Invalid Wayland descriptor")
+                    } else {
+                        println("Invalid argument: $arg")
+                    }
+                }
+            }
+            check(nativeWaylandFd == null || (!isWaylandClient && Process.myUid() == 2000)) {
+                "Native Wayland capture requires the Android shell identity and cannot use legacy stdin"
+            }
+            nativeWaylandFd = nativeWaylandFd?.let { fd ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    ParcelFileDescriptor.adoptFd(fd).use { owned ->
+                        Os.fcntlInt(owned.fileDescriptor, OsConstants.F_SETFD, OsConstants.FD_CLOEXEC)
+                        owned.detachFd()
+                    }
+                } else {
+                    error("Native Wayland capture requires Android 11 or newer")
                 }
             }
             Runtime.getRuntime().addShutdownHook(
@@ -92,7 +114,11 @@ object RemoteServiceShell {
             }
             XtLogger.info(TAG, "native libraries loaded")
 
-            val mService = RemoteService(getContext(), initialIsWaylandClient = isWaylandClient)
+            val mService = RemoteService(
+                getContext(),
+                initialIsWaylandClient = isWaylandClient,
+                nativeWaylandFd = nativeWaylandFd,
+            )
             mService.startedFromShell = true
 
             XtLogger.info(TAG, "server configuration ready wayland=${mService.isWaylandClient}")
@@ -107,7 +133,7 @@ object RemoteServiceShell {
                     component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     putExtra("data", MainActivity.SHELL_INIT)
-                    putExtra(Environment.INTENT_EXTRA, Environment.launchSignal)
+                    putExtra(MainActivity.WAYDROID_SHELL_SERVICE, nativeWaylandFd != null)
                     putExtras(Bundle().apply {
                         putBinder(MainActivity.SHELL_SERVICE_BINDER, mService.asBinder())
                     })

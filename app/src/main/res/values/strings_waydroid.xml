@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Use the default English strings during Waydroid device validation. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="input_mode_title">Input mode</string>
+    <string name="input_mode_root">Root</string>
+    <string name="input_mode_shizuku">Shizuku (ADB)</string>
+    <string name="input_mode_waydroid">Waydroid</string>
+    <string name="input_mode_waydroid_detected">Waydroid (detected)</string>
+    <string name="waydroid_script_error">XtMapper could not write the Waydroid startup script.</string>
+    <string name="waydroid_start_command">Run this command in a Linux host terminal while Waydroid is running. The command starts the shell service for validation.\n\n%1$s</string>
+    <string name="waydroid_copy_command">Copy command</string>
+    <string name="waydroid_waiting_for_command">Waiting for the Waydroid startup command</string>
+    <string name="waydroid_capture_validation_only">Waydroid shell connected. Capture is available only during device validation.</string>
+    <string name="waydroid_profile_migration_required">Rebind a copy of this profile to use physical keys with Waydroid. The original profile stays available.</string>
+    <string name="waydroid_profile_rebind">Rebind a copy</string>
+    <string name="waydroid_profile_copy_title">Rebind a copy for Waydroid</string>
+    <string name="waydroid_profile_copy_name">%1$s (Waydroid)</string>
+    <string name="waydroid_profile_copy_instructions">Select each binding, then press and release the physical key you want. Review the replacements before saving the copy.</string>
+    <string name="waydroid_profile_save_copy">Save copy</string>
+    <string name="waydroid_profile_binding">%1$s · %2$s → %3$s</string>
+    <string name="waydroid_profile_unresolved">Unresolved</string>
+    <string name="waydroid_profile_press_key">Press and release the key for %1$s (%2$s).</string>
+    <string name="waydroid_profile_no_scan_code">This input has no supported physical key code. Try a hardware keyboard key.</string>
+    <string name="waydroid_profile_incomplete">Resolve each binding and use distinct keys for identical actions before saving.</string>
+    <string name="waydroid_profile_copy_failed">Could not save this copy. Check the name or reopen the migration if the original changed.</string>
+    <string name="waydroid_profile_key">Regular key</string>
+    <string name="waydroid_profile_dpad_up">D-pad up</string>
+    <string name="waydroid_profile_dpad_down">D-pad down</string>
+    <string name="waydroid_profile_dpad_left">D-pad left</string>
+    <string name="waydroid_profile_dpad_right">D-pad right</string>
+    <string name="waydroid_profile_swipe_start">Swipe start</string>
+    <string name="waydroid_profile_swipe_end">Swipe end</string>
+    <string name="waydroid_profile_shift_start">Shift start</string>
+    <string name="waydroid_profile_shift_end">Shift end</string>
+    <string name="waydroid_profile_macro">Macro trigger</string>
+    <string name="waydroid_profile_camera">Camera trigger</string>
+    <string name="waydroid_profile_pause_shortcut">Pause or resume shortcut</string>
+    <string name="waydroid_profile_editor_shortcut">Open editor shortcut</string>
+    <string name="waydroid_profile_switch_shortcut">Switch profile shortcut</string>
+    <string name="waydroid_profile_block_shortcut">Block keyboard shortcut</string>
+    <string name="waydroid_profile_aim_shortcut">Mouse aim shortcut</string>
+    <string name="waydroid_profile_grave_shortcut">Additional mouse aim shortcut</string>
+</resources>

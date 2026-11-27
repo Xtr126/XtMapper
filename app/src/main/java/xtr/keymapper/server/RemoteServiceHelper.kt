@@ -14,6 +14,7 @@ import android.os.Process
 import android.os.RemoteException
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import rikka.shizuku.Shizuku
@@ -45,6 +46,14 @@ object RemoteServiceHelper {
 
     @Volatile
     private var shellServiceAuthenticationPending = false
+    private val nativeShellServiceReady = mutableStateOf(false)
+    private val nativeShellCaptureEnabled = mutableStateOf(false)
+
+    internal val isWaydroidShellServiceReady: Boolean
+        get() = nativeShellServiceReady.value
+
+    internal val isWaydroidShellCaptureEnabled: Boolean
+        get() = nativeShellCaptureEnabled.value
 
     private var shellAuthenticationRequestId = 0L
 
@@ -104,13 +113,23 @@ object RemoteServiceHelper {
 
     @JvmStatic
     fun prepareForBackendSwitch() {
-        synchronized(backendLock) {
+        val obsoleteWaydroidService = synchronized(backendLock) {
+            val obsolete = service?.takeIf { isWaydroidShellServiceReady }
             backendGeneration++
             shellAuthenticationRequestId++
             shellServiceAuthenticationPending = false
             shellServiceBinder = null
+            nativeShellServiceReady.value = false
+            nativeShellCaptureEnabled.value = false
             service = null
             forceSelectedBackend = true
+            obsolete
+        }
+        if (obsoleteWaydroidService != null) {
+            Thread({
+                runCatching { obsoleteWaydroidService.destroy() }
+                    .onFailure { Log.w("xtmapper-startup", "Failed to close the old Waydroid backend", it) }
+            }, "xtmapper-waydroid-backend-stop").start()
         }
     }
 
@@ -210,14 +229,14 @@ object RemoteServiceHelper {
 
     /** Cache a shell Binder only after Android has verified the launching UID. */
     @JvmStatic
-    fun setAuthenticatedShellServiceBinder(binder: IBinder, onVerified: () -> Unit) {
+    fun setAuthenticatedShellServiceBinder(binder: IBinder, waydroid: Boolean, onVerified: () -> Unit) {
         val (requestId, expectedBackendGeneration) = synchronized(backendLock) {
-            if (forceSelectedBackend || !binder.isBinderAlive) return
+            if ((!waydroid && forceSelectedBackend) || !binder.isBinderAlive) return
             shellAuthenticationRequestId++
             shellServiceAuthenticationPending = true
             shellAuthenticationRequestId to backendGeneration
         }
-        validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, onVerified)
+        validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, waydroid, onVerified)
     }
 
     /**
@@ -225,11 +244,11 @@ object RemoteServiceHelper {
      * launching UID. The callback's Binder caller UID is supplied by the kernel.
      */
     @JvmStatic
-    fun authenticateShellServiceBinder(binder: IBinder?) {
-        if (binder == null || !binder.isBinderAlive) return
+    fun authenticateShellServiceBinder(binder: IBinder, waydroid: Boolean, onVerified: () -> Unit) {
+        if (!binder.isBinderAlive) return
 
         val (requestId, expectedBackendGeneration) = synchronized(backendLock) {
-            if (forceSelectedBackend) return
+            if (!waydroid && forceSelectedBackend) return
             shellAuthenticationRequestId++
             shellServiceAuthenticationPending = true
             shellAuthenticationRequestId to backendGeneration
@@ -238,7 +257,7 @@ object RemoteServiceHelper {
         val challenge = SecureRandom().nextLong()
         val expectedUid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Process.SHELL_UID else 2000
         val authenticator = ShellServiceAuthenticator(challenge, expectedUid) {
-            validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration)
+            validateShellServiceBinderAsync(binder, requestId, expectedBackendGeneration, waydroid, onVerified)
         }
         val callback = object : IShellAuthenticationCallback.Stub() {
             override fun onShellServiceAuthenticated(challengeResponse: Long) {
@@ -279,7 +298,8 @@ object RemoteServiceHelper {
         binder: IBinder,
         requestId: Long,
         expectedBackendGeneration: Long,
-        onVerified: (() -> Unit)? = null,
+        waydroid: Boolean,
+        onVerified: () -> Unit,
     ) {
         val versionCheckDeadline = SystemClock.uptimeMillis() + SHELL_VERSION_CHECK_TIMEOUT_MILLIS
         Handler(Looper.getMainLooper()).postDelayed({
@@ -297,11 +317,23 @@ object RemoteServiceHelper {
                 Log.w("xtmapper-startup", "Failed to query shell daemon version; daemon is likely from an older incompatible build", e)
                 -1
             }
+            val matchesBackend = daemonVersion == RemoteService.PROTOCOL_VERSION && try {
+                remote.isNativeWaylandBackend() == waydroid
+            } catch (e: Exception) {
+                Log.w("xtmapper-startup", "Unable to verify the shell daemon backend", e)
+                false
+            }
+            val captureEnabled = matchesBackend && waydroid && try {
+                remote.isNativeWaylandCaptureEnabled()
+            } catch (e: Exception) {
+                Log.w("xtmapper-startup", "Unable to verify Waydroid capture availability", e)
+                false
+            }
             var rejectDaemon = false
             val verified = synchronized(backendLock) {
                 if (shellAuthenticationRequestId != requestId ||
                     backendGeneration != expectedBackendGeneration ||
-                    forceSelectedBackend ||
+                    (!waydroid && forceSelectedBackend) ||
                     !shellServiceAuthenticationPending
                 ) return@synchronized false
 
@@ -312,18 +344,19 @@ object RemoteServiceHelper {
 
                 clearShellServiceAuthenticationPendingLocked(requestId, expectedBackendGeneration)
                 if (!binder.isBinderAlive) return@synchronized false
-                if (daemonVersion == BuildConfig.VERSION_CODE) {
-                    cacheShellServiceBinderLocked(remote, daemonVersion)
+                if (matchesBackend) {
+                    forceSelectedBackend = false
+                    cacheShellServiceBinderLocked(remote, daemonVersion, waydroid, captureEnabled)
                 } else {
                     Log.w(
                         "xtmapper-startup",
-                        "Rejected shell daemon due to version mismatch: daemon=$daemonVersion, app=${BuildConfig.VERSION_CODE}"
+                        "Rejected shell daemon: version=$daemonVersion, app=${RemoteService.PROTOCOL_VERSION}, requestedWaydroid=$waydroid"
                     )
-                    rejectDaemon = true
+                    rejectDaemon = daemonVersion != RemoteService.PROTOCOL_VERSION
                 }
                 hasLiveShellService() && shellServiceBinder == binder
             }
-            if (verified && onVerified != null) {
+            if (verified) {
                 Handler(Looper.getMainLooper()).post {
                     val stillCurrent = synchronized(backendLock) {
                         shellAuthenticationRequestId == requestId &&
@@ -340,19 +373,34 @@ object RemoteServiceHelper {
         }
     }
 
-    private fun cacheShellServiceBinderLocked(remote: IRemoteService, daemonVersion: Int) {
+    private fun cacheShellServiceBinderLocked(
+        remote: IRemoteService,
+        daemonVersion: Int,
+        waydroid: Boolean,
+        captureEnabled: Boolean,
+    ) {
         val remoteBinder = remote.asBinder()
         shellServiceBinder = remoteBinder
         service = remote
+        nativeShellServiceReady.value = waydroid
+        nativeShellCaptureEnabled.value = captureEnabled
         try {
             remoteBinder.linkToDeath({
                 synchronized(backendLock) {
-                    if (shellServiceBinder == remoteBinder) shellServiceBinder = null
+                    if (shellServiceBinder == remoteBinder) {
+                        shellServiceBinder = null
+                        nativeShellServiceReady.value = false
+                        nativeShellCaptureEnabled.value = false
+                    }
                     if (service?.asBinder() == remoteBinder) service = null
                 }
             }, 0)
         } catch (_: RemoteException) {
-            if (shellServiceBinder == remoteBinder) shellServiceBinder = null
+            if (shellServiceBinder == remoteBinder) {
+                shellServiceBinder = null
+                nativeShellServiceReady.value = false
+                nativeShellCaptureEnabled.value = false
+            }
             if (service?.asBinder() == remoteBinder) service = null
         }
         Log.i("xtmapper-startup", "authenticated shell Binder cached: alive=${remoteBinder.isBinderAlive} version=$daemonVersion")
@@ -367,7 +415,7 @@ object RemoteServiceHelper {
             .processNameSuffix("service")
             .tag("xtmapper-$backendSessionId-$requestGeneration")
             .debuggable(BuildConfig.DEBUG)
-            .version(BuildConfig.VERSION_CODE)
+            .version(RemoteService.PROTOCOL_VERSION)
 
     private fun bindShizukuService(
         userServiceArgs: Shizuku.UserServiceArgs,
@@ -400,8 +448,16 @@ object RemoteServiceHelper {
 
     @JvmStatic
     fun getInstance(context: Context, callback: RootRemoteServiceCallback) {
-        useShizuku = KeymapConfig(context).isShizukuMode
+        val config = KeymapConfig(context)
+        useShizuku = config.isShizukuMode
         Log.i("xtmapper-startup", "getInstance: shizuku=$useShizuku cachedPresent=${service != null} cachedAlive=${service?.asBinder()?.isBinderAlive}")
+
+        if (config.isWaydroidMode) {
+            callback.onConnection(synchronized(backendLock) {
+                service?.takeIf { isWaydroidShellServiceReady && hasLiveShellService() }
+            })
+            return
+        }
 
         val forceBackend = forceSelectedBackend
 

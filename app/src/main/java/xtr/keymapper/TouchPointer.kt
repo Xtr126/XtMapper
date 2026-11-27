@@ -221,14 +221,24 @@ class TouchPointer : Service() {
      *
      * @param profileName The name of the profile to activate.
      */
-    fun launchProfile(profileName: String?) {
+    fun launchProfile(profileName: String?): Boolean {
+        val profiles = KeymapProfiles(this)
+        val keymapProfile = profiles.getProfile(profileName, true)
+        if (rejectIncompatibleWaydroidProfile(keymapProfile)) return false
         this.selectedProfile = profileName
         currentSelectedProfile = profileName
-        KeymapProfiles(this).setLastSelectedProfile(profileName)
+        profiles.setLastSelectedProfile(profileName)
         KeymapperTileService.updateTile(this)
         updateNotification()
-        val keymapProfile = KeymapProfiles(this).getProfile(selectedProfile, true)
         connectRemoteService(keymapProfile)
+        return true
+    }
+
+    private fun rejectIncompatibleWaydroidProfile(profile: KeymapProfile): Boolean {
+        if (!KeymapConfig(this).isWaydroidMode || profile.disabled || profile.isNativeWaylandReady()) return false
+        Toast.makeText(this, R.string.waydroid_profile_migration_required, Toast.LENGTH_LONG).show()
+        stopKeymapper()
+        return true
     }
 
     /**
@@ -243,9 +253,16 @@ class TouchPointer : Service() {
         activationReason: Int = IRemoteService.ACTIVATION_MANUAL,
         onConnected: (() -> Unit)? = null
     ) {
+        if (rejectIncompatibleWaydroidProfile(profile)) return
+        val config = KeymapConfig(this)
+        if (config.isWaydroidMode && RemoteServiceHelper.isWaydroidShellServiceReady &&
+            !RemoteServiceHelper.isWaydroidShellCaptureEnabled) {
+            Toast.makeText(this, R.string.waydroid_capture_validation_only, Toast.LENGTH_LONG).show()
+            stopKeymapper()
+            return
+        }
         Log.i("xtmapper-startup", "connectRemoteService: profile=$selectedProfile disabled=${profile.disabled} reason=$activationReason")
         if (!profile.disabled) activityCallback?.updateCmdView1("connecting to server..")
-        val config = KeymapConfig(this)
         RemoteServiceHelper.useShizuku = config.isShizukuMode
         val generation = connectionGeneration
         RemoteServiceHelper.getInstance(
@@ -585,7 +602,7 @@ class TouchPointer : Service() {
                 if (designated != selectedProfile || designatedProfileDisabled) {
                     mHandler.post {
                         if (designated != selectedProfile) {
-                            launchProfile(designated)
+                            if (!launchProfile(designated)) return@post
                             Toast.makeText(this@TouchPointer, "Switched to profile: $designated", Toast.LENGTH_SHORT).show()
                         }
                         if (keymapProfiles.getProfile(designated, false).disabled) {

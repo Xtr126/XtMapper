@@ -32,7 +32,9 @@ class Camera : KeymapProfileElement {
         xSensitivity = data[3].toFloat()
         ySensitivity = data[4].toFloat()
         toggle = data[5].toInt() != 0
-        if (data[6].length >= 5) triggerKeyCode = data[6]
+        data.getOrNull(6)?.takeIf { it.length >= 5 }?.let {
+            triggerKeyCode = it.replace(Regex("^(KEY_)+"), "KEY_")
+        }
     }
 
     protected constructor(parcel: Parcel) {
@@ -52,7 +54,7 @@ class Camera : KeymapProfileElement {
                 xSensitivity + " " +
                 ySensitivity + " " +
                 (if (toggle) 1 else 0) + " " +
-                "KEY_" + triggerKeyCode
+                triggerKeyCode
     }
 
     override fun scale(scaleX: Float, scaleY: Float) {

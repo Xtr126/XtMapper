@@ -37,6 +37,9 @@ class KeymapConfig : Parcelable {
     @JvmField
     var keyGraveMouseAim = false
 
+    internal var graveMouseAimShortcutKey = "KEY_GRAVE"
+    internal var usePhysicalWaylandShortcuts = false
+
     @JvmField
     var disableAutoProfiling = false
 
@@ -102,10 +105,13 @@ class KeymapConfig : Parcelable {
     var inputMode = MODE_ROOT
 
     val isShizukuMode: Boolean
-        get() = inputMode == MODE_SHIZUKU || useShizuku
+        get() = inputMode == MODE_SHIZUKU
+
+    val isWaydroidMode: Boolean
+        get() = inputMode == MODE_WAYDROID
 
     val isRootMode: Boolean
-        get() = !isShizukuMode
+        get() = inputMode == MODE_ROOT
 
     constructor(context: Context?) {
         if (context != null) {
@@ -207,6 +213,12 @@ class KeymapConfig : Parcelable {
         return 0
     }
 
+    internal fun selectInputMode(mode: Int) {
+        inputMode = mode
+        useShizuku = isShizukuMode
+        sharedPref!!.edit().putInt("input_mode", mode).putBoolean("use_shizuku", useShizuku).apply()
+    }
+
     private fun loadSharedPrefs() {
         val sharedPref = this.sharedPref!!
         mouseSensitivity = sharedPref.getFloat("mouse_sensitivity_multiplier", 1f)
@@ -245,7 +257,7 @@ class KeymapConfig : Parcelable {
         touchJitterSpread = sharedPref.getFloat("touch_jitter_spread", 15f)
         shiftTransitionMs = sharedPref.getInt("shift_transition_ms", 100)
         blockKeyboardInput = sharedPref.getBoolean("block_keyboard_input", false)
-        inputMode = sharedPref.getInt("input_mode", if (useShizuku) MODE_SHIZUKU else MODE_ROOT)
+        inputMode = resolveInputMode(sharedPref.getInt("input_mode", -1), useShizuku)
     }
 
     fun applySharedPrefs() {
@@ -257,7 +269,7 @@ class KeymapConfig : Parcelable {
             .putBoolean("right_click_mouse_aim", rightClickMouseAim)
             .putBoolean("mouse_aim_shortcut_toggle", mouseAimToggle)
             .putBoolean("disable_auto_profile", disableAutoProfiling)
-            .putBoolean("use_shizuku", useShizuku)
+            .putBoolean("use_shizuku", isShizukuMode)
             .putBoolean("editor_overlay", editorOverlay)
             .putBoolean("show_controls", showControls)
             .putFloat("show_controls_opacity", showControlsOpacity)
@@ -285,6 +297,12 @@ class KeymapConfig : Parcelable {
     companion object {
         const val MODE_ROOT = 0
         const val MODE_SHIZUKU = 1
+        const val MODE_WAYDROID = 2
+
+        internal fun resolveInputMode(storedMode: Int, legacyShizuku: Boolean): Int = when (storedMode) {
+            MODE_ROOT, MODE_SHIZUKU, MODE_WAYDROID -> storedMode
+            else -> if (legacyShizuku) MODE_SHIZUKU else MODE_ROOT
+        }
 
         const val KEY_CTRL = "Ctrl"
         const val KEY_ALT = "Alt"

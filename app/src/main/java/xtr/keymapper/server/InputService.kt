@@ -6,6 +6,8 @@ import android.os.RemoteException
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import xtr.keymapper.InputEventCodes
+import xtr.keymapper.InputEventLabels
 import xtr.keymapper.InputEventCodes.BTN_MIDDLE
 import xtr.keymapper.InputEventCodes.BTN_MOUSE
 import xtr.keymapper.InputEventCodes.BTN_RIGHT
@@ -39,9 +41,13 @@ class InputService @Throws(RemoteException::class) constructor(
     private val input: Input
     private val touchpadInputMode: Int
     private val currentPointerMode: Int
+    private val usesHostCursor = keymapConfig.usePhysicalWaylandShortcuts
 
     private val mHandler = Handler(Looper.getMainLooper())
     private var supportsAbsEvents = false
+    private val waylandKeys = mutableMapOf<Int, String>()
+    private val waylandButtons = mutableSetOf<Int>()
+    internal var onWaylandPauseChanged: (() -> Unit)? = null
 
     internal var stopEvents = false
     val touchJitter = TouchJitter(keymapConfig.touchJitter, keymapConfig.touchJitterSpread)
@@ -59,13 +65,13 @@ class InputService @Throws(RemoteException::class) constructor(
         } else {
             keymapConfig.pointerMode
         }
-        if (currentPointerMode != KeymapConfig.POINTER_OVERLAY) {
+        if (!usesHostCursor && currentPointerMode != KeymapConfig.POINTER_OVERLAY) {
             initMouseCursor(screenWidth, screenHeight)
             // Reduce visibility of system pointer
             cursorSetX(0)
             cursorSetY(0)
         }
-        if (currentPointerMode != KeymapConfig.POINTER_SYSTEM) showCursor()
+        if (!usesHostCursor && currentPointerMode != KeymapConfig.POINTER_SYSTEM) showCursor()
 
         this.touchpadInputMode = if (isWaylandClient) KeymapConfig.TOUCHPAD_DISABLED else keymapConfig.touchpadInputMode
 
@@ -116,6 +122,7 @@ class InputService @Throws(RemoteException::class) constructor(
 
     override fun pauseResumeKeymap() {
         stopEvents = !stopEvents
+        onWaylandPauseChanged?.invoke()
         if (!isWaylandClient) {
             setMouseLock(!stopEvents)
             if (isKeyboardGrabbed) {
@@ -151,6 +158,7 @@ class InputService @Throws(RemoteException::class) constructor(
     }
 
     override fun moveCursorX(x: Int) {
+        if (usesHostCursor) return
         val view = cursorView
         if (view != null) {
             mHandler.post { view.x = x.toFloat() }
@@ -167,6 +175,7 @@ class InputService @Throws(RemoteException::class) constructor(
     }
 
     override fun moveCursorY(y: Int) {
+        if (usesHostCursor) return
         val view = cursorView
         if (view != null) {
             mHandler.post { view.y = y.toFloat() }
@@ -183,6 +192,7 @@ class InputService @Throws(RemoteException::class) constructor(
     }
 
     override fun hideCursor() {
+        if (usesHostCursor) return
         val view = cursorView
         if (view != null) {
             mHandler.post { view.visibility = View.GONE }
@@ -196,6 +206,7 @@ class InputService @Throws(RemoteException::class) constructor(
     }
 
     override fun showCursor() {
+        if (usesHostCursor) return
         val view = cursorView
         if (view != null) {
             mHandler.post { view.visibility = View.VISIBLE }
@@ -210,8 +221,18 @@ class InputService @Throws(RemoteException::class) constructor(
 
     fun reloadKeymap() {
         try {
-            this.keymapProfile = mCallback.requestKeymapProfile()
-            this.keymapConfig = mCallback.requestKeymapConfig()
+            val profile = mCallback.requestKeymapProfile()
+            val config = mCallback.requestKeymapConfig()
+            if (keymapConfig.usePhysicalWaylandShortcuts) {
+                if (!profile.isNativeWaylandReady()) {
+                    XtLogger.warn(RemoteService.TAG, "Wayland reload rejected an unverified physical-key profile")
+                    return
+                }
+                releaseWaylandEvents()
+                profile.waydroidShortcuts?.applyTo(config)
+            }
+            this.keymapProfile = profile
+            this.keymapConfig = config
             this.stop()
             touchJitter.updateConfig(this.keymapConfig.touchJitter, this.keymapConfig.touchJitterSpread)
             touchJitter.clear()
@@ -359,6 +380,45 @@ class InputService @Throws(RemoteException::class) constructor(
         } catch (e: Exception) {
             XtLogger.error(RemoteService.TAG, "Error invoking keyListener", e)
         }
+    }
+
+    internal fun releaseWaylandEvents() {
+        input.cancelScroll()
+        val keys = waylandKeys.values.toList()
+        val buttons = waylandButtons.toList()
+        waylandKeys.clear()
+        waylandButtons.clear()
+        try {
+            for (key in keys) {
+                try {
+                    keyEventHandler.handleEvent("EV_KEY $key UP")
+                } catch (e: RemoteException) {
+                    XtLogger.warn(RemoteService.TAG, "Client disconnected while releasing Wayland key", e)
+                }
+            }
+            buttons.forEach { mouseEventHandler.handleEvent(it, UP) }
+        } finally {
+            OrderedCleanup.run(
+                "cancel Waydroid keyboard actions" to { keyEventHandler.cancelPendingActions() },
+                "cancel Waydroid pointer actions" to { mouseEventHandler.cancelWaylandActions() },
+                "cancel Waydroid touches" to { input.cancelTouches() },
+            )
+        }
+    }
+
+    internal fun onWaylandKey(code: Int, pressed: Boolean) {
+        val label = if (pressed) {
+            if (code in waylandKeys) return
+            InputEventLabels.label(InputEventCodes.EV_KEY, code)?.also { waylandKeys[code] = it }
+        } else {
+            waylandKeys.remove(code)
+        } ?: return
+        sendKeyboardEvent(label, if (pressed) DOWN else UP)
+    }
+
+    internal fun onWaylandButton(code: Int, pressed: Boolean) {
+        val changed = if (pressed) waylandButtons.add(code) else waylandButtons.remove(code)
+        if (changed) sendMouseEvent(code, if (pressed) DOWN else UP)
     }
 
     fun onWaylandMouseEvent(line: String) {

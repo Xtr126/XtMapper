@@ -43,6 +43,7 @@ import xtr.keymapper.editor.component.RightClick
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfile
 import xtr.keymapper.keymap.KeymapProfiles
+import xtr.keymapper.keymap.ProfileKeySemantics
 import xtr.keymapper.log.XtLogger
 import xtr.keymapper.macro.MacroIdUtils
 import xtr.keymapper.macro.MacroStatus
@@ -251,7 +252,11 @@ class EditorUI(
 
     fun onKey(keyCode: Int, event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN) return false
-        val key = KeyUtils.resolveKeyName(keyCode, event) ?: return false
+        val key = if (profile?.keySemantics == ProfileKeySemantics.PHYSICAL_EVDEV) {
+            ProfileKeySemantics.physicalKey(event.scanCode)?.removePrefix("KEY_")
+        } else {
+            KeyUtils.resolveKeyName(keyCode, event)
+        } ?: return false
         if (macroDialog != null) {
             macroDialog!!.onKey(key)
             return true
@@ -279,6 +284,8 @@ class EditorUI(
 
         // Incoming calls are not guaranteed to be executed on the main thread
         mHandler.post {
+            // Physical profiles use Android hardware scan codes in the editor.
+            if (profile?.keySemantics == ProfileKeySemantics.PHYSICAL_EVDEV) return@post
             if (macroDialog != null) macroDialog!!.onKey(key)
             else if (keyInFocus != null) {
                 keyInFocus!!.setText(key)
@@ -434,6 +441,7 @@ class EditorUI(
         val linesToParse = ArrayList<String?>()
         editorUiComponents.forEach { linesToParse.add(it.toConfigLine()) }
         MacroIdUtils.getLines(linesToParse, profile!!)
+        profile!!.appendKeyMetadata(linesToParse)
         linesToParse.add("APPLICATION ${profile!!.packageName}")
         if (!profile!!.disabled) linesToParse.add("ENABLED")
         val coordinateWidth = loadedCoordinateWidth.takeIf { it > 0 } ?: width
@@ -500,6 +508,7 @@ class EditorUI(
 
         // Enabled macro ids
         MacroIdUtils.getLines(linesToWrite, profile!!)
+        profile!!.appendKeyMetadata(linesToWrite)
         linesToWrite.removeAll { it.isNullOrBlank() }
 
         val profiles = KeymapProfiles(context)
@@ -519,6 +528,7 @@ class EditorUI(
         editorUiComponents.forEach { linesToWrite.add(it.toConfigLine()) }
 
         MacroIdUtils.getLines(linesToWrite, profile!!)
+        profile!!.appendKeyMetadata(linesToWrite)
         return linesToWrite.filterNotNull().filter { it.isNotBlank() }.joinToString("\n")
     }
 

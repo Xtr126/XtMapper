@@ -46,19 +46,25 @@ class Macro : Parcelable {
         return 0
     }
 
-    fun runMacro(mInput: IInputInterface, pointerId: Int) {
-        val events = this.events!!
-        mInput.injectEvent(events[0]!!.x, events[0]!!.y, InputService.DOWN, pointerId)
+    fun runMacro(
+        mInput: IInputInterface,
+        pointerId: Int,
+        inject: (Float, Float, Int, Int) -> Unit = mInput::injectEvent
+    ) {
+        val events = this.events ?: return
+        if (events.isEmpty()) return
+        inject(events[0]!!.x, events[0]!!.y, InputService.DOWN, pointerId)
 
         for (i in 1 until events.size - 1) {
             try {
                 Thread.sleep(events[i]!!.elapsedTimeSinceLastEventMillis.toLong())
-                mInput.injectEvent(events[i]!!.x, events[i]!!.y, InputService.MOVE, pointerId)
+                inject(events[i]!!.x, events[i]!!.y, InputService.MOVE, pointerId)
             } catch (ignored: InterruptedException) {
+                return
             }
         }
         val last = events[events.size - 1]!!
-        mInput.injectEvent(last.x, last.y, InputService.UP, pointerId)
+        inject(last.x, last.y, InputService.UP, pointerId)
     }
 
     private class Event : Parcelable {

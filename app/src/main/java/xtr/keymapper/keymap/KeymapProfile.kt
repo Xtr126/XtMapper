@@ -16,6 +16,27 @@ import xtr.keymapper.macro.MacroSharedPreferences
 
 class KeymapProfile : Parcelable {
 
+    var keySemantics = ProfileKeySemantics.UNKNOWN
+    internal var waydroidShortcuts: ProfileShortcuts? = null
+
+    internal fun isNativeWaylandReady(): Boolean {
+        val valid = ProfileKeySemantics::isPhysicalKey
+        return keySemantics == ProfileKeySemantics.PHYSICAL_EVDEV && waydroidShortcuts != null &&
+            keys.all { valid(it.code.orEmpty()) } &&
+            dpadArray.filterNotNull().all { dpad ->
+                with(dpad.keycodes) { listOf(Up, Down, Left, Right).all(valid) }
+            } &&
+            swipeKeys.all { valid("KEY_${it.key1.code}") && valid("KEY_${it.key2.code}") } &&
+            shiftKeys.all { valid("KEY_${it.key1.code}") && valid("KEY_${it.key2.code}") } &&
+            macroIdMap.values.all { it.triggerKey == null || it.triggerKey == "null" || valid("KEY_${it.triggerKey}") } &&
+            (camera?.triggerKeyCode?.let { valid(it) || it.isMouseShortcut() } ?: true)
+    }
+
+    internal fun appendKeyMetadata(lines: MutableCollection<String?>) {
+        keySemantics.line?.let(lines::add)
+        waydroidShortcuts?.lines?.let(lines::addAll)
+    }
+
     @JvmField
     var packageName: String = BuildConfig.APPLICATION_ID
 
@@ -109,6 +130,8 @@ class KeymapProfile : Parcelable {
         if (hashMap != null) macroIdMap.putAll(hashMap as Map<String, Macro>)
         camera = parcel.readParcelable(Camera::class.java.classLoader)
         mouseWalk = parcel.readParcelable(MouseWalk::class.java.classLoader)
+        keySemantics = ProfileKeySemantics.parse(parcel.readString())
+        waydroidShortcuts = ProfileShortcuts.parse(parcel.createStringArrayList().orEmpty())
     }
 
     override fun writeToParcel(dest: Parcel, flags: Int) {
@@ -125,6 +148,8 @@ class KeymapProfile : Parcelable {
         dest.writeMap(macroIdMap)
         dest.writeParcelable(camera, flags)
         dest.writeParcelable(mouseWalk, flags)
+        dest.writeString(keySemantics.line)
+        dest.writeStringList(waydroidShortcuts?.lines)
     }
 
     override fun describeContents(): Int {

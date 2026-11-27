@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyListScope
 import xtr.keymapper.activity.MainActivity
+import xtr.keymapper.activity.inputModeLabel
 import android.content.pm.PackageManager
 import android.provider.Settings
 import android.view.InputDevice
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.draw.clip
 import xtr.keymapper.keymap.KeymapConfig
 import xtr.keymapper.keymap.KeymapProfiles
+import xtr.keymapper.server.RemoteServiceHelper
 
 // ============ THEME COLORS ============
 
@@ -87,6 +89,8 @@ internal data class AppState(
     val hasShizukuPermission: Boolean = true,
     val hasOverlayPermission: Boolean = false,
     val inputMode: Int = KeymapConfig.MODE_ROOT,
+    val waydroidServiceReady: Boolean = false,
+    val waydroidCaptureEnabled: Boolean = false,
     val connectedDevices: List<HardwareDevice> = emptyList(),
     val profiles: List<GameProfile> = emptyList()
 )
@@ -319,14 +323,17 @@ private fun GameKeyMapperActivityContent(activity: MainActivity) {
     }
 
     KeymapperApp(
-        state = state.value.copy(isServiceActive = TouchPointer.isRunning),
+        state = state.value.copy(
+            isServiceActive = TouchPointer.isRunning,
+            waydroidServiceReady = RemoteServiceHelper.isWaydroidShellServiceReady,
+            waydroidCaptureEnabled = RemoteServiceHelper.isWaydroidShellCaptureEnabled,
+        ),
         onToggleService = {
             activity.toggleServiceFromCompose()
             refresh()
         },
         onToggleInputMode = {
-            activity.toggleInputModeFromCompose()
-            refresh()
+            activity.chooseInputModeFromCompose { refresh() }
         },
         onFixPermission = {
             activity.fixPermissionFromCompose()
@@ -409,7 +416,12 @@ private fun GlobalStatusToggle(
 ) {
     val statusColor = if (state.isServiceActive) KeymapperTheme.Success else KeymapperTheme.Error
     val statusText = stringResource(
-        if (state.isServiceActive) R.string.service_active else R.string.service_inactive
+        when {
+            state.isServiceActive -> R.string.service_active
+            state.inputMode == KeymapConfig.MODE_WAYDROID && state.waydroidServiceReady && !state.waydroidCaptureEnabled ->
+                R.string.waydroid_capture_validation_only
+            else -> R.string.service_inactive
+        }
     )
 
     Card(
@@ -473,12 +485,9 @@ private fun GlobalStatusToggle(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val modeText = when (state.inputMode) {
-                    KeymapConfig.MODE_SHIZUKU -> "Mode: Shizuku (ADB)"
-                    else -> "Mode: Root"
-                }
+                val modeText = stringResource(R.string.input_mode_changed, stringResource(inputModeLabel(state.inputMode)))
                 val modeIcon = when (state.inputMode) {
-                    KeymapConfig.MODE_SHIZUKU -> Icons.Default.Terminal
+                    KeymapConfig.MODE_SHIZUKU, KeymapConfig.MODE_WAYDROID -> Icons.Default.Terminal
                     else -> Icons.Default.Security
                 }
                 Icon(
@@ -503,7 +512,13 @@ private fun GlobalStatusToggle(
                 )
             }
 
-            if (state.inputMode == KeymapConfig.MODE_SHIZUKU && !state.isShizukuInstalled) {
+            if (state.inputMode == KeymapConfig.MODE_WAYDROID && !state.waydroidServiceReady) {
+                PermissionRow(
+                    icon = Icons.Default.Terminal,
+                    text = stringResource(R.string.waydroid_waiting_for_command),
+                    onFixPermission = onFixPermission,
+                )
+            } else if (state.inputMode == KeymapConfig.MODE_SHIZUKU && !state.isShizukuInstalled) {
                 PermissionRow(
                     icon = Icons.Default.Warning,
                     text = stringResource(R.string.shizuku_install_required),
