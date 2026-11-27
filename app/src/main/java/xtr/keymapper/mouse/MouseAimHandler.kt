@@ -103,7 +103,12 @@ class MouseAimHandler(private val config: MouseAimConfig) {
     private fun calculateScaledY(value: Int): Float =
         if (config.ySensitivity != 1.0F) value * config.ySensitivity else value.toFloat()
 
+    internal fun cancelPendingReset() {
+        mHandler.removeCallbacksAndMessages(null)
+    }
+
     fun stop() {
+        cancelPendingReset()
         service.injectEvent(currentX, currentY, InputService.UP, pointerIdAim)
     }
 

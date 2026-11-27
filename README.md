@@ -45,11 +45,11 @@ To report any bugs to help improve XtMapper please create an issue at https://gi
 
 To share your thoughts on XtMapper or ask any questions please create a post at https://github.com/Xtr126/XtMapper/discussions
 
-## Using on waydroid
-https://xtr126.github.io/XtMapper-docs/waydroid/1-overview/
+## Using on Waydroid
 
-See the [Android Wayland capture-overlay plan](docs/waydroid-wayland-client-plan.md)
-for the experimental alternative to cage-xtmapper and its device validation status.
+See the [Waydroid setup guide](https://xtr126.github.io/XtMapper-docs/waydroid/1-overview/)
+and the [Waydroid capture documentation](docs/waydroid-capture.md) for the backend,
+supported startup modes, and device validation status.
 
 ## Credits
 |  |  |

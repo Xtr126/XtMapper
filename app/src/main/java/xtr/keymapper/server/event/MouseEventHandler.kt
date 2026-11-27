@@ -131,9 +131,6 @@ class MouseEventHandler(private val mInput: IInputInterface) {
         }
 
         val keymapConfig = mInput.keymapConfig
-        if (keymapConfig.ctrlMouseWheelZoom)
-            scrollZoomHandler = MouseWheelZoom(mInput)
-
         sensitivity = keymapConfig.mouseSensitivity!!
         scroll_speed_multiplier = keymapConfig.scrollSpeed!!
     }
@@ -240,10 +237,9 @@ class MouseEventHandler(private val mInput: IInputInterface) {
             } else {
                 mInput.injectMiddleClickEvent(x1.toFloat(), y1.toFloat(), pointerId, value == 1)
             }
-            REL_WHEEL -> if (scrollZoomHandler != null && mInput.keyEventHandler.ctrlKeyPressed
-                && keymapConfig.ctrlMouseWheelZoom
-            ) {
-                scrollZoomHandler!!.onScrollEvent(value, x1, y1)
+            REL_WHEEL -> if (mInput.keyEventHandler.ctrlKeyPressed && keymapConfig.ctrlMouseWheelZoom) {
+                val zoom = scrollZoomHandler ?: MouseWheelZoom(mInput).also { scrollZoomHandler = it }
+                zoom.onScrollEvent(value, x1, y1)
             } else {
                 var scrollDelta = (value * scroll_speed_multiplier.toInt())
                 scrollDelta = maxOf(-32, minOf(32, scrollDelta))
@@ -284,6 +280,18 @@ class MouseEventHandler(private val mInput: IInputInterface) {
             mouseWalkHandler!!.onCursorPosition(x1, y1)
         }
         mInput.moveCursorX(x1)
+    }
+
+    internal fun cancelWaylandActions() {
+        scrollZoomHandler?.close()
+        scrollZoomHandler = null
+        mouseAimHandler?.cancelPendingReset()
+        mouseCameraHandler?.cancelPendingReset()
+        mouseAimOrCameraHandler = null
+        mouseAimActive = false
+        mouseWalkActive = false
+        pointer_down = false
+        pinchZoom = null
     }
 
     fun stop() {

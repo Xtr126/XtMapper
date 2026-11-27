@@ -15,7 +15,7 @@
 #ifdef __ANDROID__
 #include <android/log.h>
 #include <jni.h>
-#define REPORT(...) __android_log_print(ANDROID_LOG_INFO, "xtmapper-wayland-probe", __VA_ARGS__)
+#define REPORT(...) __android_log_print(ANDROID_LOG_INFO, "xtmapper-wayland-diagnostics", __VA_ARGS__)
 #else
 #include <cstdio>
 #define REPORT(...) do { std::printf(__VA_ARGS__); std::putchar('\n'); } while (0)
@@ -27,7 +27,7 @@ using Time = Clock::time_point;
 using namespace std::chrono_literals;
 using Words = std::vector<uint32_t>;
 
-// The probe speaks only version 1 of these interfaces. See wayland.xml and
+// The diagnostic speaks only version 1 of these interfaces. See wayland.xml and
 // stable/xdg-shell/xdg-shell.xml for object method and event opcode ordering.
 enum Object : uint32_t {
     Display = 1, Registry, InitialSync, Compositor, Shm, Shell, Seat, GlobalsSync, Pointer, Keyboard,
@@ -170,7 +170,7 @@ struct Client {
             return false;
         }
         const uint32_t size = width * height * 4;
-        Fd memory{static_cast<int>(syscall(SYS_memfd_create, "xtmapper-wayland-probe", MFD_CLOEXEC))};
+        Fd memory{static_cast<int>(syscall(SYS_memfd_create, "xtmapper-wayland-diagnostics", MFD_CLOEXEC))};
         if (memory.value < 0 || ftruncate(memory.value, size) != 0) {
             REPORT("shared memory failed errno=%d", errno);
             return false;
@@ -294,9 +294,9 @@ struct Client {
         width = height = 0;
         committed = keyboardFocus = pointerFocus = keyEvent = buttonEvent = false;
         Words title;
-        appendString(title, "XtMapper Wayland Probe");
+        appendString(title, "XtMapper Wayland Capture Diagnostics");
         Words appId;
-        appendString(appId, "org.xtmapper.WaylandProbe");
+        appendString(appId, "org.xtmapper.WaylandCaptureDiagnostics");
         REPORT("show surface=%u", base);
         if (!send(Compositor, 0, {base + Surface}) // create_surface
                 || !send(Shell, 2, {base + XdgSurface, base + Surface}) // get_xdg_surface
@@ -356,7 +356,7 @@ int run(const char* endpoint, int visibleMillis) {
 
 #ifdef __ANDROID__
 extern "C" JNIEXPORT jint JNICALL
-Java_xtr_keymapper_wayland_WaylandProbe_probe(JNIEnv* env, jclass, jstring endpoint, jint duration) {
+Java_xtr_keymapper_wayland_WaylandCaptureDiagnostics_runDiagnostic(JNIEnv* env, jclass, jstring endpoint, jint duration) {
     if (!endpoint) return 2;
     const char* path = env->GetStringUTFChars(endpoint, nullptr);
     if (!path) return 2;

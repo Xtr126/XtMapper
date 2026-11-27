@@ -62,30 +62,52 @@ include $(BUILD_SHARED_LIBRARY)
 # ndk-build must generate the header before the first compilation too.
 $(JNI_SRC_PATH)/keyboard_grab.cpp: | $(input_header)
 
+# The client and its dependencies are built from the pinned source subset.
+# Refresh it with src/main/cpp/refresh-wayland-client.sh.
+ffi_src := $(JNI_SRC_PATH)/third-party/libffi
+ffi_includes := $(ffi_src)/config/$(TARGET_ARCH_ABI) $(ffi_src)/include
+ffi_arch_armeabi-v7a := arm/ffi.c arm/sysv.S
+ffi_arch_arm64-v8a := aarch64/ffi.c aarch64/sysv.S
+ffi_arch_x86 := x86/ffi.c x86/sysv.S
+ffi_arch_x86_64 := x86/ffi64.c x86/unix64.S x86/ffiw64.c x86/win64.S
+ffi_common := closures.c java_raw_api.c prep_cif.c raw_api.c tramp.c types.c
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := xtmapper_ffi
+LOCAL_C_INCLUDES := $(ffi_includes)
+LOCAL_SRC_FILES := $(addprefix $(ffi_src)/src/,$(ffi_common) $(ffi_arch_$(TARGET_ARCH_ABI)))
+LOCAL_CFLAGS := -fvisibility=hidden
+include $(BUILD_STATIC_LIBRARY)
+
+wayland_src := $(JNI_SRC_PATH)/third-party/wayland/src
+wayland_generated := $(JNI_SRC_PATH)/third-party/wayland/generated
+wayland_includes := $(wayland_src) $(wayland_generated)
+wayland_core := connection.c wayland-client.c wayland-os.c wayland-util.c
+wayland_protocol := wayland-protocol.c xdg-shell-protocol.c pointer-constraints-protocol.c relative-pointer-protocol.c
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := xtmapper_wayland_client
+LOCAL_C_INCLUDES := $(wayland_includes) $(ffi_includes)
+LOCAL_SRC_FILES := $(addprefix $(wayland_src)/,$(wayland_core)) \
+                   $(addprefix $(wayland_generated)/,$(wayland_protocol))
+LOCAL_CFLAGS := -D_POSIX_C_SOURCE=200809L -fvisibility=hidden
+LOCAL_STATIC_LIBRARIES := xtmapper_ffi
+include $(BUILD_STATIC_LIBRARY)
+
 include $(CLEAR_VARS)
 LOCAL_MODULE    := xtmapper_wayland
 LOCAL_SRC_FILES := $(JNI_SRC_PATH)/wayland_capture.cpp $(JNI_SRC_PATH)/wayland_launcher.cpp
+LOCAL_C_INCLUDES := $(wayland_includes)
 LOCAL_CPPFLAGS  := -std=c++17
 LOCAL_LDLIBS    := -llog
-
-wayland_wire_header := $(NDK_OUT)/local/$(TARGET_ARCH_ABI)/generated/xtmapper_wayland/wayland-wire.h
-wayland_wire_generator := $(JNI_SRC_PATH)/generate-wayland-wire.py
-wayland_wire_xml := $(wildcard $(JNI_SRC_PATH)/wayland-protocol/*.xml)
-
-$(wayland_wire_header): PRIVATE_GENERATOR := $(wayland_wire_generator)
-$(wayland_wire_header): PRIVATE_XML := $(wayland_wire_xml)
-$(wayland_wire_header): $(wayland_wire_generator) $(wayland_wire_xml)
-	$(hide)$(HOST_PYTHON) "$(PRIVATE_GENERATOR)" "$@" $(PRIVATE_XML)
-
-LOCAL_C_INCLUDES := $(dir $(wayland_wire_header))
+LOCAL_LDFLAGS   := -Wl,--exclude-libs,ALL
+LOCAL_STATIC_LIBRARIES := xtmapper_wayland_client
 include $(BUILD_SHARED_LIBRARY)
 
-$(JNI_SRC_PATH)/wayland_capture.cpp: | $(wayland_wire_header)
-
-ifeq ($(XTMAPPER_WAYLAND_PROBE),1)
+ifeq ($(XTMAPPER_WAYLAND_CAPTURE_DIAGNOSTICS),1)
 include $(CLEAR_VARS)
-LOCAL_MODULE    := wayland_probe
-LOCAL_SRC_FILES := src/debug/cpp/wayland_probe.cpp
+LOCAL_MODULE    := wayland_capture_diagnostics
+LOCAL_SRC_FILES := src/debug/cpp/wayland_capture_diagnostics.cpp
 LOCAL_CPPFLAGS  := -std=c++17
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)

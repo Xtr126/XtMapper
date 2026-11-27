@@ -1,10 +1,7 @@
-# Waydroid capture overlay: replacement plan
+# Waydroid capture
 
-Status: design and prerequisite testing. The [Wayland feasibility probe](waydroid-wayland-probe.md)
-isolates the connection, focus, and placement gate before backend integration.
-
-Replace cage-xtmapper's nested compositor with an Android-native Wayland client
-derived from wayland-getevent. The client runs inside the Android container,
+Waydroid capture uses an Android-native Wayland client in place of the
+cage-xtmapper nested compositor. The client runs inside the Android container,
 connects to the same host compositor socket that Waydroid receives, and maps a
 transparent overlay above the Waydroid window to grab input. XtMapper's
 `app_process` owns the client and can hide or show the overlay on demand.
@@ -16,7 +13,11 @@ host client binary, build, or helper installation.
 
 The overlay is a host Wayland surface created from inside Android, separate
 from XtMapper's Android cursor/editor overlays. A mapped transparent overlay
-still accepts input; hiding means unmapping it, not changing its alpha.
+still accepts input. Hiding unmaps the surface.
+
+Capture is currently available through a debug opt-in while device validation is
+in progress. The [Wayland capture diagnostics](waydroid-capture-diagnostics.md)
+check compositor connection, focus, and placement independently of input mapping.
 
 ## Waydroid mode and Cage compatibility
 
@@ -48,7 +49,7 @@ is not reset to Root or redirected into Shizuku authorization/root prompts.
 Selecting Waydroid opens a dialog with a copyable command to run in a Linux
 host terminal with sudo. Generate the startup script in the app's private files
 directory before displaying the command, checking that generation succeeded.
-For example, with a proposed script name `start-waydroid.sh`:
+The launcher is named `start-waydroid.sh`.
 
 ```sh
 sudo waydroid shell -- sh /data/data/<app package>/files/start-waydroid.sh
@@ -82,13 +83,9 @@ if properties are missing or invalid, report the configuration problem without
 guessing a display path or claiming capture. Detection must work without Cage,
 including when no capture backend is connected.
 
-[SoufianoDev's proposal](https://github.com/Xtr126/XtMapper/pull/237#issuecomment-6953867826)
-calls for resolving environment evidence before service and XtLogger startup.
-Evaluate multiple consistent Waydroid-specific signals for automatic selection.
-Keep Linux host capabilities such as XtCrash's browser handoff and XtLogger's
-host-accessible log storage behind a separate integration boundary. The
-Wayland connection serves the compositor client. Socket access and each host
-integration require their own capability checks.
+Host browser handoff for XtCrash and host-accessible log export for XtLogger
+are follow-up work. They need their own capability checks and a separate
+Android-to-host interface. [Contributor proposal](https://github.com/Xtr126/XtMapper/pull/237#issuecomment-7100090163)
 
 ## Context and evidence
 
@@ -163,19 +160,21 @@ app UID is not assumed to have equivalent access. Inspect
 `persist.waydroid.fake_touch` as in the existing shell warning; establish the
 same baseline with fake touch disabled before interpreting input failures.
 
-Build prerequisites remain those in [BUILDING.md](../BUILDING.md): JDK 21,
-SDK Platform 37, NDK `28.0.13004108`, and ignored local signing properties.
-This host has that NDK, SDK directory `android-37.0`, Meson 1.12.1, Ninja 1.13.2,
-and host wayland-scanner 1.26.0. Its default `java` reports 25, so verify the
-Gradle daemon's JDK 21 selection. Local signing properties exist; their
-contents were not read. No Android build was run for this documentation change.
+Use the SDK and NDK versions in the [build guide](../BUILDING.md) and the
+daemon JVM requested by Gradle. Keep local signing credentials out of commits.
 
 ## Native build approach
 
-The experimental APK backend extends the probe's Wayland wire client. The
-NDK build generates C++ request and event opcodes from the vendored protocol
-XML using its bundled Python. The upstream XML carries its license and is
-pinned to these releases:
+The APK links Wayland 1.24.0 and libffi 3.4.6 statically into
+`libxtmapper_wayland.so`. The vendored source subset and scanner-generated
+client bindings are compiled by ndk-build for each supported Android ABI.
+Ordinary builds need only the configured Android toolchain. The [dependency
+guide](../app/src/main/cpp/third-party/README.md) records the Linux regeneration
+command, tool requirements, checksum verification, and license locations.
+Expat supports the host scanner during regeneration.
+
+The [protocol XML sources](../app/src/main/cpp/wayland-protocol/) carry
+their upstream licenses and pin these releases:
 
 | Protocol | Release | SHA-256 |
 | --- | --- | --- |
@@ -184,46 +183,10 @@ pinned to these releases:
 | [Pointer constraints](https://gitlab.freedesktop.org/wayland/wayland-protocols/-/blob/1.41/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml) | wayland-protocols 1.41 | `f980fac900ba1dcfbbe97f588fc17b893926bd2b57624563653a1bfe4d035948` |
 | [Relative pointer](https://gitlab.freedesktop.org/wayland/wayland-protocols/-/blob/1.41/unstable/relative-pointer/relative-pointer-unstable-v1.xml) | wayland-protocols 1.41 | `ab4930dd3084f732b6fdd12ee6dbd0a112a758ed8a57b170366391dbeb1a22ff` |
 
-The [XML sources](../app/src/main/cpp/wayland-protocol/) are build inputs.
-The backend implements framing, descriptor passing and object lifecycle in
-`wayland_capture.cpp`. The libwayland-client cross-build and scanner-generated
-C bindings described below remain follow-up work.
-
-[wlroots-android-bridge issue #5](https://github.com/Xtr126/wlroots-android-bridge/issues/5)
-reports Linux-hosted Meson/NDK r28 cross-compilation, including libffi 3.4.6,
-expat 2.6.4, Wayland 1.24.0 and wayland-protocols 1.41. It identifies host
-scanner selection and cross pkg-config paths as important; its `sys_root`
-setting interfered with protocol XML discovery. The issue concerns a server
-stack, so it is evidence for a build strategy, not a verified XtMapper client
-recipe. Its wlroots-specific librt/shm changes should not be copied blindly.
-
-Proposed client-only dependency graph:
-
-```text
-NDK Clang + libffi + expat -> libwayland-client -> libxtmapper_wayland.so
-host wayland-scanner + pinned protocol XMLs -> generated client bindings --^
-```
-
-1. Pin sources/checksums and licenses. Start a client-only cross-build with
-   the issue's Wayland/ffi/expat versions, checking which dependencies the
-   selected client target actually needs. Build host tools separately.
-2. Use one explicit NDK target/API and isolated pkg-config/sysroot search
-   paths per Android ABI. Start with the actual Waydroid ABI (commonly x86_64),
-   then arm64-v8a; the issue's arm64 result does not prove x86_64 works.
-3. Generate extension client headers/private C from xdg-shell,
-   pointer-constraints and relative-pointer XML with a compatible host scanner.
-   Core Wayland bindings come from the Wayland build. Treat protocol XMLs as
-   build inputs, not Android executables. Add activation bindings only if used.
-4. Disable server/compositor, documentation, examples and unrelated features
-   where the pinned build supports it. Do not pull in wlroots, DRM, pixman,
-   libinput or EGL for this shm input-overlay client.
-5. Prefer position-independent static dependencies behind one JNI library,
-   exported through the existing `app/Android.mk` ndk-build integration. Make
-   third-party outputs deterministic inputs to that build; document how to
-   regenerate them. Verify licenses before copying reference source.
-6. Inspect target ELF architecture, undefined symbols, SONAME/DT_NEEDED and
-   API availability with NDK tools. Verify page-size compatibility and APK
-   extraction/loading via the installed native-library path in app_process.
+The launcher opens the socket and passes the connected descriptor to the
+authenticated Android service. libwayland-client takes ownership of that
+descriptor on the capture thread. The separate debug diagnostic retains its
+standalone protocol implementation for socket, focus, and placement checks.
 
 For new physical-key profiles, use Wayland's evdev key codes and the
 NDK-generated event labels introduced by [PR #239](https://github.com/Xtr126/XtMapper/pull/239).
@@ -337,10 +300,9 @@ lock the pointer instead of confining it at window edges. On focus/seat/global
 loss, release held input; retain desired visibility without reporting capture
 until focus and constraints recover.
 
-Gate: launch the NDK probe from a fresh `sudo waydroid shell` and record its
-Android UID and domain. The probe must connect, show a transparent capture
-surface, receive input, hide, return input to
-Waydroid, and show again. Include focus restoration and correct Android game
+Launch the debug diagnostic from a fresh `sudo waydroid shell` and record its
+Android UID and domain. Verify socket connection, a transparent surface, input
+delivery, hide, focus restoration, and a second show. Include focus restoration and correct Android game
 touch injection while the host focuses the overlay. If this needs compositor
 rules, document them; if a compositor cannot support it, offer the retained
 legacy Cage path when a user supplies a compatible community fork, or report
@@ -348,44 +310,34 @@ the unsupported configuration. Do not promise a maintained upstream fallback.
 
 ## XtMapper integration and event correctness
 
-Fix initialization first: `RemoteService` calls `init()` in its constructor,
-but `RemoteServiceShell` assigns `isWaylandClient` afterward. Backend selection
-must be immutable constructor configuration before discovery starts. Resolve
-Waydroid detection and the persisted launch mode independently before selecting
-that configuration; Cage input must not be required to identify Waydroid. Keep
-legacy stdin mode separate during migration; both must avoid unintended evdev
-discovery. Native events/control replace a host pipe for the new backend.
+The service selects its backend before discovery starts. The Waydroid mode
+and property-based environment detection work independently of the compositor
+connection. Native capture and legacy Cage stdin have distinct startup paths
+and bypass evdev discovery.
 
-Normalize native events into typed keyboard, button, absolute, relative, wheel
-and focus events. A compatibility adapter can emit existing `wl_*` records for
-listeners, but parser layout must be tested: `onWaylandMouseEvent()` expects
-the leading space after the colon. Keep diagnostics out of input streams.
+The Wayland dispatch thread normalizes evdev keys, buttons, absolute and
+relative motion, wheel events, and focus changes for the mapper. Absolute
+positions are normalized to the configured surface. Relative movement uses
+fractional accumulation while the pointer is locked. The app and server
+record state changes separately from input events.
 
-Correct the reference client's hazards during adaptation: pass the real client
-state to callbacks (the relative listener currently receives `&state`), handle
-missing/removed globals, support middle and other buttons explicitly, avoid
-axis-zero division, define wheel/high-resolution behavior, validate dimensions
-and release resources. Accumulate fractional relative deltas without drift.
-Avoid duplicate absolute/relative movement; transform surface-local logical
-coordinates to Android display coordinates, including scale, resize and
-letterboxing. Preserve evdev code identity and suppress synthetic repeat unless
-the mapper requires it. Clear pressed state on leave/hide/disconnect so keys
-and injected touches cannot stick.
+The service main handler owns capture lifecycle and rejects events from old
+generations. Pause, focus loss, and shutdown release held keys and touches
+and cancel queued pointer work. Resume requests a visible surface for the
+current profile. Shell startup still selects `Default` without saving it as
+the user's last-selected profile.
 
-`InputService.pauseResumeKeymap()` currently toggles `stopEvents` without a
-Wayland hide/show command. `RemoteService.stopServer()` omits much of its
-cleanup for Wayland mode. Integrate capture release into those paths, profile
-replacement, callback death and process shutdown. Serialize lifecycle decisions
-on the main handler; define event-thread synchronization and discard stale
-service-generation events. Avoid creating evdev/uinput cursor resources unless
-the selected pointer mode actually needs them. Preserve shell startup's
-`Default` selection and other profiles' mappings/metadata.
+## Setup and release validation
 
-## Implementation sequence and validation
-
-Debug builds can opt in to mapping for device validation. Select **Waydroid**
-in the app to generate the private launcher, then add the environment variable
-before the generated command's `sh`:
+1. Start the Waydroid full UI and open XtMapper there.
+2. Select **Waydroid** in the startup mode switcher and copy the generated
+   launcher command.
+3. Run the command in a Linux host terminal with sudo. During device
+   qualification, use the installed debug build and insert the environment
+   variable before `sh` as shown below.
+4. After XtMapper connects to the shell service, start an enabled physical-key
+   profile. Rebind legacy or unknown keyboard mappings into a copy before
+   using them with Waydroid capture.
 
 ```sh
 sudo waydroid shell -- env XTMAPPER_EXPERIMENTAL_WAYLAND_CAPTURE=1 \
@@ -399,18 +351,27 @@ actual KWin frame with the Waydroid content bounds at the configured host
 scale. Release builds keep mapping disabled while device qualification is
 in progress.
 
-1. **Mode detection and prerequisite probe:** define the property detector,
+Before enabling capture in release builds, verify controlled transparency and
+placement, a physical key or button mapped through XtMapper to Android touch,
+hardware AZERTY rebinding, and cleanup when capture hides, the editor opens,
+or the compositor disconnects. Verify authenticated automatic Default startup
+on Android 14 or later, with the last-selected profile preserved. Repeat the
+launcher smoke check with a release APK and verify Root and Shizuku startup.
+
+### Implementation milestones
+
+1. **Mode detection and diagnostics.** Define the property detector,
    persistent Root/Shizuku/Waydroid selection and backend-independent environment state; capture
    live endpoint permissions, globals and compositor behavior; cross-build/load a minimal JNI client for the target
    ABI. Save reproducible commands and results with the actual UID/domain.
-2. **Overlay lifecycle:** implement transparent map/unmap, command wakeups,
+2. **Overlay lifecycle.** Implement transparent map/unmap, command wakeups,
    focus/constraint status and teardown independently of mapper event injection.
    Demonstrate repeated show/hide and the hidden-state Binder resume path.
-3. **Input/backend integration:** immutable backend startup, event translation,
+3. **Input and backend integration.** Implement immutable backend startup, event translation,
    capture controls and service/profile/editor lifecycle. Retain evdev and the
    optional community-fork Cage integration; label legacy stdin and native
    backend distinctly without promising continued upstream Cage maintenance.
-4. **Packaging and support:** pin dependencies, integrate ndk-build/APK loading,
+4. **Packaging and support.** Pin dependencies, integrate ndk-build/APK loading,
    add build instructions and a compositor/ABI support matrix. Supply a simple
    launch path through `waydroid shell` using Waydroid's existing socket and
    installed APK libraries, with no separately installed host client or helper.
@@ -418,8 +379,7 @@ in progress.
    Put user-facing setup, mode-switcher/dialog instructions, the sudo command,
    troubleshooting and optional fork links in the
    [XtMapper-docs Waydroid section](https://github.com/Xtr126/XtMapper-docs/tree/main/src/content/docs/waydroid).
-   Keep this repository's document as the implementation plan and link to those
-   user-facing instructions rather than duplicating them here.
+   Keep build, backend design, and release validation details in this repository.
 
 Add focused JVM tests for property detection with present, missing, empty and
 partial Waydroid properties, rejection of generic Mesa-only evidence, and
@@ -462,5 +422,5 @@ Android cursor modes for duplicate movement. Capture both app and server logs
 using [service-debugging.md](service-debugging.md), logging transitions and
 capabilities rather than high-frequency events.
 
-See the [probe results](waydroid-wayland-probe.md#observed-results) for the
+See the [diagnostic results](waydroid-capture-diagnostics.md#observed-results) for the
 current gate status and remaining device checks.

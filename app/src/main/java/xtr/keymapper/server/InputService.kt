@@ -383,22 +383,26 @@ class InputService @Throws(RemoteException::class) constructor(
     }
 
     internal fun releaseWaylandEvents() {
+        input.cancelScroll()
         val keys = waylandKeys.values.toList()
         val buttons = waylandButtons.toList()
         waylandKeys.clear()
         waylandButtons.clear()
-        for (key in keys) {
-            try {
-                keyEventHandler.handleEvent("EV_KEY $key UP")
-            } catch (e: RemoteException) {
-                XtLogger.warn(RemoteService.TAG, "Client disconnected while releasing Wayland key", e)
-            }
-        }
         try {
+            for (key in keys) {
+                try {
+                    keyEventHandler.handleEvent("EV_KEY $key UP")
+                } catch (e: RemoteException) {
+                    XtLogger.warn(RemoteService.TAG, "Client disconnected while releasing Wayland key", e)
+                }
+            }
             buttons.forEach { mouseEventHandler.handleEvent(it, UP) }
         } finally {
-            keyEventHandler.cancelPendingActions()
-            input.cancelTouches()
+            OrderedCleanup.run(
+                "cancel Waydroid keyboard actions" to { keyEventHandler.cancelPendingActions() },
+                "cancel Waydroid pointer actions" to { mouseEventHandler.cancelWaylandActions() },
+                "cancel Waydroid touches" to { input.cancelTouches() },
+            )
         }
     }
 

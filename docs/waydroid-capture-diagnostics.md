@@ -1,11 +1,12 @@
-# Waydroid Wayland feasibility probe
+# Wayland capture diagnostics on Waydroid
 
-The debug APK has a standalone `app_process` entry point for the first gate
-in [PR #237's overlay plan](waydroid-wayland-client-plan.md). It reads the
+The debug APK has a standalone `app_process` diagnostic for
+[Waydroid capture](waydroid-capture.md). It reads the
 container's `waydroid.xdg_runtime_dir` and `waydroid.wayland_display` Android
 properties, connects to the existing compositor socket, and tries a transparent
-maximized `xdg_toplevel` with app ID `org.xtmapper.WaylandProbe`. The probe
-shows for 10 seconds, hides for 5 seconds, then shows again for 10 seconds.
+maximized `xdg_toplevel` with app ID `org.xtmapper.WaylandCaptureDiagnostics`.
+The diagnostic shows for 10 seconds, hides for 5 seconds, then shows again for
+10 seconds.
 
 ## Launch on Waydroid
 
@@ -19,11 +20,11 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Capture both app and server logs as in [service debugging](service-debugging.md).
-For the standalone probe, add its tag to the logcat command or capture it
+For the standalone diagnostic, add its tag to the logcat command or capture it
 and Android runtime errors in a separate terminal:
 
 ```sh
-adb logcat -v threadtime 'xtmapper-wayland-probe:V' 'AndroidRuntime:E' '*:S'
+adb logcat -v threadtime 'xtmapper-wayland-diagnostics:V' 'AndroidRuntime:E' '*:S'
 ```
 
 Enter the Android shell through `sudo waydroid shell` for the intended
@@ -54,7 +55,7 @@ abi=$(printf '%s\n' "$package_info" | sed -n 's/^    primaryCpuAbi=//p')
 lib="$lib_base/$abi"
 if [ -f "$apk" ] && [ -d "$lib" ]; then
   /system/bin/app_process "-Djava.class.path=$apk" "-Djava.library.path=$lib" \
-    / xtr.keymapper.wayland.WaylandProbe
+    / xtr.keymapper.wayland.WaylandCaptureDiagnostics
 fi
 ```
 
@@ -66,7 +67,7 @@ launcher or library loading failure separately from the socket result. If
 and any SELinux denials. Keep the socket permissions and SELinux policy as
 provided by the session.
 
-## Evaluate the gate
+## Interpret the results
 
 Record the host compositor and version, whether compositor rules were needed,
 the monitor arrangement and scale, and the Waydroid full-UI geometry. Repeat
@@ -76,22 +77,22 @@ the test on each compositor configuration the overlay would need to support.
 | --- | --- |
 | Android and socket | APK library loads in `app_process` under the intended UID/domain. A Unix socket connection and successful protocol exchange are recorded separately. |
 | Capabilities | Registry includes the compositor, shared memory, xdg-shell and a seat with keyboard and pointer capabilities. |
-| Placement | The Waydroid content stays visible through the transparent surface and the probe covers the intended window bounds. Check host compositor window geometry and stacking. A matching configure size alone leaves placement unverified. |
+| Placement | The Waydroid content stays visible through the transparent surface and the diagnostic covers the intended window bounds. Check host compositor window geometry and stacking. A matching configure size alone leaves placement unverified. |
 | Focus and input | Move the pointer over the expected region and press a test key. Record pointer and keyboard focus separately. Distinguish automatic focus from focus obtained by clicking or using the compositor's window controls. |
 | Hide and show again | During the hidden interval, observe whether ordinary pointer and keyboard input return to Waydroid without intervention. Verify placement and focus again on the second show. |
 
 Run first with the compositor's normal policy, then with a targeted rule for
-`org.xtmapper.WaylandProbe` if needed. Record the exact rule and whether the
-same behavior repeats. Standard xdg-shell leaves placement, stacking and
+`org.xtmapper.WaylandCaptureDiagnostics` if needed. Record the exact rule and
+whether the same behavior repeats. Standard xdg-shell leaves placement, stacking and
 focus policy to the compositor. Android touch injection while the overlay has
 focus remains a separate device acceptance check before enabling a backend.
 
-The debug probe implements only the Wayland wire messages it needs, using
+The debug diagnostic implements only the Wayland wire messages it needs, using
 version 1 of the bound interfaces. It links against the Android NDK runtime
-and liblog and packages no server library. The full backend's dependency
-choice remains open. The probe reports the initial configured size and holds
-that buffer size for each visible interval. Use a fixed monitor and window
-configuration during each run.
+and liblog and packages no server library. The production backend has its own
+native build. The diagnostic reports the initial configured size and holds that
+buffer size for each visible interval. Use a fixed monitor and window configuration
+during each run.
 
 The exit status distinguishes invalid configuration (`2`), socket connection
 failure (`3`), capability exchange failure (`4`), surface or dispatch failure
@@ -100,6 +101,9 @@ committed a buffer and received keyboard and pointer enter events. Use the
 manual checks above to assess stacking, input delivery and focus restoration.
 
 ## Observed results
+
+These runs predate the diagnostic rename. The diagnostic was then called
+`WaylandProbe` and used the compositor app ID `org.xtmapper.WaylandProbe`.
 
 The host control connected as UID 1000 on KWin 6.8.3. On both shows the
 compositor configured a 1920 × 1058 surface, delivered keyboard and pointer
@@ -185,7 +189,8 @@ experimental backend was added.
 - `./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest`
   built both APKs and passed 423 JVM tests. The probe library was packaged for
   all four app ABIs. The 64-bit ELF load segments were aligned to 16 KiB.
-- The focused `WaylandProbeTest` instrumentation suite passed all four tests
+- The focused `WaylandProbeTest` instrumentation suite (now
+  `WaylandCaptureDiagnosticsTest`) passed all four tests
   on the x86_64 Waydroid device.
 - The touchpad and native diagnostics CTest suites passed all eight checks.
 - `./gradlew :app:lintDebug` reported 13 errors in existing files on the

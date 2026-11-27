@@ -2,18 +2,27 @@ package xtr.keymapper
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.Binder
+import android.os.IBinder
+import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import xtr.keymapper.keymap.KeymapConfig
+import xtr.keymapper.server.RemoteService
+import xtr.keymapper.server.RemoteServiceHelper
 import java.io.File
 import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 @RunWith(AndroidJUnit4::class)
 class WaydroidStartupTest {
@@ -51,6 +60,50 @@ class WaydroidStartupTest {
         } finally {
             blocked.delete()
         }
+    }
+
+    @Test
+    fun appProcessCannotAuthenticateAsTheWaydroidShellService() {
+        assumeFalse("Stop the test shell session first", RemoteServiceHelper.hasLiveShellService())
+        assumeFalse(RemoteServiceHelper.isShellServiceAuthenticationPending())
+        val answered = CountDownLatch(1)
+        val versionRead = AtomicBoolean()
+        val verified = AtomicBoolean()
+        class FakeDaemon : IRemoteService.Default() {
+            private val binder = Binder().apply {
+                attachInterface(this@FakeDaemon, "xtr.keymapper.IRemoteService")
+            }
+
+            override fun asBinder(): IBinder = binder
+
+            override fun authenticateShellClient(callback: IShellAuthenticationCallback, challenge: Long) {
+                callback.onShellServiceAuthenticated(challenge)
+                answered.countDown()
+            }
+
+            override fun getVersion(): Int {
+                versionRead.set(true)
+                return RemoteService.PROTOCOL_VERSION
+            }
+
+            override fun isNativeWaylandBackend() = true
+
+            override fun isNativeWaylandCaptureEnabled() = true
+        }
+        RemoteServiceHelper.authenticateShellServiceBinder(FakeDaemon().asBinder(), true) {
+            verified.set(true)
+        }
+        assertTrue("Fake daemon should receive the challenge", answered.await(5, TimeUnit.SECONDS))
+        val deadline = SystemClock.elapsedRealtime() + 5_000
+        while (RemoteServiceHelper.isShellServiceAuthenticationPending() &&
+            SystemClock.elapsedRealtime() < deadline
+        ) {
+            SystemClock.sleep(10)
+        }
+        assertFalse(RemoteServiceHelper.isShellServiceAuthenticationPending())
+        assertFalse("App UID must be rejected before protocol negotiation", versionRead.get())
+        assertFalse(verified.get())
+        assertFalse(RemoteServiceHelper.isWaydroidShellServiceReady)
     }
 
     @Test

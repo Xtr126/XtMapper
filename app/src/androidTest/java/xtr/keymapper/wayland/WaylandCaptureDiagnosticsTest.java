@@ -14,26 +14,26 @@ import java.io.File;
 import java.io.IOException;
 
 @RunWith(AndroidJUnit4.class)
-public final class WaylandProbeTest {
+public final class WaylandCaptureDiagnosticsTest {
     @Test
     public void resolvesRelativeAndAbsoluteDisplayProperties() {
-        assertEquals("/run/xdg/wayland-0", WaylandProbe.resolveEndpoint("/run/xdg", "wayland-0"));
+        assertEquals("/run/xdg/wayland-0", WaylandCaptureDiagnostics.resolveEndpoint("/run/xdg", "wayland-0"));
         assertEquals("/run/custom/wayland-1",
-                WaylandProbe.resolveEndpoint("", "/run/custom/wayland-1"));
+                WaylandCaptureDiagnostics.resolveEndpoint("", "/run/custom/wayland-1"));
     }
 
     @Test
     public void rejectsMissingAndInvalidDisplayProperties() {
-        assertNull(WaylandProbe.resolveEndpoint("/run/xdg", ""));
-        assertNull(WaylandProbe.resolveEndpoint("/run/xdg", "None"));
-        assertNull(WaylandProbe.resolveEndpoint("", "wayland-0"));
-        assertNull(WaylandProbe.resolveEndpoint("run/xdg", "wayland-0"));
-        assertNull(WaylandProbe.resolveEndpoint("/run/xdg", "../wayland-0"));
+        assertNull(WaylandCaptureDiagnostics.resolveEndpoint("/run/xdg", ""));
+        assertNull(WaylandCaptureDiagnostics.resolveEndpoint("/run/xdg", "None"));
+        assertNull(WaylandCaptureDiagnostics.resolveEndpoint("", "wayland-0"));
+        assertNull(WaylandCaptureDiagnostics.resolveEndpoint("run/xdg", "wayland-0"));
+        assertNull(WaylandCaptureDiagnostics.resolveEndpoint("/run/xdg", "../wayland-0"));
     }
 
     @Test
     public void nativeProbeRejectsRelativeSocketPath() {
-        assertEquals(2, WaylandProbe.run("wayland-0", 100));
+        assertEquals(2, WaylandCaptureDiagnostics.run("wayland-0", 100));
     }
 
     @Test
@@ -41,6 +41,6 @@ public final class WaylandProbeTest {
         File cache = InstrumentationRegistry.getInstrumentation().getTargetContext().getCacheDir();
         File endpoint = File.createTempFile("wl-", ".sock", cache);
         assertTrue(endpoint.delete());
-        assertEquals(3, WaylandProbe.run(endpoint.getAbsolutePath(), 100));
+        assertEquals(3, WaylandCaptureDiagnostics.run(endpoint.getAbsolutePath(), 100));
     }
 }

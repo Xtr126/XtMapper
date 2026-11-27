@@ -188,7 +188,14 @@ class MainActivity : AppCompatActivity() {
             supportFragmentManager.findFragmentByTag(SERVER_CRASH_DIALOG_TAG) != null ||
             !RemoteServiceHelper.hasLiveShellService(binder)
         ) return
-        if (KeymapConfig(this).isWaydroidMode && !RemoteServiceHelper.isWaydroidShellCaptureEnabled) return
+        if (KeymapConfig(this).isWaydroidMode) {
+            if (!RemoteServiceHelper.isWaydroidShellCaptureEnabled) return
+            val profile = KeymapProfiles(this).getProfile(pendingShellStartup.profileName, false)
+            if (profile.disabled || !profile.isNativeWaylandReady()) {
+                pendingShellStartup = PendingShellStartup(null)
+                return
+            }
+        }
 
         val hasOverlayPermission = Settings.canDrawOverlays(this)
         if (!hasOverlayPermission) {

@@ -15,6 +15,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.DataInputStream;
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -54,6 +55,7 @@ public final class WaylandCaptureNativeTest {
                     int active = connected | WaylandCaptureNative.MAPPED
                             | WaylandCaptureNative.KEYBOARD_FOCUS | WaylandCaptureNative.POINTER_FOCUS;
                     observer.awaitState(0, connected);
+                    protocol.sendKeymapAndVerifyPing();
 
                     capture.setVisible(true, 7, false, 640, 480);
                     protocol.show();
@@ -164,6 +166,21 @@ public final class WaylandCaptureNativeTest {
             pointer = request(seat, 0).getInt();
             keyboard = request(seat, 1).getInt();
             relativePointer = request(relativeManager, 1).getInt();
+        }
+
+        void sendKeymapAndVerifyPing() throws IOException {
+            ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
+            try (ParcelFileDescriptor keymap = pipe[0]; ParcelFileDescriptor writer = pipe[1]) {
+                socket.setFileDescriptorsForSend(new FileDescriptor[]{keymap.getFileDescriptor()});
+                try {
+                    // The keymap descriptor travels out of band. Physical codes do not use it.
+                    write(keyboard, 0, 0, 0);
+                } finally {
+                    socket.setFileDescriptorsForSend(null);
+                }
+            }
+            write(shell, 0, 42);
+            assertEquals(42, request(shell, 3).getInt());
         }
 
         void show() throws IOException {

@@ -54,7 +54,7 @@ android {
         }
         getByName("debug") {
             applicationIdSuffix = ".debug"
-            externalNativeBuild.ndkBuild.arguments += "XTMAPPER_WAYLAND_PROBE=1"
+            externalNativeBuild.ndkBuild.arguments += "XTMAPPER_WAYLAND_CAPTURE_DIAGNOSTICS=1"
             resValue("string", "app_name", "XtMapper(Debug)")
         }
     }

@@ -5,11 +5,11 @@ import android.util.Log;
 
 import java.io.File;
 
-/** Standalone debug app_process entry point for the Waydroid feasibility gate. */
-public final class WaylandProbe {
-    private static final String TAG = "xtmapper-wayland-probe";
+/** Standalone debug app_process entry point for Waydroid capture diagnostics. */
+public final class WaylandCaptureDiagnostics {
+    private static final String TAG = "xtmapper-wayland-diagnostics";
 
-    private WaylandProbe() {}
+    private WaylandCaptureDiagnostics() {}
 
     public static void main(String[] args) {
         String endpoint = resolveEndpoint(
@@ -31,9 +31,9 @@ public final class WaylandProbe {
     }
 
     static int run(String endpoint, int visibleMillis) {
-        System.loadLibrary("wayland_probe");
-        return probe(endpoint, visibleMillis);
+        System.loadLibrary("wayland_capture_diagnostics");
+        return runDiagnostic(endpoint, visibleMillis);
     }
 
-    private static native int probe(String endpoint, int visibleMillis);
+    private static native int runDiagnostic(String endpoint, int visibleMillis);
 }

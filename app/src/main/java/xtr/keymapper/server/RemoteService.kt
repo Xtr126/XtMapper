@@ -263,8 +263,14 @@ class RemoteService @JvmOverloads constructor(
                         waylandState = state
                         Log.i(TAG, "Wayland capture generation=$generation state=$state")
                         val lost = previous and state.inv()
-                        if (lost and WAYLAND_INPUT_STATE != 0) {
+                        val lostRequestedLock = waylandWantsLock &&
+                            lost and WaylandCaptureNative.POINTER_LOCKED != 0
+                        if (lost and WAYLAND_INPUT_FOCUS != 0 || lostRequestedLock) {
                             mInputService.get()?.releaseWaylandEvents()
+                            if (waylandWantsLock && state and WaylandCaptureNative.MAPPED != 0) {
+                                waylandWantsLock = false
+                                waylandCapture?.setVisible(true, generation, false, waylandWidth, waylandHeight)
+                            }
                         }
                     }
                 }
@@ -310,9 +316,12 @@ class RemoteService @JvmOverloads constructor(
         val capture = waylandCapture ?: return
         waylandGeneration++
         waylandState = 0
-        if (!visible) service?.releaseWaylandEvents()
         waylandWantsLock = visible && service?.mouseEventHandler?.mouseAimActive == true
-        capture.setVisible(visible, waylandGeneration, waylandWantsLock, waylandWidth, waylandHeight)
+        try {
+            capture.setVisible(visible, waylandGeneration, waylandWantsLock, waylandWidth, waylandHeight)
+        } finally {
+            if (!visible) service?.releaseWaylandEvents()
+        }
     }
 
     /** Reads Cage event lines until EOF and leaves process-owned stdin open. */
@@ -479,8 +488,8 @@ class RemoteService @JvmOverloads constructor(
             check(isNativeWaylandCaptureEnabled()) {
                 "Native Wayland capture is available only in an opted-in validation build"
             }
-            require(profile.isNativeWaylandReady()) {
-                "Native Wayland capture requires a physical-key profile"
+            require(!profile.disabled && profile.isNativeWaylandReady()) {
+                "Native Wayland capture requires an enabled physical-key profile"
             }
             require(screenWidth > 0 && screenHeight > 0)
             profile.waydroidShortcuts?.applyTo(keymapConfig)
@@ -734,10 +743,17 @@ class RemoteService @JvmOverloads constructor(
         }
         if (nativeWaylandFd != null) {
             mHandler.post {
-                stopServer(true)
-                waylandCapture?.close()
-                waylandCapture = null
-                System.exit(0)
+                try {
+                    stopServer(true)
+                } finally {
+                    try {
+                        waylandCapture?.close()
+                    } finally {
+                        waylandCapture = null
+                        XtLogger.endSession(SessionStates.STATUS_SERVICE_STOP)
+                        System.exit(0)
+                    }
+                }
             }
         } else if (usesLegacyWaylandInput) {
             val session = mInputService.owner()
@@ -793,7 +809,7 @@ class RemoteService @JvmOverloads constructor(
         DeviceTelemetry.stop()
         val service = mInputService.get()
         Log.i(TAG, "stopServer: exitProcess=$exitProcess startedFromShell=$startedFromShell serviceReady=${service != null} mouseOpen=${mouseDevice.isOpen} wayland=$isWaylandClient clientAlive=$clientAlive")
-        if (service != null && clientAlive) {
+        if (nativeWaylandFd == null && service != null && clientAlive) {
             try {
                 service.callback.disablePointer()
             } catch (e: RemoteException) {
@@ -802,11 +818,17 @@ class RemoteService @JvmOverloads constructor(
         }
 
         if (nativeWaylandFd != null) {
-            setWaylandVisible(false, service)
+            service?.stopEvents = true
             service?.onWaylandPauseChanged = null
-            service?.hideCursor()
-            service?.stop()
-            mInputService.clear()
+            OrderedCleanup.run(
+                "hide Waydroid capture" to { setWaylandVisible(false, service) },
+                "hide input cursor" to { service?.hideCursor() },
+                "stop input service" to { service?.stop() },
+                "clear input service slot" to { mInputService.clear() },
+                "disable client pointer" to {
+                    if (clientAlive) service?.callback?.disablePointer()
+                },
+            )
         } else if (!startedFromShell && exitProcess) {
             XtLogger.info(TAG, "server stopped; exiting process")
             // END marker before the existing System.exit; endSession is bounded.
@@ -833,9 +855,11 @@ class RemoteService @JvmOverloads constructor(
                 }
             )
         }
-        // A shell-started process survives stopServer: admission reopens only after the
-        // non-exit cleanup completes, never where the destroy request was recorded.
-        synchronized(mStartRequestLock) { destroyRequested = false }
+        // The native Waydroid daemon exits on destroy. Ordinary stops never close admission.
+        // Legacy shell daemons can reopen admission after their non-exit cleanup.
+        if (nativeWaylandFd == null) {
+            synchronized(mStartRequestLock) { destroyRequested = false }
+        }
     }
 
     private val mKeyEventListenerDeathRecipient = IBinder.DeathRecipient {
@@ -912,9 +936,8 @@ class RemoteService @JvmOverloads constructor(
         // Keep the version distinct from APKs predating the Waydroid profile parcel fields.
         internal const val PROTOCOL_VERSION = BuildConfig.VERSION_CODE + 10_000_000
         const val TAG = "xtmapper-server"
-        private const val WAYLAND_INPUT_STATE = WaylandCaptureNative.MAPPED or
-            WaylandCaptureNative.KEYBOARD_FOCUS or WaylandCaptureNative.POINTER_FOCUS or
-            WaylandCaptureNative.POINTER_LOCKED
+        private const val WAYLAND_INPUT_FOCUS = WaylandCaptureNative.MAPPED or
+            WaylandCaptureNative.KEYBOARD_FOCUS or WaylandCaptureNative.POINTER_FOCUS
 
         /**
          * Loads native C++ shared libraries for mouse, touchpad, and keyboard handling.
